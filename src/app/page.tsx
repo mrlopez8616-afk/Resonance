@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClassBadge, ProvenanceBadge, StatusBadge } from "@/components/badges";
+import { ClassBadge, DecisionStatusBadge, ProvenanceBadge, StatusBadge } from "@/components/badges";
 import { EmptyState, PageHeader } from "@/components/page-header";
 import { NodePriceCell, Stat } from "@/components/ui";
 import { usePrices } from "@/context/prices";
@@ -166,7 +166,7 @@ export default function OverviewPage() {
           <div className="mb-3 flex items-end justify-between">
             <h2 className="text-lg">Last decisions</h2>
             <Link href="/decisions" className="text-sm text-[color:var(--accent)]">
-              Log
+              Record book
             </Link>
           </div>
           {lastDecisions.length === 0 ? (
@@ -178,12 +178,17 @@ export default function OverviewPage() {
             <div className="space-y-3">
               {lastDecisions.map((item) => (
                 <div key={item.id} className="card">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="kicker">{item.date}</p>
-                    <StatusAsDecision status={item.status} />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="kicker">{item.date}</p>
+                      <span className="badge border-[color:var(--border)] font-mono text-[color:var(--text)]">
+                        {item.id}
+                      </span>
+                    </div>
+                    <DecisionStatusBadge value={item.status} />
                   </div>
                   <p className="mt-2 text-sm">{item.question}</p>
-                  {item.status === "decided" && item.decision ? (
+                  {item.status !== "pending" && item.decision ? (
                     <p className="mt-2 text-sm text-[color:var(--muted)]">
                       {item.decision}
                     </p>
@@ -248,16 +253,3 @@ export default function OverviewPage() {
   );
 }
 
-function StatusAsDecision({ status }: { status: "pending" | "decided" }) {
-  return (
-    <span
-      className={`badge ${
-        status === "decided"
-          ? "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]"
-          : "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]"
-      }`}
-    >
-      {status === "decided" ? "Decided" : "Pending"}
-    </span>
-  );
-}

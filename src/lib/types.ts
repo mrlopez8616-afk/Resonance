@@ -6,7 +6,7 @@ export type PositionStatus = "none" | "watch" | "funded";
 
 export type LedgerClassification = "principal" | "reward" | "fee" | "transfer";
 
-export type DecisionStatus = "pending" | "decided";
+export type DecisionStatus = "pending" | "decided" | "superseded";
 
 export interface Treasury {
   units: number;
@@ -92,11 +92,16 @@ export interface LedgerEntry {
 }
 
 export interface Decision {
+  /** Durable record-book ID, e.g. D-2026-09-11-01. Merge key for hub import. */
   id: string;
   question: string;
   options: string;
   status: DecisionStatus;
+  /** Founder decision / the call. */
   decision: string;
+  rationale: string;
+  evidence: string;
+  reviewTrigger: string;
   date: string;
   createdAt: string;
 }

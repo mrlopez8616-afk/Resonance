@@ -50,7 +50,7 @@ No user accounts or API keys are required. Production should lock the site with 
 - **Treasury** — editable working balance on **Xaman** (~26k XRP seed), optional manual XRP/USD for estimates, reward/claim ledger you can add and edit in place (date, amount, fee, note, classification `principal | reward | fee | transfer`). Robinhood XRP is **not** this balance.
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable name, thesis, failure condition, position status `none | watch | funded`, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
-- **Decisions** — question, options, pending/decided, date.
+- **Decisions** — Phase Zero **record book**. Dated ID, question, options, founder decision, rationale, evidence, review trigger, status (`pending | decided | superseded`). Hub merges via import; on-chain / XRS recording is later.
 - **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
@@ -63,6 +63,14 @@ Badges:
 Seeded operating priority: build and add to treasury; keep principal; use realized rewards later to fund other nodes.
 
 Venues (editable): Robinhood (fractional equities + small XRP bag), Coinbase (general), Xaman (treasury), MetaMask (Flare DeFi play — secondary).
+
+## Decisions record book
+
+Decisions is the durable, visible log for founder Andres López — the Phase Zero OS record book. Hub (Resonance Operations) writes structured entries in chat; this page shows them and **imports/merges by decision ID** so hub and site stay aligned without wiping unrelated local rows.
+
+A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` … `D-2026-09-11-04`). Existing browsers can merge the same file: [`public/examples/decisions-record-book.json`](public/examples/decisions-record-book.json). Export decisions JSON from the page for backup.
+
+On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys.
 
 ## Holdings snapshot sync (Robinhood)
 

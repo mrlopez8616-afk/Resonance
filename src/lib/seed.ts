@@ -1,3 +1,4 @@
+import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 import { STATE_VERSION, type AppState, type Node } from "./types";
 
 function node(
@@ -214,6 +215,7 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
       },
     ],
     decisions: [
+      ...LOCKED_DECISIONS_2026_09_11,
       {
         id: "dec-vault",
         question: "Keep XRP principal in the Flare vault, or hold liquid on Xaman?",
@@ -221,6 +223,12 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         status: "decided",
         decision:
           "Keep principal in the Flare vault. Do not spend principal. Use realized rewards later to fund other nodes.",
+        rationale:
+          "Principal is the operating priority. Realized rewards, not principal, fund later nodes.",
+        evidence:
+          "Founder-reported Xaman / Flare vault balance (~26k XRP). Phase Zero does not verify on-chain yet.",
+        reviewTrigger:
+          "If vault terms cannot be explained in one sentence, or principal is at risk.",
         date: "2026-08-20",
         createdAt: "2026-08-20T16:00:00.000Z",
       },
@@ -230,6 +238,9 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         options: "BTC · ETH · FLR overlay only · A physical ticker · None yet",
         status: "pending",
         decision: "",
+        rationale: "",
+        evidence: "",
+        reviewTrigger: "When realized rewards can size a position without touching XRP principal.",
         date: "2026-09-11",
         createdAt: now,
       },
@@ -239,6 +250,9 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         options: "Not now · Stub only · Commit to a publishing cadence",
         status: "pending",
         decision: "",
+        rationale: "",
+        evidence: "",
+        reviewTrigger: "When a real publishing cadence exists — then drop the Overview stub.",
         date: "2026-09-11",
         createdAt: now,
       },

@@ -1,5 +1,6 @@
 import { applyLedgerToTreasury, roundUnits } from "./ledger";
 import { applyHoldingsSnapshot } from "./holdings-snapshot";
+import { mergeDecisionsById } from "./decisions";
 import { createSeedState } from "./seed";
 import { loadState, saveState } from "./storage";
 import { newId } from "./format";
@@ -112,16 +113,27 @@ export function updateLedgerEntry(id: string, patch: Partial<LedgerEntry>) {
   }));
 }
 
-export function addDecision(entry: Omit<Decision, "id" | "createdAt">) {
+export function addDecision(
+  entry: Omit<Decision, "id" | "createdAt"> & { id?: string },
+) {
+  const id = entry.id?.trim() || newId("dec");
   const full: Decision = {
     ...entry,
-    id: newId("dec"),
+    id,
+    rationale: entry.rationale ?? "",
+    evidence: entry.evidence ?? "",
+    reviewTrigger: entry.reviewTrigger ?? "",
     createdAt: new Date().toISOString(),
   };
-  update((current) => ({
-    ...current,
-    decisions: [full, ...current.decisions],
-  }));
+  update((current) => {
+    if (current.decisions.some((item) => item.id === id)) {
+      throw new Error(`A record with ID ${id} already exists.`);
+    }
+    return {
+      ...current,
+      decisions: [full, ...current.decisions],
+    };
+  });
 }
 
 export function updateDecision(id: string, patch: Partial<Decision>) {
@@ -157,4 +169,14 @@ export function replaceState(next: AppState) {
 
 export function importHoldingsSnapshot(snapshot: HoldingsSnapshot) {
   setSnapshot(applyHoldingsSnapshot(getAppSnapshot(), snapshot), true);
+}
+
+export function importDecisionsMerge(incoming: Decision[]) {
+  setSnapshot(
+    {
+      ...getAppSnapshot(),
+      decisions: mergeDecisionsById(getAppSnapshot().decisions, incoming),
+    },
+    true,
+  );
 }

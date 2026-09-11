@@ -27,7 +27,9 @@ import {
   updateSettings as updateSettingsAction,
   updateTreasury as updateTreasuryAction,
   importHoldingsSnapshot as importHoldingsSnapshotAction,
+  importDecisionsMerge as importDecisionsMergeAction,
 } from "@/lib/app-store";
+import { exportDecisionsJson } from "@/lib/decisions";
 import { exportState, parseImportedState } from "@/lib/storage";
 import type {
   AppState,
@@ -60,7 +62,9 @@ type StoreContextValue = {
   addLedgerEntry: (entry: Omit<LedgerEntry, "id" | "createdAt">) => void;
   updateLedgerEntry: (id: string, patch: Partial<LedgerEntry>) => void;
   deleteLedgerEntry: (id: string) => void;
-  addDecision: (entry: Omit<Decision, "id" | "createdAt">) => void;
+  addDecision: (
+    entry: Omit<Decision, "id" | "createdAt"> & { id?: string },
+  ) => void;
   updateDecision: (id: string, patch: Partial<Decision>) => void;
   deleteDecision: (id: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
@@ -68,6 +72,8 @@ type StoreContextValue = {
   exportJson: () => string;
   importJson: (text: string) => void;
   importHoldingsSnapshot: (snapshot: HoldingsSnapshot) => void;
+  importDecisionsMerge: (incoming: Decision[]) => void;
+  exportDecisionsJson: () => string;
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -89,6 +95,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const importJson = useCallback((text: string) => {
     replaceState(parseImportedState(text));
   }, []);
+  const exportDecisions = useCallback(
+    () => exportDecisionsJson(state.decisions),
+    [state.decisions],
+  );
 
   const value = useMemo(
     () => ({
@@ -109,8 +119,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       exportJson,
       importJson,
       importHoldingsSnapshot: importHoldingsSnapshotAction,
+      importDecisionsMerge: importDecisionsMergeAction,
+      exportDecisionsJson: exportDecisions,
     }),
-    [ready, epoch, state, exportJson, importJson],
+    [ready, epoch, state, exportJson, importJson, exportDecisions],
   );
 
   return (

@@ -1,4 +1,4 @@
-import type { Provenance, PositionStatus } from "@/lib/types";
+import type { DecisionStatus, Provenance, PositionStatus } from "@/lib/types";
 
 const provenanceStyles: Record<Provenance, string> = {
   verified:
@@ -48,6 +48,29 @@ export function SnapshotBadge() {
   return (
     <span className="badge border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]">
       Verified-from-snapshot
+    </span>
+  );
+}
+
+const decisionStatusStyles: Record<DecisionStatus, string> = {
+  decided:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+  pending:
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  superseded:
+    "border-[color:var(--muted)]/40 bg-[color:var(--surface-2)] text-[color:var(--muted)]",
+};
+
+const decisionStatusLabel: Record<DecisionStatus, string> = {
+  decided: "Decided",
+  pending: "Pending",
+  superseded: "Superseded",
+};
+
+export function DecisionStatusBadge({ value }: { value: DecisionStatus }) {
+  return (
+    <span className={`badge ${decisionStatusStyles[value]}`}>
+      {decisionStatusLabel[value]}
     </span>
   );
 }

@@ -1,3 +1,4 @@
+import { coerceStoredDecision, mergeDecisionsById } from "./decisions";
 import { createSeedState } from "./seed";
 import {
   STATE_VERSION,
@@ -161,15 +162,11 @@ function mergeLedger(raw: unknown, seed: LedgerEntry[]): LedgerEntry[] {
 
 function mergeDecisions(raw: unknown, seed: Decision[]): Decision[] {
   if (!Array.isArray(raw)) return seed;
-  return raw.filter(isRecord).map((item, index) => ({
-    id: asString(item.id, `dec-${index}`),
-    question: asString(item.question, ""),
-    options: asString(item.options, ""),
-    status: item.status === "decided" ? "decided" : "pending",
-    decision: asString(item.decision, ""),
-    date: asString(item.date, ""),
-    createdAt: asString(item.createdAt, ""),
-  }));
+  const stored = raw
+    .map((item, index) => coerceStoredDecision(item, index))
+    .filter((item): item is Decision => item !== null);
+  // Stored rows win on ID. Seed fills official record-book IDs a browser is missing.
+  return mergeDecisionsById(seed, stored);
 }
 
 function mergeSettings(raw: unknown, seed: Settings): Settings {
