@@ -30,12 +30,16 @@ function localOnly(): Decision {
     id: "dec-local-keep",
     date: "2026-09-10",
     question: "Operator-only row that must survive merge.",
+    proposal: "",
     options: "Keep · Drop",
     status: "pending",
     decision: "",
     rationale: "",
+    authorizedBy: "",
+    outcome: "",
     evidence: "",
     reviewTrigger: "",
+    fingerprint: null,
     createdAt: "2026-09-10T12:00:00.000Z",
   };
 }
@@ -63,6 +67,10 @@ describe("decisions example + seed", () => {
     const autonomy = imported.decisions.find((row) => row.id === "D-2026-09-11-04");
     assert.match(autonomy?.decision ?? "", /Agentic account only/i);
     assert.match(autonomy?.decision ?? "", /off-limits/);
+    assert.equal(flatten?.authorizedBy, "Andres López");
+    assert.match(flatten?.outcome ?? "", /queued ≠ filled|Queued ≠ filled/);
+    assert.equal(flatten?.fingerprint, null);
+    assert.match(buys?.outcome ?? "", /No fill recorded yet/);
   });
 
   it("matches the in-memory locked records used by seed", () => {
@@ -74,9 +82,13 @@ describe("decisions example + seed", () => {
       assert.equal(row?.question, locked.question);
       assert.equal(row?.decision, locked.decision);
       assert.equal(row?.status, locked.status);
+      assert.equal(row?.proposal, locked.proposal);
       assert.equal(row?.rationale, locked.rationale);
+      assert.equal(row?.authorizedBy, locked.authorizedBy);
+      assert.equal(row?.outcome, locked.outcome);
       assert.equal(row?.evidence, locked.evidence);
       assert.equal(row?.reviewTrigger, locked.reviewTrigger);
+      assert.equal(row?.fingerprint, locked.fingerprint);
     }
   });
 
@@ -163,14 +175,23 @@ describe("decisions merge by ID", () => {
           {
             id: "D-2026-09-12-02",
             question: "Alias fields?",
+            proposed: "Use aliases.",
             founderDecision: "Yes.",
+            why: "Hub payloads vary.",
+            authorized_by: "Andres López",
+            receipt: "chat-lock-12",
             review_trigger: "If aliases disappear.",
           },
         ],
       }),
     );
+    assert.equal(imported.decisions[0]?.proposal, "Use aliases.");
     assert.equal(imported.decisions[0]?.decision, "Yes.");
+    assert.equal(imported.decisions[0]?.rationale, "Hub payloads vary.");
+    assert.equal(imported.decisions[0]?.authorizedBy, "Andres López");
+    assert.equal(imported.decisions[0]?.evidence, "chat-lock-12");
     assert.equal(imported.decisions[0]?.reviewTrigger, "If aliases disappear.");
+    assert.equal(imported.decisions[0]?.fingerprint, null);
   });
 });
 

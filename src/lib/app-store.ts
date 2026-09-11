@@ -120,9 +120,13 @@ export function addDecision(
   const full: Decision = {
     ...entry,
     id,
+    proposal: entry.proposal ?? "",
     rationale: entry.rationale ?? "",
+    authorizedBy: entry.authorizedBy ?? "",
+    outcome: entry.outcome ?? "",
     evidence: entry.evidence ?? "",
     reviewTrigger: entry.reviewTrigger ?? "",
+    fingerprint: entry.fingerprint ?? null,
     createdAt: new Date().toISOString(),
   };
   update((current) => {

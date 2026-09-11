@@ -95,13 +95,29 @@ export interface Decision {
   /** Durable record-book ID, e.g. D-2026-09-11-01. Merge key for hub import. */
   id: string;
   question: string;
+  /** What was proposed (the specific action on the table). */
+  proposal: string;
   options: string;
   status: DecisionStatus;
-  /** Founder decision / the call. */
+  /** Founder decision / the call. Not the same as outcome. */
   decision: string;
+  /** Why the call was made. */
   rationale: string;
+  /** Who authorized the call. */
+  authorizedBy: string;
+  /**
+   * What actually happened. Distinct from proposal and from the call.
+   * Queued / approved orders are not fills.
+   */
+  outcome: string;
+  /** Supporting receipt: order ids, quotes, links, screenshot refs. */
   evidence: string;
   reviewTrigger: string;
+  /**
+   * Reserved for a later shared-DB / on-chain fingerprint (hash of the
+   * public record; sensitive details stay off-chain). Unused in Phase Zero.
+   */
+  fingerprint: string | null;
   date: string;
   createdAt: string;
 }

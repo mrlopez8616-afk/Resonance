@@ -38,12 +38,16 @@ export const DECISIONS_IMPORT_HELP = `{
       "id": "D-2026-09-11-01",
       "date": "2026-09-11",
       "question": "What has to be decided?",
+      "proposal": "The specific action proposed",
       "options": "A · B · C",
       "decision": "The founder call",
       "rationale": "Why this call",
-      "evidence": "What was on the table",
+      "authorizedBy": "Andres López",
+      "outcome": "What actually happened — queued ≠ filled",
+      "evidence": "Receipt: order ids, quotes, links, screenshot refs",
       "reviewTrigger": "What would reopen it",
-      "status": "decided"
+      "status": "decided",
+      "fingerprint": null
     }
   ]
 }`;
@@ -54,6 +58,7 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     date: "2026-09-11",
     question:
       "Flatten Robinhood physical learning lots, or keep the Monday market sells?",
+    proposal: "Flatten RH physical learning lots tonight.",
     options:
       "Flatten all RH physical lots tonight · KEEP Monday market sells on CEG/ETN/PWR/GEV/HUBB/VRT · Flatten some, keep others",
     status: "decided",
@@ -61,16 +66,21 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
       "KEEP Monday market sells on CEG/ETN/PWR/GEV/HUBB/VRT. Do not flatten the physical learning lots tonight.",
     rationale:
       "Learning lots stay on the board as funded Robinhood physicals. Monday open sells are the written exit. Flattening tonight would erase the live experiment before the planned market action.",
+    authorizedBy: "Andres López",
+    outcome:
+      "Call locked. Monday market sells are queued — not filled. Queued ≠ filled.",
     evidence:
       "Robinhood holdings snapshot of CEG/ETN/PWR/GEV/HUBB/VRT learning lots; Monday sell instructions already locked for market open.",
     reviewTrigger:
       "After Monday session — confirm fills, leftover quantity, and whether any ticker should remain a funded node.",
+    fingerprint: null,
     createdAt: "2026-09-11T22:10:00.000Z",
   },
   {
     id: "D-2026-09-11-02",
     date: "2026-09-11",
     question: "Lock the Phase Zero Agentic charter for Robinhood Ops?",
+    proposal: "Lock the Phase Zero Agentic charter (constrained agent).",
     options:
       "Lock charter (constrained agent) · Delay · Unlock full autonomy now",
     status: "superseded",
@@ -78,10 +88,14 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
       "Lock the Phase Zero Agentic charter. Agentic may operate only inside the written charter. Later superseded by D-2026-09-11-04 for trading autonomy — keep this row as the historical lock.",
     rationale:
       "Phase Zero stays human-governed. A written charter is the record before any agentic trading. This lock is the original call; D-2026-09-11-04 is the later autonomy unlock.",
+    authorizedBy: "Andres López",
+    outcome:
+      "Charter was locked, then superseded by D-2026-09-11-04 for trading autonomy. Kept as historical record. No trades executed from this row.",
     evidence:
       "Phase Zero human-governed scope; Resonance web app does not execute trades; hub/chat charter text.",
     reviewTrigger:
       "Superseded by D-2026-09-11-04. Re-open only if the charter itself is rewritten.",
+    fingerprint: null,
     createdAt: "2026-09-11T22:40:00.000Z",
   },
   {
@@ -89,22 +103,28 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     date: "2026-09-11",
     question:
       "Approve Agentic buys of PWR $35 and VRT $17 at Monday open?",
+    proposal: "Agentic PWR $35 + VRT $17 at Monday open.",
     options:
       "Approve both · Approve PWR only · Approve VRT only · Reject · Delay",
     status: "decided",
     decision: "Approve Agentic PWR $35 + VRT $17 Monday open.",
     rationale:
       "Sized, named, Monday-open entries. Does not tap Main or Xaman treasury principal. Sits on top of D-2026-09-11-01 (learning lots / Monday sells stay).",
+    authorizedBy: "Andres López",
+    outcome:
+      "Approved and queued for Monday open. No fill recorded yet — queued ≠ filled.",
     evidence:
       "Written size ($35 PWR, $17 VRT); Agentic Robinhood Ops only; Monday open timing.",
     reviewTrigger:
       "After Monday open — confirm fills, residual cash, and whether either ticker needs a new decision.",
+    fingerprint: null,
     createdAt: "2026-09-11T23:05:00.000Z",
   },
   {
     id: "D-2026-09-11-04",
     date: "2026-09-11",
     question: "Unlock full Agentic autonomy for Robinhood Ops?",
+    proposal: "Unlock FULL Agentic autonomy for Robinhood Ops (Agentic only).",
     options:
       "Unlock full Agentic autonomy (Agentic only) · Keep D-2026-09-11-02 charter · Unlock including Main/Xaman (rejected)",
     status: "decided",
@@ -112,10 +132,14 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
       "Unlock FULL Agentic autonomy for Robinhood Ops. Agentic account only. Main + Xaman treasury principal remain off-limits.",
     rationale:
       "Trading autonomy is granted to Agentic only. This supersedes D-2026-09-11-02 for trading autonomy. It does not authorize spending Xaman treasury principal or the founder Main account.",
+    authorizedBy: "Andres López",
+    outcome:
+      "Autonomy unlocked for Agentic Robinhood Ops only. No Main or Xaman principal movement. No on-chain write.",
     evidence:
       "Founder lock tonight; Phase Zero Web2 record only — no wallet signing, no on-chain write.",
     reviewTrigger:
       "Any proposed touch of Main or Xaman treasury principal; material Agentic loss; or a new written charter.",
+    fingerprint: null,
     createdAt: "2026-09-11T23:25:00.000Z",
   },
 ];
@@ -161,18 +185,25 @@ export function normalizeDecision(
   return {
     id,
     question,
+    proposal: asString(raw.proposal, asString(raw.proposed, "")).trim(),
     options: asString(raw.options, "").trim(),
     status: parseDecisionStatus(raw.status),
     decision: asString(
       raw.decision,
       asString(raw.founderDecision, asString(raw.founder_decision, "")),
     ).trim(),
-    rationale: asString(raw.rationale, "").trim(),
-    evidence: asString(raw.evidence, "").trim(),
+    rationale: asString(raw.rationale, asString(raw.why, "")).trim(),
+    authorizedBy: asString(
+      raw.authorizedBy,
+      asString(raw.authorized_by, asString(raw.authorizer, "")),
+    ).trim(),
+    outcome: asString(raw.outcome, "").trim(),
+    evidence: asString(raw.evidence, asString(raw.receipt, "")).trim(),
     reviewTrigger: asString(
       raw.reviewTrigger,
       asString(raw.review_trigger, ""),
     ).trim(),
+    fingerprint: parseFingerprint(raw.fingerprint),
     date: asString(raw.date, "").trim(),
     createdAt: asString(raw.createdAt, fallbackCreatedAt),
   };
@@ -188,15 +219,22 @@ export function coerceStoredDecision(
   return {
     id,
     question: asString(raw.question, ""),
+    proposal: asString(raw.proposal, asString(raw.proposed, "")),
     options: asString(raw.options, ""),
     status: parseDecisionStatus(raw.status),
     decision: asString(raw.decision, ""),
-    rationale: asString(raw.rationale, ""),
-    evidence: asString(raw.evidence, ""),
+    rationale: asString(raw.rationale, asString(raw.why, "")),
+    authorizedBy: asString(
+      raw.authorizedBy,
+      asString(raw.authorized_by, asString(raw.authorizer, "")),
+    ),
+    outcome: asString(raw.outcome, ""),
+    evidence: asString(raw.evidence, asString(raw.receipt, "")),
     reviewTrigger: asString(
       raw.reviewTrigger,
       asString(raw.review_trigger, ""),
     ),
+    fingerprint: parseFingerprint(raw.fingerprint),
     date: asString(raw.date, ""),
     createdAt: asString(raw.createdAt, ""),
   };
@@ -256,15 +294,45 @@ export function normalizeDecisionsImport(raw: unknown): DecisionsImport {
   };
 }
 
+export function parseFingerprint(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export function emptyDecisionFields(): Pick<
+  Decision,
+  | "proposal"
+  | "rationale"
+  | "authorizedBy"
+  | "outcome"
+  | "evidence"
+  | "reviewTrigger"
+  | "fingerprint"
+> {
+  return {
+    proposal: "",
+    rationale: "",
+    authorizedBy: "",
+    outcome: "",
+    evidence: "",
+    reviewTrigger: "",
+    fingerprint: null,
+  };
+}
+
 export function decisionContentEqual(a: Decision, b: Decision): boolean {
   return (
     a.question === b.question &&
+    a.proposal === b.proposal &&
     a.options === b.options &&
     a.status === b.status &&
     a.decision === b.decision &&
     a.rationale === b.rationale &&
+    a.authorizedBy === b.authorizedBy &&
+    a.outcome === b.outcome &&
     a.evidence === b.evidence &&
     a.reviewTrigger === b.reviewTrigger &&
+    a.fingerprint === b.fingerprint &&
     a.date === b.date
   );
 }

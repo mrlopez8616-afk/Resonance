@@ -12,17 +12,21 @@ import type { Decision, DecisionStatus } from "@/lib/types";
 
 const STATUS_OPTIONS: DecisionStatus[] = ["pending", "decided", "superseded"];
 
-function emptyDraft(date: string, id: string): Draft {
+function emptyDraft(date: string, id: string, authorizedBy = ""): Draft {
   return {
     id,
     date,
     question: "",
+    proposal: "",
     options: "",
     status: "pending",
     decision: "",
     rationale: "",
+    authorizedBy,
+    outcome: "",
     evidence: "",
     reviewTrigger: "",
+    fingerprint: null,
   };
 }
 
@@ -40,6 +44,7 @@ export default function DecisionsPage() {
   const [draft, setDraft] = useState<Draft>(() =>
     emptyDraft(todayIsoDate(), ""),
   );
+  const operatorName = state.settings.operatorName;
   const [error, setError] = useState<string | null>(null);
   const [idTouched, setIdTouched] = useState(false);
 
@@ -68,15 +73,19 @@ export default function DecisionsPage() {
       addDecision({
         id: newId,
         question: draft.question.trim(),
+        proposal: draft.proposal.trim(),
         options: draft.options.trim(),
         status: draft.status,
         decision: draft.decision.trim(),
         rationale: draft.rationale.trim(),
+        authorizedBy: draft.authorizedBy.trim() || operatorName,
+        outcome: draft.outcome.trim(),
         evidence: draft.evidence.trim(),
         reviewTrigger: draft.reviewTrigger.trim(),
+        fingerprint: null,
         date: draft.date || todayIsoDate(),
       });
-      setDraft(emptyDraft(todayIsoDate(), ""));
+      setDraft(emptyDraft(todayIsoDate(), "", operatorName));
       setIdTouched(false);
       setError(null);
     } catch (caught) {
@@ -107,7 +116,7 @@ export default function DecisionsPage() {
       <PageHeader
         kicker="Record Book"
         title="Decisions"
-        description="Phase Zero durable log for Andres López. Hub records structured entries; import/merge keeps chat and this site aligned. On-chain / XRS recording is later — Web2 only. Nothing here executes or signs."
+        description="Phase Zero durable log for Andres López. Each row records what was proposed, why, who authorized, the call, what actually happened (queued ≠ filled), and a receipt. Hub merges by ID. On-chain fingerprint comes later — Web2 only."
         actions={
           <button
             type="button"
@@ -122,8 +131,8 @@ export default function DecisionsPage() {
       <div className="notice notice-warn mb-8">
         <p className="font-medium text-[color:var(--text)]">
           This is the OS record book. Each row is a dated ID with the question,
-          options, founder decision, rationale, evidence, review trigger, and
-          status.
+          proposal, options, founder decision, why, who authorized, outcome,
+          receipt, review trigger, and status.
         </p>
         <p className="mt-2">
           Merge from hub JSON by decision ID. Unrelated local entries are not
@@ -170,6 +179,16 @@ export default function DecisionsPage() {
             />
           </Field>
         </div>
+        <div className="lg:col-span-2">
+          <Field label="Proposal" hint="The specific action on the table. Distinct from the founder call and from the outcome.">
+            <input
+              className="input"
+              value={draft.proposal}
+              onChange={(event) => patchDraft({ proposal: event.target.value })}
+              placeholder="What was proposed?"
+            />
+          </Field>
+        </div>
         <Field label="Options">
           <input
             className="input"
@@ -197,17 +216,27 @@ export default function DecisionsPage() {
             ))}
           </select>
         </Field>
+        <Field label="Who authorized">
+          <input
+            className="input"
+            value={draft.authorizedBy}
+            onChange={(event) =>
+              patchDraft({ authorizedBy: event.target.value })
+            }
+            placeholder={operatorName || "Andres López"}
+          />
+        </Field>
         <div className="lg:col-span-2">
           <Field label="Founder decision">
             <textarea
               className="textarea"
               value={draft.decision}
               onChange={(event) => patchDraft({ decision: event.target.value })}
-              placeholder="The call."
+              placeholder="The call — not the fill."
             />
           </Field>
         </div>
-        <Field label="Rationale">
+        <Field label="Why">
           <textarea
             className="textarea"
             value={draft.rationale}
@@ -215,12 +244,23 @@ export default function DecisionsPage() {
             placeholder="Why this call."
           />
         </Field>
-        <Field label="Evidence">
+        <Field
+          label="Outcome"
+          hint="What actually happened. A queued or approved order is not a fill."
+        >
+          <textarea
+            className="textarea"
+            value={draft.outcome}
+            onChange={(event) => patchDraft({ outcome: event.target.value })}
+            placeholder="Queued ≠ filled."
+          />
+        </Field>
+        <Field label="Evidence / receipt">
           <textarea
             className="textarea"
             value={draft.evidence}
             onChange={(event) => patchDraft({ evidence: event.target.value })}
-            placeholder="What was on the table."
+            placeholder="Order ids, quotes, links, screenshot refs."
           />
         </Field>
         <div className="lg:col-span-2">
@@ -314,6 +354,15 @@ function DecisionCard({
           }
         />
       </Field>
+      <Field label="Proposal">
+        <input
+          className="input"
+          value={item.proposal}
+          onChange={(event) =>
+            onUpdate(item.id, { proposal: event.target.value })
+          }
+        />
+      </Field>
       <Field label="Options">
         <input
           className="input"
@@ -342,17 +391,28 @@ function DecisionCard({
           />
         </Field>
       </div>
-      <Field label="Founder decision">
-        <textarea
-          className="textarea"
-          value={item.decision}
-          onChange={(event) =>
-            onUpdate(item.id, { decision: event.target.value })
-          }
-        />
-      </Field>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Field label="Rationale">
+        <Field label="Who authorized">
+          <input
+            className="input"
+            value={item.authorizedBy}
+            onChange={(event) =>
+              onUpdate(item.id, { authorizedBy: event.target.value })
+            }
+          />
+        </Field>
+        <Field label="Founder decision">
+          <textarea
+            className="textarea"
+            value={item.decision}
+            onChange={(event) =>
+              onUpdate(item.id, { decision: event.target.value })
+            }
+          />
+        </Field>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Field label="Why">
           <textarea
             className="textarea"
             value={item.rationale}
@@ -361,16 +421,28 @@ function DecisionCard({
             }
           />
         </Field>
-        <Field label="Evidence">
+        <Field
+          label="Outcome"
+          hint="What actually happened. Queued ≠ filled."
+        >
           <textarea
             className="textarea"
-            value={item.evidence}
+            value={item.outcome}
             onChange={(event) =>
-              onUpdate(item.id, { evidence: event.target.value })
+              onUpdate(item.id, { outcome: event.target.value })
             }
           />
         </Field>
       </div>
+      <Field label="Evidence / receipt">
+        <textarea
+          className="textarea"
+          value={item.evidence}
+          onChange={(event) =>
+            onUpdate(item.id, { evidence: event.target.value })
+          }
+        />
+      </Field>
       <Field label="Review trigger">
         <input
           className="input"

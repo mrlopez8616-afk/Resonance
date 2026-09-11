@@ -127,8 +127,11 @@ export function DecisionsImportPanel() {
           Decisions JSON schema
         </summary>
         <p className="mt-3 text-sm text-[color:var(--muted)]">
-          Merge key is <span className="font-mono">id</span>. A bare array of
-          records is also accepted. Status: pending · decided · superseded.
+          Merge key is <span className="font-mono">id</span>. Required story:
+          proposal, why, who authorized, outcome (queued ≠ filled), receipt.
+          <span className="font-mono"> fingerprint</span> is reserved and unused.
+          A bare array of records is also accepted. Status: pending · decided ·
+          superseded.
         </p>
         <pre className="mt-3 overflow-x-auto text-xs leading-5 text-[color:var(--muted)]">
           {DECISIONS_IMPORT_HELP}
