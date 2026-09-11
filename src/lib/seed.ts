@@ -19,6 +19,12 @@ function node(
     status,
     manualPriceUsd: null,
     manualPriceUpdatedAt: null,
+    quantity: null,
+    averageCost: null,
+    venue: "",
+    lastSyncedAt: null,
+    syncSource: null,
+    holdingsNote: "",
     links,
   };
 }
@@ -37,6 +43,13 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
       updatedAt: now,
     },
     venues: [
+      {
+        id: "venue-robinhood",
+        name: "Robinhood",
+        role: "Fractional equities + small XRP bag",
+        notes:
+          "Founder main account. Physical nodes as fractional shares. Robinhood XRP is a separate bag from the Xaman treasury. Resonance does not call Robinhood — paste a JSON snapshot from Grok Bot.",
+      },
       {
         id: "venue-coinbase",
         name: "Coinbase",

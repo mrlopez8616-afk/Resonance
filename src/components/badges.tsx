@@ -43,3 +43,11 @@ export function ClassBadge({ value }: { value: "digital" | "physical" }) {
     </span>
   );
 }
+
+export function SnapshotBadge() {
+  return (
+    <span className="badge border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]">
+      Verified-from-snapshot
+    </span>
+  );
+}

@@ -6,7 +6,8 @@ import { EmptyState, PageHeader } from "@/components/page-header";
 import { NodePriceCell, Stat } from "@/components/ui";
 import { usePrices } from "@/context/prices";
 import { useStore } from "@/context/store";
-import { formatUsd, formatUnits } from "@/lib/format";
+import { formatHoldingAmount, formatTimestamp, formatUsd, formatUnits } from "@/lib/format";
+import { hasHoldings, latestHoldingsSync } from "@/lib/holdings-snapshot";
 import { sortLedger } from "@/lib/ledger";
 import { xrpUsdRate } from "@/lib/valuation";
 
@@ -30,6 +31,7 @@ export default function OverviewPage() {
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
     .slice(0, 3);
   const lastClaims = sortLedger(state.ledger).slice(0, 3);
+  const holdingsSync = latestHoldingsSync(state.nodes);
 
   if (!ready) {
     return <p className="text-sm text-[color:var(--muted)]">Loading local books…</p>;
@@ -100,6 +102,14 @@ export default function OverviewPage() {
         />
       </div>
 
+      {holdingsSync ? (
+        <p className="mb-8 text-sm text-[color:var(--muted)]">
+          Holdings last synced {formatTimestamp(holdingsSync.at)} from{" "}
+          <span className="font-mono">{holdingsSync.source}</span>. Pasted JSON
+          snapshot — not a live Robinhood link.
+        </p>
+      ) : null}
+
       <section className="card mb-8">
         <p className="kicker">Operating priority</p>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[color:var(--text)]">
@@ -123,6 +133,12 @@ export default function OverviewPage() {
                   <p className="mt-1 text-sm text-[color:var(--muted)]">
                     {node.name}
                   </p>
+                  {hasHoldings(node) ? (
+                    <p className="mt-2 font-mono text-xs tabular-nums text-[color:var(--muted)]">
+                      {formatHoldingAmount(node.quantity)}
+                      {node.venue ? ` · ${node.venue}` : ""}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <StatusBadge value={node.status} />

@@ -1,10 +1,12 @@
 import { applyLedgerToTreasury, roundUnits } from "./ledger";
+import { applyHoldingsSnapshot } from "./holdings-snapshot";
 import { createSeedState } from "./seed";
 import { loadState, saveState } from "./storage";
 import { newId } from "./format";
 import type {
   AppState,
   Decision,
+  HoldingsSnapshot,
   LedgerEntry,
   Node,
   Settings,
@@ -151,4 +153,8 @@ export function resetToSeed() {
 
 export function replaceState(next: AppState) {
   setSnapshot(next, true);
+}
+
+export function importHoldingsSnapshot(snapshot: HoldingsSnapshot) {
+  setSnapshot(applyHoldingsSnapshot(getAppSnapshot(), snapshot), true);
 }

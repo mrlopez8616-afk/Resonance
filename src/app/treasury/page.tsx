@@ -87,7 +87,7 @@ export default function TreasuryPage() {
       <PageHeader
         kicker="Books"
         title="Treasury"
-        description="Working balance and the claim ledger are typed by you and stored in this browser — not an XRPL proof. Live XRP/USD is optional."
+        description="Working balance and the claim ledger are typed by you and stored in this browser — not an XRPL proof. Live XRP/USD is optional. Robinhood XRP is a separate node holding and does not live in this Xaman principal."
       />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">

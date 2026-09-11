@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
 import { PricesProvider } from "@/context/prices";
 import { StoreProvider } from "@/context/store";
+import { isGateEnabled } from "@/lib/app-gate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full">
         <StoreProvider>
           <PricesProvider>
-            <AppShell>{children}</AppShell>
+            <AppShell gateEnabled={isGateEnabled()}>{children}</AppShell>
           </PricesProvider>
         </StoreProvider>
       </body>

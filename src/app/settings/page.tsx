@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { HoldingsImportPanel } from "@/components/holdings-import";
 import { PageHeader } from "@/components/page-header";
 import { Field } from "@/components/ui";
 import { useStore } from "@/context/store";
 import { newId } from "@/lib/format";
+import { lockAppGate } from "@/lib/lock-gate";
 import type { Venue } from "@/lib/types";
 
 export default function SettingsPage() {
   const { ready, epoch } = useStore();
+  const [message, setMessage] = useState<string | null>(null);
 
   if (!ready) {
     return (
@@ -16,10 +20,18 @@ export default function SettingsPage() {
     );
   }
 
-  return <SettingsBody key={epoch} />;
+  return (
+    <SettingsBody key={epoch} message={message} setMessage={setMessage} />
+  );
 }
 
-function SettingsBody() {
+function SettingsBody({
+  message,
+  setMessage,
+}: {
+  message: string | null;
+  setMessage: (value: string | null) => void;
+}) {
   const {
     state,
     updateTreasury,
@@ -35,7 +47,23 @@ function SettingsBody() {
   const [youtube, setYoutube] = useState(state.settings.showYoutubeStub);
   const [venues, setLocalVenues] = useState<Venue[]>(state.venues);
   const [importText, setImportText] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [gateRequired, setGateRequired] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/gate")
+      .then((response) => response.json())
+      .then((body: { required?: boolean }) => {
+        if (!cancelled) setGateRequired(Boolean(body.required));
+      })
+      .catch(() => {
+        if (!cancelled) setGateRequired(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function saveIdentity(event: React.FormEvent) {
     event.preventDefault();
@@ -85,7 +113,7 @@ function SettingsBody() {
       <PageHeader
         kicker="Local"
         title="Settings"
-        description="Everything here lives in this browser’s localStorage. There is no account and no backend login in Phase Zero."
+        description="Operator defaults, venues, holdings snapshot import, and the session lock. Books still live in this browser’s localStorage."
       />
 
       <div className="notice notice-warn mb-8">
@@ -102,6 +130,39 @@ function SettingsBody() {
       {message ? (
         <p className="mb-6 text-sm text-[color:var(--accent)]">{message}</p>
       ) : null}
+
+      <section className="card mb-8 space-y-3">
+        <h2 className="text-lg">Session</h2>
+        {gateRequired ? (
+          <>
+            <p className="text-sm text-[color:var(--muted)]">
+              This browser is unlocked with an httpOnly cookie (about 14 days).
+              Locking sends you back to the password screen. The password itself
+              is not stored in the browser.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                void lockAppGate().then(() => {
+                  router.push("/unlock");
+                  router.refresh();
+                });
+              }}
+            >
+              Lock now
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-[color:var(--muted)]">
+            App gate is off in this environment. Set{" "}
+            <code className="font-mono text-xs">RESONANCE_APP_PASSWORD</code> on
+            the server to require Unlock. Do not put the password in
+            localStorage or a <code className="font-mono text-xs">NEXT_PUBLIC_</code>{" "}
+            variable.
+          </p>
+        )}
+      </section>
 
       <form className="card mb-8 space-y-4" onSubmit={saveIdentity}>
         <h2 className="text-lg">Operator</h2>
@@ -179,8 +240,8 @@ function SettingsBody() {
       <form className="card mb-8 space-y-4" onSubmit={saveVenues}>
         <h2 className="text-lg">Venues</h2>
         <p className="text-sm text-[color:var(--muted)]">
-          Seeded as Coinbase (general), Xaman (treasury), MetaMask (Flare DeFi
-          play — secondary).
+          Seeded as Robinhood (fractional equities + small XRP bag), Coinbase
+          (general), Xaman (treasury), MetaMask (Flare DeFi play — secondary).
         </p>
         <div className="space-y-4">
           {venues.map((venue, index) => (
@@ -249,6 +310,8 @@ function SettingsBody() {
           </button>
         </div>
       </form>
+
+      <HoldingsImportPanel onApplied={setMessage} />
 
       <section className="card mb-8 space-y-4">
         <h2 className="text-lg">Local snapshot</h2>

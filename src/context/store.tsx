@@ -26,11 +26,13 @@ import {
   updateNode as updateNodeAction,
   updateSettings as updateSettingsAction,
   updateTreasury as updateTreasuryAction,
+  importHoldingsSnapshot as importHoldingsSnapshotAction,
 } from "@/lib/app-store";
 import { exportState, parseImportedState } from "@/lib/storage";
 import type {
   AppState,
   Decision,
+  HoldingsSnapshot,
   LedgerEntry,
   Node,
   Settings,
@@ -65,6 +67,7 @@ type StoreContextValue = {
   resetToSeed: () => void;
   exportJson: () => string;
   importJson: (text: string) => void;
+  importHoldingsSnapshot: (snapshot: HoldingsSnapshot) => void;
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -105,6 +108,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resetToSeed: resetToSeedAction,
       exportJson,
       importJson,
+      importHoldingsSnapshot: importHoldingsSnapshotAction,
     }),
     [ready, epoch, state, exportJson, importJson],
   );

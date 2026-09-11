@@ -46,7 +46,38 @@ export interface Node {
   status: PositionStatus;
   manualPriceUsd: number | null;
   manualPriceUpdatedAt: string | null;
+  /** Fractional or whole size. String preserves snapshot precision. */
+  quantity: number | string | null;
+  /** Average cost per unit in USD. String preserves snapshot precision. */
+  averageCost: number | string | null;
+  /** Custody / brokerage venue for this node holding (not treasury). */
+  venue: string;
+  lastSyncedAt: string | null;
+  /** e.g. robinhood-snapshot. Never implies a live brokerage session. */
+  syncSource: string | null;
+  holdingsNote: string;
   links: NodeLink[];
+}
+
+export type SnapshotAssetClass = "equity" | "crypto";
+
+export type SnapshotHoldingTarget = "node" | "treasury";
+
+export interface HoldingsSnapshotHolding {
+  symbol: string;
+  assetClass?: SnapshotAssetClass | string;
+  quantity: number | string;
+  averageCost?: number | string;
+  venue?: string;
+  note?: string;
+  /** Default `node`. RH XRP must stay on the node, not Xaman treasury. */
+  target?: SnapshotHoldingTarget;
+}
+
+export interface HoldingsSnapshot {
+  asOf: string;
+  source: string;
+  holdings: HoldingsSnapshotHolding[];
 }
 
 export interface LedgerEntry {
