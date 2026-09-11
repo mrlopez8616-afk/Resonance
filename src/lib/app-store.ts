@@ -15,6 +15,7 @@ import type {
 const listeners = new Set<() => void>();
 let snapshot: AppState | null = null;
 let epoch = 0;
+const serverSnapshot: AppState = createSeedState();
 
 function emit() {
   for (const listener of listeners) listener();
@@ -26,13 +27,13 @@ export function subscribeAppStore(listener: () => void): () => void {
 }
 
 export function getAppSnapshot(): AppState {
-  if (typeof window === "undefined") return createSeedState();
+  if (typeof window === "undefined") return serverSnapshot;
   if (!snapshot) snapshot = loadState();
   return snapshot;
 }
 
 export function getServerAppSnapshot(): AppState {
-  return createSeedState();
+  return serverSnapshot;
 }
 
 export function getStoreEpoch(): number {
