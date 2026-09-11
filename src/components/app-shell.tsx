@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   BookMarked,
@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useStore } from "@/context/store";
+import { lockAppGate } from "@/lib/lock-gate";
 
 const NAV = [
   { href: "/", label: "Overview", icon: CircleGauge },
@@ -54,9 +55,27 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  gateEnabled,
+}: {
+  children: ReactNode;
+  gateEnabled: boolean;
+}) {
   const { state, ready } = useStore();
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  async function lockNow() {
+    await lockAppGate();
+    router.push("/unlock");
+    router.refresh();
+  }
+
+  if (pathname === "/unlock") {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-full lg:grid lg:grid-cols-[240px_1fr]">
@@ -81,6 +100,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="mt-3 text-[11px] leading-5 text-[color:var(--muted)]">
             Human-governed tracker. No keys. No signing. No on-chain writes.
           </p>
+          {gateEnabled ? (
+            <button
+              type="button"
+              className="btn btn-secondary mt-3 w-full"
+              onClick={() => void lockNow()}
+            >
+              Lock now
+            </button>
+          ) : null}
         </div>
       </aside>
 
@@ -102,9 +130,26 @@ export function AppShell({ children }: { children: ReactNode }) {
         {open ? (
           <div className="border-b border-[color:var(--border)] bg-[color:var(--bg-sidebar)] px-3 py-3 lg:hidden">
             <NavLinks onNavigate={() => setOpen(false)} />
+            {gateEnabled ? (
+              <button
+                type="button"
+                className="btn btn-secondary mt-3 w-full"
+                onClick={() => void lockNow()}
+              >
+                Lock now
+              </button>
+            ) : null}
           </div>
         ) : null}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          {gateEnabled ? null : (
+            <div className="notice notice-warn mb-8">
+              App password gate is off. Set{" "}
+              <code className="font-mono text-xs">RESONANCE_APP_PASSWORD</code>{" "}
+              in Vercel Project → Settings → Environment Variables and redeploy
+              before this board is public. Local/dev can leave it unset.
+            </div>
+          )}
           {children}
         </main>
       </div>

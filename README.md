@@ -13,7 +13,20 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Local/dev leaves the site gate off unless you set `RESONANCE_APP_PASSWORD` in `.env.local`.
+
+## Site password gate
+
+This is a **single-operator site lock**, not multi-user accounts. Vercel Deployment Protection is not used here.
+
+1. In the Vercel dashboard open the project → **Settings → Environment Variables**.
+2. Add `RESONANCE_APP_PASSWORD` (Production, and Preview if you want previews locked). Do **not** prefix it with `NEXT_PUBLIC_`.
+3. Redeploy so the server process sees the variable.
+4. Visiting the app shows **Unlock**. A correct password sets an **httpOnly** session cookie (~14 days). **Settings → Lock now** (and the sidebar button) clears it.
+
+If the variable is unset, the dashboard loads without a password and a banner says the gate is off. That is the local/dev default. **Production must set the env var.** The password is verified in a Route Handler; it is never written to `localStorage` or shipped in the client bundle.
+
+Copy [`.env.example`](.env.example) to `.env.local` if you want to try the gate locally. Choose the password offline — this repo does not include one.
 
 Production build:
 
@@ -38,7 +51,7 @@ No account, API key, or backend login is required for v0. App data is stored in 
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable name, thesis, failure condition, position status `none | watch | funded`, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
 - **Decisions** — question, options, pending/decided, date.
-- **Settings** — treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
+- **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
 
@@ -96,6 +109,7 @@ Resonance will not, in this phase or as a hidden control:
 - Treat a pasted snapshot as a live continuous brokerage feed
 - Overwrite Xaman treasury principal with Robinhood XRP
 - Fabricate prices when a feed is down
+- Offer multi-user accounts, email login, or Vercel Deployment Protection (the in-app password gate is a site lock only)
 
 The optional XRPL field is a public `r…` address only, stored locally, unused by Phase Zero besides persistence.
 
