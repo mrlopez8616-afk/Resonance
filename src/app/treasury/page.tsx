@@ -115,7 +115,7 @@ export default function TreasuryPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <WorkingBalanceForm key={epoch} />
+        <WorkingBalanceForm key={`${epoch}-${state.treasury.updatedAt}`} />
 
         <form className="card space-y-4" onSubmit={submitClaim}>
           <h2 className="text-lg">Add claim</h2>
