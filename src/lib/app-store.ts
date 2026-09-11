@@ -97,6 +97,19 @@ export function deleteLedgerEntry(id: string) {
   }));
 }
 
+export function updateLedgerEntry(id: string, patch: Partial<LedgerEntry>) {
+  update((current) => ({
+    ...current,
+    ledger: current.ledger.map((entry) => {
+      if (entry.id !== id) return entry;
+      const next = { ...entry, ...patch };
+      if (typeof patch.amount === "number") next.amount = roundUnits(patch.amount);
+      if (typeof patch.fee === "number") next.fee = roundUnits(patch.fee);
+      return next;
+    }),
+  }));
+}
+
 export function addDecision(entry: Omit<Decision, "id" | "createdAt">) {
   const full: Decision = {
     ...entry,

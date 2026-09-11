@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { applyLedgerToTreasury, balanceDelta, netAmount } from "./ledger";
 import { createSeedState } from "./seed";
+import { xrpUsdRate } from "./valuation";
 
 describe("ledger math", () => {
   it("nets amount minus fee", () => {
@@ -34,5 +35,36 @@ describe("ledger math", () => {
     });
     assert.equal(next.treasury.units, 26000.9);
     assert.equal(next.ledger.length, state.ledger.length + 1);
+  });
+});
+
+describe("manual-first valuation", () => {
+  it("does not invent an XRP/USD rate", () => {
+    assert.equal(xrpUsdRate(null, null), null);
+  });
+
+  it("prefers a live print over a typed rate", () => {
+    const rate = xrpUsdRate(1.39, 2);
+    assert.equal(rate?.usd, 1.39);
+    assert.equal(rate?.provenance, "verified");
+  });
+
+  it("uses a typed rate when no live print exists", () => {
+    const rate = xrpUsdRate(undefined, 1.4);
+    assert.equal(rate?.usd, 1.4);
+    assert.equal(rate?.provenance, "founder-reported");
+  });
+});
+
+describe("graph-ready node records", () => {
+  it("gives every node a stable id and a links array", () => {
+    const state = createSeedState();
+    assert.equal(state.nodes.length, 12);
+    for (const node of state.nodes) {
+      assert.ok(node.id.startsWith("node-"));
+      assert.ok(Array.isArray(node.links));
+    }
+    const xrp = state.nodes.find((node) => node.ticker === "XRP");
+    assert.ok(xrp?.links.some((link) => link.targetTicker === "FLR"));
   });
 });

@@ -8,18 +8,20 @@ import { usePrices } from "@/context/prices";
 import { useStore } from "@/context/store";
 import { formatUsd, formatUnits } from "@/lib/format";
 import { sortLedger } from "@/lib/ledger";
+import { xrpUsdRate } from "@/lib/valuation";
 
 export default function OverviewPage() {
   const { ready, state } = useStore();
   const { book, quoteFor } = usePrices();
   const xrp = quoteFor("XRP");
+  const rate = xrpUsdRate(xrp?.usd, state.treasury.manualUsdPerXrp);
   const treasuryUsd =
-    xrp && Number.isFinite(state.treasury.units)
-      ? state.treasury.units * xrp.usd
+    rate && Number.isFinite(state.treasury.units)
+      ? state.treasury.units * rate.usd
       : null;
   const dailyUsd =
-    xrp && Number.isFinite(state.treasury.estimatedDailyReward)
-      ? state.treasury.estimatedDailyReward * xrp.usd
+    rate && Number.isFinite(state.treasury.estimatedDailyReward)
+      ? state.treasury.estimatedDailyReward * rate.usd
       : null;
   const funded = state.nodes.filter((node) => node.status === "funded");
   const watch = state.nodes.filter((node) => node.status === "watch");
@@ -63,16 +65,18 @@ export default function OverviewPage() {
           label="Est. USD"
           value={formatUsd(treasuryUsd)}
           hint={
-            xrp ? (
+            rate ? (
               <span className="flex flex-wrap items-center gap-2">
-                <ProvenanceBadge value="verified" />
-                XRP {formatUsd(xrp.usd)} via {book.crypto.source ?? "live feed"}
+                <ProvenanceBadge value={rate.provenance} />
+                XRP {formatUsd(rate.usd)} · {rate.label}
+                {book.crypto.source && rate.provenance === "verified"
+                  ? ` (${book.crypto.source})`
+                  : ""}
               </span>
             ) : (
               <span>
-                {book.crypto.status === "error"
-                  ? "Live XRP price unavailable — USD not estimated."
-                  : "Waiting for a live XRP price. No placeholder used."}
+                No live XRP print and no manual XRP/USD. Type a rate on Treasury
+                if you want an estimate. Nothing is invented.
               </span>
             )
           }
@@ -85,8 +89,8 @@ export default function OverviewPage() {
           )}
           hint={
             dailyUsd !== null
-              ? `≈ ${formatUsd(dailyUsd)} / day at last live XRP print`
-              : "Founder-reported rate. Convert to USD when XRP prints."
+              ? `≈ ${formatUsd(dailyUsd)} / day at ${rate?.label ?? "last"} XRP print`
+              : "Founder-reported rate. Add a live or manual XRP/USD to convert."
           }
         />
         <Stat

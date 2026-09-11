@@ -34,8 +34,8 @@ No account, API key, or backend login is required for v0. App data is stored in 
 ## Phase Zero scope
 
 - **Overview** — treasury summary (units, estimated USD when a live XRP price exists, ~daily reward), node watch vs funded, last decisions, optional YouTube stub.
-- **Treasury** — editable working balance, reward/claim ledger (date, amount, fee, note, classification `principal | reward | fee | transfer`), persisted locally.
-- **Nodes** — twelve tracking slots (not proof of holdings): digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable thesis, failure condition, position status `none | watch | funded`, and a manual last price on every ticker.
+- **Treasury** — editable working balance, optional manual XRP/USD for estimates, reward/claim ledger you can add and edit in place (date, amount, fee, note, classification `principal | reward | fee | transfer`).
+- **Nodes** — twelve tracking slots (not proof of holdings): digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable name, thesis, failure condition, position status `none | watch | funded`, and a manual last price on every ticker. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
 - **Decisions** — question, options, pending/decided, date.
 - **Settings** — treasury defaults, venues, optional public XRPL address stored for a *future* read-only watch, JSON export/import, reset to seed.

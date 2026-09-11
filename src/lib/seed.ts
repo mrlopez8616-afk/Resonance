@@ -7,6 +7,7 @@ function node(
   status: Node["status"],
   thesis: string,
   failureCondition: string,
+  links: Node["links"] = [],
 ): Node {
   return {
     id: `node-${ticker.toLowerCase()}`,
@@ -18,6 +19,7 @@ function node(
     status,
     manualPriceUsd: null,
     manualPriceUpdatedAt: null,
+    links,
   };
 }
 
@@ -30,6 +32,7 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
       venue: "Xaman",
       locationNote: "Currently in a Flare vault",
       estimatedDailyReward: 1,
+      manualUsdPerXrp: null,
       provenance: "founder-reported",
       updatedAt: now,
     },
@@ -85,6 +88,13 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         "funded",
         "Operating treasury rail. Keep principal intact. Realized Flare-vault rewards may later fund other nodes.",
         "Reduce or exit the yield overlay if principal is at risk, rewards cannot be reconciled, or custody leaves Xaman/Flare undocumented.",
+        [
+          {
+            targetTicker: "FLR",
+            kind: "depends-on",
+            note: "Flare vault overlay for yield — secondary to XRP principal.",
+          },
+        ],
       ),
       node(
         "SUI",
@@ -101,6 +111,13 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         "watch",
         "Venue layer for XRP vault / DeFi yield. Secondary to treasury preservation. MetaMask is a play surface, not the books.",
         "Stop the overlay if yield requires locking principal on terms you cannot explain, or if FLR exposure becomes the position instead of XRP.",
+        [
+          {
+            targetTicker: "XRP",
+            kind: "related",
+            note: "Yield venue for the XRP treasury, not the books of record.",
+          },
+        ],
       ),
       node(
         "PWR",

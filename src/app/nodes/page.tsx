@@ -50,7 +50,7 @@ export default function NodesPage() {
 
       <div className="mb-6 flex flex-wrap gap-2 text-sm text-[color:var(--muted)]">
         <ProvenanceBadge value="unverified" />
-        <span>Thesis and failure conditions are operator stubs until you rewrite them.</span>
+        <span>Rewrite the name, thesis, failure condition, status, and last price. These are operator stubs until you say otherwise.</span>
       </div>
 
       <div className="grid gap-4">
@@ -83,6 +83,15 @@ export default function NodesPage() {
 
               {open ? (
                 <div className="mt-6 grid gap-4 border-t border-[color:var(--border)] pt-5 lg:grid-cols-2">
+                  <Field label="Display name">
+                    <input
+                      className="input"
+                      value={node.name}
+                      onChange={(event) =>
+                        updateNode(node.ticker, { name: event.target.value })
+                      }
+                    />
+                  </Field>
                   <Field label="Position status">
                     <select
                       className="select"

@@ -14,6 +14,8 @@ export interface Treasury {
   venue: string;
   locationNote: string;
   estimatedDailyReward: number;
+  /** Operator-typed XRP/USD. Used for Est. USD when no live print exists. Never fabricated. */
+  manualUsdPerXrp: number | null;
   provenance: Provenance;
   updatedAt: string;
 }
@@ -23,6 +25,15 @@ export interface Venue {
   name: string;
   role: string;
   notes: string;
+}
+
+export type NodeLinkKind = "funds" | "depends-on" | "related";
+
+/** Directed edge for a later systems map. Unused in Phase Zero UI. */
+export interface NodeLink {
+  targetTicker: string;
+  kind: NodeLinkKind;
+  note: string;
 }
 
 export interface Node {
@@ -35,6 +46,7 @@ export interface Node {
   status: PositionStatus;
   manualPriceUsd: number | null;
   manualPriceUpdatedAt: string | null;
+  links: NodeLink[];
 }
 
 export interface LedgerEntry {

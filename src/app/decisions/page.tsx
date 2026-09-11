@@ -57,7 +57,7 @@ export default function DecisionsPage() {
       <PageHeader
         kicker="Governance"
         title="Decisions"
-        description="A dated log of questions, options, and calls. Phase Zero is human-governed: nothing here executes."
+        description="A dated log of questions, options, and calls. Every field is typed by you. Phase Zero is human-governed: nothing here executes."
       />
 
       <form className="card mb-8 grid gap-4 lg:grid-cols-2" onSubmit={submit}>
@@ -144,12 +144,34 @@ export default function DecisionsPage() {
                   <option value="decided">Decided</option>
                 </select>
               </div>
-              <h2 className="text-base">{item.question}</h2>
-              {item.options ? (
-                <p className="text-sm text-[color:var(--muted)]">
-                  Options: {item.options}
-                </p>
-              ) : null}
+              <Field label="Question">
+                <input
+                  className="input"
+                  value={item.question}
+                  onChange={(event) =>
+                    updateDecision(item.id, { question: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Options">
+                <input
+                  className="input"
+                  value={item.options}
+                  onChange={(event) =>
+                    updateDecision(item.id, { options: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Date">
+                <input
+                  className="input"
+                  type="date"
+                  value={item.date}
+                  onChange={(event) =>
+                    updateDecision(item.id, { date: event.target.value })
+                  }
+                />
+              </Field>
               <Field label="Decision / notes">
                 <textarea
                   className="textarea"

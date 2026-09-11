@@ -13,6 +13,19 @@ export function NodePriceCell({
   live: Quote | null;
   liveStatus: "idle" | "loading" | "ok" | "error";
 }) {
+  if (node.manualPriceUsd !== null) {
+    return (
+      <div>
+        <p className="font-mono tabular-nums">
+          {formatUsd(node.manualPriceUsd)}
+        </p>
+        <p className="text-xs text-[color:var(--muted)]">
+          Manual · unverified
+          {live ? ` · live ${formatUsd(live.usd)}` : ""}
+        </p>
+      </div>
+    );
+  }
   if (live) {
     return (
       <div>
@@ -29,25 +42,12 @@ export function NodePriceCell({
       </div>
     );
   }
-  if (node.manualPriceUsd !== null) {
-    return (
-      <div>
-        <p className="font-mono tabular-nums">
-          {formatUsd(node.manualPriceUsd)}
-        </p>
-        <p className="text-xs text-[color:var(--muted)]">Manual · unverified</p>
-      </div>
-    );
-  }
   if (liveStatus === "loading" || liveStatus === "idle") {
-    return <p className="text-sm text-[color:var(--muted)]">Fetching…</p>;
+    return <p className="text-sm text-[color:var(--muted)]">Type a last price, or wait for a live feed</p>;
   }
-  if (node.class === "physical") {
-    return (
-      <p className="text-sm text-[color:var(--muted)]">No live feed</p>
-    );
-  }
-  return <p className="text-sm text-[color:var(--muted)]">Unavailable</p>;
+  return (
+    <p className="text-sm text-[color:var(--muted)]">Type a last price</p>
+  );
 }
 
 export function Field({

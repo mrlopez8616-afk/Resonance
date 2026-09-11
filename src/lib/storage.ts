@@ -10,6 +10,7 @@ import {
   type Treasury,
   type Venue,
 } from "./types";
+import { mergeLinks } from "./valuation";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -44,6 +45,12 @@ function mergeTreasury(raw: unknown, seed: Treasury): Treasury {
       raw.estimatedDailyReward,
       seed.estimatedDailyReward,
     ),
+    manualUsdPerXrp:
+      typeof raw.manualUsdPerXrp === "number" && Number.isFinite(raw.manualUsdPerXrp)
+        ? raw.manualUsdPerXrp
+        : raw.manualUsdPerXrp === null
+          ? null
+          : seed.manualUsdPerXrp,
     provenance,
     updatedAt: asString(raw.updatedAt, seed.updatedAt),
   };
@@ -81,6 +88,7 @@ function mergeNodes(raw: unknown, seed: Node[]): Node[] {
           item.failureCondition,
           fallback.failureCondition,
         ),
+        name: asString(item.name, fallback.name),
         status,
         manualPriceUsd:
           typeof item.manualPriceUsd === "number" &&
@@ -93,6 +101,7 @@ function mergeNodes(raw: unknown, seed: Node[]): Node[] {
           item.manualPriceUpdatedAt,
           fallback.manualPriceUpdatedAt ?? "",
         ) || null,
+        links: mergeLinks(item.links, fallback.links),
       });
     }
   }

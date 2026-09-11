@@ -22,6 +22,7 @@ import {
   setVenues as setVenuesAction,
   subscribeAppStore,
   updateDecision as updateDecisionAction,
+  updateLedgerEntry as updateLedgerEntryAction,
   updateNode as updateNodeAction,
   updateSettings as updateSettingsAction,
   updateTreasury as updateTreasuryAction,
@@ -55,6 +56,7 @@ type StoreContextValue = {
   setVenues: (venues: Venue[]) => void;
   updateNode: (ticker: string, patch: Partial<Node>) => void;
   addLedgerEntry: (entry: Omit<LedgerEntry, "id" | "createdAt">) => void;
+  updateLedgerEntry: (id: string, patch: Partial<LedgerEntry>) => void;
   deleteLedgerEntry: (id: string) => void;
   addDecision: (entry: Omit<Decision, "id" | "createdAt">) => void;
   updateDecision: (id: string, patch: Partial<Decision>) => void;
@@ -94,6 +96,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setVenues: setVenuesAction,
       updateNode: updateNodeAction,
       addLedgerEntry: addLedgerEntryAction,
+      updateLedgerEntry: updateLedgerEntryAction,
       deleteLedgerEntry: deleteLedgerEntryAction,
       addDecision: addDecisionAction,
       updateDecision: updateDecisionAction,

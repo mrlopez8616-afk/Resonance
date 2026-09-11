@@ -13,6 +13,7 @@ import {
   totalsByClassification,
 } from "@/lib/ledger";
 import type { LedgerClassification } from "@/lib/types";
+import { parseOptionalNumber, xrpUsdRate } from "@/lib/valuation";
 
 const CLASSES: LedgerClassification[] = [
   "principal",
@@ -22,7 +23,8 @@ const CLASSES: LedgerClassification[] = [
 ];
 
 export default function TreasuryPage() {
-  const { ready, epoch, state, addLedgerEntry, deleteLedgerEntry } = useStore();
+  const { ready, epoch, state, addLedgerEntry, updateLedgerEntry, deleteLedgerEntry } =
+    useStore();
   const { quoteFor, book } = usePrices();
   const xrp = quoteFor("XRP");
   const [date, setDate] = useState(todayIsoDate());
@@ -34,9 +36,10 @@ export default function TreasuryPage() {
   const [applyToBalance, setApplyToBalance] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const rate = xrpUsdRate(xrp?.usd, state.treasury.manualUsdPerXrp);
   const usd =
-    xrp && Number.isFinite(state.treasury.units)
-      ? state.treasury.units * xrp.usd
+    rate && Number.isFinite(state.treasury.units)
+      ? state.treasury.units * rate.usd
       : null;
   const totals = totalsByClassification(state.ledger);
   const rows = sortLedger(state.ledger);
@@ -84,7 +87,7 @@ export default function TreasuryPage() {
       <PageHeader
         kicker="Books"
         title="Treasury"
-        description="Working balance is operator-edited and stored in this browser. The ledger is a local claim log — not an XRPL proof."
+        description="Working balance and the claim ledger are typed by you and stored in this browser — not an XRPL proof. Live XRP/USD is optional."
       />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
@@ -102,9 +105,17 @@ export default function TreasuryPage() {
           label="Est. USD"
           value={formatUsd(usd)}
           hint={
-            xrp
-              ? `XRP ${formatUsd(xrp.usd)} · ${book.crypto.source}`
-              : "No live XRP print — USD left blank on purpose."
+            rate ? (
+              <span className="flex flex-wrap items-center gap-2">
+                <ProvenanceBadge value={rate.provenance} />
+                XRP {formatUsd(rate.usd)} · {rate.label}
+                {book.crypto.source && rate.provenance === "verified"
+                  ? ` (${book.crypto.source})`
+                  : ""}
+              </span>
+            ) : (
+              "No live XRP print and no manual XRP/USD — USD left blank on purpose."
+            )
           }
         />
         <Stat
@@ -196,7 +207,11 @@ export default function TreasuryPage() {
       </div>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg">Ledger</h2>
+        <h2 className="mb-1 text-lg">Ledger</h2>
+        <p className="mb-3 text-sm text-[color:var(--muted)]">
+          Edit any cell. Amount edits do not move working balance — type that
+          separately so the books stay honest.
+        </p>
         {rows.length === 0 ? (
           <EmptyState
             title="No ledger rows"
@@ -218,21 +233,70 @@ export default function TreasuryPage() {
               <tbody>
                 {rows.map((entry) => (
                   <tr key={entry.id}>
-                    <td className="whitespace-nowrap font-mono text-xs">
-                      {entry.date}
+                    <td>
+                      <input
+                        className="input font-mono text-xs"
+                        type="date"
+                        value={entry.date}
+                        onChange={(event) =>
+                          updateLedgerEntry(entry.id, { date: event.target.value })
+                        }
+                      />
                     </td>
-                    <td className="capitalize">{entry.classification}</td>
-                    <td className="font-mono tabular-nums">
-                      {formatUnits(entry.amount, "")}
+                    <td>
+                      <select
+                        className="select capitalize"
+                        value={entry.classification}
+                        onChange={(event) =>
+                          updateLedgerEntry(entry.id, {
+                            classification: event.target.value as LedgerClassification,
+                          })
+                        }
+                      >
+                        {CLASSES.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
                     </td>
-                    <td className="font-mono tabular-nums">
-                      {formatUnits(entry.fee, "")}
+                    <td>
+                      <input
+                        className="input font-mono"
+                        inputMode="decimal"
+                        key={`${entry.id}-amt-${entry.amount}`}
+                        defaultValue={String(entry.amount)}
+                        onBlur={(event) => {
+                          const value = Number(event.target.value);
+                          if (!Number.isFinite(value) || value < 0) return;
+                          updateLedgerEntry(entry.id, { amount: value });
+                        }}
+                      />
                     </td>
-                    <td className="max-w-md text-[color:var(--muted)]">
-                      {entry.note || "—"}
+                    <td>
+                      <input
+                        className="input font-mono"
+                        inputMode="decimal"
+                        key={`${entry.id}-fee-${entry.fee}`}
+                        defaultValue={String(entry.fee)}
+                        onBlur={(event) => {
+                          const value = Number(event.target.value);
+                          if (!Number.isFinite(value) || value < 0) return;
+                          updateLedgerEntry(entry.id, { fee: value });
+                        }}
+                      />
+                    </td>
+                    <td className="min-w-[12rem]">
+                      <input
+                        className="input"
+                        value={entry.note}
+                        onChange={(event) =>
+                          updateLedgerEntry(entry.id, { note: event.target.value })
+                        }
+                      />
                       {entry.applyToBalance ? (
                         <span className="mt-1 block text-xs text-[color:var(--accent)]">
-                          Applied to working balance
+                          Applied to working balance on create — later edits do not re-move units. Adjust working balance by hand if needed.
                         </span>
                       ) : null}
                     </td>
@@ -262,6 +326,11 @@ function WorkingBalanceForm() {
   const [daily, setDaily] = useState(String(state.treasury.estimatedDailyReward));
   const [venue, setVenue] = useState(state.treasury.venue);
   const [location, setLocation] = useState(state.treasury.locationNote);
+  const [manualUsd, setManualUsd] = useState(
+    state.treasury.manualUsdPerXrp === null
+      ? ""
+      : String(state.treasury.manualUsdPerXrp),
+  );
 
   function saveBalance(event: React.FormEvent) {
     event.preventDefault();
@@ -274,6 +343,7 @@ function WorkingBalanceForm() {
       estimatedDailyReward: nextDaily,
       venue: venue.trim() || state.treasury.venue,
       locationNote: location.trim() || state.treasury.locationNote,
+      manualUsdPerXrp: parseOptionalNumber(manualUsd),
       provenance: "founder-reported",
     });
   }
@@ -313,6 +383,18 @@ function WorkingBalanceForm() {
           className="input"
           value={location}
           onChange={(event) => setLocation(event.target.value)}
+        />
+      </Field>
+      <Field
+        label="Manual XRP/USD (optional)"
+        hint="Used for Est. USD only when no live print exists. Leave blank rather than guessing."
+      >
+        <input
+          className="input font-mono"
+          inputMode="decimal"
+          value={manualUsd}
+          onChange={(event) => setManualUsd(event.target.value)}
+          placeholder="Leave blank"
         />
       </Field>
       <button className="btn btn-primary" type="submit">
