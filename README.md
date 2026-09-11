@@ -42,7 +42,7 @@ npm run lint
 npm test
 ```
 
-No account, API key, or backend login is required for v0. App data is stored in `localStorage` under `resonance.phase-zero.v1`. First load is seeded with founder-reported sample data so the board is not empty.
+No user accounts or API keys are required. Production should lock the site with `RESONANCE_APP_PASSWORD` (see above). App data is stored in `localStorage` under `resonance.phase-zero.v1`. First load is seeded with founder-reported sample data so the board is not empty.
 
 ## Phase Zero scope
 
