@@ -31,7 +31,7 @@ export default function NodesPage() {
       <PageHeader
         kicker="Board"
         title="Nodes"
-        description="Twelve tracking slots — not proof of holdings. Digital names are crypto tickers. Physical names are US equity tickers. Theses are editable stubs."
+        description="Twelve tracking slots — not proof of holdings. Digital names are crypto tickers. Physical names are US equity tickers. Thesis, failure condition, status, and a manual last price are typed by you and stored in this browser. Live prints are optional."
         actions={
           <div className="flex gap-2">
             {(["all", "digital", "physical"] as const).map((item) => (
@@ -100,45 +100,37 @@ export default function NodesPage() {
                       ))}
                     </select>
                   </Field>
-                  {node.class === "physical" ? (
-                    <Field
-                      label="Manual last price (USD)"
-                      hint="Used only when no live equity feed is available. Never mixed with fabricated quotes."
-                    >
-                      <input
-                        className="input font-mono"
-                        inputMode="decimal"
-                        placeholder="Leave blank"
-                        defaultValue={
-                          node.manualPriceUsd === null
-                            ? ""
-                            : String(node.manualPriceUsd)
-                        }
-                        onBlur={(event) => {
-                          const raw = event.target.value.trim();
-                          if (!raw) {
-                            updateNode(node.ticker, {
-                              manualPriceUsd: null,
-                              manualPriceUpdatedAt: null,
-                            });
-                            return;
-                          }
-                          const value = Number(raw);
-                          if (!Number.isFinite(value) || value < 0) return;
+                  <Field
+                    label="Manual last price (USD)"
+                    hint="Typed by you and stored locally. Shown when no live feed is available. Live prints never overwrite this field."
+                  >
+                    <input
+                      className="input font-mono"
+                      inputMode="decimal"
+                      placeholder="Leave blank"
+                      defaultValue={
+                        node.manualPriceUsd === null
+                          ? ""
+                          : String(node.manualPriceUsd)
+                      }
+                      onBlur={(event) => {
+                        const raw = event.target.value.trim();
+                        if (!raw) {
                           updateNode(node.ticker, {
-                            manualPriceUsd: value,
-                            manualPriceUpdatedAt: new Date().toISOString(),
+                            manualPriceUsd: null,
+                            manualPriceUpdatedAt: null,
                           });
-                        }}
-                      />
-                    </Field>
-                  ) : (
-                    <div className="text-sm text-[color:var(--muted)]">
-                      Digital last price comes from the public crypto feed when
-                      it is up. Failures show as unavailable — never a made-up
-                      number.
-                    </div>
-                  )}
+                          return;
+                        }
+                        const value = Number(raw);
+                        if (!Number.isFinite(value) || value < 0) return;
+                        updateNode(node.ticker, {
+                          manualPriceUsd: value,
+                          manualPriceUpdatedAt: new Date().toISOString(),
+                        });
+                      }}
+                    />
+                  </Field>
                   <Field label="Thesis (editable stub)">
                     <textarea
                       className="textarea"

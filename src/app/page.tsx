@@ -38,12 +38,14 @@ export default function OverviewPage() {
       <PageHeader
         kicker="Home"
         title="Overview"
-        description={`${state.settings.operatorName}'s Phase Zero board. Figures below are founder-reported until a read-only feed verifies them.`}
+        description={`${state.settings.operatorName}'s Phase Zero board. Type the books by hand. Live prices are optional. Figures are founder-reported until a read-only feed verifies them.`}
       />
 
       <div className="notice notice-warn mb-8">
-        Phase Zero is human-governed. Resonance does not import seeds, request
-        private keys, sign transactions, launch tokens, or write on-chain.
+        Phase Zero is human-governed and manual-first. You type treasury,
+        claims, theses, and decisions. Resonance does not import seeds, request
+        private keys, sign transactions, launch tokens, or write on-chain. Live
+        market prints are optional and never invented when a feed is down.
       </div>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

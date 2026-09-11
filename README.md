@@ -2,7 +2,7 @@
 
 Phase Zero personal operating dashboard for founder **Andres López**.
 
-A single-user Web2 tracker for treasury, nodes, decisions, and rewards. It is the first piece of an eventual larger OS. Phase Zero is **human-governed**: you enter figures, you make calls, the app remembers them in the browser.
+A single-user Web2 tracker for treasury, nodes, decisions, and rewards. It is the first piece of an eventual larger OS. Phase Zero is **human-governed** and **manual-first**: you type the books so you learn the operating system. Live prices are optional. The app remembers everything in the browser.
 
 ## Run locally
 
@@ -35,8 +35,8 @@ No account, API key, or backend login is required for v0. App data is stored in 
 
 - **Overview** — treasury summary (units, estimated USD when a live XRP price exists, ~daily reward), node watch vs funded, last decisions, optional YouTube stub.
 - **Treasury** — editable working balance, reward/claim ledger (date, amount, fee, note, classification `principal | reward | fee | transfer`), persisted locally.
-- **Nodes** — twelve tracking slots (not proof of holdings): digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable thesis, failure condition, position status `none | watch | funded`.
-- **Prices** — public crypto quotes (CoinGecko, Binance fallback). Equities from public unofficial feeds when they respond; otherwise a visible **no live feed** state and manual entry. Failed fetches never show invented numbers.
+- **Nodes** — twelve tracking slots (not proof of holdings): digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable thesis, failure condition, position status `none | watch | funded`, and a manual last price on every ticker.
+- **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
 - **Decisions** — question, options, pending/decided, date.
 - **Settings** — treasury defaults, venues, optional public XRPL address stored for a *future* read-only watch, JSON export/import, reset to seed.
 
@@ -75,10 +75,11 @@ Server route: `GET /api/prices` (60s cache). Quotes that cannot be fetched are o
 
 ## Next steps (not in this PR)
 
-1. **Read-only XRPL address watch** — use the stored public address to verify XRP balance and incoming payments. Still no keys.
+1. **Read-only XRPL address watch** — use the stored public address to verify XRP balance and incoming payments. Still no keys. Manual books remain the source of truth until a print is verified.
 2. **Coinbase export import** — parse a statement/CSV into the ledger instead of typing claims.
 3. **Equity price source** — a key-backed vendor (or a documented unpaid source that actually stays up from a datacenter) so physical nodes are not dependent on unofficial Yahoo/Stooq.
-4. Drop the YouTube stub when a real publishing cadence exists.
+4. **Systems map** — a later world-view of nodes (Factorio-style). Not in this MVP; tickers already carry class, thesis, failure condition, and status so a graph can sit on top later.
+5. Drop the YouTube stub when a real publishing cadence exists.
 
 ## Stack
 

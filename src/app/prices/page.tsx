@@ -24,7 +24,7 @@ export default function PricesPage() {
       <PageHeader
         kicker="Market"
         title="Prices"
-        description="Live prints are fetched from public APIs through this app’s server. If a feed fails, the cell stays blank. Nothing here is a trading signal."
+        description="Live prints are optional. The books stay useful if every feed is down: type a last price on Nodes. Failed fetches stay blank — nothing is invented."
         actions={
           <button
             type="button"
@@ -59,7 +59,7 @@ export default function PricesPage() {
         {book.crypto.status === "error" ? (
           <div className="notice notice-warn mb-4">
             Crypto feed failed. {book.crypto.error} No fallback numbers were
-            invented.
+            invented. Type a last price on Nodes if you need a working figure.
           </div>
         ) : null}
         <QuoteTable
@@ -102,10 +102,10 @@ export default function PricesPage() {
           failed={book.equities.status === "error"}
           nodes={state.nodes}
         />
-        {book.equities.status === "error" ? (
+        {book.crypto.status === "error" || book.equities.status === "error" ? (
           <EmptyState
             title="Manual entry is the honest fallback"
-            body="Open Nodes, expand a physical ticker, and type a last price. It is stored locally and labeled unverified."
+            body="Open Nodes, expand a ticker, and type a last price. It is stored locally and labeled unverified. The rest of the board does not wait on this feed."
           />
         ) : null}
       </section>
