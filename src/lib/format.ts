@@ -42,6 +42,35 @@ export function formatDate(value: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+export function formatTimestamp(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "Z");
+}
+
+export function holdingToNumber(
+  value: number | string | null | undefined,
+): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function formatHoldingAmount(
+  value: number | string | null | undefined,
+): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || "—";
+  }
+  return formatNumber(value, {
+    maximumFractionDigits: 8,
+    minimumFractionDigits: 0,
+  });
+}
+
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }

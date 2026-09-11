@@ -63,6 +63,11 @@ describe("graph-ready node records", () => {
     for (const node of state.nodes) {
       assert.ok(node.id.startsWith("node-"));
       assert.ok(Array.isArray(node.links));
+      assert.equal(node.quantity, null);
+      assert.equal(node.averageCost, null);
+      assert.equal(node.venue, "");
+      assert.equal(node.lastSyncedAt, null);
+      assert.equal(node.syncSource, null);
     }
     const xrp = state.nodes.find((node) => node.ticker === "XRP");
     assert.ok(xrp?.links.some((link) => link.targetTicker === "FLR"));

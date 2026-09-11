@@ -1,0 +1,55 @@
+{
+  "asOf": "2026-09-11T16:10:00Z",
+  "source": "robinhood",
+  "holdings": [
+    {
+      "symbol": "CEG",
+      "assetClass": "equity",
+      "quantity": "0.027002",
+      "averageCost": "259.61",
+      "venue": "Robinhood"
+    },
+    {
+      "symbol": "ETN",
+      "assetClass": "equity",
+      "quantity": "0.041504",
+      "averageCost": "410.08",
+      "venue": "Robinhood"
+    },
+    {
+      "symbol": "PWR",
+      "assetClass": "equity",
+      "quantity": "0.070066",
+      "averageCost": "627.98",
+      "venue": "Robinhood"
+    },
+    {
+      "symbol": "GEV",
+      "assetClass": "equity",
+      "quantity": "0.030763",
+      "averageCost": "944.64",
+      "venue": "Robinhood"
+    },
+    {
+      "symbol": "HUBB",
+      "assetClass": "equity",
+      "quantity": "0.010088",
+      "averageCost": "470.86",
+      "venue": "Robinhood"
+    },
+    {
+      "symbol": "VRT",
+      "assetClass": "equity",
+      "quantity": "0.019260",
+      "averageCost": "259.61",
+      "venue": "Robinhood"
+    },
+    {
+      "symbol": "XRP",
+      "assetClass": "crypto",
+      "quantity": "69.169",
+      "venue": "Robinhood",
+      "note": "Separate from Xaman treasury. Cost basis ~18.85 USD on 16.334 direct qty; remainder may be transfers."
+    }
+  ]
+}

@@ -66,6 +66,24 @@ function mergeVenues(raw: unknown, seed: Venue[]): Venue[] {
   }));
 }
 
+function mergeHoldingAmount(
+  value: unknown,
+  fallback: number | string | null,
+): number | string | null {
+  if (value === null) return null;
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+    return value;
+  }
+  return fallback;
+}
+
 function mergeNodes(raw: unknown, seed: Node[]): Node[] {
   const byTicker = new Map<string, Node>();
   for (const node of seed) byTicker.set(node.ticker, node);
@@ -101,6 +119,15 @@ function mergeNodes(raw: unknown, seed: Node[]): Node[] {
           item.manualPriceUpdatedAt,
           fallback.manualPriceUpdatedAt ?? "",
         ) || null,
+        quantity: mergeHoldingAmount(item.quantity, fallback.quantity),
+        averageCost: mergeHoldingAmount(item.averageCost, fallback.averageCost),
+        venue: asString(item.venue, fallback.venue),
+        lastSyncedAt: asString(
+          item.lastSyncedAt,
+          fallback.lastSyncedAt ?? "",
+        ) || null,
+        syncSource: asString(item.syncSource, fallback.syncSource ?? "") || null,
+        holdingsNote: asString(item.holdingsNote, fallback.holdingsNote),
         links: mergeLinks(item.links, fallback.links),
       });
     }

@@ -1,17 +1,53 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClassBadge, ProvenanceBadge, StatusBadge } from "@/components/badges";
+import Link from "next/link";
+import {
+  ClassBadge,
+  ProvenanceBadge,
+  SnapshotBadge,
+  StatusBadge,
+} from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
 import { Field, NodePriceCell } from "@/components/ui";
 import { usePrices } from "@/context/prices";
 import { useStore } from "@/context/store";
-import type { AssetClass, PositionStatus } from "@/lib/types";
+import { formatHoldingAmount, formatUsd, holdingToNumber } from "@/lib/format";
+import { hasHoldings } from "@/lib/holdings-snapshot";
+import type { AssetClass, Node, PositionStatus } from "@/lib/types";
 
 const STATUSES: PositionStatus[] = ["none", "watch", "funded"];
 
+function parseEditableAmount(raw: string): number | string | null | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0) return undefined;
+  return trimmed;
+}
+
+function HoldingsLine({ node }: { node: Node }) {
+  if (!hasHoldings(node) && !node.venue) return null;
+  const avg = holdingToNumber(node.averageCost);
+  return (
+    <p className="mt-2 text-sm text-[color:var(--muted)]">
+      {hasHoldings(node) ? (
+        <>
+          <span className="font-mono tabular-nums">
+            {formatHoldingAmount(node.quantity)}
+          </span>
+          {avg !== null ? <> @ {formatUsd(avg)} avg</> : null}
+        </>
+      ) : (
+        "No quantity"
+      )}
+      {node.venue ? ` · ${node.venue}` : ""}
+    </p>
+  );
+}
+
 export default function NodesPage() {
-  const { ready, state, updateNode } = useStore();
+  const { ready, epoch, state, updateNode } = useStore();
   const { book, quoteFor } = usePrices();
   const [filter, setFilter] = useState<"all" | AssetClass>("all");
   const [openTicker, setOpenTicker] = useState<string | null>("XRP");
@@ -31,9 +67,12 @@ export default function NodesPage() {
       <PageHeader
         kicker="Board"
         title="Nodes"
-        description="Twelve tracking slots — not proof of holdings. Digital names are crypto tickers. Physical names are US equity tickers. Thesis, failure condition, status, and a manual last price are typed by you and stored in this browser. Live prints are optional."
+        description="Twelve tracking slots. Paste a Grok Bot / Robinhood JSON snapshot in Settings to fill quantity, average cost, and venue. Thesis and failure condition stay yours to edit. This is still not a live brokerage feed."
         actions={
           <div className="flex gap-2">
+            <Link href="/settings" className="btn btn-secondary">
+              Import snapshot
+            </Link>
             {(["all", "digital", "physical"] as const).map((item) => (
               <button
                 key={item}
@@ -50,7 +89,11 @@ export default function NodesPage() {
 
       <div className="mb-6 flex flex-wrap gap-2 text-sm text-[color:var(--muted)]">
         <ProvenanceBadge value="unverified" />
-        <span>Rewrite the name, thesis, failure condition, status, and last price. These are operator stubs until you say otherwise.</span>
+        <span>
+          Rewrite name, thesis, failure condition, status, last price, and any
+          imported holding. Snapshot imports show as founder-reported and
+          verified-from-snapshot.
+        </span>
       </div>
 
       <div className="grid gap-4">
@@ -59,6 +102,7 @@ export default function NodesPage() {
           const liveStatus =
             node.class === "digital" ? book.crypto.status : book.equities.status;
           const open = openTicker === node.ticker;
+          const fromSnapshot = Boolean(node.syncSource && node.lastSyncedAt);
           return (
             <article key={node.ticker} className="card">
               <button
@@ -73,16 +117,33 @@ export default function NodesPage() {
                     <h2 className="font-mono text-lg">{node.ticker}</h2>
                     <ClassBadge value={node.class} />
                     <StatusBadge value={node.status} />
+                    {fromSnapshot ? (
+                      <>
+                        <ProvenanceBadge value="founder-reported" />
+                        <SnapshotBadge />
+                      </>
+                    ) : hasHoldings(node) ? (
+                      <ProvenanceBadge value="founder-reported" />
+                    ) : null}
                   </div>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">
                     {node.name}
                   </p>
+                  <HoldingsLine node={node} />
+                  {node.holdingsNote ? (
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">
+                      {node.holdingsNote}
+                    </p>
+                  ) : null}
                 </div>
                 <NodePriceCell node={node} live={live} liveStatus={liveStatus} />
               </button>
 
               {open ? (
-                <div className="mt-6 grid gap-4 border-t border-[color:var(--border)] pt-5 lg:grid-cols-2">
+                <div
+                  key={`${node.ticker}-${epoch}`}
+                  className="mt-6 grid gap-4 border-t border-[color:var(--border)] pt-5 lg:grid-cols-2"
+                >
                   <Field label="Display name">
                     <input
                       className="input"
@@ -108,6 +169,60 @@ export default function NodesPage() {
                         </option>
                       ))}
                     </select>
+                  </Field>
+                  <Field
+                    label="Quantity"
+                    hint="Fractional shares or units. Type over a snapshot at any time."
+                  >
+                    <input
+                      className="input font-mono"
+                      inputMode="decimal"
+                      placeholder="Leave blank"
+                      defaultValue={
+                        node.quantity === null || node.quantity === undefined
+                          ? ""
+                          : String(node.quantity)
+                      }
+                      onBlur={(event) => {
+                        const next = parseEditableAmount(event.target.value);
+                        if (next === undefined) return;
+                        updateNode(node.ticker, { quantity: next });
+                      }}
+                    />
+                  </Field>
+                  <Field
+                    label="Average cost (USD)"
+                    hint="Per-unit cost basis. Optional."
+                  >
+                    <input
+                      className="input font-mono"
+                      inputMode="decimal"
+                      placeholder="Leave blank"
+                      defaultValue={
+                        node.averageCost === null ||
+                        node.averageCost === undefined
+                          ? ""
+                          : String(node.averageCost)
+                      }
+                      onBlur={(event) => {
+                        const next = parseEditableAmount(event.target.value);
+                        if (next === undefined) return;
+                        updateNode(node.ticker, { averageCost: next });
+                      }}
+                    />
+                  </Field>
+                  <Field
+                    label="Venue"
+                    hint="Robinhood, Xaman, Coinbase, MetaMask, or another custody label."
+                  >
+                    <input
+                      className="input"
+                      value={node.venue}
+                      onChange={(event) =>
+                        updateNode(node.ticker, { venue: event.target.value })
+                      }
+                      placeholder="e.g. Robinhood"
+                    />
                   </Field>
                   <Field
                     label="Manual last price (USD)"
@@ -162,6 +277,27 @@ export default function NodesPage() {
                       }
                     />
                   </Field>
+                  <Field
+                    label="Holdings note"
+                    hint="e.g. Robinhood XRP is separate from Xaman treasury."
+                  >
+                    <textarea
+                      className="textarea"
+                      value={node.holdingsNote}
+                      onChange={(event) =>
+                        updateNode(node.ticker, {
+                          holdingsNote: event.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                  {fromSnapshot ? (
+                    <p className="text-xs text-[color:var(--muted)] lg:col-span-2">
+                      Last snapshot {node.lastSyncedAt} via {node.syncSource}.
+                      Still founder-reported / verified-from-snapshot — not a
+                      live Robinhood session.
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <p className="mt-4 line-clamp-2 text-sm text-[color:var(--muted)]">

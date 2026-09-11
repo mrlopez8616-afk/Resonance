@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HoldingsImportPanel } from "@/components/holdings-import";
 import { PageHeader } from "@/components/page-header";
 import { Field } from "@/components/ui";
 import { useStore } from "@/context/store";
@@ -9,6 +10,7 @@ import type { Venue } from "@/lib/types";
 
 export default function SettingsPage() {
   const { ready, epoch } = useStore();
+  const [message, setMessage] = useState<string | null>(null);
 
   if (!ready) {
     return (
@@ -16,10 +18,18 @@ export default function SettingsPage() {
     );
   }
 
-  return <SettingsBody key={epoch} />;
+  return (
+    <SettingsBody key={epoch} message={message} setMessage={setMessage} />
+  );
 }
 
-function SettingsBody() {
+function SettingsBody({
+  message,
+  setMessage,
+}: {
+  message: string | null;
+  setMessage: (value: string | null) => void;
+}) {
   const {
     state,
     updateTreasury,
@@ -35,7 +45,6 @@ function SettingsBody() {
   const [youtube, setYoutube] = useState(state.settings.showYoutubeStub);
   const [venues, setLocalVenues] = useState<Venue[]>(state.venues);
   const [importText, setImportText] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
 
   function saveIdentity(event: React.FormEvent) {
     event.preventDefault();
@@ -179,8 +188,8 @@ function SettingsBody() {
       <form className="card mb-8 space-y-4" onSubmit={saveVenues}>
         <h2 className="text-lg">Venues</h2>
         <p className="text-sm text-[color:var(--muted)]">
-          Seeded as Coinbase (general), Xaman (treasury), MetaMask (Flare DeFi
-          play — secondary).
+          Seeded as Robinhood (fractional equities + small XRP bag), Coinbase
+          (general), Xaman (treasury), MetaMask (Flare DeFi play — secondary).
         </p>
         <div className="space-y-4">
           {venues.map((venue, index) => (
@@ -249,6 +258,8 @@ function SettingsBody() {
           </button>
         </div>
       </form>
+
+      <HoldingsImportPanel onApplied={setMessage} />
 
       <section className="card mb-8 space-y-4">
         <h2 className="text-lg">Local snapshot</h2>
