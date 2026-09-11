@@ -1,0 +1,135 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import {
+  BookMarked,
+  CircleGauge,
+  Landmark,
+  Menu,
+  Radio,
+  Settings2,
+  Table2,
+  X,
+} from "lucide-react";
+import { useStore } from "@/context/store";
+
+const NAV = [
+  { href: "/", label: "Overview", icon: CircleGauge },
+  { href: "/treasury", label: "Treasury", icon: Landmark },
+  { href: "/nodes", label: "Nodes", icon: Table2 },
+  { href: "/prices", label: "Prices", icon: Radio },
+  { href: "/decisions", label: "Decisions", icon: BookMarked },
+  { href: "/settings", label: "Settings", icon: Settings2 },
+];
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  return (
+    <nav className="flex flex-col gap-1">
+      {NAV.map((item) => {
+        const active =
+          item.href === "/"
+            ? pathname === "/"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+              active
+                ? "bg-[color:var(--surface-2)] text-[color:var(--text)]"
+                : "text-[color:var(--muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--text)]"
+            }`}
+          >
+            <Icon size={16} strokeWidth={1.6} />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const { state, ready } = useStore();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="min-h-full lg:grid lg:grid-cols-[240px_1fr]">
+      <aside className="hidden border-r border-[color:var(--border)] bg-[color:var(--bg-sidebar)] lg:flex lg:flex-col">
+        <div className="px-5 py-6">
+          <div className="flex items-center gap-3">
+            <ResonanceMark />
+            <div>
+              <p className="text-sm font-medium tracking-wide">Resonance</p>
+              <p className="kicker mt-0.5">Phase Zero</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-3">
+          <NavLinks />
+        </div>
+        <div className="mt-auto border-t border-[color:var(--border)] px-5 py-4">
+          <p className="kicker">Operator</p>
+          <p className="mt-1 text-sm text-[color:var(--text)]">
+            {ready ? state.settings.operatorName : "—"}
+          </p>
+          <p className="mt-3 text-[11px] leading-5 text-[color:var(--muted)]">
+            Human-governed tracker. No keys. No signing. No on-chain writes.
+          </p>
+        </div>
+      </aside>
+
+      <div className="flex min-h-full flex-col">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[color:var(--border)] bg-[color:var(--bg)]/90 px-4 py-3 backdrop-blur lg:hidden">
+          <div className="flex items-center gap-2">
+            <ResonanceMark />
+            <span className="text-sm font-medium">Resonance</span>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary px-2 py-1.5"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </header>
+        {open ? (
+          <div className="border-b border-[color:var(--border)] bg-[color:var(--bg-sidebar)] px-3 py-3 lg:hidden">
+            <NavLinks onNavigate={() => setOpen(false)} />
+          </div>
+        ) : null}
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function ResonanceMark() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--accent)]/40 text-[color:var(--accent)]"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="2" fill="currentColor" />
+        <circle cx="8" cy="8" r="5" stroke="currentColor" strokeWidth="1" />
+        <circle
+          cx="8"
+          cy="8"
+          r="7.25"
+          stroke="currentColor"
+          strokeWidth="0.75"
+          opacity="0.45"
+        />
+      </svg>
+    </span>
+  );
+}

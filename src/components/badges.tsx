@@ -1,0 +1,45 @@
+import type { Provenance, PositionStatus } from "@/lib/types";
+
+const provenanceStyles: Record<Provenance, string> = {
+  verified:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+  "founder-reported":
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  unverified:
+    "border-[color:var(--border)] bg-[color:var(--surface-2)] text-[color:var(--muted)]",
+};
+
+const provenanceLabel: Record<Provenance, string> = {
+  verified: "Verified",
+  "founder-reported": "Founder-reported",
+  unverified: "Unverified",
+};
+
+const statusStyles: Record<PositionStatus, string> = {
+  none: "border-[color:var(--border)] text-[color:var(--muted)]",
+  watch:
+    "border-[color:var(--accent-2)]/35 bg-[color:var(--accent-2)]/10 text-[color:var(--accent-2)]",
+  funded:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+};
+
+export function ProvenanceBadge({ value }: { value: Provenance }) {
+  return (
+    <span className={`badge ${provenanceStyles[value]}`}>
+      {provenanceLabel[value]}
+    </span>
+  );
+}
+
+export function StatusBadge({ value }: { value: PositionStatus }) {
+  const label = value === "none" ? "None" : value === "watch" ? "Watch" : "Funded";
+  return <span className={`badge ${statusStyles[value]}`}>{label}</span>;
+}
+
+export function ClassBadge({ value }: { value: "digital" | "physical" }) {
+  return (
+    <span className="badge border-[color:var(--border)] text-[color:var(--muted)]">
+      {value === "digital" ? "Digital" : "Physical"}
+    </span>
+  );
+}
