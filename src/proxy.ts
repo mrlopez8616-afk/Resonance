@@ -6,7 +6,16 @@ import {
   verifyGateToken,
 } from "@/lib/app-gate";
 
-const PUBLIC_PATHS = new Set(["/unlock", "/api/gate"]);
+const PUBLIC_PATHS = new Set([
+  "/unlock",
+  "/api/gate",
+  "/api/health",
+  "/api/public",
+]);
+
+function isDecisionSyncApi(pathname: string): boolean {
+  return pathname === "/api/decisions" || pathname.startsWith("/api/decisions/");
+}
 
 export function proxy(request: NextRequest) {
   const password = getAppPassword();
@@ -27,7 +36,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/api/gate")) {
+  if (
+    PUBLIC_PATHS.has(pathname) ||
+    pathname.startsWith("/api/gate") ||
+    isDecisionSyncApi(pathname)
+  ) {
     return NextResponse.next();
   }
 

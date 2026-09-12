@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
@@ -17,6 +18,7 @@ import {
   getServerAppSnapshot,
   getServerStoreEpoch,
   getStoreEpoch,
+  mergeDecisionsFromServer,
   replaceState,
   resetToSeed as resetToSeedAction,
   setVenues as setVenuesAction,
@@ -30,6 +32,7 @@ import {
   importDecisionsMerge as importDecisionsMergeAction,
   importTreasuryLedgerMerge as importTreasuryLedgerMergeAction,
 } from "@/lib/app-store";
+import { hydrateDecisionsFromServer } from "@/lib/decisions-client-sync";
 import { exportDecisionsJson } from "@/lib/decisions";
 import { exportState, parseImportedState } from "@/lib/storage";
 import { exportTreasuryLedgerJson } from "@/lib/treasury-ledger";
@@ -97,6 +100,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     getStoreEpoch,
     getServerStoreEpoch,
   );
+
+  useEffect(() => {
+    if (!ready) return;
+    void hydrateDecisionsFromServer(mergeDecisionsFromServer);
+  }, [ready]);
 
   const exportJson = useCallback(() => exportState(state), [state]);
   const importJson = useCallback((text: string) => {

@@ -1,4 +1,4 @@
-import type { AppState, Node } from "./types";
+import type { AppState, Decision, Node } from "./types";
 
 export interface PublicNode {
   ticker: string;
@@ -36,28 +36,36 @@ export function redactPublicMemoText(text: string): string {
     .replace(/\b\d{4,}(?:\.\d+)?\s*XRP\b/gi, "[units omitted]");
 }
 
+export function toPublicNodes(nodes: Node[]): PublicNode[] {
+  return nodes.map((node) => ({
+    ticker: node.ticker,
+    name: node.name,
+    class: node.class,
+    publicAllocationPct: node.publicAllocationPct,
+  }));
+}
+
+export function toPublicDecisions(decisions: Decision[]): PublicDecision[] {
+  return decisions.map((row) => ({
+    id: row.id,
+    date: row.date,
+    question: redactPublicMemoText(row.question),
+    status: row.status,
+    attestationStatus: row.attestationStatus,
+    fingerprint: row.fingerprint,
+    hederaMessageId: row.hederaMessageId,
+    attestedAt: row.attestedAt,
+    memoHash: row.hederaMessageId ?? row.fingerprint,
+    memoAt: row.attestedAt,
+  }));
+}
+
 /** Shareable skeleton — no dollars, no exact XRP, no RH quantities. */
 export function toPublicSkeleton(state: AppState): PublicSkeleton {
   return {
     omitDryPowder: true,
-    nodes: state.nodes.map((node) => ({
-      ticker: node.ticker,
-      name: node.name,
-      class: node.class,
-      publicAllocationPct: node.publicAllocationPct,
-    })),
-    decisions: state.decisions.map((row) => ({
-      id: row.id,
-      date: row.date,
-      question: redactPublicMemoText(row.question),
-      status: row.status,
-      attestationStatus: row.attestationStatus,
-      fingerprint: row.fingerprint,
-      hederaMessageId: row.hederaMessageId,
-      attestedAt: row.attestedAt,
-      memoHash: row.hederaMessageId ?? row.fingerprint,
-      memoAt: row.attestedAt,
-    })),
+    nodes: toPublicNodes(state.nodes),
+    decisions: toPublicDecisions(state.decisions),
   };
 }
 
