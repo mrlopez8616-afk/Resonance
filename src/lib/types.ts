@@ -91,6 +91,7 @@ export interface LedgerEntry {
   createdAt: string;
 }
 
+/** Phase Zero record-book row. Doctrine: docs/recording-pipeline.md */
 export interface Decision {
   /** Durable record-book ID, e.g. D-2026-09-11-01. Merge key for hub import. */
   id: string;

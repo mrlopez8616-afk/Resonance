@@ -72,6 +72,8 @@ A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` �
 
 Import/merge is the Phase Zero bridge from hub/chat. Fields are shaped so a later shared DB and an on-chain fingerprint (hash of the public record; sensitive details off-chain) can plug in without a schema rewrite. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
 
+Recording-pipeline doctrine (future sensor path, public channel vs gated amounts, export → XRPL/XRS): [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
+
 ## Holdings snapshot sync (Robinhood)
 
 Resonance **cannot** call Robinhood. There is no OAuth, no brokerage API key, and no auto-trade in this app.
