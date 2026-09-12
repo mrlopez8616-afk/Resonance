@@ -90,6 +90,12 @@ export function DecisionAttestPanel({
         <p className="text-sm text-[color:var(--muted)]">
           Checking Hedera Testnet configuration…
         </p>
+      ) : !configured && alreadyAttested ? (
+        <p className="text-sm text-[color:var(--muted)]">
+          Live re-attest needs{" "}
+          <span className="font-mono text-xs">HEDERA_OPERATOR_KEY</span> on
+          Vercel (server-only — never paste that key into chat).
+        </p>
       ) : !configured ? (
         <p className="text-sm text-[color:var(--muted)]">
           Hedera Testnet submit is off until you set{" "}
