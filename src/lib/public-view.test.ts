@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createSeedState } from "./seed";
+import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 import {
   publishedAllocationSum,
   redactPublicMemoText,
+  toPublicDecisions,
   toPublicSkeleton,
 } from "./public-view";
 
@@ -40,5 +42,21 @@ describe("public skeleton", () => {
       redactPublicMemoText("Approve PWR $35 and 27,772 XRP"),
       "Approve PWR [size omitted] and [units omitted]",
     );
+  });
+
+  it("public API shape never includes outcomes, evidence, or dollar sizes", () => {
+    const filled = LOCKED_DECISIONS_2026_09_11.map((row) =>
+      row.id === "D-2026-09-11-03"
+        ? { ...row, outcome: "PWR $35 and VRT $17 FILLED at Monday open." }
+        : row,
+    );
+    const pub = toPublicDecisions(filled);
+    const blob = JSON.stringify(pub);
+    assert.ok(!blob.includes("$35"));
+    assert.ok(!blob.includes("FILLED"));
+    assert.ok(!/"outcome"/.test(blob));
+    assert.ok(!/"evidence"/.test(blob));
+    const d03 = pub.find((row) => row.id === "D-2026-09-11-03");
+    assert.match(d03?.question ?? "", /\[size omitted\]/);
   });
 });

@@ -2,7 +2,7 @@
 
 Phase Zero personal operating dashboard for founder **Andres López**.
 
-A single-user Web2 tracker for treasury, nodes, decisions, and rewards. It is the first piece of an eventual larger OS. Phase Zero is **human-governed** and **manual-first**: you type the books so you learn the operating system. Live prices are optional. The app remembers everything in the browser.
+A single-user Web2 tracker for treasury, nodes, decisions, and rewards. It is the first piece of an eventual larger OS. Phase Zero is **human-governed** and **manual-first**: you type the books so you learn the operating system. Live prices are optional. The app remembers the board in the browser. Decisions can also sync to a shared store so every device sees the same record book.
 
 ## Run locally
 
@@ -42,6 +42,41 @@ If the variable is unset, the dashboard loads without a password and a banner sa
 
 Copy [`.env.example`](.env.example) to `.env.local` if you want to try the gate locally. Choose the password offline — this repo does not include one.
 
+## Decision sync (all devices — no JSON import)
+
+Hub fills used to die in one browser’s `localStorage`. After this setup, a POST/PATCH updates the live Decisions page on every unlocked device.
+
+### Vercel (Hobby is enough)
+
+1. Project → **Storage** → **Create** → **Blob**.
+2. Connect that store to this project (Production).
+3. Keep `RESONANCE_APP_PASSWORD` set (you already use it for Unlock).
+4. Optional but better for hub scripts: add `RESONANCE_SYNC_SECRET` (a long random string). Do **not** prefix with `NEXT_PUBLIC_`.
+5. Redeploy.
+
+Vercel writes `BLOB_READ_WRITE_TOKEN` for you. First request seeds `D-2026-09-11-01`…`04` if the store is empty.
+
+### Check, then post a Monday fill
+
+```bash
+curl -s https://YOUR-APP.vercel.app/api/health
+```
+
+You want `"configured": true`. Then:
+
+```bash
+curl -X PATCH https://YOUR-APP.vercel.app/api/decisions \
+  -H "Authorization: Bearer YOUR_SYNC_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"D-2026-09-11-03","outcome":"PWR $35 and VRT $17 FILLED at Monday open.","evidence":"RH order ids here"}'
+```
+
+Open **/decisions**. The row shows filled. No file import.
+
+`GET /api/public` and **/public** still omit dollar amounts, outcomes, and receipts. Full rows are only on `/api/decisions` (cookie or Bearer).
+
+Local/dev without Blob writes `.data/decisions.json`. Longer note: [`docs/decision-sync.md`](docs/decision-sync.md).
+
 Production build:
 
 ```bash
@@ -56,7 +91,7 @@ npm run lint
 npm test
 ```
 
-No user accounts or API keys are required. Production should lock the site with `RESONANCE_APP_PASSWORD` (see above). App data is stored in `localStorage` under `resonance.phase-zero.v1`. First load is seeded with founder-reported sample data so the board is not empty.
+No user accounts or API keys are required. Production should lock the site with `RESONANCE_APP_PASSWORD` (see above). Most app data is stored in `localStorage` under `resonance.phase-zero.v1`. Decisions also sync to the shared store when Blob is configured. First load is seeded with founder-reported sample data so the board is not empty.
 
 ## Phase Zero scope
 
@@ -65,7 +100,7 @@ No user accounts or API keys are required. Production should lock the site with 
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Main-sleeve learning lots ship funded from the Robinhood snapshot example. Editable name, thesis, failure condition, position status `none | watch | funded`, sleeve, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
-- **Decisions** — Phase Zero **record book**. Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`). `fingerprint` is reserved for a later shared DB / on-chain hash — unused now. Hub merges via import.
+- **Decisions** — Phase Zero **record book**. Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`). Shared store: `GET/POST/PATCH /api/decisions` (merge by id). `fingerprint` is reserved for a later on-chain hash — unused now. JSON import is the fallback.
 - **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
@@ -83,9 +118,9 @@ Venues (editable): Robinhood (fractional equities + small XRP bag), Coinbase (ge
 
 Decisions is the durable, visible log for founder Andres López — the Phase Zero OS record book. Hub (Resonance Operations) writes structured entries in chat; this page shows them and **imports/merges by decision ID** so hub and site stay aligned without wiping unrelated local rows.
 
-A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` … `D-2026-09-11-04`). Existing browsers can merge the same file: [`public/examples/decisions-record-book.json`](public/examples/decisions-record-book.json). Export decisions JSON from the page for backup.
+A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` … `D-2026-09-11-04`). The shared store seeds those same four ids on first boot if empty. Existing browsers can still merge the file: [`public/examples/decisions-record-book.json`](public/examples/decisions-record-book.json). Export decisions JSON from the page for backup.
 
-Import/merge is the Phase Zero bridge from hub/chat. Fields are shaped so a later shared DB and an on-chain fingerprint (hash of the public record; sensitive details off-chain) can plug in without a schema rewrite. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
+Hub writes go to `POST` / `PATCH /api/decisions` (Bearer `RESONANCE_SYNC_SECRET` or the site password). The Decisions page pulls that store and keeps `localStorage` as the offline cache. JSON import remains if sync is off. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
 
 Recording-pipeline doctrine (future sensor path, public channel vs gated amounts, export → XRPL/XRS): [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
 
@@ -157,4 +192,4 @@ Server route: `GET /api/prices` (60s cache). Quotes that cannot be fetched are o
 
 ## Stack
 
-Next.js (App Router) + TypeScript + Tailwind. Client state in React context; persistence in `localStorage`. Public market data via Next.js Route Handlers so the browser does not hit CORS-blocked finance APIs directly.
+Next.js (App Router) + TypeScript + Tailwind. Client state in React context; persistence in `localStorage`, plus a private Vercel Blob JSON file for shared Decisions. Public market data via Next.js Route Handlers so the browser does not hit CORS-blocked finance APIs directly.

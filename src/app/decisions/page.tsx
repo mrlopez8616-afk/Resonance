@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DecisionStatusBadge } from "@/components/badges";
 import { DecisionsImportPanel } from "@/components/decisions-import";
+import { DecisionsSyncBanner } from "@/components/decisions-sync";
 import { EmptyState, PageHeader } from "@/components/page-header";
 import { Field } from "@/components/ui";
 import { useStore } from "@/context/store";
@@ -122,7 +123,7 @@ export default function DecisionsPage() {
       <PageHeader
         kicker="Record Book"
         title="Decisions"
-        description="Phase Zero durable log for Andres López. Each row records what was proposed, why, who authorized, the call, what actually happened (queued ≠ filled), and a receipt. Hub merges by ID. On-chain fingerprint comes later — Web2 only."
+        description="Phase Zero durable log for Andres López. Each row records what was proposed, why, who authorized, the call, what actually happened (queued ≠ filled), and a receipt. Shared store + hub PATCH merge by ID. On-chain fingerprint comes later — Web2 only."
         actions={
           <button
             type="button"
@@ -141,10 +142,13 @@ export default function DecisionsPage() {
           receipt, review trigger, and status.
         </p>
         <p className="mt-2">
-          Merge from hub JSON by decision ID. Unrelated local entries are not
-          wiped. Blockchain recording is out of scope for Phase Zero.
+          Hub can POST/PATCH /api/decisions (queued → filled) and this page
+          pulls the shared store. JSON import remains a fallback. Blockchain
+          recording is out of scope for Phase Zero.
         </p>
       </div>
+
+      <DecisionsSyncBanner />
 
       <DecisionsImportPanel />
 
