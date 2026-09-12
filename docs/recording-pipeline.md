@@ -12,4 +12,8 @@ Founder-locked for later phases. Phase Zero implements the Web2 record book and 
 
 5. **Playbook pointer.** Overnight Web2 mimic (treasury trail, record-book fields, Robinhood Main vs Agentic) is documented in [`overnight-build.md`](./overnight-build.md) and in-app at **What changed**. That work does not start chain writes.
 
-Not in this phase: sensors, ack viewer, beep trail, shared DB, hashing, or on-chain writes.
+6. **Hedera witness (later).** Hedera Hashgraph is the primary attestation path. Decision rows already carry `attestationStatus` (`web2_only` → `pending_operator_ack` → `hashgraph_queued` → `hashgraph_attested`) plus reserved `hederaMessageId` / `attestedAt`. Promotion rules: [`hedera-attestation.md`](./hedera-attestation.md). No Hedera SDK or keys in Phase Zero.
+
+7. **Channel vs gate (dual surface).** Private board keeps dollars and exact XRP. Public skeleton (`/public`) publishes node target % only. [`public-vs-private.md`](./public-vs-private.md).
+
+Not in this phase: sensors, ack viewer, beep trail, shared DB, hashing, Hedera submits, or on-chain writes.

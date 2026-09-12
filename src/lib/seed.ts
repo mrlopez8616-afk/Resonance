@@ -33,6 +33,7 @@ function node(
     syncSource: null,
     holdingsNote: "",
     sleeve: "none",
+    publicAllocationPct: null,
     links,
   };
 }
@@ -213,6 +214,9 @@ export function createSeedState(now = TREASURY_AS_OF): AppState {
         reviewTrigger:
           "If vault terms cannot be explained in one sentence, or principal is at risk.",
         fingerprint: null,
+        attestationStatus: "web2_only",
+        hederaMessageId: null,
+        attestedAt: null,
         date: "2026-08-20",
         createdAt: "2026-08-20T16:00:00.000Z",
       },
@@ -229,6 +233,9 @@ export function createSeedState(now = TREASURY_AS_OF): AppState {
         evidence: "",
         reviewTrigger: "When realized rewards can size a position without touching XRP principal.",
         fingerprint: null,
+        attestationStatus: "web2_only",
+        hederaMessageId: null,
+        attestedAt: null,
         date: "2026-09-11",
         createdAt: now,
       },
@@ -245,6 +252,9 @@ export function createSeedState(now = TREASURY_AS_OF): AppState {
         evidence: "",
         reviewTrigger: "When a real publishing cadence exists — then drop the Overview stub.",
         fingerprint: null,
+        attestationStatus: "web2_only",
+        hederaMessageId: null,
+        attestedAt: null,
         date: "2026-09-11",
         createdAt: now,
       },

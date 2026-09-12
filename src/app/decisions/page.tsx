@@ -27,6 +27,9 @@ function emptyDraft(date: string, id: string, authorizedBy = ""): Draft {
     evidence: "",
     reviewTrigger: "",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
   };
 }
 
@@ -83,6 +86,9 @@ export default function DecisionsPage() {
         evidence: draft.evidence.trim(),
         reviewTrigger: draft.reviewTrigger.trim(),
         fingerprint: null,
+        attestationStatus: "web2_only",
+        hederaMessageId: null,
+        attestedAt: null,
         date: draft.date || todayIsoDate(),
       });
       setDraft(emptyDraft(todayIsoDate(), "", operatorName));
@@ -326,6 +332,9 @@ function DecisionCard({
           <DecisionStatusBadge value={item.status} />
           <span className="badge border-[color:var(--border)] font-mono text-[color:var(--muted)]">
             fingerprint {item.fingerprint ?? "null"}
+          </span>
+          <span className="badge border-[color:var(--border)] text-[color:var(--muted)]">
+            {item.attestationStatus.replace(/_/g, " ")}
           </span>
         </div>
         <select

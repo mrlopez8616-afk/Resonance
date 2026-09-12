@@ -293,6 +293,33 @@ export default function NodesPage() {
                     />
                   </Field>
                   <Field
+                    label="Public target % "
+                    hint="Shareable skeleton only. Null/blank is unpublished. Not a dollar weight."
+                  >
+                    <input
+                      className="input font-mono"
+                      inputMode="decimal"
+                      placeholder="Unpublished"
+                      defaultValue={
+                        node.publicAllocationPct === null
+                          ? ""
+                          : String(node.publicAllocationPct)
+                      }
+                      onBlur={(event) => {
+                        const raw = event.target.value.trim();
+                        if (!raw) {
+                          updateNode(node.ticker, { publicAllocationPct: null });
+                          return;
+                        }
+                        const value = Number(raw);
+                        if (!Number.isFinite(value) || value < 0 || value > 100) {
+                          return;
+                        }
+                        updateNode(node.ticker, { publicAllocationPct: value });
+                      }}
+                    />
+                  </Field>
+                  <Field
                     label="Holdings note"
                     hint="e.g. Robinhood XRP is separate from Xaman treasury."
                   >

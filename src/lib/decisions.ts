@@ -1,4 +1,4 @@
-import type { Decision, DecisionStatus } from "./types";
+import type { AttestationStatus, Decision, DecisionStatus } from "./types";
 
 export class DecisionsImportError extends Error {
   constructor(message: string) {
@@ -47,7 +47,10 @@ export const DECISIONS_IMPORT_HELP = `{
       "evidence": "Receipt: order ids, quotes, links, screenshot refs",
       "reviewTrigger": "What would reopen it",
       "status": "decided",
-      "fingerprint": null
+      "fingerprint": null,
+      "attestationStatus": "web2_only",
+      "hederaMessageId": null,
+      "attestedAt": null
     }
   ]
 }`;
@@ -74,6 +77,9 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     reviewTrigger:
       "After Monday session — confirm fills, leftover quantity, and whether any ticker should remain a funded node.",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
     createdAt: "2026-09-11T22:10:00.000Z",
   },
   {
@@ -96,6 +102,9 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     reviewTrigger:
       "Superseded by D-2026-09-11-04. Re-open only if the charter itself is rewritten.",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
     createdAt: "2026-09-11T22:40:00.000Z",
   },
   {
@@ -118,6 +127,9 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     reviewTrigger:
       "After Monday open — confirm fills, residual cash, and whether either ticker needs a new decision.",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
     createdAt: "2026-09-11T23:05:00.000Z",
   },
   {
@@ -140,6 +152,9 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     reviewTrigger:
       "Any proposed touch of Main or Xaman treasury principal; material Agentic loss; or a new written charter.",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
     createdAt: "2026-09-11T23:25:00.000Z",
   },
 ];
@@ -204,6 +219,11 @@ export function normalizeDecision(
       asString(raw.review_trigger, ""),
     ).trim(),
     fingerprint: parseFingerprint(raw.fingerprint),
+    attestationStatus: parseAttestationStatus(raw.attestationStatus),
+    hederaMessageId: parseFingerprint(
+      raw.hederaMessageId ?? raw.hedera_message_id ?? raw.hederaTxId,
+    ),
+    attestedAt: asTrimmedString(raw.attestedAt) ?? asTrimmedString(raw.attested_at),
     date: asString(raw.date, "").trim(),
     createdAt: asString(raw.createdAt, fallbackCreatedAt),
   };
@@ -235,6 +255,11 @@ export function coerceStoredDecision(
       asString(raw.review_trigger, ""),
     ),
     fingerprint: parseFingerprint(raw.fingerprint),
+    attestationStatus: parseAttestationStatus(raw.attestationStatus),
+    hederaMessageId: parseFingerprint(
+      raw.hederaMessageId ?? raw.hedera_message_id ?? raw.hederaTxId,
+    ),
+    attestedAt: asTrimmedString(raw.attestedAt) ?? asTrimmedString(raw.attested_at),
     date: asString(raw.date, ""),
     createdAt: asString(raw.createdAt, ""),
   };
@@ -299,6 +324,18 @@ export function parseFingerprint(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+export function parseAttestationStatus(value: unknown): AttestationStatus {
+  if (
+    value === "web2_only" ||
+    value === "pending_operator_ack" ||
+    value === "hashgraph_queued" ||
+    value === "hashgraph_attested"
+  ) {
+    return value;
+  }
+  return "web2_only";
+}
+
 export function emptyDecisionFields(): Pick<
   Decision,
   | "proposal"
@@ -308,6 +345,9 @@ export function emptyDecisionFields(): Pick<
   | "evidence"
   | "reviewTrigger"
   | "fingerprint"
+  | "attestationStatus"
+  | "hederaMessageId"
+  | "attestedAt"
 > {
   return {
     proposal: "",
@@ -317,6 +357,9 @@ export function emptyDecisionFields(): Pick<
     evidence: "",
     reviewTrigger: "",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
   };
 }
 
@@ -333,6 +376,9 @@ export function decisionContentEqual(a: Decision, b: Decision): boolean {
     a.evidence === b.evidence &&
     a.reviewTrigger === b.reviewTrigger &&
     a.fingerprint === b.fingerprint &&
+    a.attestationStatus === b.attestationStatus &&
+    a.hederaMessageId === b.hederaMessageId &&
+    a.attestedAt === b.attestedAt &&
     a.date === b.date
   );
 }

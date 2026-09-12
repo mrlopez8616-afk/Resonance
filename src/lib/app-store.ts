@@ -128,6 +128,9 @@ export function addDecision(
     evidence: entry.evidence ?? "",
     reviewTrigger: entry.reviewTrigger ?? "",
     fingerprint: entry.fingerprint ?? null,
+    attestationStatus: entry.attestationStatus ?? "web2_only",
+    hederaMessageId: entry.hederaMessageId ?? null,
+    attestedAt: entry.attestedAt ?? null,
     createdAt: new Date().toISOString(),
   };
   update((current) => {

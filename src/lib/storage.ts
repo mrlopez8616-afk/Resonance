@@ -140,6 +140,13 @@ function mergeNodes(raw: unknown, seed: Node[]): Node[] {
         syncSource: asString(item.syncSource, fallback.syncSource ?? "") || null,
         holdingsNote: asString(item.holdingsNote, fallback.holdingsNote),
         sleeve: parseSleeve(item.sleeve, fallback.sleeve),
+        publicAllocationPct:
+          typeof item.publicAllocationPct === "number" &&
+          Number.isFinite(item.publicAllocationPct)
+            ? item.publicAllocationPct
+            : item.publicAllocationPct === null
+              ? null
+              : fallback.publicAllocationPct,
         links: mergeLinks(item.links, fallback.links),
       });
     }

@@ -12,7 +12,9 @@ Walkthrough also lives in the app at **What changed**.
 
 3. **Robinhood categories** — **Main** (read-only learning / flatten Monday) vs **Agentic** (autonomous risk sleeve). Physical AI: PWR ETN VRT GEV CEG HUBB. Digital: BTC ETH SOL XRP SUI FLR. Venue badges: Robinhood / Xaman / founder-reported. Holdings snapshot example stays aligned with the seeded Main lots.
 
-4. **Nav** — Overview skeleton nodes, Treasury ledger, Nodes, Robinhood/Agentic, Decisions, Prices, What changed, Settings. Dark operator aesthetic, mobile menu.
+4. **Nav** — Overview skeleton nodes, Treasury ledger, Nodes, Robinhood/Agentic, Decisions, Prices, Public skeleton, What changed, Settings. Dark operator aesthetic, mobile menu.
+
+5. **Public vs private** — `/public` is the shareable twelve-node target-% skeleton (no dollars, no exact XRP). Hedera attestation fields exist on Decisions as `web2_only` tonight.
 
 ## Out of scope (unchanged)
 

@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import {
   BookMarked,
   CircleGauge,
+  Globe,
   Landmark,
   Menu,
   Radio,
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/robinhood", label: "Robinhood", icon: SplitSquareVertical },
   { href: "/decisions", label: "Decisions", icon: BookMarked },
   { href: "/prices", label: "Prices", icon: Radio },
+  { href: "/public", label: "Public", icon: Globe },
   { href: "/whats-new", label: "What changed", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings2 },
 ];

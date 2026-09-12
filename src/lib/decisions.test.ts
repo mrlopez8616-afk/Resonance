@@ -40,6 +40,9 @@ function localOnly(): Decision {
     evidence: "",
     reviewTrigger: "",
     fingerprint: null,
+    attestationStatus: "web2_only",
+    hederaMessageId: null,
+    attestedAt: null,
     createdAt: "2026-09-10T12:00:00.000Z",
   };
 }

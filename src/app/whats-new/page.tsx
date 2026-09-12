@@ -63,7 +63,19 @@ export default function WhatsNewPage() {
           </p>
         </li>
         <li className="card">
-          <p className="kicker">4 · Still out of scope</p>
+          <p className="kicker">4 · Dual surface</p>
+          <h2 className="mt-2 text-lg">Private board vs public skeleton</h2>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
+            Private / gated: exact XRP, RH ties, receipts. Public{" "}
+            <Link href="/public" className="text-[color:var(--accent)]">
+              /public
+            </Link>{" "}
+            : twelve-node target % only. Hedera Hashgraph is the later
+            attestation witness — rows stay <span className="font-mono">web2_only</span> tonight.
+          </p>
+        </li>
+        <li className="card">
+          <p className="kicker">5 · Still out of scope</p>
           <h2 className="mt-2 text-lg">No chain, no keys, no XRS</h2>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
             Recording-pipeline doctrine is unchanged: Web2 mimics chain-class

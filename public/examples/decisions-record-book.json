@@ -16,6 +16,9 @@
       "evidence": "Robinhood holdings snapshot of CEG/ETN/PWR/GEV/HUBB/VRT learning lots; Monday sell instructions already locked for market open.",
       "reviewTrigger": "After Monday session — confirm fills, leftover quantity, and whether any ticker should remain a funded node.",
       "fingerprint": null,
+      "attestationStatus": "web2_only",
+      "hederaMessageId": null,
+      "attestedAt": null,
       "createdAt": "2026-09-11T22:10:00.000Z"
     },
     {
@@ -32,6 +35,9 @@
       "evidence": "Phase Zero human-governed scope; Resonance web app does not execute trades; hub/chat charter text.",
       "reviewTrigger": "Superseded by D-2026-09-11-04. Re-open only if the charter itself is rewritten.",
       "fingerprint": null,
+      "attestationStatus": "web2_only",
+      "hederaMessageId": null,
+      "attestedAt": null,
       "createdAt": "2026-09-11T22:40:00.000Z"
     },
     {
@@ -48,6 +54,9 @@
       "evidence": "Written size ($35 PWR, $17 VRT); Agentic Robinhood Ops only; Monday open timing. No fill recorded.",
       "reviewTrigger": "After Monday open — confirm fills, residual cash, and whether either ticker needs a new decision.",
       "fingerprint": null,
+      "attestationStatus": "web2_only",
+      "hederaMessageId": null,
+      "attestedAt": null,
       "createdAt": "2026-09-11T23:05:00.000Z"
     },
     {
@@ -64,6 +73,9 @@
       "evidence": "Founder lock tonight; Phase Zero Web2 record only — no wallet signing, no on-chain write. ETN/GEV autonomy tickets sit on the Agentic sleeve, not Main.",
       "reviewTrigger": "Any proposed touch of Main or Xaman treasury principal; material Agentic loss; or a new written charter.",
       "fingerprint": null,
+      "attestationStatus": "web2_only",
+      "hederaMessageId": null,
+      "attestedAt": null,
       "createdAt": "2026-09-11T23:25:00.000Z"
     }
   ]

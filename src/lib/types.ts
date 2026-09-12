@@ -15,6 +15,13 @@ export type AgenticIntentSide = "buy" | "sell";
 
 export type DecisionStatus = "pending" | "decided" | "superseded";
 
+/** Hedera Hashgraph attestation witness. Unused at runtime in Phase Zero. */
+export type AttestationStatus =
+  | "web2_only"
+  | "pending_operator_ack"
+  | "hashgraph_queued"
+  | "hashgraph_attested";
+
 export interface Treasury {
   units: number;
   asset: "XRP";
@@ -65,6 +72,11 @@ export interface Node {
   holdingsNote: string;
   /** Main = founder RH learning account. Agentic is tracked via queued intents, not this field. */
   sleeve: NodeSleeve;
+  /**
+   * Published target weight of the 12-node skeleton (0–100).
+   * Public view only. Null = unpublished. Not a dollar mark-to-market.
+   */
+  publicAllocationPct: number | null;
   links: NodeLink[];
 }
 
@@ -141,6 +153,13 @@ export interface Decision {
    * public record; sensitive details stay off-chain). Unused in Phase Zero.
    */
   fingerprint: string | null;
+  /**
+   * Hedera attestation ladder. Phase Zero stays `web2_only`.
+   * Live Hedera ids are later — do not implement signing here.
+   */
+  attestationStatus: AttestationStatus;
+  hederaMessageId: string | null;
+  attestedAt: string | null;
   date: string;
   createdAt: string;
 }
