@@ -1,14 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { ClassBadge, ProvenanceBadge, StatusBadge } from "@/components/badges";
+import {
+  ClassBadge,
+  DecisionStatusBadge,
+  IntentStatusBadge,
+  ProvenanceBadge,
+  SleeveBadge,
+  StatusBadge,
+  VenueBadge,
+} from "@/components/badges";
 import { EmptyState, PageHeader } from "@/components/page-header";
+import { WhatsNewCard } from "@/components/whats-new";
 import { NodePriceCell, Stat } from "@/components/ui";
 import { usePrices } from "@/context/prices";
 import { useStore } from "@/context/store";
 import { formatHoldingAmount, formatTimestamp, formatUsd, formatUnits } from "@/lib/format";
 import { hasHoldings, latestHoldingsSync } from "@/lib/holdings-snapshot";
+import type { Node, Quote } from "@/lib/types";
 import { sortLedger } from "@/lib/ledger";
+import { digitalNodes, physicalNodes, queuedAgenticIntents } from "@/lib/robinhood";
 import { xrpUsdRate } from "@/lib/valuation";
 
 export default function OverviewPage() {
@@ -28,10 +39,22 @@ export default function OverviewPage() {
   const watch = state.nodes.filter((node) => node.status === "watch");
   const none = state.nodes.filter((node) => node.status === "none");
   const lastDecisions = [...state.decisions]
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 3);
+    .sort((a, b) => {
+      const aOfficial = a.id.startsWith("D-") ? 1 : 0;
+      const bOfficial = b.id.startsWith("D-") ? 1 : 0;
+      if (aOfficial !== bOfficial) return bOfficial - aOfficial;
+      return (
+        b.date.localeCompare(a.date) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.id.localeCompare(a.id)
+      );
+    })
+    .slice(0, 4);
   const lastClaims = sortLedger(state.ledger).slice(0, 3);
   const holdingsSync = latestHoldingsSync(state.nodes);
+  const digital = digitalNodes(state.nodes);
+  const physical = physicalNodes(state.nodes);
+  const queued = queuedAgenticIntents(state.agenticIntents);
 
   if (!ready) {
     return <p className="text-sm text-[color:var(--muted)]">Loading local books…</p>;
@@ -42,14 +65,21 @@ export default function OverviewPage() {
       <PageHeader
         kicker="Home"
         title="Overview"
-        description={`${state.settings.operatorName}'s Phase Zero board. Type the books by hand. Live prices are optional. Figures are founder-reported until a read-only feed verifies them.`}
+        description={`${state.settings.operatorName}'s Phase Zero board. Private surface: exact XRP, RH ties, receipts. Shareable skeleton is /public (target % only). Live prices are optional. Figures are founder-reported until a read-only feed verifies them.`}
+        actions={
+          <Link href="/public" className="btn btn-secondary">
+            Public skeleton
+          </Link>
+        }
       />
 
-      <div className="notice notice-warn mb-8">
-        Phase Zero is human-governed and manual-first. You type treasury,
-        claims, theses, and decisions. Resonance does not import seeds, request
-        private keys, sign transactions, launch tokens, or write on-chain. Live
-        market prints are optional and never invented when a feed is down.
+      <WhatsNewCard compact />
+
+      <div className="notice mb-8">
+        Phase Zero is human-governed and manual-first. Resonance does not import
+        seeds, request private keys, sign transactions, launch tokens, write
+        on-chain, or place silent Main trades. Live market prints are optional
+        and never invented when a feed is down.
       </div>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -59,7 +89,8 @@ export default function OverviewPage() {
           hint={
             <span className="flex flex-wrap items-center gap-2">
               <ProvenanceBadge value={state.treasury.provenance} />
-              {state.treasury.venue} · {state.treasury.locationNote}
+              <VenueBadge value={state.treasury.venue} />
+              {state.treasury.locationNote}
             </span>
           }
         />
@@ -119,54 +150,79 @@ export default function OverviewPage() {
 
       <section className="mb-8">
         <div className="mb-3 flex items-end justify-between">
-          <h2 className="text-lg">Nodes</h2>
-          <Link href="/nodes" className="text-sm text-[color:var(--accent)]">
-            Open board
-          </Link>
+          <h2 className="text-lg">Skeleton nodes</h2>
+          <div className="flex gap-4">
+            <Link href="/robinhood" className="text-sm text-[color:var(--accent)]">
+              Sleeves
+            </Link>
+            <Link href="/nodes" className="text-sm text-[color:var(--accent)]">
+              Open board
+            </Link>
+          </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {state.nodes.map((node) => (
-            <div key={node.ticker} className="card py-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-mono text-sm">{node.ticker}</p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">
-                    {node.name}
-                  </p>
-                  {hasHoldings(node) ? (
-                    <p className="mt-2 font-mono text-xs tabular-nums text-[color:var(--muted)]">
-                      {formatHoldingAmount(node.quantity)}
-                      {node.venue ? ` · ${node.venue}` : ""}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <StatusBadge value={node.status} />
-                  <ClassBadge value={node.class} />
-                </div>
-              </div>
-              <div className="mt-4">
-                <NodePriceCell
-                  node={node}
-                  live={quoteFor(node.ticker)}
-                  liveStatus={
-                    node.class === "digital"
-                      ? book.crypto.status
-                      : book.equities.status
-                  }
-                />
-              </div>
-            </div>
-          ))}
+        <div className="mb-6">
+          <p className="kicker mb-3">Physical AI</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {physical.map((node) => (
+              <SkeletonNodeCard
+                key={node.ticker}
+                node={node}
+                live={quoteFor(node.ticker)}
+                liveStatus={book.equities.status}
+              />
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="kicker mb-3">Digital</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {digital.map((node) => (
+              <SkeletonNodeCard
+                key={node.ticker}
+                node={node}
+                live={quoteFor(node.ticker)}
+                liveStatus={book.crypto.status}
+              />
+            ))}
+          </div>
         </div>
       </section>
+
+      {queued.length > 0 ? (
+        <section className="mb-8">
+          <div className="mb-3 flex items-end justify-between">
+            <h2 className="text-lg">Agentic queued</h2>
+            <Link href="/robinhood" className="text-sm text-[color:var(--accent)]">
+              Robinhood panel
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {queued.map((intent) => (
+              <div key={intent.id} className="card py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-sm">{intent.ticker}</p>
+                  <SleeveBadge value="agentic" />
+                  <IntentStatusBadge value={intent.status} />
+                </div>
+                <p className="mt-2 text-sm text-[color:var(--muted)]">
+                  {intent.authorizedByDecisionId}
+                  {intent.notionalUsd != null
+                    ? ` · ${intent.notionalUsd} USD`
+                    : " · autonomy"}
+                  {" · Monday open"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section>
           <div className="mb-3 flex items-end justify-between">
             <h2 className="text-lg">Last decisions</h2>
             <Link href="/decisions" className="text-sm text-[color:var(--accent)]">
-              Log
+              Record book
             </Link>
           </div>
           {lastDecisions.length === 0 ? (
@@ -178,12 +234,17 @@ export default function OverviewPage() {
             <div className="space-y-3">
               {lastDecisions.map((item) => (
                 <div key={item.id} className="card">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="kicker">{item.date}</p>
-                    <StatusAsDecision status={item.status} />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="kicker">{item.date}</p>
+                      <span className="badge border-[color:var(--border)] font-mono text-[color:var(--text)]">
+                        {item.id}
+                      </span>
+                    </div>
+                    <DecisionStatusBadge value={item.status} />
                   </div>
                   <p className="mt-2 text-sm">{item.question}</p>
-                  {item.status === "decided" && item.decision ? (
+                  {item.status !== "pending" && item.decision ? (
                     <p className="mt-2 text-sm text-[color:var(--muted)]">
                       {item.decision}
                     </p>
@@ -192,6 +253,11 @@ export default function OverviewPage() {
                       Still open. Options: {item.options || "not listed"}
                     </p>
                   )}
+                  {item.outcome ? (
+                    <p className="mt-2 text-xs text-[color:var(--muted)]">
+                      Outcome: {item.outcome}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -200,7 +266,7 @@ export default function OverviewPage() {
 
         <section>
           <div className="mb-3 flex items-end justify-between">
-            <h2 className="text-lg">Reward ledger</h2>
+            <h2 className="text-lg">Treasury trail</h2>
             <Link href="/treasury" className="text-sm text-[color:var(--accent)]">
               Treasury
             </Link>
@@ -248,16 +314,38 @@ export default function OverviewPage() {
   );
 }
 
-function StatusAsDecision({ status }: { status: "pending" | "decided" }) {
+function SkeletonNodeCard({
+  node,
+  live,
+  liveStatus,
+}: {
+  node: Node;
+  live: Quote | null;
+  liveStatus: "idle" | "loading" | "ok" | "error";
+}) {
   return (
-    <span
-      className={`badge ${
-        status === "decided"
-          ? "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]"
-          : "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]"
-      }`}
-    >
-      {status === "decided" ? "Decided" : "Pending"}
-    </span>
+    <div className="card py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-sm">{node.ticker}</p>
+          <p className="mt-1 text-sm text-[color:var(--muted)]">{node.name}</p>
+          {hasHoldings(node) ? (
+            <p className="mt-2 font-mono text-xs tabular-nums text-[color:var(--muted)]">
+              {formatHoldingAmount(node.quantity)}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge value={node.status} />
+          <ClassBadge value={node.class} />
+          <SleeveBadge value={node.sleeve} />
+          {node.venue ? <VenueBadge value={node.venue} /> : null}
+        </div>
+      </div>
+      <div className="mt-4">
+        <NodePriceCell node={node} live={live} liveStatus={liveStatus} />
+      </div>
+    </div>
   );
 }
+

@@ -4,9 +4,23 @@ export type AssetClass = "digital" | "physical";
 
 export type PositionStatus = "none" | "watch" | "funded";
 
+/** Robinhood sleeve. Main is the founder learning account; Agentic is the autonomous risk sleeve. */
+export type NodeSleeve = "main" | "agentic" | "none";
+
 export type LedgerClassification = "principal" | "reward" | "fee" | "transfer";
 
-export type DecisionStatus = "pending" | "decided";
+export type AgenticIntentStatus = "queued" | "filled" | "cancelled";
+
+export type AgenticIntentSide = "buy" | "sell";
+
+export type DecisionStatus = "pending" | "decided" | "superseded";
+
+/** Hedera Hashgraph attestation witness. Unused at runtime in Phase Zero. */
+export type AttestationStatus =
+  | "web2_only"
+  | "pending_operator_ack"
+  | "hashgraph_queued"
+  | "hashgraph_attested";
 
 export interface Treasury {
   units: number;
@@ -56,7 +70,27 @@ export interface Node {
   /** e.g. robinhood-snapshot. Never implies a live brokerage session. */
   syncSource: string | null;
   holdingsNote: string;
+  /** Main = founder RH learning account. Agentic is tracked via queued intents, not this field. */
+  sleeve: NodeSleeve;
+  /**
+   * Published target weight of the 12-node skeleton (0–100).
+   * Public view only. Null = unpublished. Not a dollar mark-to-market.
+   */
+  publicAllocationPct: number | null;
   links: NodeLink[];
+}
+
+/** Queued (≠ filled) Agentic sleeve intent. Web2 record only — the app does not place trades. */
+export interface AgenticIntent {
+  id: string;
+  ticker: string;
+  side: AgenticIntentSide;
+  /** Named USD size when the decision specified one. Null = autonomy, no fixed ticket. */
+  notionalUsd: number | null;
+  status: AgenticIntentStatus;
+  authorizedByDecisionId: string;
+  note: string;
+  venue: string;
 }
 
 export type SnapshotAssetClass = "equity" | "crypto";
@@ -91,12 +125,41 @@ export interface LedgerEntry {
   createdAt: string;
 }
 
+/** Phase Zero record-book row. Doctrine: docs/recording-pipeline.md */
 export interface Decision {
+  /** Durable record-book ID, e.g. D-2026-09-11-01. Merge key for hub import. */
   id: string;
   question: string;
+  /** What was proposed (the specific action on the table). */
+  proposal: string;
   options: string;
   status: DecisionStatus;
+  /** Founder decision / the call. Not the same as outcome. */
   decision: string;
+  /** Why the call was made. */
+  rationale: string;
+  /** Who authorized the call. */
+  authorizedBy: string;
+  /**
+   * What actually happened. Distinct from proposal and from the call.
+   * Queued / approved orders are not fills.
+   */
+  outcome: string;
+  /** Supporting receipt: order ids, quotes, links, screenshot refs. */
+  evidence: string;
+  reviewTrigger: string;
+  /**
+   * Reserved for a later shared-DB / on-chain fingerprint (hash of the
+   * public record; sensitive details stay off-chain). Unused in Phase Zero.
+   */
+  fingerprint: string | null;
+  /**
+   * Hedera attestation ladder. Phase Zero stays `web2_only`.
+   * Live Hedera ids are later — do not implement signing here.
+   */
+  attestationStatus: AttestationStatus;
+  hederaMessageId: string | null;
+  attestedAt: string | null;
   date: string;
   createdAt: string;
 }
@@ -115,6 +178,7 @@ export interface AppState {
   nodes: Node[];
   ledger: LedgerEntry[];
   decisions: Decision[];
+  agenticIntents: AgenticIntent[];
   settings: Settings;
 }
 

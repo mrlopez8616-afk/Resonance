@@ -1,0 +1,73 @@
+{
+  "asOf": "2026-09-12T00:00:00.000Z",
+  "source": "founder-reported",
+  "treasury": {
+    "units": 27772,
+    "venue": "Xaman",
+    "locationNote": "Flare vault / Xaman principal trail starting 2026-08-28",
+    "estimatedDailyReward": 1,
+    "provenance": "founder-reported"
+  },
+  "ledger": [
+    {
+      "id": "led-2026-08-28-open",
+      "date": "2026-08-28",
+      "amount": 20000,
+      "fee": 0,
+      "note": "Opening Flare vault / Xaman principal trail. Started ~20,000 XRP. Founder-reported — not chain-verified. Principal never withdrawn.",
+      "classification": "principal",
+      "applyToBalance": false,
+      "createdAt": "2026-08-28T16:00:00.000Z"
+    },
+    {
+      "id": "led-2026-09-02-add",
+      "date": "2026-09-02",
+      "amount": 4000,
+      "fee": 0,
+      "note": "Weekly-class principal add (~4k). Founder-reported path: ~20k → +~4k.",
+      "classification": "principal",
+      "applyToBalance": false,
+      "createdAt": "2026-09-02T16:00:00.000Z"
+    },
+    {
+      "id": "led-2026-09-06-add",
+      "date": "2026-09-06",
+      "amount": 1000,
+      "fee": 0,
+      "note": "Weekly-class principal add (~1k).",
+      "classification": "principal",
+      "applyToBalance": false,
+      "createdAt": "2026-09-06T16:00:00.000Z"
+    },
+    {
+      "id": "led-2026-09-09-add",
+      "date": "2026-09-09",
+      "amount": 1000,
+      "fee": 0,
+      "note": "Weekly-class principal add (~1k). Path through early Sep: ~20k then +~4k then +1k then +1k.",
+      "classification": "principal",
+      "applyToBalance": false,
+      "createdAt": "2026-09-09T16:00:00.000Z"
+    },
+    {
+      "id": "led-2026-09-11-mark",
+      "date": "2026-09-11",
+      "amount": 1772,
+      "fee": 0,
+      "note": "Founder-reported residual to current books (~27,772 XRP as of 2026-09-11/12). Additional principal not itemized week-by-week. Principal still never withdrawn.",
+      "classification": "principal",
+      "applyToBalance": false,
+      "createdAt": "2026-09-11T20:00:00.000Z"
+    },
+    {
+      "id": "led-2026-09-11-yield-ammo",
+      "date": "2026-09-11",
+      "amount": 14,
+      "fee": 0,
+      "note": "Yield ammo only (~1 XRP/day class, Aug 28 → Sep 11). Not principal. Harvest is later funding rail — do not fold into working principal.",
+      "classification": "reward",
+      "applyToBalance": false,
+      "createdAt": "2026-09-11T20:05:00.000Z"
+    }
+  ]
+}

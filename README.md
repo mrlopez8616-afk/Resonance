@@ -15,6 +15,20 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Local/dev leaves the site gate off unless you set `RESONANCE_APP_PASSWORD` in `.env.local`.
 
+## What changed overnight (2026-09-12)
+
+The Web2 app now **behaves as if it were already on-chain**: same fields, receipts, and rules. Still no wallet, no XRS, no silent Main trades.
+
+- **Treasury** — Founder-reported Flare vault / Xaman trail from **2026-08-28 ~20,000 XRP** through weekly-class adds to **~27,772 XRP** as of 2026-09-11/12. Principal never withdrawn. Yield (~1 XRP/day class) is ammo only. Ledger history + running principal on `/treasury`. Import/export: [`public/examples/treasury-ledger.json`](public/examples/treasury-ledger.json).
+- **Decisions** — Record book already has proposal, why, `authorizedBy`, outcome, evidence/receipt, timestamps, `fingerprint: null`. Seeded `D-2026-09-11-01`…`04`. D-04 notes Agentic autonomy may trade **ETN/GEV**. PWR, VRT, ETN, GEV outcomes are **QUEUED for Monday open — not filled**.
+- **Robinhood** — New `/robinhood` panel. **Main** = read-only learning / flatten Monday. **Agentic** = autonomous risk sleeve. Physical AI: PWR ETN VRT GEV CEG HUBB. Digital: BTC ETH SOL XRP SUI FLR. Venue badges (Robinhood / Xaman / founder-reported). Seeded Main lots match the holdings snapshot example.
+- **Nav** — Overview skeleton nodes, Treasury ledger, Nodes, Robinhood/Agentic, Decisions, Prices, Public skeleton, What changed, Settings.
+- **Public skeleton** — `/public` shows the twelve nodes as target allocation % (not dollars) and a decision index without receipts. Private board stays gated. Docs: [`docs/public-vs-private.md`](docs/public-vs-private.md).
+- **Hedera (schema only)** — Decisions carry `attestationStatus` (`web2_only` tonight) plus reserved `hederaMessageId` / `attestedAt`. No Hedera calls. Docs: [`docs/hedera-attestation.md`](docs/hedera-attestation.md).
+- In-app walkthrough: `/whats-new`. Docs: [`docs/overnight-build.md`](docs/overnight-build.md). Doctrine: [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
+
+Existing browsers that still have the old ~26,000 opening seed are migrated to the Aug 28 trail (operator-typed ledger rows are kept). Or import the treasury JSON / reset to seed.
+
 ## Site password gate
 
 This is a **single-operator site lock**, not multi-user accounts. Vercel Deployment Protection is not used here.
@@ -46,23 +60,34 @@ No user accounts or API keys are required. Production should lock the site with 
 
 ## Phase Zero scope
 
-- **Overview** — treasury summary (units, estimated USD when a live XRP price exists, ~daily reward), node watch vs funded, last decisions, optional YouTube stub. When any node has a pasted holdings snapshot, a **Holdings last synced** line appears (timestamp + source). That is not a live brokerage session.
-- **Treasury** — editable working balance on **Xaman** (~26k XRP seed), optional manual XRP/USD for estimates, reward/claim ledger you can add and edit in place (date, amount, fee, note, classification `principal | reward | fee | transfer`). Robinhood XRP is **not** this balance.
-- **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Editable name, thesis, failure condition, position status `none | watch | funded`, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
+- **Overview** — treasury summary (units, estimated USD when a live XRP price exists, ~daily reward), skeleton nodes (physical AI vs digital), Agentic queued tickets, last decisions, optional YouTube stub. When any node has a pasted holdings snapshot, a **Holdings last synced** line appears (timestamp + source). That is not a live brokerage session.
+- **Treasury** — editable working balance on **Xaman** (~27,772 XRP seed, founder-reported), principal trail from Aug 28, optional manual XRP/USD for estimates, reward/claim ledger you can add and edit in place (date, amount, fee, note, classification `principal | reward | fee | transfer`). Import/merge the official trail by ID. Robinhood XRP is **not** this balance.
+- **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Main-sleeve learning lots ship funded from the Robinhood snapshot example. Editable name, thesis, failure condition, position status `none | watch | funded`, sleeve, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
+- **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
-- **Decisions** — question, options, pending/decided, date.
+- **Decisions** — Phase Zero **record book**. Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`). `fingerprint` is reserved for a later shared DB / on-chain hash — unused now. Hub merges via import.
 - **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
 
 - **Verified** — live market print from a public API.
-- **Founder-reported** — operator figures (including the seeded ~26,000 XRP / ~1 XRP/day, and pasted holdings).
+- **Founder-reported** — operator figures (including the seeded ~27,772 XRP / ~1 XRP/day ammo, and pasted holdings).
 - **Verified-from-snapshot** — a pasted Grok Bot JSON snapshot was merged onto matching tickers. Not a continuous Robinhood link.
 - **Unverified** — theses, failure conditions, manual prices, anything not independently fetched.
 
 Seeded operating priority: build and add to treasury; keep principal; use realized rewards later to fund other nodes.
 
 Venues (editable): Robinhood (fractional equities + small XRP bag), Coinbase (general), Xaman (treasury), MetaMask (Flare DeFi play — secondary).
+
+## Decisions record book
+
+Decisions is the durable, visible log for founder Andres López — the Phase Zero OS record book. Hub (Resonance Operations) writes structured entries in chat; this page shows them and **imports/merges by decision ID** so hub and site stay aligned without wiping unrelated local rows.
+
+A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` … `D-2026-09-11-04`). Existing browsers can merge the same file: [`public/examples/decisions-record-book.json`](public/examples/decisions-record-book.json). Export decisions JSON from the page for backup.
+
+Import/merge is the Phase Zero bridge from hub/chat. Fields are shaped so a later shared DB and an on-chain fingerprint (hash of the public record; sensitive details off-chain) can plug in without a schema rewrite. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
+
+Recording-pipeline doctrine (future sensor path, public channel vs gated amounts, export → XRPL/XRS): [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
 
 ## Holdings snapshot sync (Robinhood)
 
@@ -75,7 +100,7 @@ Flow:
 3. The app validates, shows a preview, then merges into board nodes by ticker (case-insensitive).
 4. Matching nodes become `funded` and receive quantity / average cost / venue / `lastSyncedAt` / `syncSource` (`robinhood-snapshot`). You can still type over any field.
 
-**Robinhood XRP ≠ Xaman treasury.** The operating treasury (~26k XRP on Xaman / Flare vault) is the books of record. Robinhood also holds a small separate XRP bag (~69). Importing XRP from a Robinhood snapshot updates the **XRP node holding** with venue `Robinhood`. It does **not** overwrite treasury principal unless a holding explicitly sets `"target": "treasury"` (the Robinhood example does not).
+**Robinhood XRP ≠ Xaman treasury.** The operating treasury (~27,772 XRP on Xaman / Flare vault) is the books of record. Robinhood also holds a small separate XRP bag (~69). Importing XRP from a Robinhood snapshot updates the **XRP node holding** with venue `Robinhood`. It does **not** overwrite treasury principal unless a holding explicitly sets `"target": "treasury"` (the Robinhood example does not).
 
 Digital board names BTC/ETH/SOL/SUI/FLR are **not** on Robinhood; they stay watch/unfunded unless you type a holding by hand or a later snapshot includes them.
 

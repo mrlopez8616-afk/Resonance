@@ -1,4 +1,11 @@
-import type { Provenance, PositionStatus } from "@/lib/types";
+import { venueKind } from "@/lib/robinhood";
+import type {
+  AgenticIntentStatus,
+  DecisionStatus,
+  NodeSleeve,
+  Provenance,
+  PositionStatus,
+} from "@/lib/types";
 
 const provenanceStyles: Record<Provenance, string> = {
   verified:
@@ -48,6 +55,83 @@ export function SnapshotBadge() {
   return (
     <span className="badge border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]">
       Verified-from-snapshot
+    </span>
+  );
+}
+
+const decisionStatusStyles: Record<DecisionStatus, string> = {
+  decided:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+  pending:
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  superseded:
+    "border-[color:var(--muted)]/40 bg-[color:var(--surface-2)] text-[color:var(--muted)]",
+};
+
+const decisionStatusLabel: Record<DecisionStatus, string> = {
+  decided: "Decided",
+  pending: "Pending",
+  superseded: "Superseded",
+};
+
+export function DecisionStatusBadge({ value }: { value: DecisionStatus }) {
+  return (
+    <span className={`badge ${decisionStatusStyles[value]}`}>
+      {decisionStatusLabel[value]}
+    </span>
+  );
+}
+
+const venueStyles = {
+  robinhood:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+  xaman:
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  coinbase:
+    "border-[color:var(--accent-2)]/35 bg-[color:var(--accent-2)]/10 text-[color:var(--accent-2)]",
+  metamask:
+    "border-[color:var(--border)] bg-[color:var(--surface-2)] text-[color:var(--muted)]",
+  other: "border-[color:var(--border)] text-[color:var(--muted)]",
+} as const;
+
+export function VenueBadge({ value }: { value: string }) {
+  if (!value.trim()) return null;
+  return (
+    <span className={`badge ${venueStyles[venueKind(value)]}`}>{value}</span>
+  );
+}
+
+const sleeveStyles: Record<NodeSleeve, string> = {
+  main: "border-[color:var(--accent-2)]/35 bg-[color:var(--accent-2)]/10 text-[color:var(--accent-2)]",
+  agentic:
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  none: "border-[color:var(--border)] text-[color:var(--muted)]",
+};
+
+const sleeveLabel: Record<NodeSleeve, string> = {
+  main: "Main",
+  agentic: "Agentic",
+  none: "Unassigned",
+};
+
+export function SleeveBadge({ value }: { value: NodeSleeve }) {
+  if (value === "none") return null;
+  return <span className={`badge ${sleeveStyles[value]}`}>{sleeveLabel[value]}</span>;
+}
+
+const intentStyles: Record<AgenticIntentStatus, string> = {
+  queued:
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  filled:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+  cancelled:
+    "border-[color:var(--muted)]/40 bg-[color:var(--surface-2)] text-[color:var(--muted)]",
+};
+
+export function IntentStatusBadge({ value }: { value: AgenticIntentStatus }) {
+  return (
+    <span className={`badge ${intentStyles[value]}`}>
+      {value === "queued" ? "Queued ≠ filled" : value}
     </span>
   );
 }

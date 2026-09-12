@@ -7,6 +7,7 @@ import type {
   SnapshotHoldingTarget,
 } from "./types";
 import { holdingToNumber } from "./format";
+import { SEEDED_MAIN_HOLDINGS } from "./robinhood";
 
 export class HoldingsSnapshotError extends Error {
   constructor(message: string) {
@@ -353,6 +354,9 @@ function patchNodeFromHolding(
     lastSyncedAt: snapshot.asOf,
     syncSource: syncSourceFromSnapshot(snapshot.source),
     holdingsNote: holding.note ?? node.holdingsNote,
+    sleeve:
+      SEEDED_MAIN_HOLDINGS[node.ticker]?.sleeve ??
+      (venue.toLowerCase().includes("robinhood") ? "main" : node.sleeve),
   };
 }
 

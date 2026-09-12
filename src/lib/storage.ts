@@ -1,11 +1,22 @@
+import { coerceStoredDecision, mergeDecisionsById } from "./decisions";
+import { mergeAgenticIntentsById } from "./robinhood";
 import { createSeedState } from "./seed";
+import {
+  coerceStoredLedgerEntry,
+  dropLegacyOpeningSeed,
+  looksLikeLegacyOpeningSeed,
+  mergeLedgerById,
+  TREASURY_CURRENT_UNITS,
+} from "./treasury-ledger";
 import {
   STATE_VERSION,
   STORAGE_KEY,
+  type AgenticIntent,
   type AppState,
   type Decision,
   type LedgerEntry,
   type Node,
+  type NodeSleeve,
   type Settings,
   type Treasury,
   type Venue,
@@ -128,6 +139,14 @@ function mergeNodes(raw: unknown, seed: Node[]): Node[] {
         ) || null,
         syncSource: asString(item.syncSource, fallback.syncSource ?? "") || null,
         holdingsNote: asString(item.holdingsNote, fallback.holdingsNote),
+        sleeve: parseSleeve(item.sleeve, fallback.sleeve),
+        publicAllocationPct:
+          typeof item.publicAllocationPct === "number" &&
+          Number.isFinite(item.publicAllocationPct)
+            ? item.publicAllocationPct
+            : item.publicAllocationPct === null
+              ? null
+              : fallback.publicAllocationPct,
         links: mergeLinks(item.links, fallback.links),
       });
     }
@@ -135,41 +154,68 @@ function mergeNodes(raw: unknown, seed: Node[]): Node[] {
   return seed.map((node) => byTicker.get(node.ticker) ?? node);
 }
 
+function parseSleeve(value: unknown, fallback: NodeSleeve): NodeSleeve {
+  if (value === "main" || value === "agentic" || value === "none") return value;
+  return fallback;
+}
+
 function mergeLedger(raw: unknown, seed: LedgerEntry[]): LedgerEntry[] {
   if (!Array.isArray(raw)) return seed;
-  const entries = raw.filter(isRecord).map((item, index) => {
-    const classification =
-      item.classification === "principal" ||
-      item.classification === "reward" ||
-      item.classification === "fee" ||
-      item.classification === "transfer"
-        ? item.classification
-        : "reward";
-    return {
-      id: asString(item.id, `led-${index}`),
-      date: asString(item.date, ""),
-      amount: asNumber(item.amount, 0),
-      fee: asNumber(item.fee, 0),
-      note: asString(item.note, ""),
-      classification,
-      applyToBalance: asBoolean(item.applyToBalance, false),
-      createdAt: asString(item.createdAt, asString(item.date, "")),
-    } satisfies LedgerEntry;
-  });
-  return entries;
+  const stored = raw
+    .map((item, index) => coerceStoredLedgerEntry(item, index))
+    .filter((item): item is LedgerEntry => item !== null);
+  const withoutLegacy = dropLegacyOpeningSeed(stored);
+  // Official trail IDs fill in; stored operator rows win on the same ID.
+  return mergeLedgerById(seed, withoutLegacy);
+}
+
+function mergeAgenticIntents(
+  raw: unknown,
+  seed: AgenticIntent[],
+): AgenticIntent[] {
+  if (!Array.isArray(raw)) return seed;
+  const stored = raw
+    .filter(isRecord)
+    .map((item, index) => normalizeStoredIntent(item, index))
+    .filter((item): item is AgenticIntent => item !== null);
+  return mergeAgenticIntentsById(seed, stored);
+}
+
+function normalizeStoredIntent(
+  raw: Record<string, unknown>,
+  index: number,
+): AgenticIntent | null {
+  const id = asString(raw.id, "").trim() || `agt-${index}`;
+  const ticker = asString(raw.ticker, "").trim().toUpperCase();
+  if (!ticker) return null;
+  const side = raw.side === "sell" ? "sell" : "buy";
+  const status =
+    raw.status === "filled" || raw.status === "cancelled" ? raw.status : "queued";
+  const notionalUsd =
+    typeof raw.notionalUsd === "number" && Number.isFinite(raw.notionalUsd)
+      ? raw.notionalUsd
+      : raw.notionalUsd === null
+        ? null
+        : null;
+  return {
+    id,
+    ticker,
+    side,
+    notionalUsd,
+    status,
+    authorizedByDecisionId: asString(raw.authorizedByDecisionId, ""),
+    note: asString(raw.note, ""),
+    venue: asString(raw.venue, "Robinhood"),
+  };
 }
 
 function mergeDecisions(raw: unknown, seed: Decision[]): Decision[] {
   if (!Array.isArray(raw)) return seed;
-  return raw.filter(isRecord).map((item, index) => ({
-    id: asString(item.id, `dec-${index}`),
-    question: asString(item.question, ""),
-    options: asString(item.options, ""),
-    status: item.status === "decided" ? "decided" : "pending",
-    decision: asString(item.decision, ""),
-    date: asString(item.date, ""),
-    createdAt: asString(item.createdAt, ""),
-  }));
+  const stored = raw
+    .map((item, index) => coerceStoredDecision(item, index))
+    .filter((item): item is Decision => item !== null);
+  // Stored rows win on ID. Seed fills official record-book IDs a browser is missing.
+  return mergeDecisionsById(seed, stored);
 }
 
 function mergeSettings(raw: unknown, seed: Settings): Settings {
@@ -185,13 +231,32 @@ function mergeSettings(raw: unknown, seed: Settings): Settings {
 export function migrateState(raw: unknown): AppState {
   const seed = createSeedState();
   if (!isRecord(raw)) return seed;
+  const storedLedger = Array.isArray(raw.ledger)
+    ? raw.ledger
+        .map((item, index) => coerceStoredLedgerEntry(item, index))
+        .filter((item): item is LedgerEntry => item !== null)
+    : [];
+  const storedUnits =
+    isRecord(raw.treasury) && typeof raw.treasury.units === "number"
+      ? raw.treasury.units
+      : Number.NaN;
+  const upgradeOpening = looksLikeLegacyOpeningSeed(storedUnits, storedLedger);
+  const treasury = mergeTreasury(raw.treasury, seed.treasury);
   return {
     version: STATE_VERSION,
-    treasury: mergeTreasury(raw.treasury, seed.treasury),
+    treasury: upgradeOpening
+      ? {
+          ...treasury,
+          units: TREASURY_CURRENT_UNITS,
+          locationNote: seed.treasury.locationNote,
+          provenance: "founder-reported",
+        }
+      : treasury,
     venues: mergeVenues(raw.venues, seed.venues),
     nodes: mergeNodes(raw.nodes, seed.nodes),
     ledger: mergeLedger(raw.ledger, seed.ledger),
     decisions: mergeDecisions(raw.decisions, seed.decisions),
+    agenticIntents: mergeAgenticIntents(raw.agenticIntents, seed.agenticIntents),
     settings: mergeSettings(raw.settings, seed.settings),
   };
 }

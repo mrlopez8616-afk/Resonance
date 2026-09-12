@@ -33,7 +33,7 @@ describe("ledger math", () => {
       applyToBalance: true,
       createdAt: "2026-09-11T00:00:00.000Z",
     });
-    assert.equal(next.treasury.units, 26000.9);
+    assert.equal(next.treasury.units, 27772.9);
     assert.equal(next.ledger.length, state.ledger.length + 1);
   });
 });
@@ -57,19 +57,20 @@ describe("manual-first valuation", () => {
 });
 
 describe("graph-ready node records", () => {
-  it("gives every node a stable id and a links array", () => {
+  it("gives every node a stable id, sleeve, and a links array", () => {
     const state = createSeedState();
     assert.equal(state.nodes.length, 12);
     for (const node of state.nodes) {
       assert.ok(node.id.startsWith("node-"));
       assert.ok(Array.isArray(node.links));
-      assert.equal(node.quantity, null);
-      assert.equal(node.averageCost, null);
-      assert.equal(node.venue, "");
-      assert.equal(node.lastSyncedAt, null);
-      assert.equal(node.syncSource, null);
+      assert.ok(node.sleeve === "main" || node.sleeve === "none");
     }
+    const btc = state.nodes.find((node) => node.ticker === "BTC");
+    assert.equal(btc?.quantity, null);
+    assert.equal(btc?.venue, "");
+    assert.equal(btc?.sleeve, "none");
     const xrp = state.nodes.find((node) => node.ticker === "XRP");
     assert.ok(xrp?.links.some((link) => link.targetTicker === "FLR"));
+    assert.equal(xrp?.sleeve, "main");
   });
 });
