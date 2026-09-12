@@ -4,6 +4,7 @@ import { mergeDecisionsById } from "./decisions";
 import { createSeedState } from "./seed";
 import { loadState, saveState } from "./storage";
 import { newId } from "./format";
+import { mergeLedgerById } from "./treasury-ledger";
 import type {
   AppState,
   Decision,
@@ -180,6 +181,28 @@ export function importDecisionsMerge(incoming: Decision[]) {
     {
       ...getAppSnapshot(),
       decisions: mergeDecisionsById(getAppSnapshot().decisions, incoming),
+    },
+    true,
+  );
+}
+
+export function importTreasuryLedgerMerge(
+  incoming: LedgerEntry[],
+  treasuryPatch?: Partial<Treasury> | null,
+) {
+  const current = getAppSnapshot();
+  setSnapshot(
+    {
+      ...current,
+      ledger: mergeLedgerById(current.ledger, incoming),
+      treasury: treasuryPatch
+        ? {
+            ...current.treasury,
+            ...treasuryPatch,
+            provenance: treasuryPatch.provenance ?? "founder-reported",
+            updatedAt: new Date().toISOString(),
+          }
+        : current.treasury,
     },
     true,
   );

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ProvenanceBadge } from "@/components/badges";
+import { ProvenanceBadge, VenueBadge } from "@/components/badges";
 import { EmptyState, PageHeader } from "@/components/page-header";
+import { TreasuryImportPanel } from "@/components/treasury-import";
 import { Field, Stat } from "@/components/ui";
 import { usePrices } from "@/context/prices";
 import { useStore } from "@/context/store";
@@ -12,6 +13,10 @@ import {
   sortLedger,
   totalsByClassification,
 } from "@/lib/ledger";
+import {
+  principalTrailTotal,
+  withRunningPrincipal,
+} from "@/lib/treasury-ledger";
 import type { LedgerClassification } from "@/lib/types";
 import { parseOptionalNumber, xrpUsdRate } from "@/lib/valuation";
 
@@ -23,8 +28,15 @@ const CLASSES: LedgerClassification[] = [
 ];
 
 export default function TreasuryPage() {
-  const { ready, epoch, state, addLedgerEntry, updateLedgerEntry, deleteLedgerEntry } =
-    useStore();
+  const {
+    ready,
+    epoch,
+    state,
+    addLedgerEntry,
+    updateLedgerEntry,
+    deleteLedgerEntry,
+    exportTreasuryLedgerJson,
+  } = useStore();
   const { quoteFor, book } = usePrices();
   const xrp = quoteFor("XRP");
   const [date, setDate] = useState(todayIsoDate());
@@ -43,6 +55,20 @@ export default function TreasuryPage() {
       : null;
   const totals = totalsByClassification(state.ledger);
   const rows = sortLedger(state.ledger);
+  const trail = withRunningPrincipal(state.ledger);
+  const principalSum = principalTrailTotal(state.ledger);
+
+  function downloadExport() {
+    const blob = new Blob([exportTreasuryLedgerJson()], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "resonance-treasury-ledger.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   function submitClaim(event: React.FormEvent) {
     event.preventDefault();
@@ -86,9 +112,29 @@ export default function TreasuryPage() {
     <div>
       <PageHeader
         kicker="Books"
-        title="Treasury"
-        description="Working balance and the claim ledger are typed by you and stored in this browser — not an XRPL proof. Live XRP/USD is optional. Robinhood XRP is a separate node holding and does not live in this Xaman principal."
+        title="Treasury ledger"
+        description="Founder-reported Flare vault / Xaman principal trail starting 2026-08-28. Working books ~27,772 XRP as of 2026-09-11/12. Principal was never withdrawn. Yield is ammo only. Not an XRPL proof. Robinhood XRP is a separate Main bag."
+        actions={
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={downloadExport}
+          >
+            Export treasury JSON
+          </button>
+        }
       />
+
+      <div className="notice notice-warn mb-8">
+        <p className="font-medium text-[color:var(--text)]">
+          Principal never withdrawn. Yield (~1 XRP/day class) is ammo only.
+        </p>
+        <p className="mt-2">
+          Path: ~20,000 on Aug 28, then weekly-class adds (~4k, then +1k, then
+          +1k) through early Sep, then a founder-reported residual to ~27,772.
+          Badge every unit founder-reported until a later read-only XRPL watch.
+        </p>
+      </div>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <Stat
@@ -97,6 +143,7 @@ export default function TreasuryPage() {
           hint={
             <span className="flex flex-wrap items-center gap-2">
               <ProvenanceBadge value={state.treasury.provenance} />
+              <VenueBadge value={state.treasury.venue} />
               Last edited {state.treasury.updatedAt.slice(0, 10)}
             </span>
           }
@@ -124,6 +171,49 @@ export default function TreasuryPage() {
           hint={`${totals.reward.count} reward rows · fees ${formatUnits(totals.reward.fees + totals.fee.amount)}`}
         />
       </div>
+
+      <section className="mb-8">
+        <h2 className="mb-1 text-lg">Principal trail</h2>
+        <p className="mb-3 text-sm text-[color:var(--muted)]">
+          Chronological running principal from founder-reported adds. Reward
+          rows do not move this column. Trail principal {formatUnits(principalSum)}{" "}
+          vs working balance {formatUnits(state.treasury.units)}.
+        </p>
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Class</th>
+                <th>Amount</th>
+                <th>Running principal</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trail.map((entry) => (
+                <tr key={`trail-${entry.id}`}>
+                  <td className="font-mono text-xs">{entry.date}</td>
+                  <td>{entry.classification}</td>
+                  <td className="font-mono tabular-nums">
+                    {formatUnits(entry.amount)}
+                  </td>
+                  <td className="font-mono tabular-nums">
+                    {entry.runningPrincipal === null
+                      ? "—"
+                      : formatUnits(entry.runningPrincipal)}
+                  </td>
+                  <td className="text-sm text-[color:var(--muted)]">
+                    {entry.note}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <TreasuryImportPanel />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <WorkingBalanceForm key={`${epoch}-${state.treasury.updatedAt}`} />
@@ -194,7 +284,7 @@ export default function TreasuryPage() {
             <span>
               Apply net ({formatUnits(netAmount({ amount: Number(amount) || 0, fee: Number(fee) || 0 }))}
               ) to the working balance. Seed history is stored without this so
-              the opening 26,000 is not double-counted.
+              the opening 20,000 → 27,772 trail is not double-counted.
             </span>
           </label>
           {formError ? (
@@ -352,8 +442,8 @@ function WorkingBalanceForm() {
     <form className="card space-y-4" onSubmit={saveBalance}>
       <h2 className="text-lg">Working balance</h2>
       <p className="text-sm text-[color:var(--muted)]">
-        Seeded at ~26,000 XRP on Xaman in a Flare vault, ~1 XRP/day. Treat as
-        founder-reported until verified.
+        Seeded at ~27,772 XRP on Xaman in a Flare vault, ~1 XRP/day ammo.
+        Treat as founder-reported until verified. Principal never withdrawn.
       </p>
       <Field label="Units (XRP)">
         <input

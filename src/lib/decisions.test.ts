@@ -70,7 +70,7 @@ describe("decisions example + seed", () => {
     assert.equal(flatten?.authorizedBy, "Andres López");
     assert.match(flatten?.outcome ?? "", /queued ≠ filled|Queued ≠ filled/);
     assert.equal(flatten?.fingerprint, null);
-    assert.match(buys?.outcome ?? "", /No fill recorded yet/);
+    assert.match(buys?.outcome ?? "", /QUEUED for Monday open/);
   });
 
   it("matches the in-memory locked records used by seed", () => {

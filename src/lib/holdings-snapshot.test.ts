@@ -94,8 +94,9 @@ describe("holdings snapshot apply", () => {
     assert.ok(
       preview.warnings.some((warning) => warning.includes("Xaman")),
     );
-    const stillWatch = seed.nodes.find((node) => node.ticker === "PWR");
-    assert.equal(stillWatch?.status, "watch");
+    const before = seed.nodes.find((node) => node.ticker === "PWR");
+    assert.equal(before?.quantity, "0.070066");
+    assert.equal(before?.status, "funded");
   });
 
   it("only updates treasury when a holding explicitly targets it", () => {
@@ -118,7 +119,7 @@ describe("holdings snapshot apply", () => {
     );
     assert.equal(next.treasury.units, 100);
     const xrp = next.nodes.find((node) => node.ticker === "XRP");
-    assert.equal(xrp?.quantity, null);
+    assert.equal(xrp?.quantity, seed.nodes.find((node) => node.ticker === "XRP")?.quantity);
   });
 
   it("keeps thesis editable after import (manual overlay)", () => {

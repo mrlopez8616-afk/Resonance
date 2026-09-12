@@ -28,9 +28,11 @@ import {
   updateTreasury as updateTreasuryAction,
   importHoldingsSnapshot as importHoldingsSnapshotAction,
   importDecisionsMerge as importDecisionsMergeAction,
+  importTreasuryLedgerMerge as importTreasuryLedgerMergeAction,
 } from "@/lib/app-store";
 import { exportDecisionsJson } from "@/lib/decisions";
 import { exportState, parseImportedState } from "@/lib/storage";
+import { exportTreasuryLedgerJson } from "@/lib/treasury-ledger";
 import type {
   AppState,
   Decision,
@@ -74,6 +76,11 @@ type StoreContextValue = {
   importHoldingsSnapshot: (snapshot: HoldingsSnapshot) => void;
   importDecisionsMerge: (incoming: Decision[]) => void;
   exportDecisionsJson: () => string;
+  importTreasuryLedgerMerge: (
+    incoming: LedgerEntry[],
+    treasuryPatch?: Partial<Treasury> | null,
+  ) => void;
+  exportTreasuryLedgerJson: () => string;
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -99,6 +106,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => exportDecisionsJson(state.decisions),
     [state.decisions],
   );
+  const exportTreasuryLedger = useCallback(
+    () => exportTreasuryLedgerJson(state.treasury, state.ledger),
+    [state.treasury, state.ledger],
+  );
 
   const value = useMemo(
     () => ({
@@ -121,8 +132,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       importHoldingsSnapshot: importHoldingsSnapshotAction,
       importDecisionsMerge: importDecisionsMergeAction,
       exportDecisionsJson: exportDecisions,
+      importTreasuryLedgerMerge: importTreasuryLedgerMergeAction,
+      exportTreasuryLedgerJson: exportTreasuryLedger,
     }),
-    [ready, epoch, state, exportJson, importJson, exportDecisions],
+    [
+      ready,
+      epoch,
+      state,
+      exportJson,
+      importJson,
+      exportDecisions,
+      exportTreasuryLedger,
+    ],
   );
 
   return (

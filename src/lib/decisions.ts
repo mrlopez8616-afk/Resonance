@@ -112,9 +112,9 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
       "Sized, named, Monday-open entries. Does not tap Main or Xaman treasury principal. Sits on top of D-2026-09-11-01 (learning lots / Monday sells stay).",
     authorizedBy: "Andres López",
     outcome:
-      "Approved and queued for Monday open. No fill recorded yet — queued ≠ filled.",
+      "PWR $35 and VRT $17 are QUEUED for Monday open — not filled. Queued ≠ filled.",
     evidence:
-      "Written size ($35 PWR, $17 VRT); Agentic Robinhood Ops only; Monday open timing.",
+      "Written size ($35 PWR, $17 VRT); Agentic Robinhood Ops only; Monday open timing. No fill recorded.",
     reviewTrigger:
       "After Monday open — confirm fills, residual cash, and whether either ticker needs a new decision.",
     fingerprint: null,
@@ -131,12 +131,12 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     decision:
       "Unlock FULL Agentic autonomy for Robinhood Ops. Agentic account only. Main + Xaman treasury principal remain off-limits.",
     rationale:
-      "Trading autonomy is granted to Agentic only. This supersedes D-2026-09-11-02 for trading autonomy. It does not authorize spending Xaman treasury principal or the founder Main account.",
+      "Trading autonomy is granted to Agentic only. This supersedes D-2026-09-11-02 for trading autonomy. It does not authorize spending Xaman treasury principal or the founder Main account. Agentic may trade ETN and GEV under this unlock.",
     authorizedBy: "Andres López",
     outcome:
-      "Autonomy unlocked for Agentic Robinhood Ops only. No Main or Xaman principal movement. No on-chain write.",
+      "Autonomy unlocked for Agentic Robinhood Ops only. Agentic autonomy trades ETN/GEV under this row. PWR/VRT (D-03) and ETN/GEV (D-04) are QUEUED for Monday open — not filled. No Main or Xaman principal movement. No on-chain write.",
     evidence:
-      "Founder lock tonight; Phase Zero Web2 record only — no wallet signing, no on-chain write.",
+      "Founder lock tonight; Phase Zero Web2 record only — no wallet signing, no on-chain write. ETN/GEV autonomy tickets sit on the Agentic sleeve, not Main.",
     reviewTrigger:
       "Any proposed touch of Main or Xaman treasury principal; material Agentic loss; or a new written charter.",
     fingerprint: null,

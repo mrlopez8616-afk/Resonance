@@ -10,6 +10,8 @@ import {
   Menu,
   Radio,
   Settings2,
+  Sparkles,
+  SplitSquareVertical,
   Table2,
   X,
 } from "lucide-react";
@@ -20,8 +22,10 @@ const NAV = [
   { href: "/", label: "Overview", icon: CircleGauge },
   { href: "/treasury", label: "Treasury", icon: Landmark },
   { href: "/nodes", label: "Nodes", icon: Table2 },
-  { href: "/prices", label: "Prices", icon: Radio },
+  { href: "/robinhood", label: "Robinhood", icon: SplitSquareVertical },
   { href: "/decisions", label: "Decisions", icon: BookMarked },
+  { href: "/prices", label: "Prices", icon: Radio },
+  { href: "/whats-new", label: "What changed", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings2 },
 ];
 
@@ -89,7 +93,7 @@ export function AppShell({
             </div>
           </div>
         </div>
-        <div className="px-3">
+        <div className="flex-1 overflow-y-auto px-3">
           <NavLinks />
         </div>
         <div className="mt-auto border-t border-[color:var(--border)] px-5 py-4">

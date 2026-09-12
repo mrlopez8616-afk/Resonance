@@ -5,8 +5,10 @@ import Link from "next/link";
 import {
   ClassBadge,
   ProvenanceBadge,
+  SleeveBadge,
   SnapshotBadge,
   StatusBadge,
+  VenueBadge,
 } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
 import { Field, NodePriceCell } from "@/components/ui";
@@ -49,13 +51,15 @@ function HoldingsLine({ node }: { node: Node }) {
 export default function NodesPage() {
   const { ready, epoch, state, updateNode } = useStore();
   const { book, quoteFor } = usePrices();
-  const [filter, setFilter] = useState<"all" | AssetClass>("all");
+  const [filter, setFilter] = useState<"all" | AssetClass | "main">("all");
   const [openTicker, setOpenTicker] = useState<string | null>("XRP");
 
   const nodes = useMemo(() => {
-    return state.nodes.filter(
-      (node) => filter === "all" || node.class === filter,
-    );
+    return state.nodes.filter((node) => {
+      if (filter === "all") return true;
+      if (filter === "main") return node.sleeve === "main";
+      return node.class === filter;
+    });
   }, [filter, state.nodes]);
 
   if (!ready) {
@@ -67,20 +71,29 @@ export default function NodesPage() {
       <PageHeader
         kicker="Board"
         title="Nodes"
-        description="Twelve tracking slots. Paste a Grok Bot / Robinhood JSON snapshot in Settings to fill quantity, average cost, and venue. Thesis and failure condition stay yours to edit. This is still not a live brokerage feed."
+        description="Twelve tracking slots. Physical AI: PWR ETN VRT GEV CEG HUBB. Digital: BTC ETH SOL XRP SUI FLR. Main sleeve = Robinhood learning lots. Thesis stays yours. Not a live brokerage feed."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link href="/robinhood" className="btn btn-secondary">
+              Sleeves
+            </Link>
             <Link href="/settings" className="btn btn-secondary">
               Import snapshot
             </Link>
-            {(["all", "digital", "physical"] as const).map((item) => (
+            {(["all", "digital", "physical", "main"] as const).map((item) => (
               <button
                 key={item}
                 type="button"
                 className={`btn ${filter === item ? "btn-primary" : "btn-secondary"}`}
                 onClick={() => setFilter(item)}
               >
-                {item === "all" ? "All" : item === "digital" ? "Digital" : "Physical"}
+                {item === "all"
+                  ? "All"
+                  : item === "digital"
+                    ? "Digital"
+                    : item === "physical"
+                      ? "Physical AI"
+                      : "Main"}
               </button>
             ))}
           </div>
@@ -117,6 +130,8 @@ export default function NodesPage() {
                     <h2 className="font-mono text-lg">{node.ticker}</h2>
                     <ClassBadge value={node.class} />
                     <StatusBadge value={node.status} />
+                    <SleeveBadge value={node.sleeve} />
+                    {node.venue ? <VenueBadge value={node.venue} /> : null}
                     {fromSnapshot ? (
                       <>
                         <ProvenanceBadge value="founder-reported" />

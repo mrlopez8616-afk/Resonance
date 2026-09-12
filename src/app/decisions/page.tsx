@@ -324,6 +324,9 @@ function DecisionCard({
             {item.id}
           </span>
           <DecisionStatusBadge value={item.status} />
+          <span className="badge border-[color:var(--border)] font-mono text-[color:var(--muted)]">
+            fingerprint {item.fingerprint ?? "null"}
+          </span>
         </div>
         <select
           className="select w-auto"

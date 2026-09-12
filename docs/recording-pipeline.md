@@ -10,4 +10,6 @@ Founder-locked for later phases. Phase Zero implements the Web2 record book and 
 
 4. **Engineer handoff.** Exportable full trail (Decisions JSON today; later a shared DB) is the bridge to real XRPL / XRS recording. Import/merge is the Phase Zero hub bridge. Do not invent a second schema for chain.
 
-Not in this PR: sensors, ack viewer, beep trail, shared DB, hashing, or on-chain writes.
+5. **Playbook pointer.** Overnight Web2 mimic (treasury trail, record-book fields, Robinhood Main vs Agentic) is documented in [`overnight-build.md`](./overnight-build.md) and in-app at **What changed**. That work does not start chain writes.
+
+Not in this phase: sensors, ack viewer, beep trail, shared DB, hashing, or on-chain writes.

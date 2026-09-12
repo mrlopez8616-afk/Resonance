@@ -4,7 +4,14 @@ export type AssetClass = "digital" | "physical";
 
 export type PositionStatus = "none" | "watch" | "funded";
 
+/** Robinhood sleeve. Main is the founder learning account; Agentic is the autonomous risk sleeve. */
+export type NodeSleeve = "main" | "agentic" | "none";
+
 export type LedgerClassification = "principal" | "reward" | "fee" | "transfer";
+
+export type AgenticIntentStatus = "queued" | "filled" | "cancelled";
+
+export type AgenticIntentSide = "buy" | "sell";
 
 export type DecisionStatus = "pending" | "decided" | "superseded";
 
@@ -56,7 +63,22 @@ export interface Node {
   /** e.g. robinhood-snapshot. Never implies a live brokerage session. */
   syncSource: string | null;
   holdingsNote: string;
+  /** Main = founder RH learning account. Agentic is tracked via queued intents, not this field. */
+  sleeve: NodeSleeve;
   links: NodeLink[];
+}
+
+/** Queued (≠ filled) Agentic sleeve intent. Web2 record only — the app does not place trades. */
+export interface AgenticIntent {
+  id: string;
+  ticker: string;
+  side: AgenticIntentSide;
+  /** Named USD size when the decision specified one. Null = autonomy, no fixed ticket. */
+  notionalUsd: number | null;
+  status: AgenticIntentStatus;
+  authorizedByDecisionId: string;
+  note: string;
+  venue: string;
 }
 
 export type SnapshotAssetClass = "equity" | "crypto";
@@ -137,6 +159,7 @@ export interface AppState {
   nodes: Node[];
   ledger: LedgerEntry[];
   decisions: Decision[];
+  agenticIntents: AgenticIntent[];
   settings: Settings;
 }
 

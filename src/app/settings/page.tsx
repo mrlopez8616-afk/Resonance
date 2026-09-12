@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HoldingsImportPanel } from "@/components/holdings-import";
 import { PageHeader } from "@/components/page-header";
@@ -113,7 +114,7 @@ function SettingsBody({
       <PageHeader
         kicker="Local"
         title="Settings"
-        description="Operator defaults, venues, holdings snapshot import, and the session lock. Books still live in this browser’s localStorage."
+        description="Operator defaults, venues, holdings snapshot import, and the session lock. Overnight seed is ~27,772 XRP founder-reported plus Main/Agentic sleeves. Books still live in this browser’s localStorage."
       />
 
       <div className="notice notice-warn mb-8">
@@ -310,6 +311,15 @@ function SettingsBody({
           </button>
         </div>
       </form>
+
+      <p className="mb-8 text-sm text-[color:var(--muted)]">
+        Overnight walkthrough lives at{" "}
+        <Link href="/whats-new" className="text-[color:var(--accent)]">
+          /whats-new
+        </Link>
+        . Treasury trail JSON:{" "}
+        <span className="font-mono text-xs">/examples/treasury-ledger.json</span>.
+      </p>
 
       <HoldingsImportPanel onApplied={setMessage} />
 

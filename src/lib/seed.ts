@@ -1,4 +1,10 @@
 import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
+import { applySeedHolding, LOCKED_AGENTIC_INTENTS } from "./robinhood";
+import {
+  LOCKED_TREASURY_LEDGER,
+  TREASURY_AS_OF,
+  TREASURY_CURRENT_UNITS,
+} from "./treasury-ledger";
 import { STATE_VERSION, type AppState, type Node } from "./types";
 
 function node(
@@ -26,18 +32,132 @@ function node(
     lastSyncedAt: null,
     syncSource: null,
     holdingsNote: "",
+    sleeve: "none",
     links,
   };
 }
 
-export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
+export function createSeedState(now = TREASURY_AS_OF): AppState {
+  const nodes = [
+    node(
+      "BTC",
+      "Bitcoin",
+      "digital",
+      "watch",
+      "Long-duration monetary reserve. Fund only from realized rewards after treasury principal is stable.",
+      "Thesis fails if a funded position would require spending XRP principal, or if custody cannot be described in one sentence.",
+    ),
+    node(
+      "ETH",
+      "Ethereum",
+      "digital",
+      "watch",
+      "Settlement and DeFi optionality. Watch until rewards can size a position without touching XRP principal.",
+      "Abandon if gas, custody, or protocol risk cannot be named before funding.",
+    ),
+    node(
+      "SOL",
+      "Solana",
+      "digital",
+      "watch",
+      "High-throughput L1. Unfunded watch until size, venue, and failure condition are written down.",
+      "Do not fund while the written size is blank or while treasury rewards are still needed to rebuild principal.",
+    ),
+    node(
+      "XRP",
+      "XRP",
+      "digital",
+      "funded",
+      "Operating treasury rail. Keep principal intact. Realized Flare-vault rewards may later fund other nodes. Robinhood also holds a small separate XRP bag.",
+      "Reduce or exit the yield overlay if principal is at risk, rewards cannot be reconciled, or custody leaves Xaman/Flare undocumented.",
+      [
+        {
+          targetTicker: "FLR",
+          kind: "depends-on",
+          note: "Flare vault overlay for yield — secondary to XRP principal.",
+        },
+      ],
+    ),
+    node(
+      "SUI",
+      "Sui",
+      "digital",
+      "watch",
+      "Move-based L1 option. Thesis is incomplete — tracking only.",
+      "Remain unfunded until a specific use and a maximum loss are written.",
+    ),
+    node(
+      "FLR",
+      "Flare",
+      "digital",
+      "watch",
+      "Venue layer for XRP vault / DeFi yield. Secondary to treasury preservation. MetaMask is a play surface, not the books.",
+      "Stop the overlay if yield requires locking principal on terms you cannot explain, or if FLR exposure becomes the position instead of XRP.",
+      [
+        {
+          targetTicker: "XRP",
+          kind: "related",
+          note: "Yield venue for the XRP treasury, not the books of record.",
+        },
+      ],
+    ),
+    node(
+      "PWR",
+      "Quanta Services",
+      "physical",
+      "watch",
+      "US equity. Electrical infrastructure exposed to grid and compute-load buildout (Quanta).",
+      "Drop to none if the thesis becomes a trade without a holding period and a max loss, or if funding would tap XRP principal.",
+    ),
+    node(
+      "ETN",
+      "Eaton",
+      "physical",
+      "watch",
+      "US equity. Power management and electrical equipment (Eaton).",
+      "Invalid if position sizing is not funded from realized rewards or if the company-level thesis cannot be restated in two lines.",
+    ),
+    node(
+      "VRT",
+      "Vertiv",
+      "physical",
+      "watch",
+      "US equity. Data-center thermal and power infrastructure (Vertiv).",
+      "Watch only until a written entry price band and a reason to sell exist.",
+    ),
+    node(
+      "GEV",
+      "GE Vernova",
+      "physical",
+      "watch",
+      "US equity. Grid and generation transition (GE Vernova).",
+      "Do not fund as a momentum ticker. Require a cycle-length holding thesis first.",
+    ),
+    node(
+      "CEG",
+      "Constellation Energy",
+      "physical",
+      "watch",
+      "US equity. Contracted power and nuclear generation (Constellation).",
+      "Failure if the thesis depends on a single headline rather than contracted cash flows you can point to.",
+    ),
+    node(
+      "HUBB",
+      "Hubbell",
+      "physical",
+      "watch",
+      "US equity. Electrical products into construction and utility channels (Hubbell).",
+      "Remain unfunded until rewards coverage and a boring holding period are specified.",
+    ),
+  ].map(applySeedHolding);
+
   return {
     version: STATE_VERSION,
     treasury: {
-      units: 26000,
+      units: TREASURY_CURRENT_UNITS,
       asset: "XRP",
       venue: "Xaman",
-      locationNote: "Currently in a Flare vault",
+      locationNote: "Flare vault / Xaman principal trail starting 2026-08-28",
       estimatedDailyReward: 1,
       manualUsdPerXrp: null,
       provenance: "founder-reported",
@@ -47,9 +167,9 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
       {
         id: "venue-robinhood",
         name: "Robinhood",
-        role: "Fractional equities + small XRP bag",
+        role: "Main learning account + Agentic risk sleeve",
         notes:
-          "Founder main account. Physical nodes as fractional shares. Robinhood XRP is a separate bag from the Xaman treasury. Resonance does not call Robinhood — paste a JSON snapshot from Grok Bot.",
+          "Two sleeves, one venue. Main is read-only learning / flatten Monday (D-01) — Resonance never places silent Main trades. Agentic is the autonomous risk sleeve (D-03/D-04). Robinhood XRP is a separate bag from the Xaman treasury. Resonance does not call Robinhood — paste a JSON snapshot from Grok Bot.",
       },
       {
         id: "venue-coinbase",
@@ -61,7 +181,8 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         id: "venue-xaman",
         name: "Xaman",
         role: "Treasury",
-        notes: "Treasury wallet of record for XRP. Public address watch is future work.",
+        notes:
+          "Treasury wallet of record for XRP principal. Flare vault overlay. Public address watch is future work. Figures are founder-reported until verified.",
       },
       {
         id: "venue-metamask",
@@ -70,150 +191,8 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         notes: "Secondary surface for Flare DeFi. Not the vault of record.",
       },
     ],
-    nodes: [
-      node(
-        "BTC",
-        "Bitcoin",
-        "digital",
-        "watch",
-        "Long-duration monetary reserve. Fund only from realized rewards after treasury principal is stable.",
-        "Thesis fails if a funded position would require spending XRP principal, or if custody cannot be described in one sentence.",
-      ),
-      node(
-        "ETH",
-        "Ethereum",
-        "digital",
-        "watch",
-        "Settlement and DeFi optionality. Watch until rewards can size a position without touching XRP principal.",
-        "Abandon if gas, custody, or protocol risk cannot be named before funding.",
-      ),
-      node(
-        "SOL",
-        "Solana",
-        "digital",
-        "watch",
-        "High-throughput L1. Unfunded watch until size, venue, and failure condition are written down.",
-        "Do not fund while the written size is blank or while treasury rewards are still needed to rebuild principal.",
-      ),
-      node(
-        "XRP",
-        "XRP",
-        "digital",
-        "funded",
-        "Operating treasury rail. Keep principal intact. Realized Flare-vault rewards may later fund other nodes.",
-        "Reduce or exit the yield overlay if principal is at risk, rewards cannot be reconciled, or custody leaves Xaman/Flare undocumented.",
-        [
-          {
-            targetTicker: "FLR",
-            kind: "depends-on",
-            note: "Flare vault overlay for yield — secondary to XRP principal.",
-          },
-        ],
-      ),
-      node(
-        "SUI",
-        "Sui",
-        "digital",
-        "watch",
-        "Move-based L1 option. Thesis is incomplete — tracking only.",
-        "Remain unfunded until a specific use and a maximum loss are written.",
-      ),
-      node(
-        "FLR",
-        "Flare",
-        "digital",
-        "watch",
-        "Venue layer for XRP vault / DeFi yield. Secondary to treasury preservation. MetaMask is a play surface, not the books.",
-        "Stop the overlay if yield requires locking principal on terms you cannot explain, or if FLR exposure becomes the position instead of XRP.",
-        [
-          {
-            targetTicker: "XRP",
-            kind: "related",
-            note: "Yield venue for the XRP treasury, not the books of record.",
-          },
-        ],
-      ),
-      node(
-        "PWR",
-        "Quanta Services",
-        "physical",
-        "watch",
-        "US equity. Electrical infrastructure exposed to grid and compute-load buildout (Quanta).",
-        "Drop to none if the thesis becomes a trade without a holding period and a max loss, or if funding would tap XRP principal.",
-      ),
-      node(
-        "ETN",
-        "Eaton",
-        "physical",
-        "watch",
-        "US equity. Power management and electrical equipment (Eaton).",
-        "Invalid if position sizing is not funded from realized rewards or if the company-level thesis cannot be restated in two lines.",
-      ),
-      node(
-        "VRT",
-        "Vertiv",
-        "physical",
-        "watch",
-        "US equity. Data-center thermal and power infrastructure (Vertiv).",
-        "Watch only until a written entry price band and a reason to sell exist.",
-      ),
-      node(
-        "GEV",
-        "GE Vernova",
-        "physical",
-        "watch",
-        "US equity. Grid and generation transition (GE Vernova).",
-        "Do not fund as a momentum ticker. Require a cycle-length holding thesis first.",
-      ),
-      node(
-        "CEG",
-        "Constellation Energy",
-        "physical",
-        "watch",
-        "US equity. Contracted power and nuclear generation (Constellation).",
-        "Failure if the thesis depends on a single headline rather than contracted cash flows you can point to.",
-      ),
-      node(
-        "HUBB",
-        "Hubbell",
-        "physical",
-        "watch",
-        "US equity. Electrical products into construction and utility channels (Hubbell).",
-        "Remain unfunded until rewards coverage and a boring holding period are specified.",
-      ),
-    ],
-    ledger: [
-      {
-        id: "led-open",
-        date: "2026-08-15",
-        amount: 26000,
-        fee: 0,
-        note: "Opening treasury balance on Xaman / Flare vault. Founder-reported; not chain-verified.",
-        classification: "principal",
-        applyToBalance: false,
-        createdAt: "2026-08-15T15:00:00.000Z",
-      },
-      {
-        id: "led-d1",
-        date: "2026-09-01",
-        amount: 1.0,
-        fee: 0,
-        note: "Approx daily Flare-vault reward (founder-reported, ~1 XRP/day).",
-        classification: "reward",
-        applyToBalance: false,
-        createdAt: "2026-09-01T18:00:00.000Z",
-      },
-      {
-        id: "led-w1",
-        date: "2026-09-08",
-        amount: 7.14,
-        fee: 0.02,
-        note: "Weekly reward sweep (founder-reported). Fee is a placeholder for network/venue cost.",
-        classification: "reward",
-        applyToBalance: false,
-        createdAt: "2026-09-08T18:30:00.000Z",
-      },
-    ],
+    nodes,
+    ledger: [...LOCKED_TREASURY_LEDGER],
     decisions: [
       ...LOCKED_DECISIONS_2026_09_11,
       {
@@ -225,12 +204,12 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         decision:
           "Keep principal in the Flare vault. Do not spend principal. Use realized rewards later to fund other nodes.",
         rationale:
-          "Principal is the operating priority. Realized rewards, not principal, fund later nodes.",
+          "Principal is the operating priority. Realized rewards, not principal, fund later nodes. Yield (~1 XRP/day class) is ammo only.",
         authorizedBy: "Andres López",
         outcome:
-          "Principal remains in the Flare vault (founder-reported). Not chain-verified.",
+          "Principal remains in the Flare vault (founder-reported, ~27,772 XRP as of 2026-09-11/12). Not chain-verified. Principal never withdrawn.",
         evidence:
-          "Founder-reported Xaman / Flare vault balance (~26k XRP). Phase Zero does not verify on-chain yet.",
+          "Founder-reported Xaman / Flare vault trail from 2026-08-28 (~20k → +~4k → +1k → +1k → 27,772). Phase Zero does not verify on-chain yet.",
         reviewTrigger:
           "If vault terms cannot be explained in one sentence, or principal is at risk.",
         fingerprint: null,
@@ -270,10 +249,11 @@ export function createSeedState(now = "2026-09-11T12:00:00.000Z"): AppState {
         createdAt: now,
       },
     ],
+    agenticIntents: [...LOCKED_AGENTIC_INTENTS],
     settings: {
       operatorName: "Andres López",
       operatingPriority:
-        "Build and add to treasury. Keep principal. Use realized rewards later to fund other nodes.",
+        "Build and add to treasury. Keep principal. Yield is ammo only. Use realized rewards later to fund other nodes. Main Robinhood lots flatten Monday; Agentic is the only autonomous sleeve.",
       xrplWatchAddress: "",
       showYoutubeStub: true,
     },
