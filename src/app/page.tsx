@@ -39,8 +39,17 @@ export default function OverviewPage() {
   const watch = state.nodes.filter((node) => node.status === "watch");
   const none = state.nodes.filter((node) => node.status === "none");
   const lastDecisions = [...state.decisions]
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 3);
+    .sort((a, b) => {
+      const aOfficial = a.id.startsWith("D-") ? 1 : 0;
+      const bOfficial = b.id.startsWith("D-") ? 1 : 0;
+      if (aOfficial !== bOfficial) return bOfficial - aOfficial;
+      return (
+        b.date.localeCompare(a.date) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.id.localeCompare(a.id)
+      );
+    })
+    .slice(0, 4);
   const lastClaims = sortLedger(state.ledger).slice(0, 3);
   const holdingsSync = latestHoldingsSync(state.nodes);
   const digital = digitalNodes(state.nodes);
