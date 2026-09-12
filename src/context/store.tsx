@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -9,6 +10,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   addDecision as addDecisionAction,
   addLedgerEntry as addLedgerEntryAction,
@@ -101,11 +103,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     getServerStoreEpoch,
   );
 
-  useEffect(() => {
-    if (!ready) return;
-    void hydrateDecisionsFromServer(mergeDecisionsFromServer);
-  }, [ready]);
-
   const exportJson = useCallback(() => exportState(state), [state]);
   const importJson = useCallback((text: string) => {
     replaceState(parseImportedState(text));
@@ -155,8 +152,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
+    <StoreContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <DecisionStoreHydrate ready={ready} />
+      </Suspense>
+      {children}
+    </StoreContext.Provider>
   );
+}
+
+function DecisionStoreHydrate({ ready }: { ready: boolean }) {
+  const pathname = usePathname();
+  const gatedOut = pathname === "/unlock";
+  useEffect(() => {
+    if (!ready || gatedOut) return;
+    void hydrateDecisionsFromServer(mergeDecisionsFromServer);
+  }, [ready, gatedOut]);
+  return null;
 }
 
 export function useStore(): StoreContextValue {
