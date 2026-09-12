@@ -19,6 +19,8 @@ Do not publish these figures on a public memo or an on-chain memo.
 
 Dollar sizes and exact unit prints are stripped from public memo text. Never put private prices in a public or on-chain memo.
 
+`GET /api/public` is the ungated JSON form of this skeleton. `GET /api/decisions` stays locked (cookie or Bearer) because it includes outcomes and sizes.
+
 Target % lives on each node as `publicAllocationPct` (null = unpublished). Edit on Nodes.
 
 See also [`hedera-attestation.md`](./hedera-attestation.md) and [`recording-pipeline.md`](./recording-pipeline.md).

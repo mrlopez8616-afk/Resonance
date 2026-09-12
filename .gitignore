@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local Decision store (used when Blob is not configured)
+.data/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

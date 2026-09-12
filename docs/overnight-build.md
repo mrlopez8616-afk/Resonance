@@ -8,7 +8,7 @@ Walkthrough also lives in the app at **What changed**.
 
 1. **Treasury ledger** — Founder-reported Flare vault / Xaman principal trail starting 2026-08-28 (~20,000 XRP), weekly-class adds (~4k, then +1k, then +1k), residual to **~27,772 XRP** as of 2026-09-11/12. Principal never withdrawn. Yield (~1 XRP/day class) is ammo only and does not move working principal. Import/export: [`public/examples/treasury-ledger.json`](../public/examples/treasury-ledger.json).
 
-2. **Decisions record book** — Chain-mimic rows: proposal, why, who authorized, outcome, evidence/receipt, timestamps, `fingerprint: null`. Seeded `D-2026-09-11-01` … `04`. Agentic autonomy may trade ETN/GEV under D-04. PWR / VRT / ETN / GEV outcomes are **QUEUED for Monday open — not filled**. Import/merge + export unchanged in spirit, improved copy.
+2. **Decisions record book** — Chain-mimic rows: proposal, why, who authorized, outcome, evidence/receipt, timestamps, `fingerprint: null`. Seeded `D-2026-09-11-01` … `04`. Agentic autonomy may trade ETN/GEV under D-04. PWR / VRT / ETN / GEV outcomes are **QUEUED for Monday open — not filled**. Shared store (`/api/decisions`) can take a hub PATCH (queued → filled) so every device updates without JSON import. Setup: [`decision-sync.md`](./decision-sync.md).
 
 3. **Robinhood categories** — **Main** (read-only learning / flatten Monday) vs **Agentic** (autonomous risk sleeve). Physical AI: PWR ETN VRT GEV CEG HUBB. Digital: BTC ETH SOL XRP SUI FLR. Venue badges: Robinhood / Xaman / founder-reported. Holdings snapshot example stays aligned with the seeded Main lots.
 

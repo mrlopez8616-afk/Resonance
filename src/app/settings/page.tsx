@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DecisionsSyncSettingsCard } from "@/components/decisions-sync";
 import { HoldingsImportPanel } from "@/components/holdings-import";
 import { PageHeader } from "@/components/page-header";
 import { Field } from "@/components/ui";
@@ -114,7 +115,7 @@ function SettingsBody({
       <PageHeader
         kicker="Local"
         title="Settings"
-        description="Operator defaults, venues, holdings snapshot import, and the session lock. Overnight seed is ~27,772 XRP founder-reported plus Main/Agentic sleeves. Books still live in this browser’s localStorage."
+        description="Operator defaults, venues, holdings snapshot import, and the session lock. Overnight seed is ~27,772 XRP founder-reported plus Main/Agentic sleeves. Decisions sync to a shared store when Blob is configured; everything else stays in this browser’s localStorage."
       />
 
       <div className="notice notice-warn mb-8">
@@ -320,6 +321,8 @@ function SettingsBody({
         . Treasury trail JSON:{" "}
         <span className="font-mono text-xs">/examples/treasury-ledger.json</span>.
       </p>
+
+      <DecisionsSyncSettingsCard />
 
       <HoldingsImportPanel onApplied={setMessage} />
 
