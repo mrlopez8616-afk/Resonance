@@ -106,6 +106,8 @@ describe("decisions example + seed", () => {
       assert.ok(seed.decisions.some((row) => row.id === id), `seed missing ${id}`);
     }
     assert.ok(seed.decisions.some((row) => row.id === "dec-vault"));
+    assert.ok(!seed.decisions.some((row) => row.id === "dec-next-node"));
+    assert.ok(!seed.decisions.some((row) => row.id === "dec-youtube"));
   });
 
   it("parses the in-app schema help example", () => {
