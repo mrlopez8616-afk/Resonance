@@ -18,7 +18,7 @@ Walkthrough also lives in the app at **What changed**.
 
 ## Out of scope (unchanged)
 
-No real blockchain, no XRS mint, no wallet keys, no silent Main trades.
+No Mainnet, no XRS mint, no wallet keys in the repo, no silent Main trades. Phase 0.5 Testnet attest (later than this overnight) is documented in [`hedera-attestation.md`](./hedera-attestation.md).
 
 ## Doctrine
 

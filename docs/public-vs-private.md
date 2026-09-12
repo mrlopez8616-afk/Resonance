@@ -15,7 +15,7 @@ Do not publish these figures on a public memo or an on-chain memo.
 
 ## 2. Public / shareable skeleton
 
-`/public` shows the twelve nodes with **target allocation percentages** of the published system — not dollars. Dry powder / exact XRP / RH quantities are omitted (`omitDryPowder: true`). Decision index shows id, redacted question, attestation status, and reserved memo hash + timestamp slots (empty until Hedera).
+`/public` shows the twelve nodes with **target allocation percentages** of the published system — not dollars. Dry powder / exact XRP / RH quantities are omitted (`omitDryPowder: true`). Decision index shows id, redacted question, attestation status, and memo hash + timestamp (Hedera Testnet message id when a row is `hashgraph_attested`).
 
 Dollar sizes and exact unit prints are stripped from public memo text. Never put private prices in a public or on-chain memo.
 

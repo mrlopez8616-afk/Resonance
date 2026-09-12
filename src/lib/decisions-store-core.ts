@@ -17,6 +17,8 @@ export interface DecisionsStoreEnvelope {
   updatedAt: string;
   seededAt: string | null;
   decisions: Decision[];
+  /** Created on first live Testnet attest when HEDERA_TOPIC_ID is unset. */
+  hederaTopicId?: string | null;
 }
 
 export function detectDecisionsBackend(env: NodeJS.ProcessEnv = process.env): DecisionsStoreBackend {
@@ -40,6 +42,7 @@ export function createEmptyEnvelope(
     updatedAt: now,
     seededAt: null,
     decisions: [],
+    hederaTopicId: null,
   };
 }
 
@@ -51,6 +54,7 @@ export function createSeededEnvelope(
     updatedAt: now,
     seededAt: now,
     decisions: [...LOCKED_DECISIONS_2026_09_11],
+    hederaTopicId: null,
   };
 }
 
@@ -83,6 +87,10 @@ export function parseDecisionsEnvelope(
         : new Date().toISOString(),
     seededAt: typeof raw.seededAt === "string" ? raw.seededAt : null,
     decisions,
+    hederaTopicId:
+      typeof raw.hederaTopicId === "string" && raw.hederaTopicId.trim()
+        ? raw.hederaTopicId.trim()
+        : null,
   };
 }
 
@@ -96,6 +104,7 @@ export function writeDecisionsIntoEnvelope(
     ...envelope,
     updatedAt: now,
     decisions,
+    hederaTopicId: envelope.hederaTopicId ?? null,
   };
 }
 
@@ -108,6 +117,23 @@ export function deleteDecisionFromEnvelope(
     ...envelope,
     updatedAt: now,
     decisions: removeDecisionById(envelope.decisions, id),
+    hederaTopicId: envelope.hederaTopicId ?? null,
+  };
+}
+
+export function writeAttestationIntoEnvelope(
+  envelope: DecisionsStoreEnvelope,
+  decision: Decision,
+  hederaTopicId: string | null | undefined,
+  now = new Date().toISOString(),
+): DecisionsStoreEnvelope {
+  return {
+    ...envelope,
+    updatedAt: now,
+    decisions: envelope.decisions.map((row) =>
+      row.id === decision.id ? decision : row,
+    ),
+    hederaTopicId: hederaTopicId ?? envelope.hederaTopicId ?? null,
   };
 }
 

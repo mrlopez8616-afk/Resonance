@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DecisionStatusBadge } from "@/components/badges";
+import { DecisionAttestPanel } from "@/components/decision-attest";
 import { DecisionsImportPanel } from "@/components/decisions-import";
 import { DecisionsSyncBanner } from "@/components/decisions-sync";
 import { EmptyState, PageHeader } from "@/components/page-header";
 import { Field } from "@/components/ui";
 import { useStore } from "@/context/store";
+import {
+  fetchDecisionsHealth,
+  type HederaHealthSnapshot,
+} from "@/lib/decisions-client-sync";
 import { nextDecisionId, sortDecisions } from "@/lib/decisions";
 import { todayIsoDate } from "@/lib/format";
 import type { Decision, DecisionStatus } from "@/lib/types";
@@ -51,6 +56,18 @@ export default function DecisionsPage() {
   const operatorName = state.settings.operatorName;
   const [error, setError] = useState<string | null>(null);
   const [idTouched, setIdTouched] = useState(false);
+  const [hedera, setHedera] = useState<HederaHealthSnapshot | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDecisionsHealth().then((health) => {
+      if (cancelled || !health?.hedera) return;
+      setHedera(health.hedera);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const rows = sortDecisions(state.decisions);
   const suggestedId = nextDecisionId(state.decisions, draft.date);
@@ -123,7 +140,7 @@ export default function DecisionsPage() {
       <PageHeader
         kicker="Record Book"
         title="Decisions"
-        description="Phase Zero durable log for Andres López. Each row records what was proposed, why, who authorized, the call, what actually happened (queued ≠ filled), and a receipt. Shared store + hub PATCH merge by ID. On-chain fingerprint comes later — Web2 only."
+        description="Phase Zero durable log for Andres López. Each row records what was proposed, why, who authorized, the call, what actually happened (queued ≠ filled), and a receipt. Shared store + hub PATCH merge by ID. Decided rows can take a Hedera Testnet witness — public fingerprint only, no dollar amounts in the memo."
         actions={
           <button
             type="button"
@@ -143,8 +160,9 @@ export default function DecisionsPage() {
         </p>
         <p className="mt-2">
           Hub can POST/PATCH /api/decisions (queued → filled) and this page
-          pulls the shared store. JSON import remains a fallback. Blockchain
-          recording is out of scope for Phase Zero.
+          pulls the shared store. JSON import remains a fallback. Phase 0.5
+          can attest a decided row on Hedera Testnet. Sensor beeps still need
+          an operator ack first. Mainnet and XRPL memos stay later.
         </p>
       </div>
 
@@ -306,6 +324,7 @@ export default function DecisionsPage() {
             <DecisionCard
               key={item.id}
               item={item}
+              hedera={hedera}
               onUpdate={updateDecision}
               onDelete={deleteDecision}
             />
@@ -318,10 +337,12 @@ export default function DecisionsPage() {
 
 function DecisionCard({
   item,
+  hedera,
   onUpdate,
   onDelete,
 }: {
   item: Decision;
+  hedera: HederaHealthSnapshot | null;
   onUpdate: (id: string, patch: Partial<Decision>) => void;
   onDelete: (id: string) => void;
 }) {
@@ -335,7 +356,7 @@ function DecisionCard({
           </span>
           <DecisionStatusBadge value={item.status} />
           <span className="badge border-[color:var(--border)] font-mono text-[color:var(--muted)]">
-            fingerprint {item.fingerprint ?? "null"}
+            fingerprint {item.fingerprint ? `${item.fingerprint.slice(0, 8)}…` : "null"}
           </span>
           <span className="badge border-[color:var(--border)] text-[color:var(--muted)]">
             {item.attestationStatus.replace(/_/g, " ")}
@@ -468,6 +489,7 @@ function DecisionCard({
           }
         />
       </Field>
+      <DecisionAttestPanel item={item} hedera={hedera} onApplied={onUpdate} />
       <button
         type="button"
         className="btn btn-danger"
