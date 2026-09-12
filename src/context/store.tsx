@@ -2,12 +2,15 @@
 
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   addDecision as addDecisionAction,
   addLedgerEntry as addLedgerEntryAction,
@@ -17,6 +20,7 @@ import {
   getServerAppSnapshot,
   getServerStoreEpoch,
   getStoreEpoch,
+  mergeDecisionsFromServer,
   replaceState,
   resetToSeed as resetToSeedAction,
   setVenues as setVenuesAction,
@@ -30,6 +34,7 @@ import {
   importDecisionsMerge as importDecisionsMergeAction,
   importTreasuryLedgerMerge as importTreasuryLedgerMergeAction,
 } from "@/lib/app-store";
+import { hydrateDecisionsFromServer } from "@/lib/decisions-client-sync";
 import { exportDecisionsJson } from "@/lib/decisions";
 import { exportState, parseImportedState } from "@/lib/storage";
 import { exportTreasuryLedgerJson } from "@/lib/treasury-ledger";
@@ -147,8 +152,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
+    <StoreContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <DecisionStoreHydrate ready={ready} />
+      </Suspense>
+      {children}
+    </StoreContext.Provider>
   );
+}
+
+function DecisionStoreHydrate({ ready }: { ready: boolean }) {
+  const pathname = usePathname();
+  const gatedOut = pathname === "/unlock";
+  useEffect(() => {
+    if (!ready || gatedOut) return;
+    void hydrateDecisionsFromServer(mergeDecisionsFromServer);
+  }, [ready, gatedOut]);
+  return null;
 }
 
 export function useStore(): StoreContextValue {

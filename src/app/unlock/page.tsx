@@ -2,6 +2,8 @@
 
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { mergeDecisionsFromServer } from "@/lib/app-store";
+import { hydrateDecisionsFromServer } from "@/lib/decisions-client-sync";
 
 function safeNextPath(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
@@ -34,6 +36,7 @@ function UnlockForm() {
         setPending(false);
         return;
       }
+      await hydrateDecisionsFromServer(mergeDecisionsFromServer);
       router.push(safeNextPath(searchParams.get("next")));
       router.refresh();
     } catch {

@@ -1,6 +1,12 @@
 import { applyLedgerToTreasury, roundUnits } from "./ledger";
 import { applyHoldingsSnapshot } from "./holdings-snapshot";
 import { mergeDecisionsById } from "./decisions";
+import {
+  deleteServerDecision,
+  pushDecisionNow,
+  pushDecisionRecords,
+  scheduleDecisionPush,
+} from "./decisions-client-sync";
 import { createSeedState } from "./seed";
 import { loadState, saveState } from "./storage";
 import { newId } from "./format";
@@ -142,6 +148,7 @@ export function addDecision(
       decisions: [full, ...current.decisions],
     };
   });
+  pushDecisionNow(full);
 }
 
 export function updateDecision(id: string, patch: Partial<Decision>) {
@@ -151,6 +158,8 @@ export function updateDecision(id: string, patch: Partial<Decision>) {
       item.id === id ? { ...item, ...patch } : item,
     ),
   }));
+  const next = getAppSnapshot().decisions.find((item) => item.id === id);
+  if (next) scheduleDecisionPush(next);
 }
 
 export function deleteDecision(id: string) {
@@ -158,6 +167,17 @@ export function deleteDecision(id: string) {
     ...current,
     decisions: current.decisions.filter((item) => item.id !== id),
   }));
+  void deleteServerDecision(id);
+}
+
+export function mergeDecisionsFromServer(incoming: Decision[]) {
+  setSnapshot(
+    {
+      ...getAppSnapshot(),
+      decisions: mergeDecisionsById(getAppSnapshot().decisions, incoming),
+    },
+    true,
+  );
 }
 
 export function updateSettings(patch: Partial<Settings>) {
@@ -187,6 +207,7 @@ export function importDecisionsMerge(incoming: Decision[]) {
     },
     true,
   );
+  void pushDecisionRecords(incoming);
 }
 
 export function importTreasuryLedgerMerge(

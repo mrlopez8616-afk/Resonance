@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ClassBadge } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
 import { useStore } from "@/context/store";
 import { digitalNodes, physicalNodes } from "@/lib/robinhood";
-import { publishedAllocationSum, toPublicSkeleton } from "@/lib/public-view";
+import {
+  publishedAllocationSum,
+  toPublicSkeleton,
+  type PublicDecision,
+} from "@/lib/public-view";
 
 export default function PublicSkeletonPage() {
   const { ready, state } = useStore();
@@ -13,6 +18,26 @@ export default function PublicSkeletonPage() {
   const digital = digitalNodes(state.nodes);
   const physical = physicalNodes(state.nodes);
   const published = publishedAllocationSum(skeleton.nodes);
+  const [serverDecisions, setServerDecisions] = useState<PublicDecision[] | null>(
+    null,
+  );
+  const publicDecisions = serverDecisions ?? skeleton.decisions;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { decisions?: PublicDecision[] } | null) => {
+        if (cancelled || !Array.isArray(body?.decisions)) return;
+        setServerDecisions(body.decisions);
+      })
+      .catch(() => {
+        /* keep redacted local skeleton */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!ready) {
     return (
@@ -58,7 +83,7 @@ export default function PublicSkeletonPage() {
           id appears here when a row is hashgraph_attested.
         </p>
         <div className="space-y-2">
-          {skeleton.decisions
+          {publicDecisions
             .filter((row) => row.id.startsWith("D-"))
             .map((row) => (
               <div

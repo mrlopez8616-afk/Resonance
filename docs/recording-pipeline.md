@@ -8,7 +8,7 @@ Founder-locked for later phases. Phase Zero implements the Web2 record book and 
 
 3. **Channel vs gate.** The public channel teaches the OS. Private amounts stay gated (site lock, local books). Public teaching copy must not leak sized balances or receipts that belong behind the gate.
 
-4. **Engineer handoff.** Exportable full trail (Decisions JSON today; later a shared DB) is the bridge to real XRPL / XRS recording. Import/merge is the Phase Zero hub bridge. Do not invent a second schema for chain.
+4. **Engineer handoff.** The shared Decision store (`GET/POST/PATCH /api/decisions`, Vercel Blob) is the Phase Zero hub bridge. JSON import/export remains the fallback. Later XRPL / XRS recording still uses this schema. Do not invent a second schema for chain. Setup: [`decision-sync.md`](./decision-sync.md).
 
 5. **Playbook pointer.** Overnight Web2 mimic (treasury trail, record-book fields, Robinhood Main vs Agentic) is documented in [`overnight-build.md`](./overnight-build.md) and in-app at **What changed**. That work does not start chain writes.
 
@@ -16,4 +16,4 @@ Founder-locked for later phases. Phase Zero implements the Web2 record book and 
 
 7. **Channel vs gate (dual surface).** Private board keeps dollars and exact XRP. Public skeleton (`/public`) publishes node target % only. [`public-vs-private.md`](./public-vs-private.md).
 
-Not in this phase: sensors, ack viewer, beep trail, shared DB, hashing, Hedera submits, or on-chain writes.
+Not in this phase: sensors, ack viewer, beep trail, hashing, Hedera submits, or on-chain writes. The shared Web2 Decision store is in.
