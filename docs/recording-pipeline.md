@@ -4,7 +4,7 @@ Founder-locked for later phases. Phase Zero implements the Web2 record book and 
 
 1. **Web2 mimics on-chain now.** Every serious event must already look like a chain-class record: proposed, why, who authorized, outcome (queued ≠ filled), receipt, plus timestamps (`date`, `createdAt`). The Decisions schema is that shape. `fingerprint` is reserved for a later hash of the public record; sensitive details stay off-chain.
 
-2. **Sensor path (future).** Raw anomalies log to Web2 immediately. They become a chain-class commit only after an operator views and acks them — a record viewer plus time with the beep trail. Do not auto-promote sensor noise to the durable book.
+2. **Sensor path (future).** Raw anomalies log to Web2 immediately (`web2_only` / `pending_operator_ack`). They become a chain-class commit only after an operator views and acks them — a record viewer plus time with the beep trail. Do not auto-promote sensor noise to the durable book or to Hedera.
 
 3. **Channel vs gate.** The public channel teaches the OS. Private amounts stay gated (site lock, local books). Public teaching copy must not leak sized balances or receipts that belong behind the gate.
 

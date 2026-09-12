@@ -1,6 +1,6 @@
 # Hedera attestation (doctrine)
 
-Founder-locked: **Hedera Hashgraph** is the primary attestation / hashgraph witness for Resonance. Phase Zero does **not** talk to Hedera, store keys, or submit messages.
+Founder-locked: **Hedera Hashgraph** is the primary attestation / hashgraph witness for Resonance. Phase Zero does **not** talk to Hedera, store keys, or submit messages. Schema only: `attestationStatus`, `hederaMessageId` (tx / message id), `attestedAt` (timestamp).
 
 ## Status ladder (Decision fields)
 
@@ -15,9 +15,9 @@ Founder-locked: **Hedera Hashgraph** is the primary attestation / hashgraph witn
 
 ## Promotion rules
 
-1. Sensor beeps stay `web2_only` or `pending_operator_ack`. Do not auto-promote noise.
-2. Chain-class Decisions (proposal, why, who, outcome, receipt) are eligible for Hedera after operator ack.
-3. Public view shows attestation link + timestamp, not dollar amounts.
+1. **Sensor beeps stay Web2** (`web2_only` or `pending_operator_ack`) until an operator views and acks. Do not auto-promote the beep trail.
+2. **Chain-class Decisions** (proposal, why, who authorized, outcome queued ≠ filled, receipt) are eligible for Hedera after that ack → `hashgraph_queued` then `hashgraph_attested`.
+3. **Public view** (`/public`) shows attestation status, reserved memo hash / timestamp (Hedera id when live), **not dollar amounts**.
 4. Main Robinhood lots and Xaman principal never appear in a public memo.
 
 No Hedera SDK, operator keys, or network calls in this phase.
