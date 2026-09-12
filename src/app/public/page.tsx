@@ -68,6 +68,9 @@ export default function PublicSkeletonPage() {
                 <div>
                   <p className="font-mono text-xs">{row.id}</p>
                   <p className="mt-1 text-sm">{row.question}</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">
+                    Memo hash {row.memoHash ?? "—"} · {row.memoAt ?? "not attested"}
+                  </p>
                 </div>
                 <p className="text-xs uppercase tracking-[0.12em] text-[color:var(--muted)]">
                   {row.attestationStatus.replace(/_/g, " ")}

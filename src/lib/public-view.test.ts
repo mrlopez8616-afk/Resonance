@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createSeedState } from "./seed";
-import { publishedAllocationSum, toPublicSkeleton } from "./public-view";
+import {
+  publishedAllocationSum,
+  redactPublicMemoText,
+  toPublicSkeleton,
+} from "./public-view";
 
 describe("public skeleton", () => {
   it("strips dollars, exact XRP, and Robinhood quantities", () => {
@@ -26,6 +30,15 @@ describe("public skeleton", () => {
     assert.equal(d04?.attestationStatus, "web2_only");
     assert.equal(d04?.hederaMessageId, null);
     assert.equal(d04?.fingerprint, null);
+    assert.equal(d04?.memoHash, null);
+    assert.equal(d04?.memoAt, null);
     assert.equal(publishedAllocationSum(pub.nodes), 0);
+    const d03 = pub.decisions.find((row) => row.id === "D-2026-09-11-03");
+    assert.match(d03?.question ?? "", /\[size omitted\]/);
+    assert.ok(!/\$35/.test(d03?.question ?? ""));
+    assert.equal(
+      redactPublicMemoText("Approve PWR $35 and 27,772 XRP"),
+      "Approve PWR [size omitted] and [units omitted]",
+    );
   });
 });

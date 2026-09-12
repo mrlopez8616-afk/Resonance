@@ -16,12 +16,24 @@ export interface PublicDecision {
   fingerprint: string | null;
   hederaMessageId: string | null;
   attestedAt: string | null;
+  /** Later: Hedera / on-chain memo id. Null in Phase Zero. */
+  memoHash: string | null;
+  /** Later: attestation timestamp. Null in Phase Zero. */
+  memoAt: string | null;
 }
 
 export interface PublicSkeleton {
   omitDryPowder: true;
   nodes: PublicNode[];
   decisions: PublicDecision[];
+}
+
+/** Drop dollar sizes and exact unit prints from anything that might become a public memo. */
+export function redactPublicMemoText(text: string): string {
+  return text
+    .replace(/\$\s?\d[\d,]*(?:\.\d+)?/g, "[size omitted]")
+    .replace(/\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\s*XRP\b/gi, "[units omitted]")
+    .replace(/\b\d{4,}(?:\.\d+)?\s*XRP\b/gi, "[units omitted]");
 }
 
 /** Shareable skeleton — no dollars, no exact XRP, no RH quantities. */
@@ -37,12 +49,14 @@ export function toPublicSkeleton(state: AppState): PublicSkeleton {
     decisions: state.decisions.map((row) => ({
       id: row.id,
       date: row.date,
-      question: row.question,
+      question: redactPublicMemoText(row.question),
       status: row.status,
       attestationStatus: row.attestationStatus,
       fingerprint: row.fingerprint,
       hederaMessageId: row.hederaMessageId,
       attestedAt: row.attestedAt,
+      memoHash: row.hederaMessageId ?? row.fingerprint,
+      memoAt: row.attestedAt,
     })),
   };
 }

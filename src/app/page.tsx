@@ -65,7 +65,12 @@ export default function OverviewPage() {
       <PageHeader
         kicker="Home"
         title="Overview"
-        description={`${state.settings.operatorName}'s Phase Zero board. Web2 books already use chain-class fields. Live prices are optional. Figures are founder-reported until a read-only feed verifies them.`}
+        description={`${state.settings.operatorName}'s Phase Zero board. Private surface: exact XRP, RH ties, receipts. Shareable skeleton is /public (target % only). Live prices are optional. Figures are founder-reported until a read-only feed verifies them.`}
+        actions={
+          <Link href="/public" className="btn btn-secondary">
+            Public skeleton
+          </Link>
+        }
       />
 
       <WhatsNewCard compact />
