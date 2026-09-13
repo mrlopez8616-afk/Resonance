@@ -1,6 +1,11 @@
-import { encode, encodeForSigning } from "ripple-binary-codec";
-import { deriveAddress, deriveKeypair, sign } from "ripple-keypairs";
 import { encodeMemoDataHex } from "./xrpl-memo";
+import {
+  classicAddressFromPublicKey,
+  deriveXrplKeypair,
+  encodePaymentForSigning,
+  encodeSignedPayment,
+  signEncodedPayment,
+} from "./xrpl-native";
 
 /** One drop. Recorder self-payment — not a transfer and not a dollar size. */
 export const XRPL_DUST_DROPS = "1";
@@ -18,8 +23,8 @@ export interface XrplUnsignedPayment {
 }
 
 export function classicAddressFromSeed(seed: string): string {
-  const { publicKey } = deriveKeypair(seed);
-  return deriveAddress(publicKey);
+  const keypair = deriveXrplKeypair(seed);
+  return classicAddressFromPublicKey(keypair.publicKey);
 }
 
 export function buildUnsignedDustPayment(input: {
@@ -46,16 +51,22 @@ export function signXrplPayment(
   seed: string,
   payment: XrplUnsignedPayment,
 ): { txBlob: string } {
-  const keypair = deriveKeypair(seed);
+  const keypair = deriveXrplKeypair(seed);
   const toSign = {
-    ...payment,
+    Account: payment.Account,
+    Destination: payment.Destination,
+    Amount: payment.Amount,
+    Fee: payment.Fee,
+    Sequence: payment.Sequence,
+    LastLedgerSequence: payment.LastLedgerSequence,
+    Flags: payment.Flags,
     SigningPubKey: keypair.publicKey,
+    Memos: payment.Memos,
   };
-  const signed = {
-    ...toSign,
-    TxnSignature: sign(encodeForSigning(toSign), keypair.privateKey),
+  const signature = signEncodedPayment(encodePaymentForSigning(toSign), keypair);
+  return {
+    txBlob: encodeSignedPayment({ ...toSign, TxnSignature: signature }),
   };
-  return { txBlob: encode(signed) };
 }
 
 export function feeDropsFromRpc(result: Record<string, unknown>): string {

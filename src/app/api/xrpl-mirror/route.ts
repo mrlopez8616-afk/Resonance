@@ -104,9 +104,8 @@ async function postXrplMirror(request: Request) {
     submit: parsed.xrplTxHash
       ? undefined
       : async (input) => {
-          // Load signing + JSON-RPC only after auth. A top-level `xrpl` import
-          // pulls Client/ws at module eval and can crash the function with an
-          // empty HTTP 500 before 401 JSON can be returned.
+          // Signing is vendored (noble 1.x). Lazy-load after auth so a
+          // submit crash cannot blank a 401.
           const { submitXrplDustMemo } = await import("@/lib/xrpl-submit");
           return submitXrplDustMemo(config, { memo: input.memo });
         },
