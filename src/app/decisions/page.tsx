@@ -70,21 +70,6 @@ function DecisionsPageInner() {
         }
       />
 
-      <div className="notice notice-warn mb-8">
-        <p className="font-medium text-[color:var(--text)]">
-          This is the OS record book. Folders are dates. Files are the full
-          records (question, proposal, options, founder decision, why, who
-          authorized, outcome, receipt, review trigger, attestation).
-        </p>
-        <p className="mt-2">
-          Hub can POST/PATCH /api/decisions (queued → filled) and this page
-          pulls the shared store. JSON import remains a fallback. Blockchain
-          recording is out of scope for Phase Zero.
-        </p>
-      </div>
-
-      <DecisionsSyncBanner />
-
       <DecisionsSectionNav tab={folderKey ? "archive" : tab} />
 
       {tab === "todos" && !folderKey ? (
@@ -100,6 +85,23 @@ function DecisionsPageInner() {
           folderKey={folderKey}
         />
       )}
+
+      <div className="mt-8">
+        <DecisionsSyncBanner />
+      </div>
+
+      <div className="notice notice-warn mb-8">
+        <p className="font-medium text-[color:var(--text)]">
+          This is the OS record book. Folders are dates. Files are the full
+          records (question, proposal, options, founder decision, why, who
+          authorized, outcome, receipt, review trigger, attestation).
+        </p>
+        <p className="mt-2">
+          Hub can POST/PATCH /api/decisions (queued → filled) and this page
+          pulls the shared store. JSON import remains a fallback. Blockchain
+          recording is out of scope for Phase Zero.
+        </p>
+      </div>
     </div>
   );
 }
