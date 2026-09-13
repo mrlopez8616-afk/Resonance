@@ -5,26 +5,7 @@ import {
   getAppPassword,
   verifyGateToken,
 } from "@/lib/app-gate";
-
-const PUBLIC_PATHS = new Set([
-  "/unlock",
-  "/api/gate",
-  "/api/health",
-  "/api/public",
-]);
-
-function isDecisionSyncApi(pathname: string): boolean {
-  return (
-    pathname === "/api/decisions" ||
-    pathname.startsWith("/api/decisions/") ||
-    pathname === "/api/todos" ||
-    pathname.startsWith("/api/todos/") ||
-    pathname === "/api/attest" ||
-    pathname.startsWith("/api/attest/") ||
-    pathname === "/api/ack" ||
-    pathname.startsWith("/api/ack/")
-  );
-}
+import { isApiPath, shouldBypassAppGate } from "@/lib/app-gate-paths";
 
 export function proxy(request: NextRequest) {
   const password = getAppPassword();
@@ -45,16 +26,22 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (
-    PUBLIC_PATHS.has(pathname) ||
-    pathname.startsWith("/api/gate") ||
-    isDecisionSyncApi(pathname)
-  ) {
+  if (shouldBypassAppGate(pathname)) {
     return NextResponse.next();
   }
 
   if (unlocked) {
     return NextResponse.next();
+  }
+
+  // Locked fetch to an API that is not in the Decision-sync pass-through
+  // list must stay JSON. An HTML /unlock redirect makes response.json()
+  // throw and the UI shows a fake "network error".
+  if (isApiPath(pathname)) {
+    return NextResponse.json(
+      { ok: false, error: "Unlock the site and try again." },
+      { status: 401 },
+    );
   }
 
   const unlock = request.nextUrl.clone();

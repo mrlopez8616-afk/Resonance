@@ -4,8 +4,12 @@ import {
   assertXrplSubmitAllowed,
   DEFAULT_XRPL_ACCOUNT,
   DEFAULT_XRPL_WS_URL,
+  formatXrplSubmitError,
+  isXrplConnectFailure,
+  looksLikeXrplMainnetWs,
   readXrplConfig,
   xrplHealth,
+  xrplSubmitWsUrls,
 } from "./xrpl-config";
 import { xrplExplorerUrl } from "./xrpl-explorer";
 
@@ -60,6 +64,43 @@ describe("xrpl env config", () => {
       XRPL_WS_URL: "http://evil.example/steal",
     });
     assert.equal(config.wsUrl, DEFAULT_XRPL_WS_URL);
+  });
+
+  it("ignores a Mainnet websocket override", () => {
+    const config = readXrplConfig({
+      XRPL_WS_URL: "wss://s1.ripple.com",
+    });
+    assert.equal(config.wsUrl, DEFAULT_XRPL_WS_URL);
+    assert.equal(looksLikeXrplMainnetWs("wss://s1.ripple.com"), true);
+    assert.equal(looksLikeXrplMainnetWs(DEFAULT_XRPL_WS_URL), false);
+  });
+
+  it("tries the preferred Testnet websocket then known fallbacks, never Mainnet", () => {
+    const urls = xrplSubmitWsUrls("wss://s.altnet.rippletest.net:51233");
+    assert.equal(urls[0], DEFAULT_XRPL_WS_URL);
+    assert.ok(urls.includes("wss://testnet.xrpl-labs.com"));
+    assert.ok(!urls.some((url) => looksLikeXrplMainnetWs(url)));
+
+    const custom = xrplSubmitWsUrls("wss://custom-testnet.example:51233");
+    assert.equal(custom[0], "wss://custom-testnet.example:51233");
+    assert.ok(custom.includes(DEFAULT_XRPL_WS_URL));
+    assert.deepEqual(xrplSubmitWsUrls("wss://s1.ripple.com")[0], DEFAULT_XRPL_WS_URL);
+  });
+
+  it("rewrites connect/timeout errors without leaking a seed", () => {
+    const seed = "super-secret-family-seed-do-not-leak";
+    assert.equal(isXrplConnectFailure(new Error("connect() timed out after 5000 ms")), true);
+    const message = formatXrplSubmitError(
+      new Error("connect() timed out after 5000 ms"),
+      DEFAULT_XRPL_WS_URL,
+    );
+    assert.match(message, /timed out/);
+    assert.match(message, /s\.altnet\.rippletest\.net:51233/);
+    assert.ok(!message.includes(seed));
+    assert.equal(
+      formatXrplSubmitError(new Error("XRPL submit did not succeed (tecUNFUNDED_PAYMENT)."), DEFAULT_XRPL_WS_URL),
+      "XRPL submit did not succeed (tecUNFUNDED_PAYMENT).",
+    );
   });
 });
 

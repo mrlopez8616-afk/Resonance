@@ -1,4 +1,5 @@
 import {
+  isXrplConnectFailure,
   xrplNotConfiguredMessage,
   type XrplRuntimeConfig,
 } from "./xrpl-config";
@@ -145,10 +146,18 @@ export async function mirrorDecisionOnXrpl(input: {
     throw new XrplMirrorError(xrplNotConfiguredMessage(input.config), 503);
   }
 
-  const submitted = await input.submit({
-    memo,
-    account: input.config.account,
-  });
+  let submitted: XrplSubmitResult;
+  try {
+    submitted = await input.submit({
+      memo,
+      account: input.config.account,
+    });
+  } catch (error) {
+    if (error instanceof XrplMirrorError) throw error;
+    const message =
+      error instanceof Error ? error.message : "XRPL Testnet submit failed.";
+    throw new XrplMirrorError(message, isXrplConnectFailure(error) ? 502 : 500);
+  }
   return {
     decision: applyXrplMirrorWitness(input.decision, {
       xrplTxHash: submitted.txHash,
