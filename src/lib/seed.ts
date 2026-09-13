@@ -217,6 +217,8 @@ export function createSeedState(now = TREASURY_AS_OF): AppState {
         attestationStatus: "web2_only",
         hederaMessageId: null,
         attestedAt: null,
+        xrplTxHash: null,
+        xrplMemoAt: null,
         date: "2026-08-20",
         createdAt: "2026-08-20T16:00:00.000Z",
       },

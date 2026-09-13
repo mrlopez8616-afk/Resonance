@@ -50,7 +50,9 @@ export const DECISIONS_IMPORT_HELP = `{
       "fingerprint": null,
       "attestationStatus": "web2_only",
       "hederaMessageId": null,
-      "attestedAt": null
+      "attestedAt": null,
+      "xrplTxHash": null,
+      "xrplMemoAt": null
     }
   ]
 }`;
@@ -80,6 +82,8 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
     createdAt: "2026-09-11T22:10:00.000Z",
   },
   {
@@ -105,6 +109,8 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
     createdAt: "2026-09-11T22:40:00.000Z",
   },
   {
@@ -130,6 +136,8 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
     createdAt: "2026-09-11T23:05:00.000Z",
   },
   {
@@ -155,6 +163,8 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
     createdAt: "2026-09-11T23:25:00.000Z",
   },
 ];
@@ -224,6 +234,9 @@ export function normalizeDecision(
       raw.hederaMessageId ?? raw.hedera_message_id ?? raw.hederaTxId,
     ),
     attestedAt: asTrimmedString(raw.attestedAt) ?? asTrimmedString(raw.attested_at),
+    xrplTxHash: parseFingerprint(raw.xrplTxHash ?? raw.xrpl_tx_hash),
+    xrplMemoAt:
+      asTrimmedString(raw.xrplMemoAt) ?? asTrimmedString(raw.xrpl_memo_at),
     date: asString(raw.date, "").trim(),
     createdAt: asString(raw.createdAt, fallbackCreatedAt),
   };
@@ -260,6 +273,9 @@ export function coerceStoredDecision(
       raw.hederaMessageId ?? raw.hedera_message_id ?? raw.hederaTxId,
     ),
     attestedAt: asTrimmedString(raw.attestedAt) ?? asTrimmedString(raw.attested_at),
+    xrplTxHash: parseFingerprint(raw.xrplTxHash ?? raw.xrpl_tx_hash),
+    xrplMemoAt:
+      asTrimmedString(raw.xrplMemoAt) ?? asTrimmedString(raw.xrpl_memo_at),
     date: asString(raw.date, ""),
     createdAt: asString(raw.createdAt, ""),
   };
@@ -348,6 +364,8 @@ export function emptyDecisionFields(): Pick<
   | "attestationStatus"
   | "hederaMessageId"
   | "attestedAt"
+  | "xrplTxHash"
+  | "xrplMemoAt"
 > {
   return {
     proposal: "",
@@ -360,6 +378,8 @@ export function emptyDecisionFields(): Pick<
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
   };
 }
 
@@ -379,6 +399,8 @@ export function decisionContentEqual(a: Decision, b: Decision): boolean {
     a.attestationStatus === b.attestationStatus &&
     a.hederaMessageId === b.hederaMessageId &&
     a.attestedAt === b.attestedAt &&
+    a.xrplTxHash === b.xrplTxHash &&
+    a.xrplMemoAt === b.xrplMemoAt &&
     a.date === b.date
   );
 }

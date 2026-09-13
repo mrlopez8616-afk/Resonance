@@ -80,6 +80,13 @@ export function pickDecisionPatch(raw: Record<string, unknown>): Partial<Decisio
     patch.attestedAt =
       asTrimmedString(raw.attestedAt) ?? asTrimmedString(raw.attested_at);
   }
+  if ("xrplTxHash" in raw || "xrpl_tx_hash" in raw) {
+    patch.xrplTxHash = parseFingerprint(raw.xrplTxHash ?? raw.xrpl_tx_hash);
+  }
+  if ("xrplMemoAt" in raw || "xrpl_memo_at" in raw) {
+    patch.xrplMemoAt =
+      asTrimmedString(raw.xrplMemoAt) ?? asTrimmedString(raw.xrpl_memo_at);
+  }
   if ("date" in raw) patch.date = asString(raw.date, "").trim();
   if ("createdAt" in raw) patch.createdAt = asString(raw.createdAt, "");
   return patch;

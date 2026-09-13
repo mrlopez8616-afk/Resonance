@@ -43,6 +43,8 @@ function localOnly(): Decision {
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
     createdAt: "2026-09-10T12:00:00.000Z",
   };
 }

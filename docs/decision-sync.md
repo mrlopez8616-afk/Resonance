@@ -72,7 +72,7 @@ Decisions is a folder/file archive:
 
 - `/decisions` — date folders (`YYYY-MM-DD`)
 - `/decisions?folder=2026-09-11` — files in that folder, grouped pending / decided / superseded / attested
-- `/decisions/D-2026-09-11-01` — full record + **Attest (Hedera Testnet)** (live HCS submit via `POST /api/attest`)
+- `/decisions/D-2026-09-11-01` — full record + **Attest (Hedera Testnet)** (live HCS submit via `POST /api/attest`) + **Mirror on XRPL Testnet** after attest (`POST /api/xrpl-mirror`)
 
 Operator to-dos live on **Decisions → To-do**. Same Blob store, sibling file `resonance/todos.json` (local/dev: `.data/todos.json`).
 
@@ -94,7 +94,7 @@ curl -X POST https://YOUR-APP.vercel.app/api/ack \
   -d '{"id":"D-2026-09-11-01"}'
 ```
 
-Live Hedera Testnet attest stays on `POST /api/attest` — see [`hedera-attestation.md`](./hedera-attestation.md).
+Live Hedera Testnet attest stays on `POST /api/attest` — see [`hedera-attestation.md`](./hedera-attestation.md). XRPL Testnet dust-memo mirror is a follow-on `POST /api/xrpl-mirror` — see [`xrpl-mirror.md`](./xrpl-mirror.md).
 
 You can also POST a full hub payload (`{ "decisions": [ ... ] }`). Matching ids merge. New ids need a `question`.
 
@@ -107,8 +107,8 @@ You can also POST a full hub payload (`{ "decisions": [ ... ] }`). Matching ids 
 
 ## Check
 
-`GET /api/health` — internal note + store status + Hedera Testnet `configured` (never keys). No decision text.
+`GET /api/health` — internal note + store status + Hedera / XRPL Testnet `configured` (never keys or seeds). No decision text.
 
-Hedera Testnet attest (Phase 0.5): [`hedera-attestation.md`](./hedera-attestation.md). Same auth as this store.
+Hedera Testnet attest (Phase 0.5): [`hedera-attestation.md`](./hedera-attestation.md). XRPL Testnet mirror: [`xrpl-mirror.md`](./xrpl-mirror.md). Same auth as this store.
 
 JSON import on the Decisions page is still there as a fallback.
