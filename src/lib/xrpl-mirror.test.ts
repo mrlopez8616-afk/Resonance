@@ -143,6 +143,30 @@ describe("xrpl mirror request + modes", () => {
     );
   });
 
+  it("surfaces a live submit failure as a 502 with the server message", async () => {
+    await assert.rejects(
+      () =>
+        mirrorDecisionOnXrpl({
+          decision: attestedD04(),
+          request: { id: "D-2026-09-11-04" },
+          config: readXrplConfig({
+            XRPL_SEED: "not-a-real-seed",
+            XRPL_ACCOUNT: DEFAULT_XRPL_ACCOUNT,
+          }),
+          submit: async () => {
+            throw new Error("XRPL Testnet websocket timed out (s.altnet.rippletest.net:51233).");
+          },
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof XrplMirrorError);
+        assert.equal(error.status, 502);
+        assert.match(error.message, /timed out/);
+        assert.ok(!error.message.includes("Network error"));
+        return true;
+      },
+    );
+  });
+
   it("rejects a mainnet-configured live submit", async () => {
     await assert.rejects(
       () =>

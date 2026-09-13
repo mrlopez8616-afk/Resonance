@@ -1,3 +1,7 @@
+import {
+  messageFromApiFailure,
+  readApiJson,
+} from "./api-client";
 import type { Decision } from "./types";
 
 export type DecisionsSyncState =
@@ -192,7 +196,7 @@ export async function attestDecisionOnServer(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    const body = (await response.json()) as {
+    const parsed = await readApiJson<{
       error?: string;
       decision?: Decision;
       note?: string;
@@ -201,12 +205,24 @@ export async function attestDecisionOnServer(
         explorerUrl?: string | null;
         topicId?: string | null;
       };
-    };
+    }>(response, "Could not attest this decision.");
+    if (!parsed.parsed) {
+      return {
+        ok: false,
+        status: parsed.status,
+        message: parsed.message,
+      };
+    }
+    const body = parsed.body;
     if (!response.ok || !body.decision) {
       return {
         ok: false,
         status: response.status,
-        message: body.error ?? "Could not attest this decision.",
+        message: messageFromApiFailure(
+          response.status,
+          body.error,
+          "Could not attest this decision.",
+        ),
       };
     }
     return {
@@ -244,19 +260,31 @@ export async function mirrorDecisionOnXrplServer(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    const body = (await response.json()) as {
+    const parsed = await readApiJson<{
       error?: string;
       decision?: Decision;
       xrpl?: {
         txHash?: string | null;
         explorerUrl?: string | null;
       };
-    };
+    }>(response, "Could not mirror this decision on XRPL Testnet.");
+    if (!parsed.parsed) {
+      return {
+        ok: false,
+        status: parsed.status,
+        message: parsed.message,
+      };
+    }
+    const body = parsed.body;
     if (!response.ok || !body.decision) {
       return {
         ok: false,
         status: response.status,
-        message: body.error ?? "Could not mirror this decision on XRPL Testnet.",
+        message: messageFromApiFailure(
+          response.status,
+          body.error,
+          "Could not mirror this decision on XRPL Testnet.",
+        ),
       };
     }
     return {
