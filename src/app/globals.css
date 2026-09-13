@@ -206,3 +206,82 @@ table.data tr:last-child td {
 a.file-row:hover {
   background: var(--surface-2);
 }
+
+.node-world {
+  position: relative;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(
+      circle at 18% 42%,
+      color-mix(in srgb, var(--accent-2) 10%, transparent),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 82% 48%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 40%
+    ),
+    var(--bg);
+}
+
+.node-world:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.node-world-grid {
+  position: relative;
+  min-height: 22rem;
+  padding: 1.1rem;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--border) 80%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 18px 18px;
+}
+
+.node-world-zoom {
+  position: relative;
+  transform-origin: center center;
+  transition: transform 0.22s ease;
+}
+
+.node-box {
+  width: 100%;
+  min-height: 8.5rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.node-box:hover {
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.node-box[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.node-box-well {
+  min-height: 8.5rem;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+
+.flow-pipe {
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 0.7;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
