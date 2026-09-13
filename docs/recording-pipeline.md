@@ -1,8 +1,8 @@
 # Recording pipeline (doctrine)
 
-Founder-locked for later phases. Phase Zero implements the Web2 record book and import/merge only. No chain writes, no wallet signing, no private keys.
+Founder-locked. Phase Zero implements the Web2 record book and import/merge. **Phase 0.5** adds a Hedera **Testnet** wiring test for chain-class Decisions. Still no Mainnet, no XRPL dust memos, no wallet signing, no seed phrases in the repo.
 
-1. **Web2 mimics on-chain now.** Every serious event must already look like a chain-class record: proposed, why, who authorized, outcome (queued ≠ filled), receipt, plus timestamps (`date`, `createdAt`). The Decisions schema is that shape. `fingerprint` is reserved for a later hash of the public record; sensitive details stay off-chain.
+1. **Web2 mimics on-chain now.** Every serious event must already look like a chain-class record: proposed, why, who authorized, outcome (queued ≠ filled), receipt, plus timestamps (`date`, `createdAt`). The Decisions schema is that shape. `fingerprint` is the hash of the public record when a row is attested; sensitive details stay off-chain.
 
 2. **Sensor path (future).** Raw anomalies log to Web2 immediately (`web2_only` / `pending_operator_ack`). They become a chain-class commit only after an operator views and acks them — a record viewer plus time with the beep trail. Do not auto-promote sensor noise to the durable book or to Hedera.
 
@@ -10,10 +10,10 @@ Founder-locked for later phases. Phase Zero implements the Web2 record book and 
 
 4. **Engineer handoff.** The shared Decision store (`GET/POST/PATCH /api/decisions`, Vercel Blob) is the Phase Zero hub bridge. JSON import/export remains the fallback. Later XRPL / XRS recording still uses this schema. Do not invent a second schema for chain. Setup: [`decision-sync.md`](./decision-sync.md).
 
-5. **Playbook pointer.** Overnight Web2 mimic (treasury trail, record-book fields, Robinhood Main vs Agentic) is documented in [`overnight-build.md`](./overnight-build.md) and in-app at **What changed**. That work does not start chain writes.
+5. **Playbook pointer.** Overnight Web2 mimic (treasury trail, record-book fields, Robinhood Main vs Agentic) is documented in [`overnight-build.md`](./overnight-build.md) and in-app at **What changed**. That work does not start Mainnet writes.
 
-6. **Hedera witness (later).** Hedera Hashgraph is the primary attestation path. Decision rows already carry `attestationStatus` (`web2_only` → `pending_operator_ack` → `hashgraph_queued` → `hashgraph_attested`) plus reserved `hederaMessageId` / `attestedAt`. Promotion rules: [`hedera-attestation.md`](./hedera-attestation.md). No Hedera SDK or keys in Phase Zero.
+6. **Hedera witness (Phase 0.5 Testnet).** Hedera Hashgraph is the primary attestation path. Decision rows carry `attestationStatus` (`web2_only` → `pending_operator_ack` → `hashgraph_queued` → `hashgraph_attested`) plus `hederaMessageId` / `attestedAt` / `fingerprint`. Promotion rules and founder env setup: [`hedera-attestation.md`](./hedera-attestation.md). Live submit uses `@hashgraph/sdk` on the server with `HEDERA_OPERATOR_KEY` — never `NEXT_PUBLIC_*`, never logged. The HCS memo is `{ v, decisionId, fingerprint, attestedAt }` only. No dollar amounts. Xaman principal / Main RH never in the public memo. Sensor beeps still need operator ack.
 
 7. **Channel vs gate (dual surface).** Private board keeps dollars and exact XRP. Public skeleton (`/public`) publishes node target % only. [`public-vs-private.md`](./public-vs-private.md).
 
-Not in this phase: sensors, ack viewer, beep trail, hashing, Hedera submits, or on-chain writes. The shared Web2 Decision store is in.
+Not in this phase: sensors, ack viewer, beep trail, Mainnet, XRPL / XRS writes, or seed phrases. The shared Web2 Decision store is in. Testnet attest is opt-in via env.

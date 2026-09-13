@@ -129,7 +129,8 @@ export function DecisionsImportPanel() {
         <p className="mt-3 text-sm text-[color:var(--muted)]">
           Merge key is <span className="font-mono">id</span>. Required story:
           proposal, why, who authorized, outcome (queued ≠ filled), receipt.
-          <span className="font-mono"> fingerprint</span> is reserved and unused.
+          <span className="font-mono"> fingerprint</span> is filled when a row
+          is attested on Hedera Testnet.
           A bare array of records is also accepted. Status: pending · decided ·
           superseded.
         </p>

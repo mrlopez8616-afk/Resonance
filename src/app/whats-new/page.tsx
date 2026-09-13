@@ -70,17 +70,20 @@ export default function WhatsNewPage() {
             <Link href="/public" className="text-[color:var(--accent)]">
               /public
             </Link>{" "}
-            : twelve-node target % only. Hedera Hashgraph is the later
-            attestation witness — rows stay <span className="font-mono">web2_only</span> tonight.
+            : twelve-node target % only. Hedera Hashgraph is the attestation
+            witness. Phase 0.5 can attest a decided row on{" "}
+            <span className="font-mono">Testnet</span> — public fingerprint
+            only, no dollar amounts in the memo.
           </p>
         </li>
         <li className="card">
           <p className="kicker">5 · Still out of scope</p>
-          <h2 className="mt-2 text-lg">No chain, no keys, no XRS</h2>
+          <h2 className="mt-2 text-lg">No Mainnet, no seed phrases, no XRS</h2>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
             Recording-pipeline doctrine is unchanged: Web2 mimics chain-class
             records now; a later exportable trail is the XRPL/XRS handoff.
-            See the playbook pointer in docs.
+            Phase 0.5 Testnet attest uses a server env key only — never paste
+            it into chat. See the playbook pointer in docs.
           </p>
           <p className="mt-3 text-sm text-[color:var(--muted)]">
             Docs: <span className="font-mono text-xs">docs/recording-pipeline.md</span>{" "}

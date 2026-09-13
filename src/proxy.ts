@@ -20,7 +20,9 @@ function isDecisionSyncApi(pathname: string): boolean {
     pathname === "/api/todos" ||
     pathname.startsWith("/api/todos/") ||
     pathname === "/api/attest" ||
-    pathname.startsWith("/api/attest/")
+    pathname.startsWith("/api/attest/") ||
+    pathname === "/api/ack" ||
+    pathname.startsWith("/api/ack/")
   );
 }
 

@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 import { collectWriteItems } from "./decision-write";
 import {
-  attestDecisionInEnvelope,
+  ackDecisionInEnvelope,
   createEmptyEnvelope,
   createSeededEnvelope,
   decisionsStoreHealth,
@@ -11,6 +11,7 @@ import {
   ensureSeededEnvelope,
   isDecisionsSyncConfigured,
   parseDecisionsEnvelope,
+  writeAttestationIntoEnvelope,
   writeDecisionsIntoEnvelope,
 } from "./decisions-store-core";
 
@@ -88,9 +89,9 @@ describe("decisions store core", () => {
     assert.equal(isDecisionsSyncConfigured({ VERCEL: "1" }), false);
   });
 
-  it("operator attest promotes web2_only without inventing a Hedera id", () => {
+  it("operator ack promotes web2_only without inventing a Hedera id", () => {
     const seeded = createSeededEnvelope("2026-09-12T00:00:00.000Z");
-    const result = attestDecisionInEnvelope(
+    const result = ackDecisionInEnvelope(
       seeded,
       "D-2026-09-11-01",
       "2026-09-13T12:00:00.000Z",
@@ -99,8 +100,48 @@ describe("decisions store core", () => {
     assert.equal(result.decision?.attestationStatus, "pending_operator_ack");
     assert.equal(result.decision?.attestedAt, "2026-09-13T12:00:00.000Z");
     assert.equal(result.decision?.hederaMessageId, null);
-    const missing = attestDecisionInEnvelope(seeded, "D-missing");
+    const missing = ackDecisionInEnvelope(seeded, "D-missing");
     assert.equal(missing.found, false);
+  });
+
+  it("operator ack does not downgrade a hashgraph_attested row", () => {
+    const seeded = createSeededEnvelope("2026-09-12T00:00:00.000Z");
+    const already = writeAttestationIntoEnvelope(
+      seeded,
+      {
+        ...LOCKED_DECISIONS_2026_09_11[3],
+        attestationStatus: "hashgraph_attested",
+        hederaMessageId: "0.0.10513997/1",
+        attestedAt: "2026-09-12T22:00:00.000Z",
+        fingerprint: "abc",
+      },
+      "0.0.10513997",
+    );
+    const result = ackDecisionInEnvelope(already, "D-2026-09-11-04");
+    assert.equal(result.decision?.attestationStatus, "hashgraph_attested");
+    assert.equal(result.decision?.hederaMessageId, "0.0.10513997/1");
+    assert.equal(already.hederaTopicId, "0.0.10513997");
+  });
+
+  it("persists a Testnet topic id next to an attested row", () => {
+    const { envelope } = ensureSeededEnvelope(null);
+    const row = envelope.decisions[3];
+    assert.ok(row);
+    const attested = {
+      ...row,
+      attestationStatus: "hashgraph_attested" as const,
+      hederaMessageId: "0.0.555/1",
+      attestedAt: "2026-09-12T22:00:00.000Z",
+      fingerprint: "abc",
+    };
+    const next = writeAttestationIntoEnvelope(envelope, attested, "0.0.555");
+    assert.equal(next.hederaTopicId, "0.0.555");
+    assert.equal(
+      next.decisions.find((item) => item.id === row.id)?.attestationStatus,
+      "hashgraph_attested",
+    );
+    const parsed = parseDecisionsEnvelope(JSON.parse(JSON.stringify(next)));
+    assert.equal(parsed?.hederaTopicId, "0.0.555");
   });
 
   it("health payload has counts, not decision text", () => {

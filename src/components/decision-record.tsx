@@ -1,8 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { DecisionAttestPanel } from "@/components/decision-attest";
 import { DecisionStatusBadge } from "@/components/badges";
 import { Field } from "@/components/ui";
-import { attestDecisionOnServer } from "@/lib/todos-client-sync";
+import {
+  fetchDecisionsHealth,
+  type HederaHealthSnapshot,
+} from "@/lib/decisions-client-sync";
 import type { Decision, DecisionStatus } from "@/lib/types";
 
 const STATUS_OPTIONS: DecisionStatus[] = ["pending", "decided", "superseded"];
@@ -18,6 +23,19 @@ export function DecisionRecordEditor({
   onDelete?: (id: string) => void;
   showDelete?: boolean;
 }) {
+  const [hedera, setHedera] = useState<HederaHealthSnapshot | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDecisionsHealth().then((health) => {
+      if (cancelled || !health?.hedera) return;
+      setHedera(health.hedera);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <article className="card space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -165,66 +183,16 @@ export function DecisionRecordEditor({
           }
         />
       </Field>
-      <Field
-        label="Hedera message id"
-        hint="Reserved. Phase Zero does not submit to Hedera."
-      >
-        <input
-          className="input font-mono"
-          value={item.hederaMessageId ?? ""}
-          readOnly
-          placeholder="null"
-        />
-      </Field>
-      <div className="flex flex-wrap gap-2">
-        <AttestButton item={item} onUpdate={onUpdate} />
-        {showDelete && onDelete ? (
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={() => onDelete(item.id)}
-          >
-            Delete
-          </button>
-        ) : null}
-      </div>
+      <DecisionAttestPanel item={item} hedera={hedera} onApplied={onUpdate} />
+      {showDelete && onDelete ? (
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={() => onDelete(item.id)}
+        >
+          Delete
+        </button>
+      ) : null}
     </article>
-  );
-}
-
-function AttestButton({
-  item,
-  onUpdate,
-}: {
-  item: Decision;
-  onUpdate: (id: string, patch: Partial<Decision>) => void;
-}) {
-  const alreadyAcked = item.attestationStatus !== "web2_only";
-
-  async function attest() {
-    const result = await attestDecisionOnServer(item.id);
-    if (result.decision) {
-      onUpdate(item.id, {
-        attestationStatus: result.decision.attestationStatus,
-        attestedAt: result.decision.attestedAt,
-        hederaMessageId: result.decision.hederaMessageId,
-      });
-      return;
-    }
-    onUpdate(item.id, {
-      attestationStatus: "pending_operator_ack",
-      attestedAt: item.attestedAt || new Date().toISOString(),
-    });
-  }
-
-  return (
-    <button
-      type="button"
-      className="btn btn-primary"
-      onClick={() => void attest()}
-      disabled={alreadyAcked}
-    >
-      {alreadyAcked ? "Attested" : "Attest"}
-    </button>
   );
 }

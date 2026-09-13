@@ -72,7 +72,7 @@ Decisions is a folder/file archive:
 
 - `/decisions` — date folders (`YYYY-MM-DD`)
 - `/decisions?folder=2026-09-11` — files in that folder, grouped pending / decided / superseded / attested
-- `/decisions/D-2026-09-11-01` — full record + Attest (operator ack only)
+- `/decisions/D-2026-09-11-01` — full record + **Attest (Hedera Testnet)** (live HCS submit via `POST /api/attest`)
 
 Operator to-dos live on **Decisions → To-do**. Same Blob store, sibling file `resonance/todos.json` (local/dev: `.data/todos.json`).
 
@@ -85,14 +85,16 @@ curl -X POST https://YOUR-APP.vercel.app/api/todos \
 
 `GET /api/health` reports `todosSync.itemCount` only — no to-do text.
 
-Operator attest (Web2 ack, no Hedera call):
+Operator view-ack (Web2 only, **does not** submit to Hedera):
 
 ```bash
-curl -X POST https://YOUR-APP.vercel.app/api/attest \
+curl -X POST https://YOUR-APP.vercel.app/api/ack \
   -H "Authorization: Bearer YOUR_SYNC_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"id":"D-2026-09-11-01"}'
 ```
+
+Live Hedera Testnet attest stays on `POST /api/attest` — see [`hedera-attestation.md`](./hedera-attestation.md).
 
 You can also POST a full hub payload (`{ "decisions": [ ... ] }`). Matching ids merge. New ids need a `question`.
 
@@ -105,6 +107,8 @@ You can also POST a full hub payload (`{ "decisions": [ ... ] }`). Matching ids 
 
 ## Check
 
-`GET /api/health` — internal note + store status. No decision text.
+`GET /api/health` — internal note + store status + Hedera Testnet `configured` (never keys). No decision text.
+
+Hedera Testnet attest (Phase 0.5): [`hedera-attestation.md`](./hedera-attestation.md). Same auth as this store.
 
 JSON import on the Decisions page is still there as a fallback.

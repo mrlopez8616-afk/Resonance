@@ -6,6 +6,7 @@ import { ClassBadge } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
 import { useStore } from "@/context/store";
 import { digitalNodes, physicalNodes } from "@/lib/robinhood";
+import { hederaExplorerUrl } from "@/lib/hedera-explorer";
 import {
   publishedAllocationSum,
   toPublicSkeleton,
@@ -50,7 +51,7 @@ export default function PublicSkeletonPage() {
       <PageHeader
         kicker="Shareable"
         title="Public skeleton"
-        description="Twelve nodes as target allocation percentages of the published system — not dollars. Dry powder / exact XRP / Robinhood sizes stay on the gated private board. Later: Hedera attestation link + timestamp per decision, never private prices in public memos."
+        description="Twelve nodes as target allocation percentages of the published system — not dollars. Dry powder / exact XRP / Robinhood sizes stay on the gated private board. Hedera Testnet message ids appear when a row is hashgraph_attested — never private prices in public memos."
       />
 
       <div className="notice notice-warn mb-8">
@@ -95,6 +96,22 @@ export default function PublicSkeletonPage() {
                   <p className="mt-1 text-sm">{row.question}</p>
                   <p className="mt-1 text-xs text-[color:var(--muted)]">
                     Memo hash {row.memoHash ?? "—"} · {row.memoAt ?? "not attested"}
+                    {row.hederaMessageId ? (
+                      <>
+                        {" · "}
+                        <a
+                          href={
+                            hederaExplorerUrl("testnet", row.hederaMessageId) ??
+                            undefined
+                          }
+                          className="font-mono text-[color:var(--accent)]"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {row.hederaMessageId}
+                        </a>
+                      </>
+                    ) : null}
                   </p>
                 </div>
                 <p className="text-xs uppercase tracking-[0.12em] text-[color:var(--muted)]">

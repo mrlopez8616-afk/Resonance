@@ -24,7 +24,7 @@ The Web2 app now **behaves as if it were already on-chain**: same fields, receip
 - **Robinhood** — New `/robinhood` panel. **Main** = read-only learning / flatten Monday. **Agentic** = autonomous risk sleeve. Physical AI: PWR ETN VRT GEV CEG HUBB. Digital: BTC ETH SOL XRP SUI FLR. Venue badges (Robinhood / Xaman / founder-reported). Seeded Main lots match the holdings snapshot example.
 - **Nav** — Overview skeleton nodes, Treasury ledger, Nodes, Robinhood/Agentic, Decisions, Prices, Public skeleton, What changed, Settings.
 - **Public skeleton** — `/public` shows the twelve nodes as target allocation % (not dollars) and a decision index without receipts. Private board stays gated. Docs: [`docs/public-vs-private.md`](docs/public-vs-private.md).
-- **Hedera (schema only)** — Decisions carry `attestationStatus` (`web2_only` tonight) plus reserved `hederaMessageId` / `attestedAt`. No Hedera calls. Docs: [`docs/hedera-attestation.md`](docs/hedera-attestation.md).
+- **Hedera (Phase 0.5 Testnet)** — Decisions carry `attestationStatus` plus `hederaMessageId` / `attestedAt` / `fingerprint`. With server env set, **Attest (Hedera Testnet)** submits a public fingerprint (no dollar amounts) to HCS. Docs: [`docs/hedera-attestation.md`](docs/hedera-attestation.md).
 - In-app walkthrough: `/whats-new`. Docs: [`docs/overnight-build.md`](docs/overnight-build.md). Doctrine: [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
 
 Existing browsers that still have the old ~26,000 opening seed are migrated to the Aug 28 trail (operator-typed ledger rows are kept). Or import the treasury JSON / reset to seed.
@@ -77,6 +77,21 @@ Open **/decisions**, click the `2026-09-11` folder, then the decision file. The 
 
 Local/dev without Blob writes `.data/decisions.json`. Longer note: [`docs/decision-sync.md`](docs/decision-sync.md).
 
+## Hedera Testnet attest (Phase 0.5)
+
+This is a wiring test, not Mainnet.
+
+1. Vercel → **Settings → Environment Variables**.
+2. Add `HEDERA_OPERATOR_KEY` (Testnet private key). **Do not** prefix `NEXT_PUBLIC_`. **Do not** paste that key into chat or Grok.
+3. Optional: `HEDERA_OPERATOR_ID=0.0.10506907` (default), `HEDERA_NETWORK=testnet`, `HEDERA_TOPIC_ID=0.0.x` after the first topic is created.
+4. Redeploy.
+5. `curl -s https://YOUR-APP.vercel.app/api/health` — you want `"hedera": { "configured": true }`. That JSON never includes keys.
+6. Unlock the site → **Decisions** → **Attest (Hedera Testnet)** on a decided row.
+
+If the key is unset, the app still deploys. Health shows `configured: false`. You can still record a HashScan id by hand: `POST /api/attest` with `{ "id", "hederaMessageId" }`.
+
+Founder steps in plain language: [`docs/hedera-attestation.md`](docs/hedera-attestation.md).
+
 Production build:
 
 ```bash
@@ -100,7 +115,7 @@ No user accounts or API keys are required. Production should lock the site with 
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Main-sleeve learning lots ship funded from the Robinhood snapshot example. Editable name, thesis, failure condition, position status `none | watch | funded`, sleeve, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
-- **Decisions** — Phase Zero **record book** as a file archive. Date folders → decision files → full record on `/decisions/[id]`. Operator to-do list on the same tab (`GET/POST/PATCH /api/todos`). Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`), Attest (operator ack). Shared store: `GET/POST/PATCH /api/decisions` (merge by id). `fingerprint` is reserved for a later on-chain hash — unused now. JSON import is the fallback.
+- **Decisions** — Phase Zero **record book** as a file archive. Date folders → decision files → full record on `/decisions/[id]`. Operator to-do list on the same tab (`GET/POST/PATCH /api/todos`). Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`). Shared store: `GET/POST/PATCH /api/decisions` (merge by id). Decided / superseded rows can be attested on Hedera Testnet (`POST /api/attest`, **Attest (Hedera Testnet)** on the file page). Operator view-ack (no Hedera) is `POST /api/ack`. `fingerprint` is the public-record hash written on attest. JSON import is the fallback.
 - **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
@@ -129,7 +144,7 @@ The **To-do** sub-tab is the operator list (add, check off, delete, optional lin
 
 A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` … `D-2026-09-11-04`). The shared store seeds those same four ids on first boot if empty. Existing browsers can still merge the file: [`public/examples/decisions-record-book.json`](public/examples/decisions-record-book.json). Export decisions JSON from the page for backup.
 
-Hub writes go to `POST` / `PATCH /api/decisions` (Bearer `RESONANCE_SYNC_SECRET` or the site password). Operator ack is `POST /api/attest` with `{ "id": "D-2026-09-11-01" }` — it does not talk to Hedera. The Decisions page pulls that store and keeps `localStorage` as the offline cache. JSON import remains if sync is off. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
+Hub writes go to `POST` / `PATCH /api/decisions` (Bearer `RESONANCE_SYNC_SECRET` or the site password). The Decisions page pulls that store and keeps `localStorage` as the offline cache. JSON import remains if sync is off. Phase 0.5 can attest a decided row on **Hedera Testnet** (`POST /api/attest`, same auth — **this is the live HCS submit**, not an operator-ack shortcut). The memo is a public fingerprint only — no dollar amounts, no Xaman principal, no Main RH lots. Sensor beeps still need an operator ack (`POST /api/ack`). Mainnet and XRPL stay later. No seed phrases in the repo. Private keys live only in server env (`HEDERA_OPERATOR_KEY` — never `NEXT_PUBLIC_*`, never paste into chat).
 
 Recording-pipeline doctrine (future sensor path, public channel vs gated amounts, export → XRPL/XRS): [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
 
@@ -171,7 +186,7 @@ Resonance will not, in this phase or as a hidden control:
 
 - Import seed phrases, secret keys, or wallet backups
 - Ask for wallet signing or connect a dapp wallet
-- Write to any chain
+- Write to Mainnet or XRPL (Hedera **Testnet** HCS attestation of a public fingerprint is the Phase 0.5 wiring test)
 - Launch or promote an XRS (or any) token
 - Auto-trade, size positions, or move funds
 - Log into Robinhood, store brokerage credentials, or refresh holdings by itself

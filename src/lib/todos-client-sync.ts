@@ -217,28 +217,3 @@ export async function deleteOperatorTodo(id: string): Promise<void> {
     // Local delete already applied.
   }
 }
-
-export async function attestDecisionOnServer(
-  id: string,
-): Promise<{
-  ok: boolean;
-  decision: import("./types").Decision | null;
-}> {
-  try {
-    const response = await fetch("/api/attest", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    if (!response.ok) {
-      return { ok: false, decision: null };
-    }
-    const body = (await response.json()) as {
-      decision?: import("./types").Decision;
-    };
-    return { ok: true, decision: body.decision ?? null };
-  } catch {
-    return { ok: false, decision: null };
-  }
-}

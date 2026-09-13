@@ -15,7 +15,7 @@ export type AgenticIntentSide = "buy" | "sell";
 
 export type DecisionStatus = "pending" | "decided" | "superseded";
 
-/** Hedera Hashgraph attestation witness. Unused at runtime in Phase Zero. */
+/** Hedera Hashgraph attestation witness. Phase 0.5 can reach hashgraph_attested on Testnet. */
 export type AttestationStatus =
   | "web2_only"
   | "pending_operator_ack"
@@ -149,13 +149,13 @@ export interface Decision {
   evidence: string;
   reviewTrigger: string;
   /**
-   * Reserved for a later shared-DB / on-chain fingerprint (hash of the
-   * public record; sensitive details stay off-chain). Unused in Phase Zero.
+   * SHA-256 of the public attestation record (no dollar sizes, no
+   * outcome/evidence/rationale). Filled when a row is attested.
    */
   fingerprint: string | null;
   /**
-   * Hedera attestation ladder. Phase Zero stays `web2_only`.
-   * Live Hedera ids are later — do not implement signing here.
+   * Hedera attestation ladder. Sensor beeps stay `pending_operator_ack`
+   * until an operator acks. Chain-class rows may be Testnet-attested.
    */
   attestationStatus: AttestationStatus;
   hederaMessageId: string | null;

@@ -10,16 +10,18 @@ import {
   createEmptyEnvelope,
   DEFAULT_DECISIONS_FILE,
   DECISIONS_BLOB_PATH,
-  attestDecisionInEnvelope,
+  ackDecisionInEnvelope,
   deleteDecisionFromEnvelope,
   detectDecisionsBackend,
   ensureSeededEnvelope,
   isDecisionsSyncConfigured,
   parseDecisionsEnvelope,
+  writeAttestationIntoEnvelope,
   writeDecisionsIntoEnvelope,
   type DecisionsStoreBackend,
   type DecisionsStoreEnvelope,
 } from "./decisions-store-core";
+import type { Decision } from "./types";
 
 export {
   detectDecisionsBackend,
@@ -153,11 +155,13 @@ export async function mergeDecisionsWrite(body: unknown): Promise<{
   return { envelope, backend: loaded.backend, seeded: loaded.seeded };
 }
 
-export async function attestStoredDecision(id: string): Promise<{
+export async function persistDecisionAttestation(input: {
+  decision: Decision;
+  hederaTopicId?: string | null;
+}): Promise<{
   envelope: DecisionsStoreEnvelope;
   backend: DecisionsStoreBackend;
-  found: boolean;
-  decision: import("./types").Decision | null;
+  seeded: boolean;
 }> {
   if (!isDecisionsSyncConfigured()) {
     throw new DecisionsStoreError(
@@ -165,15 +169,37 @@ export async function attestStoredDecision(id: string): Promise<{
     );
   }
   const loaded = await loadDecisionsStore();
-  const attested = attestDecisionInEnvelope(loaded.envelope, id);
-  if (attested.found) {
-    await persistEnvelope(attested.envelope);
+  const envelope = writeAttestationIntoEnvelope(
+    loaded.envelope,
+    input.decision,
+    input.hederaTopicId,
+  );
+  await persistEnvelope(envelope);
+  return { envelope, backend: loaded.backend, seeded: loaded.seeded };
+}
+
+/** Operator view-ack only. Hedera submit is persistDecisionAttestation + /api/attest. */
+export async function ackStoredDecision(id: string): Promise<{
+  envelope: DecisionsStoreEnvelope;
+  backend: DecisionsStoreBackend;
+  found: boolean;
+  decision: Decision | null;
+}> {
+  if (!isDecisionsSyncConfigured()) {
+    throw new DecisionsStoreError(
+      "Decision sync is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadDecisionsStore();
+  const acked = ackDecisionInEnvelope(loaded.envelope, id);
+  if (acked.found && acked.envelope !== loaded.envelope) {
+    await persistEnvelope(acked.envelope);
   }
   return {
-    envelope: attested.envelope,
+    envelope: acked.envelope,
     backend: loaded.backend,
-    found: attested.found,
-    decision: attested.decision,
+    found: acked.found,
+    decision: acked.decision,
   };
 }
 

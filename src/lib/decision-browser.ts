@@ -48,7 +48,7 @@ export function isOperatorAttested(decision: Decision): boolean {
   return decision.attestationStatus !== "web2_only";
 }
 
-/** Folder-list status. Operator-acked rows sit in Attested, not their call status. */
+/** Folder-list status. Hedera-attested or operator-acked rows sit in Attested. */
 export function decisionArchiveStatus(
   decision: Decision,
 ): DecisionArchiveStatus {

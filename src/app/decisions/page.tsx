@@ -58,7 +58,7 @@ function DecisionsPageInner() {
       <PageHeader
         kicker="Record Book"
         title="Decisions"
-        description="Phase Zero archive for Andres López. Open a date folder, then a decision file. The to-do list sits on the same tab. Shared store + hub PATCH merge by ID. On-chain fingerprint comes later — Web2 only."
+        description="Phase Zero archive for Andres López. Open a date folder, then a decision file. The to-do list sits on the same tab. Shared store + hub PATCH merge by ID. Decided rows can take a Hedera Testnet witness — public fingerprint only, no dollar amounts in the memo."
         actions={
           <button
             type="button"
@@ -98,8 +98,10 @@ function DecisionsPageInner() {
         </p>
         <p className="mt-2">
           Hub can POST/PATCH /api/decisions (queued → filled) and this page
-          pulls the shared store. JSON import remains a fallback. Blockchain
-          recording is out of scope for Phase Zero.
+          pulls the shared store. JSON import remains a fallback. Phase 0.5
+          can attest a decided row on Hedera Testnet from the file page.
+          Sensor beeps still need an operator ack first. Mainnet and XRPL memos
+          stay later.
         </p>
       </div>
     </div>

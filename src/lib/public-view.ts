@@ -16,9 +16,9 @@ export interface PublicDecision {
   fingerprint: string | null;
   hederaMessageId: string | null;
   attestedAt: string | null;
-  /** Later: Hedera / on-chain memo id. Null in Phase Zero. */
+  /** Hedera message id or public fingerprint. Null until attested. */
   memoHash: string | null;
-  /** Later: attestation timestamp. Null in Phase Zero. */
+  /** Attestation timestamp. Null until attested. */
   memoAt: string | null;
 }
 
