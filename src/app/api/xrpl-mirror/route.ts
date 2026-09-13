@@ -13,7 +13,6 @@ import {
 } from "@/lib/xrpl-config";
 import { xrplExplorerUrl } from "@/lib/xrpl-explorer";
 import { XrplMirrorError, mirrorDecisionOnXrpl, parseXrplMirrorRequestBody } from "@/lib/xrpl-mirror";
-import { submitXrplDustMemo } from "@/lib/xrpl-submit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,7 +34,26 @@ function notConfigured() {
   );
 }
 
-export async function POST(request: Request) {
+function failureJson(error: unknown) {
+  if (error instanceof XrplMirrorError) {
+    const payload: Record<string, unknown> = {
+      ok: false,
+      error: error.message,
+    };
+    if (error.status === 503) {
+      payload.setup = [...XRPL_SETUP_STEPS];
+      payload.configured = false;
+    }
+    return NextResponse.json(payload, { status: error.status });
+  }
+  const mapped = asWriteError(error);
+  return NextResponse.json(
+    { ok: false, error: mapped.message },
+    { status: mapped.status },
+  );
+}
+
+async function postXrplMirror(request: Request) {
   const auth = authorizeDecisionRequest(request);
   if (!auth.ok) return unauthorized(auth.error);
   if (!isDecisionsSyncConfigured()) return notConfigured();
@@ -50,83 +68,78 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const parsed = parseXrplMirrorRequestBody(body);
-    const loaded = await loadDecisionsStore();
-    const current = loaded.envelope.decisions.find((row) => row.id === parsed.id);
-    if (!current) {
-      return NextResponse.json(
-        { ok: false, error: `Decision ${parsed.id} was not found in the shared store.` },
-        { status: 404 },
-      );
-    }
-
-    const config = readXrplConfig(process.env);
-
-    if (!parsed.xrplTxHash && !config.configured) {
-      return NextResponse.json(
-        {
-          ok: false,
-          configured: false,
-          error: xrplNotConfiguredMessage(config),
-          setup: [...XRPL_SETUP_STEPS],
-          xrpl: {
-            configured: false,
-            network: config.network,
-            account: config.account,
-          },
-        },
-        { status: 503 },
-      );
-    }
-
-    const mirrored = await mirrorDecisionOnXrpl({
-      decision: current,
-      request: parsed,
-      config,
-      submit: parsed.xrplTxHash
-        ? undefined
-        : (input) => submitXrplDustMemo(config, { memo: input.memo }),
-    });
-
-    const written = await persistDecisionAttestation({
-      decision: mirrored.decision,
-    });
-    const stored =
-      written.envelope.decisions.find((row) => row.id === mirrored.decision.id) ??
-      mirrored.decision;
-
-    return NextResponse.json({
-      ok: true,
-      mode: mirrored.mode,
-      configured: true,
-      backend: written.backend,
-      updatedAt: written.envelope.updatedAt,
-      decision: stored,
-      xrpl: {
-        configured: config.configured,
-        network: config.network,
-        account: config.account,
-        txHash: mirrored.txHash,
-        explorerUrl: xrplExplorerUrl(config.network, mirrored.txHash),
-      },
-    });
-  } catch (error) {
-    if (error instanceof XrplMirrorError) {
-      const payload: Record<string, unknown> = {
-        ok: false,
-        error: error.message,
-      };
-      if (error.status === 503) {
-        payload.setup = [...XRPL_SETUP_STEPS];
-        payload.configured = false;
-      }
-      return NextResponse.json(payload, { status: error.status });
-    }
-    const mapped = asWriteError(error);
+  const parsed = parseXrplMirrorRequestBody(body);
+  const loaded = await loadDecisionsStore();
+  const current = loaded.envelope.decisions.find((row) => row.id === parsed.id);
+  if (!current) {
     return NextResponse.json(
-      { ok: false, error: mapped.message },
-      { status: mapped.status },
+      { ok: false, error: `Decision ${parsed.id} was not found in the shared store.` },
+      { status: 404 },
     );
+  }
+
+  const config = readXrplConfig(process.env);
+
+  if (!parsed.xrplTxHash && !config.configured) {
+    return NextResponse.json(
+      {
+        ok: false,
+        configured: false,
+        error: xrplNotConfiguredMessage(config),
+        setup: [...XRPL_SETUP_STEPS],
+        xrpl: {
+          configured: false,
+          network: config.network,
+          account: config.account,
+        },
+      },
+      { status: 503 },
+    );
+  }
+
+  const mirrored = await mirrorDecisionOnXrpl({
+    decision: current,
+    request: parsed,
+    config,
+    submit: parsed.xrplTxHash
+      ? undefined
+      : async (input) => {
+          // Load signing + JSON-RPC only after auth. A top-level `xrpl` import
+          // pulls Client/ws at module eval and can crash the function with an
+          // empty HTTP 500 before 401 JSON can be returned.
+          const { submitXrplDustMemo } = await import("@/lib/xrpl-submit");
+          return submitXrplDustMemo(config, { memo: input.memo });
+        },
+  });
+
+  const written = await persistDecisionAttestation({
+    decision: mirrored.decision,
+  });
+  const stored =
+    written.envelope.decisions.find((row) => row.id === mirrored.decision.id) ??
+    mirrored.decision;
+
+  return NextResponse.json({
+    ok: true,
+    mode: mirrored.mode,
+    configured: true,
+    backend: written.backend,
+    updatedAt: written.envelope.updatedAt,
+    decision: stored,
+    xrpl: {
+      configured: config.configured,
+      network: config.network,
+      account: config.account,
+      txHash: mirrored.txHash,
+      explorerUrl: xrplExplorerUrl(config.network, mirrored.txHash),
+    },
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    return await postXrplMirror(request);
+  } catch (error) {
+    return failureJson(error);
   }
 }
