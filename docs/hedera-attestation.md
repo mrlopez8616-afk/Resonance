@@ -77,4 +77,4 @@ Public fingerprint fields: id, date, question, status, decision text, who author
 
 HCS message (preferred witness): `TopicMessageSubmitTransaction` / ConsensusSubmitMessage with JSON `{ "v": 1, "decisionId", "fingerprint", "attestedAt" }`. No amounts. No Xaman address. No Main RH lots.
 
-The XRPL follow-on is a 1-drop self-payment whose memo is `R1|id=…|h=…|fp=…|net=testnet` only. Same purity rule. Separate Testnet dust wallet — never the Xaman principal seed. [`xrpl-mirror.md`](./xrpl-mirror.md).
+The XRPL follow-on is a fee-only AccountSet whose memo is `R1|id=…|h=…|fp=…|net=testnet` only. Same purity rule. Separate Testnet dust wallet — never the Xaman principal seed. [`xrpl-mirror.md`](./xrpl-mirror.md).

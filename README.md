@@ -25,7 +25,7 @@ The Web2 app now **behaves as if it were already on-chain**: same fields, receip
 - **Nav** — Overview skeleton nodes, Treasury ledger, Nodes, Robinhood/Agentic, Decisions, Prices, Public skeleton, What changed, Settings.
 - **Public skeleton** — `/public` shows the twelve nodes as target allocation % (not dollars) and a decision index without receipts. Private board stays gated. Docs: [`docs/public-vs-private.md`](docs/public-vs-private.md).
 - **Hedera (Phase 0.5 Testnet)** — Decisions carry `attestationStatus` plus `hederaMessageId` / `attestedAt` / `fingerprint`. With server env set, **Attest (Hedera Testnet)** submits a public fingerprint (no dollar amounts) to HCS. Docs: [`docs/hedera-attestation.md`](docs/hedera-attestation.md).
-- **XRPL (Phase 0.5 Testnet mirror)** — After Hedera attest, **Mirror on XRPL Testnet** writes a 1-drop self-payment whose memo is `R1|id=…|h=…|fp=…|net=testnet`. Stores `xrplTxHash`. Separate dust wallet — never Xaman principal. Docs: [`docs/xrpl-mirror.md`](docs/xrpl-mirror.md).
+- **XRPL (Phase 0.5 Testnet mirror)** — After Hedera attest, **Mirror on XRPL Testnet** writes a fee-only AccountSet whose memo is `R1|id=…|h=…|fp=…|net=testnet`. Stores `xrplTxHash`. Separate dust wallet — never Xaman principal. Docs: [`docs/xrpl-mirror.md`](docs/xrpl-mirror.md).
 - In-app walkthrough: `/whats-new`. Docs: [`docs/overnight-build.md`](docs/overnight-build.md). Doctrine: [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
 
 Existing browsers that still have the old ~26,000 opening seed are migrated to the Aug 28 trail (operator-typed ledger rows are kept). Or import the treasury JSON / reset to seed.
@@ -95,7 +95,7 @@ Founder steps in plain language: [`docs/hedera-attestation.md`](docs/hedera-atte
 
 ## XRPL Testnet dust-memo mirror (Phase 0.5)
 
-Payment-rail **pointer** only. Hedera stays the witness. Mainnet is rejected.
+Payment-rail **pointer** only (fee-only AccountSet + R1 memo — not a self-payment). Hedera stays the witness. Mainnet is rejected.
 
 1. Vercel → **Settings → Environment Variables**.
 2. Add `XRPL_SEED` (Testnet family seed for the **dust wallet**, not Xaman). **Do not** prefix `NEXT_PUBLIC_`. **Do not** paste that seed into chat or Grok.

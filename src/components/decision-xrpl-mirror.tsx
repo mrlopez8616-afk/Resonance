@@ -75,8 +75,9 @@ export function DecisionXrplMirrorPanel({
         </p>
       ) : (
         <p className="text-sm text-[color:var(--muted)]">
-          Payment-rail pointer only. Memo is R1 (id + Hedera message +
-          fingerprint prefix). No amounts. Not the Xaman principal wallet.
+          Payment-rail pointer only. Writes an AccountSet with R1 memo
+          (id + Hedera message + fingerprint prefix). Fee only — no
+          transfer. Not the Xaman principal wallet.
         </p>
       )}
       {!eligible ? (

@@ -2,19 +2,14 @@ import { encodeMemoDataHex } from "./xrpl-memo";
 import {
   classicAddressFromPublicKey,
   deriveXrplKeypair,
-  encodePaymentForSigning,
-  encodeSignedPayment,
-  signEncodedPayment,
+  encodeAccountSetForSigning,
+  encodeSignedAccountSet,
+  signEncodedTransaction,
 } from "./xrpl-native";
 
-/** One drop. Recorder self-payment — not a transfer and not a dollar size. */
-export const XRPL_DUST_DROPS = "1";
-
-export interface XrplUnsignedPayment {
-  TransactionType: "Payment";
+export interface XrplUnsignedAccountSet {
+  TransactionType: "AccountSet";
   Account: string;
-  Destination: string;
-  Amount: string;
   Flags: number;
   Fee: string;
   Sequence: number;
@@ -27,18 +22,17 @@ export function classicAddressFromSeed(seed: string): string {
   return classicAddressFromPublicKey(keypair.publicKey);
 }
 
-export function buildUnsignedDustPayment(input: {
+/** Fee-only AccountSet + R1 memo. Not a Payment — self-pay is temREDUNDANT. */
+export function buildUnsignedMirrorAccountSet(input: {
   account: string;
   memo: string;
   sequence: number;
   feeDrops: string;
   lastLedgerSequence: number;
-}): XrplUnsignedPayment {
+}): XrplUnsignedAccountSet {
   return {
-    TransactionType: "Payment",
+    TransactionType: "AccountSet",
     Account: input.account,
-    Destination: input.account,
-    Amount: XRPL_DUST_DROPS,
     Flags: 0,
     Fee: input.feeDrops,
     Sequence: input.sequence,
@@ -47,25 +41,29 @@ export function buildUnsignedDustPayment(input: {
   };
 }
 
-export function signXrplPayment(
+export function signXrplAccountSet(
   seed: string,
-  payment: XrplUnsignedPayment,
+  tx: XrplUnsignedAccountSet,
 ): { txBlob: string } {
+  if (tx.TransactionType !== "AccountSet") {
+    throw new Error("XRPL mirror must be AccountSet. Self-Payment is temREDUNDANT.");
+  }
   const keypair = deriveXrplKeypair(seed);
   const toSign = {
-    Account: payment.Account,
-    Destination: payment.Destination,
-    Amount: payment.Amount,
-    Fee: payment.Fee,
-    Sequence: payment.Sequence,
-    LastLedgerSequence: payment.LastLedgerSequence,
-    Flags: payment.Flags,
+    Account: tx.Account,
+    Fee: tx.Fee,
+    Sequence: tx.Sequence,
+    LastLedgerSequence: tx.LastLedgerSequence,
+    Flags: tx.Flags,
     SigningPubKey: keypair.publicKey,
-    Memos: payment.Memos,
+    Memos: tx.Memos,
   };
-  const signature = signEncodedPayment(encodePaymentForSigning(toSign), keypair);
+  const signature = signEncodedTransaction(
+    encodeAccountSetForSigning(toSign),
+    keypair,
+  );
   return {
-    txBlob: encodeSignedPayment({ ...toSign, TxnSignature: signature }),
+    txBlob: encodeSignedAccountSet({ ...toSign, TxnSignature: signature }),
   };
 }
 
