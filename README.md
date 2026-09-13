@@ -132,15 +132,16 @@ Barney path after this lands:
 2. Wait for Vercel **Ready**.
 3. Unlock (site password if the gate is on).
 4. Open `/`.
-5. Toggle **Capital flow**, **Sleeves**, and **Red locks**.
+5. Use the **bottom hotbar** to toggle **Capital flow**, **Sleeves**, and **Red locks**, and to zoom World / Node / Guts. Wheel and +/− still work.
+6. Click one physical node and one crypto node. Physical interiors use the electrification skin; crypto interiors use the liquidity skin. Red locks stay welded (visible only).
 
-You should see belts between linked nodes plus the Xaman well and queued Agentic dock; which of the twelve sit on Agentic vs founder/Main thesis; and OFF LIMITS stamps on the Xaman well and RH Main. Visibility only — no spend of Main or Xaman principal. Edit the thesis-sleeve stub in `src/lib/node-world.ts` (`FOUNDER_THESIS_SLEEVE_STUB`) if a watch node needs a different note. Do not add or remove tickers.
+You should see belts on a main-bus gutter between linked nodes plus the Xaman well and queued Agentic dock; which of the twelve sit on Agentic vs founder/Main thesis; and OFF LIMITS stamps on the Xaman well and RH Main. Visibility only — no spend of Main or Xaman principal. Left rail stays the OS toolbox. Edit the thesis-sleeve stub in `src/lib/node-world.ts` (`FOUNDER_THESIS_SLEEVE_STUB`) if a watch node needs a different note. Do not add or remove tickers.
 
 Playbook: [`docs/node-world.md`](docs/node-world.md).
 
 ## Phase Zero scope
 
-- **Overview / Node world** — `/` is the twelve-node Factorio-style map (not a brokerage list). Wheel or +/− zooms world → node → guts. Overlay rack: **Capital flow** (SVG pipes from `node.links`, Xaman→XRP well, queued Agentic intents), **Stamps**, **Sleeves** (Agentic vs founder/Main/thesis on the same twelve boxes), **Red locks** (Xaman well + RH Main marked OFF LIMITS). Sensors and Carla stay stubbed. No private dollar amounts or ticket sizes on the map. Founder path: [`docs/node-world.md`](docs/node-world.md).
+- **Overview / Node world** — `/` is the twelve-node Factorio-style map (not a brokerage list). Wheel, +/−, or the bottom hotbar zooms world → node → guts. Hotbar overlays: **Capital flow** (main-bus belts from `node.links`, Xaman→XRP well, queued Agentic intents), **Stamps**, **Sleeves** (Agentic vs founder/Main/thesis on the same twelve boxes), **Red locks** (Xaman well + RH Main marked OFF LIMITS). Click a box for a plant interior (electrification on physical AI, liquidity tanks/valves on crypto). Sensors and Carla stay stubbed. No private dollar amounts or ticket sizes on the map. Founder path: [`docs/node-world.md`](docs/node-world.md).
 - **Treasury** — editable working balance on **Xaman** (~27,772 XRP seed, founder-reported), principal trail from Aug 28, optional manual XRP/USD for estimates, reward/claim ledger you can add and edit in place (date, amount, fee, note, classification `principal | reward | fee | transfer`). Import/merge the official trail by ID. Robinhood XRP is **not** this balance.
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Main-sleeve learning lots ship funded from the Robinhood snapshot example. Editable name, thesis, failure condition, position status `none | watch | funded`, sleeve, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.

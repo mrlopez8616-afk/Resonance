@@ -262,20 +262,42 @@ export function moveToward(
   };
 }
 
-/** Quadratic belt path. Opposite directions and sibling pipes bow apart so XRP↔FLR and Agentic stacks stay readable. */
+/** Horizontal gutter between the two map rows. Belts travel these lanes, then rise to a box. */
+export const MAIN_BUS_Y = 50;
+
+export const FLOW_BUS_LANE: Record<CapitalFlowKind, number> = {
+  "treasury-principal": -6,
+  funds: -3,
+  "depends-on": 0,
+  related: 3,
+  "agentic-queued": 6,
+};
+
+export function mainBusLaneY(kind: CapitalFlowKind, sway = 0): number {
+  return MAIN_BUS_Y + FLOW_BUS_LANE[kind] + sway * 0.15;
+}
+
+export function mainBusLaneYs(): number[] {
+  return (Object.keys(FLOW_BUS_LANE) as CapitalFlowKind[]).map(
+    (kind) => MAIN_BUS_Y + FLOW_BUS_LANE[kind],
+  );
+}
+
+function fmtMap(n: number): string {
+  return n.toFixed(2);
+}
+
+/** Orthogonal main-bus belt: drop to a kind-lane, travel the gutter, rise to the target. */
 export function pipePath(
   from: { x: number; y: number },
   to: { x: number; y: number },
   sway = 0,
+  kind: CapitalFlowKind = "related",
 ): string {
   const start = moveToward(from, to, 6.4);
   const end = moveToward(to, from, 6.4);
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const bias = start.x + start.y <= end.x + end.y ? 2.2 : -2.2;
-  const midX = (start.x + end.x) / 2 + dy * 0.2 + bias + sway;
-  const midY = (start.y + end.y) / 2 - dx * 0.18 - 1.5 + sway * 0.4;
-  return `M ${start.x} ${start.y} Q ${midX} ${midY} ${end.x} ${end.y}`;
+  const laneY = mainBusLaneY(kind, sway);
+  return `M ${fmtMap(start.x)} ${fmtMap(start.y)} L ${fmtMap(start.x)} ${fmtMap(laneY)} L ${fmtMap(end.x)} ${fmtMap(laneY)} L ${fmtMap(end.x)} ${fmtMap(end.y)}`;
 }
 
 export function drawableCapitalFlows(flows: CapitalFlow[]): DrawableCapitalFlow[] {
@@ -294,10 +316,24 @@ export function drawableCapitalFlows(flows: CapitalFlow[]): DrawableCapitalFlow[
       ...flow,
       fromPoint: start,
       toPoint: end,
-      path: pipePath(fromPoint, toPoint, sway),
+      path: pipePath(fromPoint, toPoint, sway, flow.kind),
     });
   }
   return drawn;
+}
+
+/** Physical AI boxes are electrification plants; digital boxes are liquidity valves. Locked 12 only. */
+export type PlantSkin = "electrification" | "liquidity";
+
+export const PLANT_SKIN_LABEL: Record<PlantSkin, string> = {
+  electrification: "Electrification",
+  liquidity: "Liquidity",
+};
+
+export function plantSkinFor(ticker: string): PlantSkin | null {
+  const slot = slotForTicker(ticker);
+  if (!slot) return null;
+  return slot.cluster === "physical" ? "electrification" : "liquidity";
 }
 
 export function nextAltitude(

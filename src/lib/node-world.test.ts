@@ -14,6 +14,9 @@ import {
   flowAnchor,
   FOUNDER_THESIS_SLEEVE_STUB,
   isWorkingLayer,
+  mainBusLaneY,
+  mainBusLaneYs,
+  plantSkinFor,
   nextAltitude,
   publicSafeStampBlob,
   redLocksFor,
@@ -130,6 +133,14 @@ describe("node world", () => {
     assert.ok(drawn.some((flow) => flow.id === "flow-treasury-xrp"));
     assert.ok(drawn.some((flow) => flow.kind === "agentic-queued" && flow.to === "PWR"));
     assert.ok(drawn.every((flow) => flow.path.startsWith("M ")));
+    assert.ok(drawn.every((flow) => flow.path.includes(" L ")));
+    assert.ok(
+      drawn.every((flow) => {
+        const match = flow.path.match(/ L [\d.-]+ ([\d.-]+) L /);
+        const laneY = match ? Number(match[1]) : NaN;
+        return laneY >= 40 && laneY <= 62;
+      }),
+    );
     const agenticPaths = drawn
       .filter((flow) => flow.kind === "agentic-queued")
       .map((flow) => flow.path);
@@ -210,6 +221,37 @@ describe("node world", () => {
     assert.equal(isWorkingLayer("red-locks"), true);
     assert.equal(isWorkingLayer("sensors"), false);
     assert.equal(isWorkingLayer("carla"), false);
+  });
+
+  it("skins the locked twelve as electrification plants or liquidity valves — no extras", () => {
+    assert.equal(plantSkinFor("PWR"), "electrification");
+    assert.equal(plantSkinFor("ETN"), "electrification");
+    assert.equal(plantSkinFor("VRT"), "electrification");
+    assert.equal(plantSkinFor("GEV"), "electrification");
+    assert.equal(plantSkinFor("CEG"), "electrification");
+    assert.equal(plantSkinFor("HUBB"), "electrification");
+    assert.equal(plantSkinFor("XRP"), "liquidity");
+    assert.equal(plantSkinFor("FLR"), "liquidity");
+    assert.equal(plantSkinFor("BTC"), "liquidity");
+    assert.equal(plantSkinFor("ETH"), "liquidity");
+    assert.equal(plantSkinFor("SOL"), "liquidity");
+    assert.equal(plantSkinFor("SUI"), "liquidity");
+    assert.equal(plantSkinFor("FAKE"), null);
+    const seed = createSeedState();
+    const skins = worldCards(seed.nodes).map((card) => plantSkinFor(card.ticker));
+    assert.equal(skins.length, 12);
+    assert.equal(
+      skins.filter((skin) => skin === "electrification").length,
+      6,
+    );
+    assert.equal(skins.filter((skin) => skin === "liquidity").length, 6);
+    assert.deepEqual(mainBusLaneYs(), [
+      mainBusLaneY("treasury-principal"),
+      mainBusLaneY("funds"),
+      mainBusLaneY("depends-on"),
+      mainBusLaneY("related"),
+      mainBusLaneY("agentic-queued"),
+    ]);
   });
 
   it("walks altitude levels and leaves unpublished allocation unpublished", () => {
