@@ -37,6 +37,13 @@ function setSnapshot(next: DecisionsSyncState) {
   emit();
 }
 
+export interface HederaHealthSnapshot {
+  configured?: boolean;
+  network?: "testnet";
+  operatorId?: string;
+  topicId?: string | null;
+}
+
 export interface DecisionsHealth {
   ok: boolean;
   decisionsSync?: {
@@ -45,6 +52,7 @@ export interface DecisionsHealth {
     recordCount?: number;
     updatedAt?: string | null;
   };
+  hedera?: HederaHealthSnapshot;
 }
 
 export async function fetchDecisionsHealth(): Promise<DecisionsHealth | null> {
@@ -154,6 +162,60 @@ export async function pushDecisionRecords(
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+export async function attestDecisionOnServer(
+  id: string,
+): Promise<
+  | {
+      ok: true;
+      decision: Decision;
+      messageId: string | null;
+      explorerUrl: string | null;
+      topicId: string | null;
+      note?: string;
+    }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const response = await fetch("/api/attest", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const body = (await response.json()) as {
+      error?: string;
+      decision?: Decision;
+      note?: string;
+      hedera?: {
+        messageId?: string | null;
+        explorerUrl?: string | null;
+        topicId?: string | null;
+      };
+    };
+    if (!response.ok || !body.decision) {
+      return {
+        ok: false,
+        status: response.status,
+        message: body.error ?? "Could not attest this decision.",
+      };
+    }
+    return {
+      ok: true,
+      decision: body.decision,
+      messageId: body.hedera?.messageId ?? body.decision.hederaMessageId,
+      explorerUrl: body.hedera?.explorerUrl ?? null,
+      topicId: body.hedera?.topicId ?? null,
+      note: body.note,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Network error talking to the attest endpoint.",
+    };
   }
 }
 

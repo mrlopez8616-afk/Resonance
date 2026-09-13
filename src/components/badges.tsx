@@ -1,6 +1,7 @@
 import { venueKind } from "@/lib/robinhood";
 import type {
   AgenticIntentStatus,
+  AttestationStatus,
   DecisionStatus,
   NodeSleeve,
   Provenance,
@@ -78,6 +79,31 @@ export function DecisionStatusBadge({ value }: { value: DecisionStatus }) {
   return (
     <span className={`badge ${decisionStatusStyles[value]}`}>
       {decisionStatusLabel[value]}
+    </span>
+  );
+}
+
+const attestationStyles: Record<AttestationStatus, string> = {
+  web2_only: "border-[color:var(--border)] text-[color:var(--muted)]",
+  pending_operator_ack:
+    "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]",
+  hashgraph_queued:
+    "border-[color:var(--accent-2)]/35 bg-[color:var(--accent-2)]/10 text-[color:var(--accent-2)]",
+  hashgraph_attested:
+    "border-[color:var(--ok)]/40 bg-[color:var(--ok)]/10 text-[color:var(--ok)]",
+};
+
+const attestationLabel: Record<AttestationStatus, string> = {
+  web2_only: "Web2 only",
+  pending_operator_ack: "Pending operator ack",
+  hashgraph_queued: "Hashgraph queued",
+  hashgraph_attested: "Hashgraph attested",
+};
+
+export function AttestationStatusBadge({ value }: { value: AttestationStatus }) {
+  return (
+    <span className={`badge ${attestationStyles[value]}`}>
+      {attestationLabel[value]}
     </span>
   );
 }

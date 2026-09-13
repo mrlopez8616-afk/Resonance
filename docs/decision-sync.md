@@ -76,6 +76,8 @@ You can also POST a full hub payload (`{ "decisions": [ ... ] }`). Matching ids 
 
 ## Check
 
-`GET /api/health` — internal note + store status. No decision text.
+`GET /api/health` — internal note + store status + Hedera Testnet `configured` (never keys). No decision text.
+
+Hedera Testnet attest (Phase 0.5): [`hedera-attestation.md`](./hedera-attestation.md). Same auth as this store.
 
 JSON import on the Decisions page is still there as a fallback.

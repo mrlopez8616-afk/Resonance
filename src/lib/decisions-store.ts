@@ -15,10 +15,12 @@ import {
   ensureSeededEnvelope,
   isDecisionsSyncConfigured,
   parseDecisionsEnvelope,
+  writeAttestationIntoEnvelope,
   writeDecisionsIntoEnvelope,
   type DecisionsStoreBackend,
   type DecisionsStoreEnvelope,
 } from "./decisions-store-core";
+import type { Decision } from "./types";
 
 export {
   detectDecisionsBackend,
@@ -148,6 +150,29 @@ export async function mergeDecisionsWrite(body: unknown): Promise<{
   const items = collectWriteItems(body);
   const loaded = await loadDecisionsStore();
   const envelope = writeDecisionsIntoEnvelope(loaded.envelope, items);
+  await persistEnvelope(envelope);
+  return { envelope, backend: loaded.backend, seeded: loaded.seeded };
+}
+
+export async function persistDecisionAttestation(input: {
+  decision: Decision;
+  hederaTopicId?: string | null;
+}): Promise<{
+  envelope: DecisionsStoreEnvelope;
+  backend: DecisionsStoreBackend;
+  seeded: boolean;
+}> {
+  if (!isDecisionsSyncConfigured()) {
+    throw new DecisionsStoreError(
+      "Decision sync is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadDecisionsStore();
+  const envelope = writeAttestationIntoEnvelope(
+    loaded.envelope,
+    input.decision,
+    input.hederaTopicId,
+  );
   await persistEnvelope(envelope);
   return { envelope, backend: loaded.backend, seeded: loaded.seeded };
 }

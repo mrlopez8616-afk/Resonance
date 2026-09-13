@@ -10,6 +10,7 @@ import {
   ensureSeededEnvelope,
   isDecisionsSyncConfigured,
   parseDecisionsEnvelope,
+  writeAttestationIntoEnvelope,
   writeDecisionsIntoEnvelope,
 } from "./decisions-store-core";
 
@@ -85,6 +86,27 @@ describe("decisions store core", () => {
       true,
     );
     assert.equal(isDecisionsSyncConfigured({ VERCEL: "1" }), false);
+  });
+
+  it("persists a Testnet topic id next to an attested row", () => {
+    const { envelope } = ensureSeededEnvelope(null);
+    const row = envelope.decisions[3];
+    assert.ok(row);
+    const attested = {
+      ...row,
+      attestationStatus: "hashgraph_attested" as const,
+      hederaMessageId: "0.0.555/1",
+      attestedAt: "2026-09-12T22:00:00.000Z",
+      fingerprint: "abc",
+    };
+    const next = writeAttestationIntoEnvelope(envelope, attested, "0.0.555");
+    assert.equal(next.hederaTopicId, "0.0.555");
+    assert.equal(
+      next.decisions.find((item) => item.id === row.id)?.attestationStatus,
+      "hashgraph_attested",
+    );
+    const parsed = parseDecisionsEnvelope(JSON.parse(JSON.stringify(next)));
+    assert.equal(parsed?.hederaTopicId, "0.0.555");
   });
 
   it("health payload has counts, not decision text", () => {
