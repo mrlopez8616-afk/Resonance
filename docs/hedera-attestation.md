@@ -24,6 +24,8 @@ Schema: `attestationStatus`, `hederaMessageId` (topic/sequence or tx id), `attes
 3. **Public view** (`/public`) shows attestation status, reserved memo hash / timestamp (Hedera id when live), **not dollar amounts**.
 4. Main Robinhood lots and Xaman principal never appear in a public memo. The HCS payload is only `{ v, decisionId, fingerprint, attestedAt }`.
 
+The **Attest (Hedera Testnet)** button on `/decisions/[id]` is the live HCS submit (`POST /api/attest`). Operator view-ack (sensor beeps, no Hedera) is a separate `POST /api/ack`.
+
 ## Phase 0.5 Testnet wiring (founder steps)
 
 Do this in the Vercel project → **Settings → Environment Variables**. Then **redeploy**.

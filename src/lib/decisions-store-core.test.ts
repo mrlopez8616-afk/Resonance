@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 import { collectWriteItems } from "./decision-write";
 import {
+  ackDecisionInEnvelope,
   createEmptyEnvelope,
   createSeededEnvelope,
   decisionsStoreHealth,
@@ -86,6 +87,40 @@ describe("decisions store core", () => {
       true,
     );
     assert.equal(isDecisionsSyncConfigured({ VERCEL: "1" }), false);
+  });
+
+  it("operator ack promotes web2_only without inventing a Hedera id", () => {
+    const seeded = createSeededEnvelope("2026-09-12T00:00:00.000Z");
+    const result = ackDecisionInEnvelope(
+      seeded,
+      "D-2026-09-11-01",
+      "2026-09-13T12:00:00.000Z",
+    );
+    assert.equal(result.found, true);
+    assert.equal(result.decision?.attestationStatus, "pending_operator_ack");
+    assert.equal(result.decision?.attestedAt, "2026-09-13T12:00:00.000Z");
+    assert.equal(result.decision?.hederaMessageId, null);
+    const missing = ackDecisionInEnvelope(seeded, "D-missing");
+    assert.equal(missing.found, false);
+  });
+
+  it("operator ack does not downgrade a hashgraph_attested row", () => {
+    const seeded = createSeededEnvelope("2026-09-12T00:00:00.000Z");
+    const already = writeAttestationIntoEnvelope(
+      seeded,
+      {
+        ...LOCKED_DECISIONS_2026_09_11[3],
+        attestationStatus: "hashgraph_attested",
+        hederaMessageId: "0.0.10513997/1",
+        attestedAt: "2026-09-12T22:00:00.000Z",
+        fingerprint: "abc",
+      },
+      "0.0.10513997",
+    );
+    const result = ackDecisionInEnvelope(already, "D-2026-09-11-04");
+    assert.equal(result.decision?.attestationStatus, "hashgraph_attested");
+    assert.equal(result.decision?.hederaMessageId, "0.0.10513997/1");
+    assert.equal(already.hederaTopicId, "0.0.10513997");
   });
 
   it("persists a Testnet topic id next to an attested row", () => {

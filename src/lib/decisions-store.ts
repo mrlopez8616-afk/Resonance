@@ -10,6 +10,7 @@ import {
   createEmptyEnvelope,
   DEFAULT_DECISIONS_FILE,
   DECISIONS_BLOB_PATH,
+  ackDecisionInEnvelope,
   deleteDecisionFromEnvelope,
   detectDecisionsBackend,
   ensureSeededEnvelope,
@@ -175,6 +176,31 @@ export async function persistDecisionAttestation(input: {
   );
   await persistEnvelope(envelope);
   return { envelope, backend: loaded.backend, seeded: loaded.seeded };
+}
+
+/** Operator view-ack only. Hedera submit is persistDecisionAttestation + /api/attest. */
+export async function ackStoredDecision(id: string): Promise<{
+  envelope: DecisionsStoreEnvelope;
+  backend: DecisionsStoreBackend;
+  found: boolean;
+  decision: Decision | null;
+}> {
+  if (!isDecisionsSyncConfigured()) {
+    throw new DecisionsStoreError(
+      "Decision sync is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadDecisionsStore();
+  const acked = ackDecisionInEnvelope(loaded.envelope, id);
+  if (acked.found && acked.envelope !== loaded.envelope) {
+    await persistEnvelope(acked.envelope);
+  }
+  return {
+    envelope: acked.envelope,
+    backend: loaded.backend,
+    found: acked.found,
+    decision: acked.decision,
+  };
 }
 
 export async function deleteStoredDecision(id: string): Promise<{

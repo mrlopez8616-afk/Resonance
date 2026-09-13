@@ -137,6 +137,46 @@ export function writeAttestationIntoEnvelope(
   };
 }
 
+/**
+ * Operator view-ack only (`web2_only` → `pending_operator_ack`).
+ * Does not talk to Hedera, invent a message id, or change hashgraph_* rows.
+ * Live HCS submit stays on POST /api/attest.
+ */
+export function ackDecisionInEnvelope(
+  envelope: DecisionsStoreEnvelope,
+  id: string,
+  now = new Date().toISOString(),
+): {
+  envelope: DecisionsStoreEnvelope;
+  found: boolean;
+  decision: Decision | null;
+} {
+  const current = envelope.decisions.find((row) => row.id === id) ?? null;
+  if (!current) {
+    return { envelope, found: false, decision: null };
+  }
+  if (current.attestationStatus !== "web2_only") {
+    return { envelope, found: true, decision: current };
+  }
+  const decision: Decision = {
+    ...current,
+    attestationStatus: "pending_operator_ack",
+    attestedAt: current.attestedAt || now,
+  };
+  return {
+    envelope: {
+      ...envelope,
+      updatedAt: now,
+      hederaTopicId: envelope.hederaTopicId ?? null,
+      decisions: envelope.decisions.map((row) =>
+        row.id === id ? decision : row,
+      ),
+    },
+    found: true,
+    decision,
+  };
+}
+
 export function decisionsStoreHealth(input: {
   configured: boolean;
   backend: DecisionsStoreBackend;

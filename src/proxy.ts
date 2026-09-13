@@ -14,7 +14,16 @@ const PUBLIC_PATHS = new Set([
 ]);
 
 function isDecisionSyncApi(pathname: string): boolean {
-  return pathname === "/api/decisions" || pathname.startsWith("/api/decisions/");
+  return (
+    pathname === "/api/decisions" ||
+    pathname.startsWith("/api/decisions/") ||
+    pathname === "/api/todos" ||
+    pathname.startsWith("/api/todos/") ||
+    pathname === "/api/attest" ||
+    pathname.startsWith("/api/attest/") ||
+    pathname === "/api/ack" ||
+    pathname.startsWith("/api/ack/")
+  );
 }
 
 export function proxy(request: NextRequest) {
