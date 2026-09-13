@@ -67,6 +67,31 @@ describe("decision write / patch", () => {
     );
   });
 
+  it("patches XRPL pointer fields without wiping Hedera witness ids", () => {
+    const existing = LOCKED_DECISIONS_2026_09_11.map((row) =>
+      row.id === "D-2026-09-11-04"
+        ? {
+            ...row,
+            attestationStatus: "hashgraph_attested" as const,
+            hederaMessageId: "0.0.555/1",
+            fingerprint: "ab".repeat(32),
+            attestedAt: "2026-09-12T22:00:00.000Z",
+          }
+        : row,
+    );
+    const items = collectWriteItems({
+      id: "D-2026-09-11-04",
+      xrplTxHash: "CD".repeat(32),
+      xrplMemoAt: "2026-09-13T05:00:00.000Z",
+    });
+    const { decisions } = upsertDecisionsFromWrites(existing, items);
+    const row = decisions.find((item) => item.id === "D-2026-09-11-04");
+    assert.equal(row?.xrplTxHash, "CD".repeat(32));
+    assert.equal(row?.xrplMemoAt, "2026-09-13T05:00:00.000Z");
+    assert.equal(row?.hederaMessageId, "0.0.555/1");
+    assert.equal(row?.attestationStatus, "hashgraph_attested");
+  });
+
   it("accepts a decisions array payload", () => {
     const items = collectWriteItems({
       decisions: [

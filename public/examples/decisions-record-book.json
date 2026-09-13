@@ -19,6 +19,8 @@
       "attestationStatus": "web2_only",
       "hederaMessageId": null,
       "attestedAt": null,
+      "xrplTxHash": null,
+      "xrplMemoAt": null,
       "createdAt": "2026-09-11T22:10:00.000Z"
     },
     {
@@ -38,6 +40,8 @@
       "attestationStatus": "web2_only",
       "hederaMessageId": null,
       "attestedAt": null,
+      "xrplTxHash": null,
+      "xrplMemoAt": null,
       "createdAt": "2026-09-11T22:40:00.000Z"
     },
     {
@@ -57,6 +61,8 @@
       "attestationStatus": "web2_only",
       "hederaMessageId": null,
       "attestedAt": null,
+      "xrplTxHash": null,
+      "xrplMemoAt": null,
       "createdAt": "2026-09-11T23:05:00.000Z"
     },
     {
@@ -76,6 +82,8 @@
       "attestationStatus": "web2_only",
       "hederaMessageId": null,
       "attestedAt": null,
+      "xrplTxHash": null,
+      "xrplMemoAt": null,
       "createdAt": "2026-09-11T23:25:00.000Z"
     }
   ]

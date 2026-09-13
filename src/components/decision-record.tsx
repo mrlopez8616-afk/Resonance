@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { DecisionAttestPanel } from "@/components/decision-attest";
+import { DecisionXrplMirrorPanel } from "@/components/decision-xrpl-mirror";
 import { DecisionStatusBadge } from "@/components/badges";
 import { Field } from "@/components/ui";
 import {
   fetchDecisionsHealth,
   type HederaHealthSnapshot,
+  type XrplHealthSnapshot,
 } from "@/lib/decisions-client-sync";
 import type { Decision, DecisionStatus } from "@/lib/types";
 
@@ -24,12 +26,14 @@ export function DecisionRecordEditor({
   showDelete?: boolean;
 }) {
   const [hedera, setHedera] = useState<HederaHealthSnapshot | null>(null);
+  const [xrpl, setXrpl] = useState<XrplHealthSnapshot | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void fetchDecisionsHealth().then((health) => {
-      if (cancelled || !health?.hedera) return;
-      setHedera(health.hedera);
+      if (cancelled) return;
+      if (health?.hedera) setHedera(health.hedera);
+      if (health?.xrpl) setXrpl(health.xrpl);
     });
     return () => {
       cancelled = true;
@@ -184,6 +188,7 @@ export function DecisionRecordEditor({
         />
       </Field>
       <DecisionAttestPanel item={item} hedera={hedera} onApplied={onUpdate} />
+      <DecisionXrplMirrorPanel item={item} xrpl={xrpl} onApplied={onUpdate} />
       {showDelete && onDelete ? (
         <button
           type="button"

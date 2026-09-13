@@ -15,7 +15,7 @@ Do not publish these figures on a public memo or an on-chain memo.
 
 ## 2. Public / shareable skeleton
 
-`/public` shows the twelve nodes with **target allocation percentages** of the published system — not dollars. Dry powder / exact XRP / RH quantities are omitted (`omitDryPowder: true`). Decision index shows id, redacted question, attestation status, and memo hash + timestamp (Hedera Testnet message id when a row is `hashgraph_attested`).
+`/public` shows the twelve nodes with **target allocation percentages** of the published system — not dollars. Dry powder / exact XRP / RH quantities are omitted (`omitDryPowder: true`). Decision index shows id, redacted question, attestation status, and memo hash + timestamp (Hedera Testnet message id when a row is `hashgraph_attested`, plus an XRPL Testnet tx hash when the payment-rail pointer exists).
 
 Dollar sizes and exact unit prints are stripped from public memo text. Never put private prices in a public or on-chain memo.
 
@@ -23,4 +23,4 @@ Dollar sizes and exact unit prints are stripped from public memo text. Never put
 
 Target % lives on each node as `publicAllocationPct` (null = unpublished). Edit on Nodes.
 
-See also [`hedera-attestation.md`](./hedera-attestation.md) and [`recording-pipeline.md`](./recording-pipeline.md).
+See also [`hedera-attestation.md`](./hedera-attestation.md), [`xrpl-mirror.md`](./xrpl-mirror.md), and [`recording-pipeline.md`](./recording-pipeline.md).

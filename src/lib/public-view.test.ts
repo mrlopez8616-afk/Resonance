@@ -34,6 +34,8 @@ describe("public skeleton", () => {
     assert.equal(d04?.fingerprint, null);
     assert.equal(d04?.memoHash, null);
     assert.equal(d04?.memoAt, null);
+    assert.equal(d04?.xrplTxHash, null);
+    assert.equal(d04?.xrplMemoAt, null);
     assert.equal(publishedAllocationSum(pub.nodes), 0);
     const d03 = pub.decisions.find((row) => row.id === "D-2026-09-11-03");
     assert.match(d03?.question ?? "", /\[size omitted\]/);
@@ -58,5 +60,31 @@ describe("public skeleton", () => {
     assert.ok(!/"evidence"/.test(blob));
     const d03 = pub.find((row) => row.id === "D-2026-09-11-03");
     assert.match(d03?.question ?? "", /\[size omitted\]/);
+  });
+
+  it("exposes an XRPL Testnet pointer without private fields", () => {
+    const filled = LOCKED_DECISIONS_2026_09_11.map((row) =>
+      row.id === "D-2026-09-11-04"
+        ? {
+            ...row,
+            attestationStatus: "hashgraph_attested" as const,
+            hederaMessageId: "0.0.555/1",
+            fingerprint: "ab".repeat(32),
+            attestedAt: "2026-09-12T22:00:00.000Z",
+            xrplTxHash: "CD".repeat(32),
+            xrplMemoAt: "2026-09-13T05:00:00.000Z",
+            outcome: "PWR $35 FILLED — keep this off public.",
+          }
+        : row,
+    );
+    const pub = toPublicDecisions(filled);
+    const blob = JSON.stringify(pub);
+    const d04 = pub.find((row) => row.id === "D-2026-09-11-04");
+    assert.equal(d04?.xrplTxHash, "CD".repeat(32));
+    assert.equal(d04?.xrplMemoAt, "2026-09-13T05:00:00.000Z");
+    assert.ok(!blob.includes("$35"));
+    assert.ok(!blob.includes("FILLED"));
+    assert.ok(!/"outcome"/.test(blob));
+    assert.ok(!blob.toLowerCase().includes("seed"));
   });
 });

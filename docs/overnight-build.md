@@ -18,7 +18,7 @@ Walkthrough also lives in the app at **What changed**.
 
 ## Out of scope (unchanged)
 
-No Mainnet, no XRS mint, no wallet keys in the repo, no silent Main trades. Phase 0.5 Testnet attest (later than this overnight) is documented in [`hedera-attestation.md`](./hedera-attestation.md).
+No Mainnet, no XRS mint, no wallet keys in the repo, no silent Main trades. Phase 0.5 Testnet attest is documented in [`hedera-attestation.md`](./hedera-attestation.md). The XRPL Testnet dust-memo follow-on is [`xrpl-mirror.md`](./xrpl-mirror.md).
 
 ## Doctrine
 

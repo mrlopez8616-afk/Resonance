@@ -20,6 +20,9 @@ export interface PublicDecision {
   memoHash: string | null;
   /** Attestation timestamp. Null until attested. */
   memoAt: string | null;
+  /** XRPL Testnet payment-rail pointer. Public ledger hash only. */
+  xrplTxHash: string | null;
+  xrplMemoAt: string | null;
 }
 
 export interface PublicSkeleton {
@@ -57,6 +60,8 @@ export function toPublicDecisions(decisions: Decision[]): PublicDecision[] {
     attestedAt: row.attestedAt,
     memoHash: row.hederaMessageId ?? row.fingerprint,
     memoAt: row.attestedAt,
+    xrplTxHash: row.xrplTxHash,
+    xrplMemoAt: row.xrplMemoAt,
   }));
 }
 

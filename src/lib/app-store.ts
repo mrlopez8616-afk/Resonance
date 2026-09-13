@@ -137,6 +137,8 @@ export function addDecision(
     attestationStatus: entry.attestationStatus ?? "web2_only",
     hederaMessageId: entry.hederaMessageId ?? null,
     attestedAt: entry.attestedAt ?? null,
+    xrplTxHash: entry.xrplTxHash ?? null,
+    xrplMemoAt: entry.xrplMemoAt ?? null,
     createdAt: new Date().toISOString(),
   };
   update((current) => {

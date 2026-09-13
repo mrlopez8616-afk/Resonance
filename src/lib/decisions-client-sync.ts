@@ -44,6 +44,12 @@ export interface HederaHealthSnapshot {
   topicId?: string | null;
 }
 
+export interface XrplHealthSnapshot {
+  configured?: boolean;
+  network?: "testnet";
+  account?: string;
+}
+
 export interface DecisionsHealth {
   ok: boolean;
   decisionsSync?: {
@@ -53,6 +59,7 @@ export interface DecisionsHealth {
     updatedAt?: string | null;
   };
   hedera?: HederaHealthSnapshot;
+  xrpl?: XrplHealthSnapshot;
 }
 
 export async function fetchDecisionsHealth(): Promise<DecisionsHealth | null> {
@@ -215,6 +222,54 @@ export async function attestDecisionOnServer(
       ok: false,
       status: 0,
       message: "Network error talking to the attest endpoint.",
+    };
+  }
+}
+
+export async function mirrorDecisionOnXrplServer(
+  id: string,
+): Promise<
+  | {
+      ok: true;
+      decision: Decision;
+      txHash: string | null;
+      explorerUrl: string | null;
+    }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const response = await fetch("/api/xrpl-mirror", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const body = (await response.json()) as {
+      error?: string;
+      decision?: Decision;
+      xrpl?: {
+        txHash?: string | null;
+        explorerUrl?: string | null;
+      };
+    };
+    if (!response.ok || !body.decision) {
+      return {
+        ok: false,
+        status: response.status,
+        message: body.error ?? "Could not mirror this decision on XRPL Testnet.",
+      };
+    }
+    return {
+      ok: true,
+      decision: body.decision,
+      txHash: body.xrpl?.txHash ?? body.decision.xrplTxHash,
+      explorerUrl: body.xrpl?.explorerUrl ?? null,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Network error talking to the XRPL mirror endpoint.",
     };
   }
 }

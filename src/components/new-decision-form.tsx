@@ -29,6 +29,8 @@ function emptyDraft(date: string, id: string, authorizedBy = ""): Draft {
     attestationStatus: "web2_only",
     hederaMessageId: null,
     attestedAt: null,
+    xrplTxHash: null,
+    xrplMemoAt: null,
   };
 }
 
@@ -78,6 +80,8 @@ export function NewDecisionForm() {
         attestationStatus: "web2_only",
         hederaMessageId: null,
         attestedAt: null,
+        xrplTxHash: null,
+        xrplMemoAt: null,
         date: draft.date || todayIsoDate(),
       });
       setDraft(emptyDraft(todayIsoDate(), "", operatorName));

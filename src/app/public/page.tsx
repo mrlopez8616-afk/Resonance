@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useStore } from "@/context/store";
 import { digitalNodes, physicalNodes } from "@/lib/robinhood";
 import { hederaExplorerUrl } from "@/lib/hedera-explorer";
+import { xrplExplorerUrl } from "@/lib/xrpl-explorer";
 import {
   publishedAllocationSum,
   toPublicSkeleton,
@@ -51,7 +52,7 @@ export default function PublicSkeletonPage() {
       <PageHeader
         kicker="Shareable"
         title="Public skeleton"
-        description="Twelve nodes as target allocation percentages of the published system — not dollars. Dry powder / exact XRP / Robinhood sizes stay on the gated private board. Hedera Testnet message ids appear when a row is hashgraph_attested — never private prices in public memos."
+        description="Twelve nodes as target allocation percentages of the published system — not dollars. Dry powder / exact XRP / Robinhood sizes stay on the gated private board. Hedera Testnet message ids and XRPL Testnet tx hashes appear when a row is dual-witnessed — never private prices in public memos."
       />
 
       <div className="notice notice-warn mb-8">
@@ -81,7 +82,7 @@ export default function PublicSkeletonPage() {
         <h2 className="mb-3 text-lg">Public decision index</h2>
         <p className="mb-3 text-sm text-[color:var(--muted)]">
           Question + attestation status only. No sized outcomes. Hedera message
-          id appears here when a row is hashgraph_attested.
+          id and XRPL Testnet tx hash appear here when those pointers exist.
         </p>
         <div className="space-y-2">
           {publicDecisions
@@ -109,6 +110,22 @@ export default function PublicSkeletonPage() {
                           rel="noreferrer"
                         >
                           {row.hederaMessageId}
+                        </a>
+                      </>
+                    ) : null}
+                    {row.xrplTxHash ? (
+                      <>
+                        {" · "}
+                        <a
+                          href={
+                            xrplExplorerUrl("testnet", row.xrplTxHash) ??
+                            undefined
+                          }
+                          className="font-mono text-[color:var(--accent)]"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {row.xrplTxHash.slice(0, 12)}…
                         </a>
                       </>
                     ) : null}

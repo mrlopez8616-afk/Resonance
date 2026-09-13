@@ -2,7 +2,7 @@
 
 Founder-locked: **Hedera Hashgraph** is the primary attestation / hashgraph witness for Resonance.
 
-Phase Zero shipped the schema only. **Phase 0.5** is a **Testnet wiring test**: the hub or the Decisions page can submit a public fingerprint to Hedera Consensus Service (HCS) and write the witness ids back into the shared Decision store. Mainnet, XRPL dust memos, and wallet signing stay later.
+Phase Zero shipped the schema only. **Phase 0.5** is a **Testnet wiring test**: the hub or the Decisions page can submit a public fingerprint to Hedera Consensus Service (HCS) and write the witness ids back into the shared Decision store. After that, an optional **XRPL Testnet dust-memo** can store a payment-rail pointer (schema R1) — not a second database. Mainnet stays later. Setup: [`xrpl-mirror.md`](./xrpl-mirror.md).
 
 Schema: `attestationStatus`, `hederaMessageId` (topic/sequence or tx id), `attestedAt` (timestamp), `fingerprint` (SHA-256 of the public record).
 
@@ -24,7 +24,7 @@ Schema: `attestationStatus`, `hederaMessageId` (topic/sequence or tx id), `attes
 3. **Public view** (`/public`) shows attestation status, reserved memo hash / timestamp (Hedera id when live), **not dollar amounts**.
 4. Main Robinhood lots and Xaman principal never appear in a public memo. The HCS payload is only `{ v, decisionId, fingerprint, attestedAt }`.
 
-The **Attest (Hedera Testnet)** button on `/decisions/[id]` is the live HCS submit (`POST /api/attest`). Operator view-ack (sensor beeps, no Hedera) is a separate `POST /api/ack`.
+The **Attest (Hedera Testnet)** button on `/decisions/[id]` is the live HCS submit (`POST /api/attest`). Operator view-ack (sensor beeps, no Hedera) is a separate `POST /api/ack`. After a row is `hashgraph_attested`, **Mirror on XRPL Testnet** (`POST /api/xrpl-mirror`) is the follow-on payment-rail pointer. Hedera attest is unchanged.
 
 ## Phase 0.5 Testnet wiring (founder steps)
 
@@ -76,3 +76,5 @@ After the first live topic create, save `HEDERA_TOPIC_ID` so later attests reuse
 Public fingerprint fields: id, date, question, status, decision text, who authorized, attestation ladder (`chain_class`). Dollar sizes and unit prints are redacted before hashing. **Omitted:** outcome, evidence, rationale, proposal, options — those can carry ticket sizes.
 
 HCS message (preferred witness): `TopicMessageSubmitTransaction` / ConsensusSubmitMessage with JSON `{ "v": 1, "decisionId", "fingerprint", "attestedAt" }`. No amounts. No Xaman address. No Main RH lots.
+
+The XRPL follow-on is a 1-drop self-payment whose memo is `R1|id=…|h=…|fp=…|net=testnet` only. Same purity rule. Separate Testnet dust wallet — never the Xaman principal seed. [`xrpl-mirror.md`](./xrpl-mirror.md).

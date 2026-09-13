@@ -7,6 +7,7 @@ import {
 } from "@/lib/decisions-store";
 import { decisionsStoreHealth } from "@/lib/decisions-store-core";
 import { hederaHealth } from "@/lib/hedera-config";
+import { xrplHealth } from "@/lib/xrpl-config";
 import { writeProtectionEnabled } from "@/lib/sync-auth";
 import { loadTodosStore } from "@/lib/todos-store";
 import { todosStoreHealth } from "@/lib/todos-store-core";
@@ -35,7 +36,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     service: "resonance",
-    note: "Shared Decision store: GET/POST/PATCH /api/decisions. Hedera Testnet attest: POST /api/attest. Operator ack (no Hedera): POST /api/ack. Operator to-dos: GET/POST/PATCH /api/todos. Hub auth is Bearer RESONANCE_SYNC_SECRET (or the site password). Setup: docs/decision-sync.md and docs/hedera-attestation.md.",
+    note: "Shared Decision store: GET/POST/PATCH /api/decisions. Hedera Testnet attest: POST /api/attest. XRPL Testnet dust-memo mirror: POST /api/xrpl-mirror. Operator ack (no Hedera): POST /api/ack. Operator to-dos: GET/POST/PATCH /api/todos. Hub auth is Bearer RESONANCE_SYNC_SECRET (or the site password). Setup: docs/decision-sync.md, docs/hedera-attestation.md, docs/xrpl-mirror.md.",
     gate: { enabled: isGateEnabled() },
     decisionsSync: decisionsStoreHealth({
       configured,
@@ -49,5 +50,6 @@ export async function GET() {
       envelope: todosEnvelope,
     }),
     hedera: hederaHealth(process.env, envelope?.hederaTopicId ?? null),
+    xrpl: xrplHealth(process.env),
   });
 }
