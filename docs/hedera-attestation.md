@@ -24,7 +24,7 @@ Schema: `attestationStatus`, `hederaMessageId` (topic/sequence or tx id), `attes
 3. **Public view** (`/public`) shows attestation status, reserved memo hash / timestamp (Hedera id when live), **not dollar amounts**.
 4. Main Robinhood lots and Xaman principal never appear in a public memo. The HCS payload is only `{ v, decisionId, fingerprint, attestedAt }`.
 
-The **Attest (Hedera Testnet)** button on `/decisions/[id]` is the live HCS submit (`POST /api/attest`). Operator view-ack (sensor beeps, no Hedera) is a separate `POST /api/ack`. After a row is `hashgraph_attested`, **Mirror on XRPL Testnet** (`POST /api/xrpl-mirror`) is the follow-on payment-rail pointer. Hedera attest is unchanged.
+The **Attest (Hedera Testnet)** button on `/decisions/[id]` is the live HCS submit (`POST /api/attest`). The same route attests a filed report (`id` = `R-YYYY-MM-DD-NN`) — fingerprint only, not the body. Operator view-ack (sensor beeps, no Hedera) is a separate `POST /api/ack`. After a Decision is `hashgraph_attested`, **Mirror on XRPL Testnet** (`POST /api/xrpl-mirror`) is the follow-on payment-rail pointer. Reports do not use the XRPL helper in this brick.
 
 ## Phase 0.5 Testnet wiring (founder steps)
 
@@ -75,6 +75,6 @@ After the first live topic create, save `HEDERA_TOPIC_ID` so later attests reuse
 
 Public fingerprint fields: id, date, question, status, decision text, who authorized, attestation ladder (`chain_class`). Dollar sizes and unit prints are redacted before hashing. **Omitted:** outcome, evidence, rationale, proposal, options — those can carry ticket sizes.
 
-HCS message (preferred witness): `TopicMessageSubmitTransaction` / ConsensusSubmitMessage with JSON `{ "v": 1, "decisionId", "fingerprint", "attestedAt" }`. No amounts. No Xaman address. No Main RH lots.
+HCS message (preferred witness): `TopicMessageSubmitTransaction` / ConsensusSubmitMessage with JSON `{ "v": 1, "decisionId", "fingerprint", "attestedAt" }`. A report attest is the same family: `{ "v": 1, "reportId", "fingerprint", "attestedAt" }`. No amounts. No report body. No Xaman address. No Main RH lots.
 
 The XRPL follow-on is a fee-only AccountSet whose memo is `R1|id=…|h=…|fp=…|net=testnet` only. Same purity rule. Separate Testnet dust wallet — never the Xaman principal seed. [`xrpl-mirror.md`](./xrpl-mirror.md).

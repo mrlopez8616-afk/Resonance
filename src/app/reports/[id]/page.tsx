@@ -1,16 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { EmptyState, PageHeader } from "@/components/page-header";
-import { REPORT_ATTESTATION_NOT_YET } from "@/lib/reports";
+import { ReportAttestPanel } from "@/components/report-attest";
+import {
+  fetchDecisionsHealth,
+  type HederaHealthSnapshot,
+} from "@/lib/decisions-client-sync";
 import {
   REPORT_KIND_LABEL,
   reportsArchiveHref,
 } from "@/lib/reports-browser";
 import {
+  applyReportPatch,
   getReportsSyncSnapshot,
   getServerReportsSyncSnapshot,
   hydrateReportsFromServer,
@@ -26,8 +31,21 @@ export default function ReportDetailPage() {
     getServerReportsSyncSnapshot,
   );
 
+  const [hedera, setHedera] = useState<HederaHealthSnapshot | null>(null);
+
   useEffect(() => {
     void hydrateReportsFromServer();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDecisionsHealth().then((health) => {
+      if (cancelled) return;
+      if (health?.hedera) setHedera(health.hedera);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const item = sync.reports.find((row) => row.id === id) ?? null;
@@ -61,7 +79,6 @@ export default function ReportDetailPage() {
   }
 
   const folderHref = reportsArchiveHref(item.createdAt);
-  const notYet = item.attestationStatus === REPORT_ATTESTATION_NOT_YET;
 
   return (
     <div>
@@ -105,32 +122,18 @@ export default function ReportDetailPage() {
       </article>
 
       <section className="card mt-6 space-y-3">
-        <p className="kicker">Attest hook</p>
-        <h2 className="text-lg">
-          {notYet ? "Not yet attested" : item.attestationStatus}
-        </h2>
-        <p className="text-sm leading-6 text-[color:var(--muted)]">
-          Cheap fingerprint only. The SHA-256 is stored here so a later Hedera
-          witness can attest the hash — not the full body, and not Mainnet in
-          this brick.
-        </p>
+        <p className="kicker">Attest</p>
+        <h2 className="text-lg">Hedera Testnet fingerprint</h2>
         <p className="break-all font-mono text-xs text-[color:var(--text)]">
           {item.fingerprint}
         </p>
-        <p className="text-sm text-[color:var(--muted)]">
-          Hedera link:{" "}
-          {item.attestLink ? (
-            <a
-              href={item.attestLink}
-              className="text-[color:var(--accent)]"
-              rel="noreferrer"
-            >
-              {item.attestLink}
-            </a>
-          ) : (
-            <span>none yet</span>
-          )}
-        </p>
+        <ReportAttestPanel
+          item={item}
+          hedera={hedera}
+          onApplied={(report) => {
+            applyReportPatch(report.id, report);
+          }}
+        />
       </section>
     </div>
   );

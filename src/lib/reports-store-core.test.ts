@@ -79,6 +79,30 @@ describe("reports store core", () => {
     assert.equal(parsed?.reports[0]?.id, "R-2026-09-13-01");
   });
 
+  it("round-trips a hashgraph_attested witness", () => {
+    const seed = createBinderSeedStub();
+    const parsed = parseReportsEnvelope({
+      version: 1,
+      updatedAt: "2026-09-13T16:00:00.000Z",
+      seededAt: "2026-09-13T16:00:00.000Z",
+      reports: [
+        {
+          ...seed,
+          attestationStatus: "hashgraph_attested",
+          hederaMessageId: "0.0.555/2",
+          attestedAt: "2026-09-13T17:00:00.000Z",
+          attestLink: "https://hashscan.io/testnet/topic/0.0.555/2",
+        },
+      ],
+    });
+    assert.equal(parsed?.reports[0]?.attestationStatus, "hashgraph_attested");
+    assert.equal(parsed?.reports[0]?.hederaMessageId, "0.0.555/2");
+    assert.equal(
+      parsed?.reports[0]?.attestLink,
+      "https://hashscan.io/testnet/topic/0.0.555/2",
+    );
+  });
+
   it("assigns distinct day ids when filing two reports in one write", () => {
     const next = writeReportsIntoEnvelope(createEmptyReportsEnvelope(), [
       { title: "First", kind: "brief", body: "one", createdAt: "2026-09-13" },
@@ -100,6 +124,67 @@ describe("reports store core", () => {
       next.reports.map((row) => row.id),
       ["R-2026-09-13-01"],
     );
+  });
+
+  it("merges the same day + title instead of duplicating", () => {
+    const first = writeReportsIntoEnvelope(createEmptyReportsEnvelope(), [
+      {
+        title: "Daily Resonance Brief",
+        kind: "brief",
+        body: "First draft.",
+        dayKey: "2026-09-13",
+      },
+    ]);
+    assert.equal(first.reports.length, 1);
+    const firstId = first.reports[0]?.id;
+    const second = writeReportsIntoEnvelope(first, [
+      {
+        title: "Daily Resonance Brief",
+        kind: "brief",
+        body: "Revised 7am brief.",
+        dayKey: "2026-09-13",
+      },
+    ]);
+    assert.equal(second.reports.length, 1);
+    assert.equal(second.reports[0]?.id, firstId);
+    assert.equal(second.reports[0]?.body, "Revised 7am brief.");
+    assert.equal(second.reports[0]?.attestationStatus, "not_yet_attested");
+  });
+
+  it("keeps a Hedera attest when the re-file fingerprint is unchanged", () => {
+    const filed = writeReportsIntoEnvelope(createEmptyReportsEnvelope(), [
+      {
+        id: "R-2026-09-13-01",
+        title: "Daily Resonance Brief",
+        kind: "brief",
+        body: "Stable brief.",
+        createdAt: "2026-09-13",
+      },
+    ]);
+    const row = filed.reports[0]!;
+    const attested = {
+      ...filed,
+      reports: [
+        {
+          ...row,
+          attestationStatus: "hashgraph_attested" as const,
+          hederaMessageId: "0.0.555/2",
+          attestedAt: "2026-09-13T18:00:00.000Z",
+          attestLink: "https://hashscan.io/testnet/topic/0.0.555/2",
+        },
+      ],
+    };
+    const again = writeReportsIntoEnvelope(attested, [
+      {
+        title: "Daily Resonance Brief",
+        kind: "brief",
+        body: "Stable brief.",
+        dayKey: "2026-09-13",
+      },
+    ]);
+    assert.equal(again.reports.length, 1);
+    assert.equal(again.reports[0]?.attestationStatus, "hashgraph_attested");
+    assert.equal(again.reports[0]?.hederaMessageId, "0.0.555/2");
   });
 
   it("health payload has counts, not report body", () => {

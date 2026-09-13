@@ -3,10 +3,17 @@ import {
   parseHederaAccountId,
   type HederaRuntimeConfig,
 } from "./hedera-config";
+import { hederaExplorerUrl } from "./hedera-explorer";
 import {
   buildHcsAttestationMemo,
+  buildHcsReportAttestationMemo,
   fingerprintPublicDecision,
 } from "./hedera-fingerprint";
+import {
+  applyReportAttestationWitness,
+  fingerprintReportContent,
+  type OperatorReport,
+} from "./reports";
 import type { Decision } from "./types";
 
 export class AttestationError extends Error {
@@ -45,6 +52,15 @@ export interface AttestationResult {
   transactionId: string | null;
 }
 
+export interface ReportAttestationResult {
+  report: OperatorReport;
+  mode: "live" | "manual";
+  topicId: string | null;
+  topicCreated: boolean;
+  messageId: string;
+  transactionId: string | null;
+}
+
 export function parseAttestRequestBody(body: unknown): AttestRequestBody {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throw new AttestationError("JSON body with id is required.");
@@ -53,6 +69,7 @@ export function parseAttestRequestBody(body: unknown): AttestRequestBody {
   const id =
     (typeof raw.id === "string" && raw.id.trim()) ||
     (typeof raw.decisionId === "string" && raw.decisionId.trim()) ||
+    (typeof raw.reportId === "string" && raw.reportId.trim()) ||
     "";
   if (!id) {
     throw new AttestationError("id is required.");
@@ -157,6 +174,77 @@ export async function attestDecision(input: {
       fingerprint,
       hederaMessageId: submitted.messageId,
       attestedAt,
+    }),
+    mode: "live",
+    topicId,
+    topicCreated: submitted.topicCreated,
+    messageId: submitted.messageId,
+    transactionId: submitted.transactionId,
+  };
+}
+
+export function assertReportAttestationEligible(report: OperatorReport): void {
+  if (!report.id.trim()) {
+    throw new AttestationError("Report id is required.");
+  }
+  if (!report.fingerprint.trim()) {
+    throw new AttestationError("Report fingerprint is required before attest.");
+  }
+}
+
+export async function attestReport(input: {
+  report: OperatorReport;
+  request: AttestRequestBody;
+  config: HederaRuntimeConfig;
+  now?: string;
+  submit?: HederaSubmitter;
+}): Promise<ReportAttestationResult> {
+  assertReportAttestationEligible(input.report);
+  const attestedAt = input.request.attestedAt || input.now || new Date().toISOString();
+  const fingerprint = fingerprintReportContent({
+    title: input.report.title,
+    kind: input.report.kind,
+    createdAt: input.report.createdAt,
+    body: input.report.body,
+  });
+  const { json } = buildHcsReportAttestationMemo({
+    reportId: input.report.id,
+    fingerprint,
+    attestedAt,
+  });
+
+  if (input.request.hederaMessageId) {
+    const messageId = input.request.hederaMessageId;
+    return {
+      report: applyReportAttestationWitness(input.report, {
+        fingerprint,
+        hederaMessageId: messageId,
+        attestedAt,
+        attestLink: hederaExplorerUrl(input.config.network, messageId),
+      }),
+      mode: "manual",
+      topicId: input.config.topicId,
+      topicCreated: false,
+      messageId,
+      transactionId: null,
+    };
+  }
+
+  if (!input.config.configured || !input.submit) {
+    throw new AttestationError(hederaNotConfiguredMessage(input.config), 503);
+  }
+
+  const submitted = await input.submit({
+    topicId: input.config.topicId,
+    message: json,
+  });
+  const topicId = parseHederaAccountId(submitted.topicId) ?? submitted.topicId;
+  return {
+    report: applyReportAttestationWitness(input.report, {
+      fingerprint,
+      hederaMessageId: submitted.messageId,
+      attestedAt,
+      attestLink: hederaExplorerUrl(input.config.network, submitted.messageId),
     }),
     mode: "live",
     topicId,

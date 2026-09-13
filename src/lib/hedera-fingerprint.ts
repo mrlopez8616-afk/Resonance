@@ -26,6 +26,14 @@ export interface HcsAttestationMemo {
   attestedAt: string;
 }
 
+/** Same family as the Decision HCS memo — fingerprint only, no report body. */
+export interface HcsReportAttestationMemo {
+  v: typeof HCS_MEMO_VERSION;
+  reportId: string;
+  fingerprint: string;
+  attestedAt: string;
+}
+
 const MONEY_LEAK =
   /\$\s?\d|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\s*XRP\b|\b\d{4,}(?:\.\d+)?\s*XRP\b/i;
 
@@ -79,6 +87,22 @@ export function buildHcsAttestationMemo(input: {
   const memo: HcsAttestationMemo = {
     v: HCS_MEMO_VERSION,
     decisionId: input.decisionId,
+    fingerprint: input.fingerprint,
+    attestedAt: input.attestedAt,
+  };
+  const json = JSON.stringify(memo);
+  assertNoMoneyLeak(json, "HCS memo");
+  return { memo, json };
+}
+
+export function buildHcsReportAttestationMemo(input: {
+  reportId: string;
+  fingerprint: string;
+  attestedAt: string;
+}): { memo: HcsReportAttestationMemo; json: string } {
+  const memo: HcsReportAttestationMemo = {
+    v: HCS_MEMO_VERSION,
+    reportId: input.reportId,
     fingerprint: input.fingerprint,
     attestedAt: input.attestedAt,
   };

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { UNLOCK_AND_RETRY_MESSAGE } from "./api-client";
-import { fileReportOnServer } from "./reports-client-sync";
+import { attestReportOnServer, fileReportOnServer } from "./reports-client-sync";
 
 const originalFetch = globalThis.fetch;
 
@@ -42,6 +42,26 @@ describe("fileReportOnServer client errors", () => {
       kind: "brief",
       body: "paste",
     });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.status, 401);
+      assert.match(result.message, /Unlock the site|Bearer/);
+    }
+  });
+});
+
+describe("attestReportOnServer client errors", () => {
+  it("surfaces a 401 JSON error from the attest route", async () => {
+    globalThis.fetch = (async () =>
+      Response.json(
+        {
+          ok: false,
+          error:
+            "Unlock the site or send Authorization: Bearer <RESONANCE_SYNC_SECRET or RESONANCE_APP_PASSWORD>.",
+        },
+        { status: 401 },
+      )) as typeof fetch;
+    const result = await attestReportOnServer("R-2026-09-13-01");
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.status, 401);
