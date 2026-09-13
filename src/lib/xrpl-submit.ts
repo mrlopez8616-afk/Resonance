@@ -10,15 +10,12 @@ import {
   type XrplRuntimeConfig,
 } from "./xrpl-config";
 import {
-  XRPL_DUST_DROPS,
   assertSeedMatchesAccount,
-  buildUnsignedDustPayment,
+  buildUnsignedMirrorAccountSet,
   feeDropsFromRpc,
-  signXrplPayment,
+  signXrplAccountSet,
 } from "./xrpl-payment";
 import type { XrplSubmitResult } from "./xrpl-mirror";
-
-export { XRPL_DUST_DROPS };
 
 const LAST_LEDGER_OFFSET = 20;
 
@@ -103,14 +100,14 @@ async function submitOnJsonRpc(
     throw new Error("XRPL Testnet fee did not return a ledger index.");
   }
 
-  const payment = buildUnsignedDustPayment({
+  const tx = buildUnsignedMirrorAccountSet({
     account,
     memo,
     sequence,
     feeDrops: feeDropsFromRpc(feeInfo),
     lastLedgerSequence: ledgerIndex + LAST_LEDGER_OFFSET,
   });
-  const { txBlob } = signXrplPayment(seed, payment);
+  const { txBlob } = signXrplAccountSet(seed, tx);
   const submitted = await xrplJsonRpc(url, "submit", [{ tx_blob: txBlob }]);
   const engine =
     typeof submitted.engine_result === "string" ? submitted.engine_result : "";
@@ -121,6 +118,11 @@ async function submitOnJsonRpc(
   const hash = typeof txJson.hash === "string" ? txJson.hash : null;
   if (!hash) {
     throw new Error("XRPL submit did not return a transaction hash.");
+  }
+  if (engine === "temREDUNDANT") {
+    throw new Error(
+      "XRPL rejected the tx as a self-payment (temREDUNDANT). Mirror must be AccountSet, not Payment to the same account.",
+    );
   }
   if (engine && engine !== "tesSUCCESS" && engine !== "terQUEUED") {
     throw new Error(`XRPL submit did not succeed (${engine}).`);

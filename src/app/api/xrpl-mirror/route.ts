@@ -104,7 +104,7 @@ async function postXrplMirror(request: Request) {
     submit: parsed.xrplTxHash
       ? undefined
       : async (input) => {
-          // Signing is vendored (noble 1.x). Lazy-load after auth so a
+          // Vendored AccountSet + R1 memo. Lazy-load after auth so a
           // submit crash cannot blank a 401.
           const { submitXrplDustMemo } = await import("@/lib/xrpl-submit");
           return submitXrplDustMemo(config, { memo: input.memo });

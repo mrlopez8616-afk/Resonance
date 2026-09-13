@@ -100,7 +100,7 @@ describe("xrpl mirror request + modes", () => {
     assert.ok(!result.memo.includes("$"));
   });
 
-  it("live mode uses a mocked self-payment submit", async () => {
+  it("live mode uses a mocked AccountSet submit", async () => {
     const result = await mirrorDecisionOnXrpl({
       decision: attestedD04(),
       request: { id: "D-2026-09-11-04" },

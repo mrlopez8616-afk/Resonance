@@ -161,8 +161,8 @@ export interface Decision {
   hederaMessageId: string | null;
   attestedAt: string | null;
   /**
-   * XRPL Testnet dust-memo pointer (R1). Payment-rail mirror only —
-   * not a second database. Null until mirrored.
+   * XRPL Testnet dust-memo pointer (R1 AccountSet). Payment-rail
+   * mirror only — not a second database. Null until mirrored.
    */
   xrplTxHash: string | null;
   xrplMemoAt: string | null;

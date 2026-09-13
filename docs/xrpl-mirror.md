@@ -8,7 +8,7 @@ The dust wallet is **not** the Xaman principal. Separate Testnet wallet. Never p
 
 ## What gets written on XRPL
 
-A tiny **self-payment** (1 drop, back to the same Testnet dust account) whose `MemoData` is ASCII schema **R1**:
+A fee-only **AccountSet** on the Testnet dust account (no Destination, no transfer — XRPL rejects Payment-to-self as `temREDUNDANT`) whose `MemoData` is ASCII schema **R1**:
 
 ```
 R1|id=<decisionId>|h=<hederaMessageId>|fp=<fingerprintPrefix16>|net=testnet

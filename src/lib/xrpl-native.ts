@@ -242,10 +242,11 @@ function encodeVl(bytes: Uint8Array): Uint8Array {
   throw new Error("variable-length field is too large for this encoder.");
 }
 
-export interface NativeDustPayment {
+/** AccountSet = 3. Never Payment (0) to self — XRPL returns temREDUNDANT. */
+const TX_ACCOUNT_SET = 3;
+
+export interface NativeAccountSet {
   Account: string;
-  Destination: string;
-  Amount: string;
   Fee: string;
   Sequence: number;
   LastLedgerSequence: number;
@@ -270,48 +271,39 @@ function encodeMemoArray(memos: Array<{ Memo: { MemoData: string } }>): Uint8Arr
   return concatBytes(...chunks);
 }
 
-function encodePaymentFields(payment: NativeDustPayment, signingOnly: boolean): Uint8Array {
-  const account = decodeClassicAddress(payment.Account);
-  const destination = decodeClassicAddress(payment.Destination);
+function encodeAccountSetFields(tx: NativeAccountSet, signingOnly: boolean): Uint8Array {
+  const account = decodeClassicAddress(tx.Account);
   const parts: Uint8Array[] = [
     encodeFieldId(1, 2),
-    encodeUInt16(0),
+    encodeUInt16(TX_ACCOUNT_SET),
     encodeFieldId(2, 2),
-    encodeUInt32(payment.Flags),
+    encodeUInt32(tx.Flags),
     encodeFieldId(2, 4),
-    encodeUInt32(payment.Sequence),
+    encodeUInt32(tx.Sequence),
     encodeFieldId(2, 27),
-    encodeUInt32(payment.LastLedgerSequence),
-    encodeFieldId(6, 1),
-    encodeXrpAmount(payment.Amount),
+    encodeUInt32(tx.LastLedgerSequence),
     encodeFieldId(6, 8),
-    encodeXrpAmount(payment.Fee),
+    encodeXrpAmount(tx.Fee),
     encodeFieldId(7, 3),
-    encodeVl(hexToBytes(payment.SigningPubKey)),
+    encodeVl(hexToBytes(tx.SigningPubKey)),
   ];
   if (!signingOnly) {
-    if (!payment.TxnSignature) throw new Error("TxnSignature is required.");
-    parts.push(encodeFieldId(7, 4), encodeVl(hexToBytes(payment.TxnSignature)));
+    if (!tx.TxnSignature) throw new Error("TxnSignature is required.");
+    parts.push(encodeFieldId(7, 4), encodeVl(hexToBytes(tx.TxnSignature)));
   }
-  parts.push(
-    encodeFieldId(8, 1),
-    encodeVl(account),
-    encodeFieldId(8, 3),
-    encodeVl(destination),
-    encodeMemoArray(payment.Memos),
-  );
+  parts.push(encodeFieldId(8, 1), encodeVl(account), encodeMemoArray(tx.Memos));
   return concatBytes(...parts);
 }
 
-export function encodePaymentForSigning(payment: NativeDustPayment): string {
-  return bytesToHex(concatBytes(SIGNING_PREFIX, encodePaymentFields(payment, true)));
+export function encodeAccountSetForSigning(tx: NativeAccountSet): string {
+  return bytesToHex(concatBytes(SIGNING_PREFIX, encodeAccountSetFields(tx, true)));
 }
 
-export function encodeSignedPayment(payment: NativeDustPayment): string {
-  return bytesToHex(encodePaymentFields(payment, false));
+export function encodeSignedAccountSet(tx: NativeAccountSet): string {
+  return bytesToHex(encodeAccountSetFields(tx, false));
 }
 
-export function signEncodedPayment(messageHex: string, keypair: XrplKeypair): string {
+export function signEncodedTransaction(messageHex: string, keypair: XrplKeypair): string {
   const message = hexToBytes(messageHex);
   if (keypair.type === "ed25519") {
     return bytesToHex(ed25519.sign(message, hexToBytes(keypair.privateKey.slice(2))));
