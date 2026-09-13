@@ -122,7 +122,7 @@ npm run lint
 npm test
 ```
 
-No user accounts or API keys are required. Production should lock the site with `RESONANCE_APP_PASSWORD` (see above). Most app data is stored in `localStorage` under `resonance.phase-zero.v1`. Decisions also sync to the shared store when Blob is configured. First load is seeded with founder-reported sample data so the board is not empty.
+No user accounts or API keys are required. Production should lock the site with `RESONANCE_APP_PASSWORD` (see above). Most app data is stored in `localStorage` under `resonance.phase-zero.v1`. Decisions, todos, and reports also sync to the shared store when Blob is configured. First load is seeded with founder-reported sample data so the board is not empty.
 
 ## Node world overlays (founder)
 
@@ -147,6 +147,7 @@ Playbook: [`docs/node-world.md`](docs/node-world.md).
 - **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
 - **Decisions** — Phase Zero **record book** as a file archive. Date folders → decision files → full record on `/decisions/[id]`. Operator to-do list on the same tab (`GET/POST/PATCH /api/todos`). Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`). Shared store: `GET/POST/PATCH /api/decisions` (merge by id). Decided / superseded rows can be attested on Hedera Testnet (`POST /api/attest`, **Attest (Hedera Testnet)** on the file page). After that, **Mirror on XRPL Testnet** (`POST /api/xrpl-mirror`) stores a payment-rail pointer. Operator view-ack (no Hedera) is `POST /api/ack`. `fingerprint` is the public-record hash written on attest. JSON import is the fallback.
+- **Reports** — Digital binder for briefs/reports the OS files. Left-rail toolbox (not a node). Date folders on `/reports` and `/archive/YYYY-MM-DD` (America/Chicago day key) → file on `/reports/[id]`. Schema: `id`, `title`, `kind` (`brief | rh-ops | build | other`), `createdAt`, `body` or blob pointer, `fingerprint` (SHA-256 of the filed record), attest stub (`not_yet_attested` + empty Hedera link). Shared store: `GET/POST /api/reports` (same Blob family, `resonance/reports.json`). v1 files a paste brief from the page; auto-file from every routine is later. Printer is later. Health reports `reportsSync.itemCount` only.
 - **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
@@ -178,6 +179,20 @@ A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` �
 Hub writes go to `POST` / `PATCH /api/decisions` (Bearer `RESONANCE_SYNC_SECRET` or the site password). The Decisions page pulls that store and keeps `localStorage` as the offline cache. JSON import remains if sync is off. Phase 0.5 can attest a decided row on **Hedera Testnet** (`POST /api/attest`, same auth — **this is the live HCS submit**, not an operator-ack shortcut). After Hedera, `POST /api/xrpl-mirror` can write an R1 dust memo on XRPL Testnet. The Hedera memo is a public fingerprint only; the XRPL memo is a pointer to that witness — no dollar amounts, no Xaman principal, no Main RH lots. Sensor beeps still need an operator ack (`POST /api/ack`). Mainnet stays later. No seed phrases in the repo. Private keys live only in server env (`HEDERA_OPERATOR_KEY`, `XRPL_SEED` — never `NEXT_PUBLIC_*`, never paste into chat).
 
 Recording-pipeline doctrine (future sensor path, public channel vs gated amounts, export → XRPL/XRS): [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
+
+## Reports binder
+
+Reports is the digital binder + existence trail — every brief/report the OS files can sit under the Chicago day it was created and be pulled later. Paper/printer is later. Auto-file from every routine is later.
+
+How to read it:
+
+1. Unlock.
+2. Left rail **Reports** (toolbox, not a node).
+3. Click a Chicago day folder (or open `/archive/YYYY-MM-DD`).
+4. Open a file. Confirm **fingerprint** + **Not yet attested**.
+5. **File today's brief** — paste a Daily Resonance Brief, file, land on the new record.
+
+Shared store: `GET/POST /api/reports` (Bearer `RESONANCE_SYNC_SECRET` or the site unlock cookie). Sibling Blob file `resonance/reports.json` (local/dev: `.data/reports.json`). First boot seeds `R-2026-09-13-01` if empty. `GET /api/health` reports `reportsSync.itemCount` only. Same auth family as Decisions. Longer note: [`docs/decision-sync.md`](docs/decision-sync.md).
 
 ## Holdings snapshot sync (Robinhood)
 

@@ -18,6 +18,8 @@ export function isDecisionSyncApi(pathname: string): boolean {
     pathname.startsWith("/api/decisions/") ||
     pathname === "/api/todos" ||
     pathname.startsWith("/api/todos/") ||
+    pathname === "/api/reports" ||
+    pathname.startsWith("/api/reports/") ||
     pathname === "/api/attest" ||
     pathname.startsWith("/api/attest/") ||
     pathname === "/api/ack" ||

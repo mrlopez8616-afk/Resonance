@@ -23,6 +23,13 @@ interface HealthPayload {
     itemCount?: number;
     updatedAt?: string | null;
   };
+  reportsSync?: {
+    configured?: boolean;
+    backend?: string;
+    itemCount?: number;
+    updatedAt?: string | null;
+    seeded?: boolean;
+  };
   hedera?: {
     configured?: boolean;
     network?: string;
@@ -60,7 +67,7 @@ export default function HealthPage() {
       <PageHeader
         kicker="OS"
         title="System health"
-        description="Counts and configured flags only. Never keys, seeds, decision text, or to-do text. This is the same public /api/health payload the hub already uses."
+        description="Counts and configured flags only. Never keys, seeds, decision text, to-do text, or report body. This is the same public /api/health payload the hub already uses."
         actions={
           <Link href="/api/health" className="btn btn-secondary">
             Raw JSON
@@ -88,6 +95,11 @@ export default function HealthPage() {
             kicker="Todos sync"
             title={`${health.todosSync?.itemCount ?? 0} items`}
             body={`${health.todosSync?.backend ?? "unknown"} · counts only`}
+          />
+          <HealthCard
+            kicker="Reports sync"
+            title={`${health.reportsSync?.itemCount ?? 0} files`}
+            body={`${health.reportsSync?.backend ?? "unknown"} · counts only`}
           />
           <HealthCard
             kicker="Hedera Testnet"

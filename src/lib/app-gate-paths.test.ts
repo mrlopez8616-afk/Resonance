@@ -14,7 +14,10 @@ describe("app gate path rules", () => {
     assert.equal(isDecisionSyncApi("/api/decisions"), true);
     assert.equal(isDecisionSyncApi("/api/ack"), true);
     assert.equal(isDecisionSyncApi("/api/todos"), true);
+    assert.equal(isDecisionSyncApi("/api/reports"), true);
+    assert.equal(isDecisionSyncApi("/api/reports/"), true);
     assert.equal(shouldBypassAppGate("/api/xrpl-mirror"), true);
+    assert.equal(shouldBypassAppGate("/api/reports"), true);
     assert.equal(shouldBypassAppGate("/api/health"), true);
   });
 
@@ -25,6 +28,8 @@ describe("app gate path rules", () => {
     assert.equal(shouldBypassAppGate("/decisions"), false);
     assert.equal(shouldBypassAppGate("/health"), false);
     assert.equal(shouldBypassAppGate("/todos"), false);
+    assert.equal(shouldBypassAppGate("/reports"), false);
+    assert.equal(isDecisionSyncApi("/reports"), false);
     assert.equal(shouldBypassAppGate("/api/prices"), false);
     assert.equal(isApiPath("/api/prices"), true);
     assert.equal(isApiPath("/unlock"), false);

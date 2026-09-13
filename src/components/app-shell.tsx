@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   Activity,
+  Archive,
   BookMarked,
   CircleGauge,
   Globe,
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/treasury", label: "Treasury", icon: Landmark },
   { href: "/health", label: "System health", icon: Activity },
   { href: "/todos", label: "Todos", icon: ListTodo },
+  { href: "/reports", label: "Reports", icon: Archive },
   { href: "/nodes", label: "Nodes", icon: Table2 },
   { href: "/robinhood", label: "Robinhood", icon: SplitSquareVertical },
   { href: "/prices", label: "Prices", icon: Radio },
@@ -43,7 +45,12 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         const active =
           item.href === "/"
             ? pathname === "/"
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            : item.href === "/reports"
+              ? pathname === "/reports" ||
+                pathname.startsWith("/reports/") ||
+                pathname === "/archive" ||
+                pathname.startsWith("/archive/")
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         return (
           <Link
