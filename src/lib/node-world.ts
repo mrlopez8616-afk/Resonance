@@ -180,8 +180,8 @@ export function nextAltitude(
 }
 
 export function altitudeScale(altitude: WorldAltitude): number {
-  if (altitude === "guts") return 1.55;
-  if (altitude === "node") return 1.22;
+  if (altitude === "guts") return 1.12;
+  if (altitude === "node") return 1.06;
   return 1;
 }
 

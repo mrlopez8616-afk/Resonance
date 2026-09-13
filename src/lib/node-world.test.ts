@@ -6,6 +6,7 @@ import { createSeedState } from "./seed";
 import type { Decision } from "./types";
 import {
   allocationLabel,
+  altitudeScale,
   capitalFlowsFor,
   decisionTouchesTicker,
   decisionsForTicker,
@@ -122,5 +123,7 @@ describe("node world", () => {
     assert.equal(nextAltitude("guts", "out"), "node");
     assert.equal(allocationLabel(null), "Unpublished");
     assert.equal(allocationLabel(12.5), "12.5%");
+    assert.ok(altitudeScale("guts") < 1.3);
+    assert.equal(altitudeScale("world"), 1);
   });
 });

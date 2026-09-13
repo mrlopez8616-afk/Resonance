@@ -209,7 +209,7 @@ a.file-row:hover {
 
 .node-world {
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid var(--border);
   border-radius: 0.85rem;
   background:
