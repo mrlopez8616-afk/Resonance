@@ -3,13 +3,16 @@ import { describe, it } from "node:test";
 import {
   assertXrplSubmitAllowed,
   DEFAULT_XRPL_ACCOUNT,
+  DEFAULT_XRPL_JSON_RPC_URL,
   DEFAULT_XRPL_WS_URL,
   formatXrplSubmitError,
   isXrplConnectFailure,
   looksLikeXrplMainnetWs,
   readXrplConfig,
   xrplHealth,
+  xrplSubmitJsonRpcUrls,
   xrplSubmitWsUrls,
+  xrplWsToJsonRpcUrl,
 } from "./xrpl-config";
 import { xrplExplorerUrl } from "./xrpl-explorer";
 
@@ -92,15 +95,25 @@ describe("xrpl env config", () => {
     assert.equal(isXrplConnectFailure(new Error("connect() timed out after 5000 ms")), true);
     const message = formatXrplSubmitError(
       new Error("connect() timed out after 5000 ms"),
-      DEFAULT_XRPL_WS_URL,
+      DEFAULT_XRPL_JSON_RPC_URL,
     );
     assert.match(message, /timed out/);
-    assert.match(message, /s\.altnet\.rippletest\.net:51233/);
+    assert.match(message, /s\.altnet\.rippletest\.net:51234/);
     assert.ok(!message.includes(seed));
     assert.equal(
-      formatXrplSubmitError(new Error("XRPL submit did not succeed (tecUNFUNDED_PAYMENT)."), DEFAULT_XRPL_WS_URL),
+      formatXrplSubmitError(new Error("XRPL submit did not succeed (tecUNFUNDED_PAYMENT)."), DEFAULT_XRPL_JSON_RPC_URL),
       "XRPL submit did not succeed (tecUNFUNDED_PAYMENT).",
     );
+  });
+
+  it("maps Testnet websockets to HTTPS JSON-RPC and refuses Mainnet", () => {
+    assert.equal(xrplWsToJsonRpcUrl(DEFAULT_XRPL_WS_URL), DEFAULT_XRPL_JSON_RPC_URL);
+    assert.equal(xrplWsToJsonRpcUrl("wss://testnet.xrpl-labs.com"), "https://testnet.xrpl-labs.com");
+    assert.equal(xrplWsToJsonRpcUrl("wss://s1.ripple.com"), null);
+    const urls = xrplSubmitJsonRpcUrls(DEFAULT_XRPL_WS_URL);
+    assert.equal(urls[0], DEFAULT_XRPL_JSON_RPC_URL);
+    assert.ok(urls.includes("https://testnet.xrpl-labs.com"));
+    assert.ok(!urls.some((url) => /s1\.ripple\.com|xrplcluster/.test(url)));
   });
 });
 

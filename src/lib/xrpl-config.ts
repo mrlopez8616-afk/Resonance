@@ -1,11 +1,18 @@
 export const DEFAULT_XRPL_ACCOUNT = "r4oZhE86dHD4kj1BJWdfmt1xfPNrn6xxd7";
 export const DEFAULT_XRPL_NETWORK = "testnet" as const;
 export const DEFAULT_XRPL_WS_URL = "wss://s.altnet.rippletest.net:51233";
+export const DEFAULT_XRPL_JSON_RPC_URL = "https://s.altnet.rippletest.net:51234";
 
 /** Known public Testnet websockets. Never Mainnet. Tried in order after XRPL_WS_URL. */
 export const XRPL_TESTNET_WS_FALLBACKS = [
   DEFAULT_XRPL_WS_URL,
   "wss://testnet.xrpl-labs.com",
+] as const;
+
+/** HTTPS JSON-RPC — Vercel-safe. Never Mainnet. */
+export const XRPL_TESTNET_JSON_RPC_FALLBACKS = [
+  DEFAULT_XRPL_JSON_RPC_URL,
+  "https://testnet.xrpl-labs.com",
 ] as const;
 
 export const XRPL_CONNECT_TIMEOUT_MS = 15_000;
@@ -96,21 +103,50 @@ export function xrplSubmitWsUrls(preferred: string): string[] {
   return urls.length > 0 ? urls : [DEFAULT_XRPL_WS_URL];
 }
 
+export function xrplWsToJsonRpcUrl(wsUrl: string): string | null {
+  try {
+    const url = new URL(wsUrl);
+    const host = url.hostname.toLowerCase();
+    if (looksLikeXrplMainnetWs(wsUrl)) return null;
+    if (host === "s.altnet.rippletest.net") return DEFAULT_XRPL_JSON_RPC_URL;
+    if (host === "testnet.xrpl-labs.com") return "https://testnet.xrpl-labs.com";
+    if (/testnet|altnet|rippletest/.test(host) && /^wss:/i.test(wsUrl)) {
+      return `https://${url.host}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function xrplSubmitJsonRpcUrls(preferredWsUrl: string): string[] {
+  const urls: string[] = [];
+  const add = (url: string) => {
+    if (!/^https:\/\//i.test(url)) return;
+    if (looksLikeXrplMainnetWs(url.replace(/^https/i, "wss"))) return;
+    if (!urls.includes(url)) urls.push(url);
+  };
+  const mapped = xrplWsToJsonRpcUrl(preferredWsUrl);
+  if (mapped) add(mapped);
+  for (const fallback of XRPL_TESTNET_JSON_RPC_FALLBACKS) add(fallback);
+  return urls.length > 0 ? urls : [DEFAULT_XRPL_JSON_RPC_URL];
+}
+
 export function isXrplConnectFailure(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /timeout|timed out|econn|enotfound|enetunreach|socket|websocket|connect|disconnect|network|not synced|noNetwork/i.test(
+  return /timeout|timed out|econn|enotfound|enetunreach|socket|websocket|connect|disconnect|network|not synced|noNetwork|fetch failed|ECONNRESET/i.test(
     message,
   );
 }
 
-export function formatXrplSubmitError(error: unknown, wsUrl: string): string {
-  const host = xrplWsHost(wsUrl);
+export function formatXrplSubmitError(error: unknown, endpoint: string): string {
+  const host = xrplWsHost(endpoint);
   const raw = error instanceof Error ? error.message : "XRPL Testnet submit failed.";
   if (/timeout|timed out/i.test(raw)) {
-    return `XRPL Testnet websocket timed out (${host}).`;
+    return `XRPL Testnet request timed out (${host}).`;
   }
   if (isXrplConnectFailure(error)) {
-    return `Could not connect to XRPL Testnet (${host}).`;
+    return `Could not reach XRPL Testnet (${host}).`;
   }
   return raw;
 }
