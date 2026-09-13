@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
+  Activity,
   BookMarked,
   CircleGauge,
   Globe,
   Landmark,
+  ListTodo,
   Menu,
   Radio,
   Settings2,
@@ -20,11 +22,13 @@ import { useStore } from "@/context/store";
 import { lockAppGate } from "@/lib/lock-gate";
 
 const NAV = [
-  { href: "/", label: "Overview", icon: CircleGauge },
+  { href: "/", label: "Node world", icon: CircleGauge },
+  { href: "/decisions", label: "Decisions", icon: BookMarked },
   { href: "/treasury", label: "Treasury", icon: Landmark },
+  { href: "/health", label: "System health", icon: Activity },
+  { href: "/todos", label: "Todos", icon: ListTodo },
   { href: "/nodes", label: "Nodes", icon: Table2 },
   { href: "/robinhood", label: "Robinhood", icon: SplitSquareVertical },
-  { href: "/decisions", label: "Decisions", icon: BookMarked },
   { href: "/prices", label: "Prices", icon: Radio },
   { href: "/public", label: "Public", icon: Globe },
   { href: "/whats-new", label: "What changed", icon: Sparkles },

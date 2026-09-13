@@ -23,6 +23,8 @@ describe("app gate path rules", () => {
     assert.equal(isDecisionSyncApi("/decisions"), false);
     assert.equal(isDecisionSyncApi("/api/gate"), false);
     assert.equal(shouldBypassAppGate("/decisions"), false);
+    assert.equal(shouldBypassAppGate("/health"), false);
+    assert.equal(shouldBypassAppGate("/todos"), false);
     assert.equal(shouldBypassAppGate("/api/prices"), false);
     assert.equal(isApiPath("/api/prices"), true);
     assert.equal(isApiPath("/unlock"), false);
