@@ -28,17 +28,23 @@ import {
   allocationLabel,
   altitudeScale,
   capitalFlowsFor,
-  mapPoint,
+  drawableCapitalFlows,
+  FLOW_KIND_LABEL,
   nextAltitude,
   redactedDecisionQuestion,
-  slotForTicker,
+  redLocksByTarget,
+  SLEEVE_LANE_LABEL,
+  sleeveLaneKey,
+  sleeveOverlayByTicker,
   stampSummaries,
-  TREASURY_MAP_SLOT,
   WORLD_LAYERS,
   worldCards,
   type CapitalFlow,
+  type NodeSleeveOverlay,
   type NodeStampSummary,
   type NodeWorldCard,
+  type RedLockMark,
+  type SleeveOverlayLane,
   type WorldAltitude,
   type WorldLayerId,
 } from "@/lib/node-world";
@@ -84,6 +90,11 @@ export function NodeWorld() {
     () => stampSummaries(state.nodes, state.decisions, state.agenticIntents),
     [state.nodes, state.decisions, state.agenticIntents],
   );
+  const sleeves = useMemo(
+    () => sleeveOverlayByTicker(state.nodes, state.agenticIntents),
+    [state.nodes, state.agenticIntents],
+  );
+  const locks = useMemo(() => redLocksByTarget(state.nodes), [state.nodes]);
   const selected = selectedTicker
     ? (cardsByTicker.get(selectedTicker) ?? null)
     : null;
@@ -148,7 +159,7 @@ export function NodeWorld() {
       <PageHeader
         kicker="Home"
         title="Node world"
-        description="Twelve Resonance nodes as the outer layer — not a brokerage list. Scroll-wheel or +/− to change altitude. Click a box for the node level. Capital flow and Stamps are live; the rest of the rack is stubbed."
+        description="Twelve Resonance nodes as the outer layer — not a brokerage list. Scroll-wheel or +/− to change altitude. Click a box for the node level. Capital flow, Stamps, Sleeves, and Red locks are live overlays. Sensors and Carla stay stubbed."
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/nodes" className="btn btn-secondary">
@@ -162,12 +173,18 @@ export function NodeWorld() {
       />
 
       <div className="notice mb-6">
-        Phase-0 map. Pipes and stamps are overlays on the existing board — they
-        do not move capital, attest, or spend. Xaman principal and RH Main stay
-        red-locked. No private dollar amounts on this surface.
+        Phase-0 map. Pipes, sleeves, stamps, and red locks are overlays on the
+        existing twelve-node board — they do not move capital, attest, or spend.
+        Xaman principal and RH Main stay OFF LIMITS. No private dollar amounts
+        or ticket sizes on this surface.
       </div>
 
       <LayerRack layers={layers} onToggle={toggleLayer} />
+      <OverlayKey
+        showFlows={layers["capital-flow"]}
+        showSleeves={layers.sleeves}
+        showRedLocks={layers["red-locks"]}
+      />
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <AltitudeControls
@@ -192,27 +209,35 @@ export function NodeWorld() {
             className="node-world-zoom"
             style={{ transform: `scale(${altitudeScale(altitude)})` }}
           >
-            <FlowOverlay flows={flows} visible={layers["capital-flow"]} />
             <div className="grid gap-6 lg:hidden">
               <MobileCluster
                 label="Digital"
                 cards={cards.filter((card) => card.cluster === "digital")}
                 stamps={stamps}
+                sleeves={sleeves}
+                locks={locks}
                 flows={flows}
                 selectedTicker={selectedTicker}
                 showStamps={layers.stamps}
                 showFlows={layers["capital-flow"]}
+                showSleeves={layers.sleeves}
+                showRedLocks={layers["red-locks"]}
                 altitude={altitude}
                 onOpen={openNode}
+                showWell
               />
               <MobileCluster
                 label="Physical AI"
                 cards={cards.filter((card) => card.cluster === "physical")}
                 stamps={stamps}
+                sleeves={sleeves}
+                locks={locks}
                 flows={flows}
                 selectedTicker={selectedTicker}
                 showStamps={layers.stamps}
                 showFlows={layers["capital-flow"]}
+                showSleeves={layers.sleeves}
+                showRedLocks={layers["red-locks"]}
                 altitude={altitude}
                 onOpen={openNode}
               />
@@ -223,13 +248,20 @@ export function NodeWorld() {
                 <p className="kicker text-center">Well</p>
                 <p className="kicker col-span-3 text-right">Physical AI</p>
               </div>
-              <div className="grid grid-cols-7 gap-3">
+              <div className="relative">
+                <FlowOverlay flows={flows} visible={layers["capital-flow"]} />
+                <div className="grid grid-cols-7 gap-4">
                 {DESKTOP_ROW_ONE.map((id) =>
                   id === "TREASURY" ? (
                     <TreasuryWell
                       key="treasury"
                       selected={selectedTicker === "XRP"}
                       showFlow={layers["capital-flow"]}
+                      redLock={
+                        layers["red-locks"]
+                          ? (locks.get("TREASURY") ?? null)
+                          : null
+                      }
                       onOpen={() => openNode("XRP")}
                     />
                   ) : (
@@ -237,10 +269,14 @@ export function NodeWorld() {
                       key={id}
                       card={cardsByTicker.get(id) ?? null}
                       stamp={stamps.get(id) ?? null}
+                      sleeve={sleeves.get(id) ?? null}
+                      redLock={locks.get(id) ?? null}
                       outbound={flows.filter((flow) => flow.from === id)}
                       selectedTicker={selectedTicker}
                       showStamps={layers.stamps}
                       showFlows={layers["capital-flow"]}
+                      showSleeves={layers.sleeves}
+                      showRedLocks={layers["red-locks"]}
                       altitude={altitude}
                       onOpen={openNode}
                     />
@@ -248,31 +284,50 @@ export function NodeWorld() {
                 )}
                 {DESKTOP_ROW_TWO.map((id) =>
                   id === "SPACER" ? (
-                    <div key="spacer" />
+                    <AgenticDock
+                      key="agentic-dock"
+                      visible={layers["capital-flow"]}
+                      queued={
+                        flows.filter((flow) => flow.kind === "agentic-queued")
+                          .length
+                      }
+                    />
                   ) : (
                     <MapCell
                       key={id}
                       card={cardsByTicker.get(id) ?? null}
                       stamp={stamps.get(id) ?? null}
+                      sleeve={sleeves.get(id) ?? null}
+                      redLock={locks.get(id) ?? null}
                       outbound={flows.filter((flow) => flow.from === id)}
                       selectedTicker={selectedTicker}
                       showStamps={layers.stamps}
                       showFlows={layers["capital-flow"]}
+                      showSleeves={layers.sleeves}
+                      showRedLocks={layers["red-locks"]}
                       altitude={altitude}
                       onOpen={openNode}
                     />
                   ),
                 )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {layers["capital-flow"] ? <FlowLegend flows={flows} /> : null}
+
       {selected && altitude !== "world" ? (
         <NodeDetailLevel
           card={selected}
           stamp={selectedStamp}
+          sleeve={sleeves.get(selected.ticker) ?? null}
+          redLock={locks.get(selected.ticker) ?? null}
+          treasuryLock={
+            selected.ticker === "XRP" ? (locks.get("TREASURY") ?? null) : null
+          }
           flows={flows.filter(
             (flow) =>
               flow.from === selected.ticker ||
@@ -390,22 +445,32 @@ function MobileCluster({
   label,
   cards,
   stamps,
+  sleeves,
+  locks,
   flows,
   selectedTicker,
   showStamps,
   showFlows,
+  showSleeves,
+  showRedLocks,
   altitude,
   onOpen,
+  showWell = false,
 }: {
   label: string;
   cards: NodeWorldCard[];
   stamps: Map<string, NodeStampSummary>;
+  sleeves: Map<string, NodeSleeveOverlay>;
+  locks: Map<string, RedLockMark>;
   flows: CapitalFlow[];
   selectedTicker: string | null;
   showStamps: boolean;
   showFlows: boolean;
+  showSleeves: boolean;
+  showRedLocks: boolean;
   altitude: WorldAltitude;
   onOpen: (ticker: string) => void;
+  showWell?: boolean;
 }) {
   return (
     <section>
@@ -416,14 +481,32 @@ function MobileCluster({
             key={card.ticker}
             card={card}
             stamp={stamps.get(card.ticker) ?? null}
+            sleeve={sleeves.get(card.ticker) ?? null}
+            redLock={locks.get(card.ticker) ?? null}
             outbound={flows.filter((flow) => flow.from === card.ticker)}
             selectedTicker={selectedTicker}
             showStamps={showStamps}
             showFlows={showFlows}
+            showSleeves={showSleeves}
+            showRedLocks={showRedLocks}
             altitude={altitude}
             onOpen={onOpen}
           />
         ))}
+        {showWell ? (
+          <TreasuryWell
+            selected={selectedTicker === "XRP"}
+            showFlow={showFlows}
+            redLock={showRedLocks ? (locks.get("TREASURY") ?? null) : null}
+            onOpen={() => onOpen("XRP")}
+          />
+        ) : null}
+        {showWell && showFlows ? (
+          <AgenticDock
+            visible
+            queued={flows.filter((flow) => flow.kind === "agentic-queued").length}
+          />
+        ) : null}
       </div>
     </section>
   );
@@ -432,19 +515,27 @@ function MobileCluster({
 function MapCell({
   card,
   stamp,
+  sleeve,
+  redLock,
   outbound,
   selectedTicker,
   showStamps,
   showFlows,
+  showSleeves,
+  showRedLocks,
   altitude,
   onOpen,
 }: {
   card: NodeWorldCard | null;
   stamp: NodeStampSummary | null;
+  sleeve: NodeSleeveOverlay | null;
+  redLock: RedLockMark | null;
   outbound: CapitalFlow[];
   selectedTicker: string | null;
   showStamps: boolean;
   showFlows: boolean;
+  showSleeves: boolean;
+  showRedLocks: boolean;
   altitude: WorldAltitude;
   onOpen: (ticker: string) => void;
 }) {
@@ -453,6 +544,8 @@ function MapCell({
     <NodeBox
       card={card}
       stamp={stamp}
+      sleeve={sleeve}
+      redLock={redLock}
       outbound={outbound}
       selected={selectedTicker === card.ticker}
       dimmed={
@@ -462,6 +555,8 @@ function MapCell({
       }
       showStamps={showStamps}
       showFlows={showFlows}
+      showSleeves={showSleeves}
+      showRedLocks={showRedLocks}
       onOpen={onOpen}
     />
   );
@@ -470,26 +565,37 @@ function MapCell({
 function NodeBox({
   card,
   stamp,
+  sleeve,
+  redLock,
   outbound,
   selected,
   dimmed,
   showStamps,
   showFlows,
+  showSleeves,
+  showRedLocks,
   onOpen,
 }: {
   card: NodeWorldCard;
   stamp: NodeStampSummary | null;
+  sleeve: NodeSleeveOverlay | null;
+  redLock: RedLockMark | null;
   outbound: CapitalFlow[];
   selected: boolean;
   dimmed: boolean;
   showStamps: boolean;
   showFlows: boolean;
+  showSleeves: boolean;
+  showRedLocks: boolean;
   onOpen: (ticker: string) => void;
 }) {
+  const locked = showRedLocks && redLock;
   return (
     <button
       type="button"
       data-selected={selected ? "true" : "false"}
+      data-sleeve={showSleeves ? sleeveLaneKey(sleeve) : "off"}
+      data-red-lock={locked ? "true" : "false"}
       className={`node-box text-left ${dimmed ? "opacity-35" : ""}`}
       onClick={() => onOpen(card.ticker)}
     >
@@ -504,12 +610,14 @@ function NodeBox({
         <div className="flex flex-col items-end gap-1">
           <StatusBadge value={card.status} />
           <ClassBadge value={card.class} />
-          <SleeveBadge value={card.sleeve} />
+          {!showSleeves ? <SleeveBadge value={card.sleeve} /> : null}
         </div>
       </div>
       <p className="mt-3 text-xs text-[color:var(--muted)]">
         Target {allocationLabel(card.publicAllocationPct)}
       </p>
+      {showSleeves && sleeve ? <SleeveOverlayMarks overlay={sleeve} /> : null}
+      {locked ? <RedLockStamp mark={redLock} /> : null}
       {showStamps && stamp && stamp.decisionCount > 0 ? (
         <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--accent)]">
           <Stamp size={12} />
@@ -526,7 +634,9 @@ function NodeBox({
       ) : null}
       {showFlows && outbound.length > 0 ? (
         <p className="mt-2 text-xs text-[color:var(--accent-2)]">
-          {outbound.map((flow) => `${flow.kind} → ${flow.to}`).join(" · ")}
+          {outbound
+            .map((flow) => `${FLOW_KIND_LABEL[flow.kind]} → ${flow.to}`)
+            .join(" · ")}
         </p>
       ) : null}
     </button>
@@ -536,15 +646,18 @@ function NodeBox({
 function TreasuryWell({
   selected,
   showFlow,
+  redLock,
   onOpen,
 }: {
   selected: boolean;
   showFlow: boolean;
+  redLock: RedLockMark | null;
   onOpen: () => void;
 }) {
   return (
     <button
       type="button"
+      data-red-lock={redLock ? "true" : "false"}
       className={`node-box node-box-well text-center ${
         selected ? "ring-1 ring-[color:var(--accent)]" : ""
       }`}
@@ -559,10 +672,39 @@ function TreasuryWell({
       <p className="mt-1 text-[11px] leading-4 text-[color:var(--muted)]">
         Principal well. Visible. Never spendable here.
       </p>
+      {redLock ? <RedLockStamp mark={redLock} /> : null}
       {showFlow ? (
-        <p className="mt-2 text-[11px] text-[color:var(--accent-2)]">→ XRP</p>
+        <p className="mt-2 text-[11px] text-[color:var(--accent-2)]">
+          Pipe → XRP node
+        </p>
       ) : null}
     </button>
+  );
+}
+
+function AgenticDock({
+  visible,
+  queued,
+}: {
+  visible: boolean;
+  queued: number;
+}) {
+  if (!visible) return <div />;
+  return (
+    <div className="node-box node-box-dock text-center" aria-hidden={queued === 0}>
+      <GitFork
+        size={16}
+        className="mx-auto text-[color:var(--accent)]"
+        aria-hidden
+      />
+      <p className="mt-2 font-mono text-xs">Agentic</p>
+      <p className="mt-1 text-[11px] leading-4 text-[color:var(--muted)]">
+        Queued-intent dock. Not a fill. No ticket sizes.
+      </p>
+      <p className="mt-2 text-[11px] text-[color:var(--accent)]">
+        {queued} pipe{queued === 1 ? "" : "s"}
+      </p>
+    </div>
   );
 }
 
@@ -574,43 +716,148 @@ function FlowOverlay({
   visible: boolean;
 }) {
   if (!visible) return null;
-  const drawn = flows.filter((flow) => flow.from !== "AGENTIC");
+  const drawn = drawableCapitalFlows(flows);
   return (
     <svg
-      className="pointer-events-none absolute inset-6 hidden h-[calc(100%-3rem)] w-[calc(100%-3rem)] lg:block"
+      className="node-world-pipes"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
       aria-hidden
     >
-      {drawn.map((flow) => {
-        const from =
-          flow.from === "TREASURY"
-            ? mapPoint(TREASURY_MAP_SLOT.col, TREASURY_MAP_SLOT.row)
-            : pointForTicker(flow.from);
-        const to = pointForTicker(flow.to);
-        if (!from || !to) return null;
-        const midX = (from.x + to.x) / 2;
-        const midY = (from.y + to.y) / 2 - 6;
-        return (
-          <path
-            key={flow.id}
-            d={`M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`}
-            className="flow-pipe"
+      {drawn.map((flow) => (
+        <g
+          key={flow.id}
+          className={`flow-pipe-group flow-kind-${flow.kind}`}
+        >
+          <path d={flow.path} className="flow-pipe-casing" />
+          <path d={flow.path} className="flow-pipe-inner" />
+          <circle
+            cx={flow.fromPoint.x}
+            cy={flow.fromPoint.y}
+            r="1.45"
+            className="flow-pipe-joint"
           />
-        );
-      })}
+          <circle
+            cx={flow.toPoint.x}
+            cy={flow.toPoint.y}
+            r="1.45"
+            className="flow-pipe-joint"
+          />
+        </g>
+      ))}
     </svg>
   );
 }
 
-function pointForTicker(ticker: string) {
-  const slot = slotForTicker(ticker);
-  return slot ? mapPoint(slot.col, slot.row) : null;
+function OverlayKey({
+  showFlows,
+  showSleeves,
+  showRedLocks,
+}: {
+  showFlows: boolean;
+  showSleeves: boolean;
+  showRedLocks: boolean;
+}) {
+  if (!showFlows && !showSleeves && !showRedLocks) return null;
+  return (
+    <div className="mb-4 flex flex-wrap gap-2 text-[11px] text-[color:var(--muted)]">
+      {showFlows ? (
+        <>
+          <span className="overlay-chip overlay-chip-pipe">Belt / pipe</span>
+          <span className="overlay-chip overlay-chip-well">Xaman → XRP</span>
+          <span className="overlay-chip overlay-chip-agentic">
+            Agentic queued
+          </span>
+        </>
+      ) : null}
+      {showSleeves ? (
+        <>
+          <span className="overlay-chip overlay-chip-main">Founder Main</span>
+          <span className="overlay-chip overlay-chip-agentic">Agentic</span>
+          <span className="overlay-chip overlay-chip-thesis">
+            Founder thesis
+          </span>
+        </>
+      ) : null}
+      {showRedLocks ? (
+        <span className="overlay-chip overlay-chip-lock">
+          OFF LIMITS · visible only
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function FlowLegend({ flows }: { flows: CapitalFlow[] }) {
+  if (flows.length === 0) return null;
+  return (
+    <section className="mb-8 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-3">
+      <p className="kicker">Capital pipes</p>
+      <ul className="mt-2 grid gap-1 text-sm text-[color:var(--muted)] sm:grid-cols-2">
+        {flows.map((flow) => (
+          <li key={flow.id}>
+            <span className="font-mono text-[color:var(--accent-2)]">
+              {flow.from} → {flow.to}
+            </span>
+            {" · "}
+            {FLOW_KIND_LABEL[flow.kind]}
+            {flow.note ? ` · ${flow.note}` : ""}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function SleeveOverlayMarks({ overlay }: { overlay: NodeSleeveOverlay }) {
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-1.5">
+      {overlay.lanes.map((lane) => (
+        <SleeveLaneChip key={lane} lane={lane} />
+      ))}
+      {overlay.sources.includes("stub") ? (
+        <span className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--muted)]">
+          stub map
+        </span>
+      ) : null}
+    </p>
+  );
+}
+
+function SleeveLaneChip({ lane }: { lane: SleeveOverlayLane }) {
+  return (
+    <span
+      className={`badge ${
+        lane === "agentic"
+          ? "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-[color:var(--accent)]"
+          : lane === "founder-main"
+            ? "border-[color:var(--accent-2)]/35 bg-[color:var(--accent-2)]/10 text-[color:var(--accent-2)]"
+            : "border-[color:var(--border)] text-[color:var(--muted)]"
+      }`}
+    >
+      {SLEEVE_LANE_LABEL[lane]}
+    </span>
+  );
+}
+
+function RedLockStamp({ mark }: { mark: RedLockMark }) {
+  return (
+    <p className="red-lock-stamp mt-2">
+      <Lock size={11} aria-hidden />
+      {mark.label}
+      <span className="font-normal normal-case tracking-normal text-[color:var(--muted)]">
+        {mark.kind === "xaman-principal" ? "Xaman well" : "RH Main"}
+      </span>
+    </p>
+  );
 }
 
 function NodeDetailLevel({
   card,
   stamp,
+  sleeve,
+  redLock,
+  treasuryLock,
   flows,
   decisions,
   altitude,
@@ -619,6 +866,9 @@ function NodeDetailLevel({
 }: {
   card: NodeWorldCard;
   stamp: NodeStampSummary | null;
+  sleeve: NodeSleeveOverlay | null;
+  redLock: RedLockMark | null;
+  treasuryLock: RedLockMark | null;
   flows: CapitalFlow[];
   decisions: { id: string; question: string; date: string }[];
   altitude: WorldAltitude;
@@ -658,6 +908,31 @@ function NodeDetailLevel({
           kicker="Web2 record"
           title="Board row"
           body={`${card.status} · ${card.class}${card.sleeve !== "none" ? ` · ${card.sleeve}` : ""}${card.venue ? ` · ${card.venue}` : ""}`}
+        />
+        <ArchStub
+          kicker="Sleeve overlay"
+          title={
+            sleeve
+              ? sleeve.lanes.map((lane) => SLEEVE_LANE_LABEL[lane]).join(" + ")
+              : "Unassigned"
+          }
+          body={
+            sleeve?.note ??
+            "Same twelve-node universe. Founder can edit FOUNDER_THESIS_SLEEVE_STUB later."
+          }
+        />
+        <ArchStub
+          kicker="Red lock"
+          title={
+            redLock || treasuryLock
+              ? "OFF LIMITS"
+              : "Not a locked principal rail"
+          }
+          body={
+            redLock?.note ??
+            treasuryLock?.note ??
+            "Visibility layer only. Resonance never spends RH Main or Xaman principal."
+          }
         />
         <ArchStub
           kicker="Hedera stamp"
