@@ -1,12 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: [
-    "@hashgraph/sdk",
-    "xrpl",
-    "ripple-keypairs",
-    "ripple-binary-codec",
-  ],
+  serverExternalPackages: ["@hashgraph/sdk"],
 };
 
 export default nextConfig;

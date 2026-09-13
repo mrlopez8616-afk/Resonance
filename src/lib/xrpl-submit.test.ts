@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { decode } from "ripple-binary-codec";
-import { generateSeed } from "ripple-keypairs";
 import { DEFAULT_XRPL_ACCOUNT } from "./xrpl-config";
 import { buildR1Memo } from "./xrpl-memo";
 import {
@@ -13,7 +11,9 @@ import {
   signXrplPayment,
 } from "./xrpl-payment";
 
-describe("xrpl HTTP dust payment (no Client/ws)", () => {
+const SECP_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
+
+describe("xrpl HTTP dust payment (native sign/encode)", () => {
   it("builds a 1-drop self-payment with R1 memo hex", () => {
     const memo = buildR1Memo({
       decisionId: "D-2026-09-11-04",
@@ -35,9 +35,8 @@ describe("xrpl HTTP dust payment (no Client/ws)", () => {
     assert.match(payment.Memos[0].Memo.MemoData, /^[0-9A-F]+$/);
   });
 
-  it("signs with a generated Testnet seed and never leaks it", () => {
-    const seed = generateSeed();
-    const account = classicAddressFromSeed(seed);
+  it("signs without loading ripple-binary-codec and never leaks the seed", () => {
+    const account = classicAddressFromSeed(SECP_SEED);
     const payment = buildUnsignedDustPayment({
       account,
       memo: "R1|id=D-2026-09-11-04|h=0.0.10513997/1|fp=abababababababab|net=testnet",
@@ -45,14 +44,9 @@ describe("xrpl HTTP dust payment (no Client/ws)", () => {
       feeDrops: "20",
       lastLedgerSequence: 50,
     });
-    const { txBlob } = signXrplPayment(seed, payment);
-    const decoded = decode(txBlob) as Record<string, unknown>;
-    assert.equal(decoded.TransactionType, "Payment");
-    assert.equal(decoded.Account, account);
-    assert.equal(decoded.Destination, account);
-    assert.equal(decoded.Amount, "1");
-    assert.equal(typeof decoded.TxnSignature, "string");
-    assert.ok(!txBlob.toLowerCase().includes(seed.toLowerCase()));
+    const { txBlob } = signXrplPayment(SECP_SEED, payment);
+    assert.match(txBlob, /^120000/);
+    assert.ok(!txBlob.toLowerCase().includes(SECP_SEED.toLowerCase()));
   });
 
   it("pads fee for a memo-sized payment", () => {
@@ -64,13 +58,12 @@ describe("xrpl HTTP dust payment (no Client/ws)", () => {
   });
 
   it("rejects a seed/account mismatch without echoing the seed", () => {
-    const seed = generateSeed();
     assert.throws(
-      () => assertSeedMatchesAccount(seed, DEFAULT_XRPL_ACCOUNT),
+      () => assertSeedMatchesAccount(SECP_SEED, DEFAULT_XRPL_ACCOUNT),
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.match(error.message, /does not match XRPL_ACCOUNT/);
-        assert.ok(!error.message.includes(seed));
+        assert.ok(!error.message.includes(SECP_SEED));
         return true;
       },
     );

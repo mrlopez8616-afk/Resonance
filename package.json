@@ -15,15 +15,14 @@
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.81.0",
+    "@noble/curves": "^1.8.1",
+    "@noble/hashes": "^1.7.1",
     "@vercel/blob": "^2.8.0",
     "lucide-react": "^1.45.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "ripple-binary-codec": "^2.11.0",
-    "ripple-keypairs": "^3.1.0",
-    "server-only": "^0.0.1",
-    "xrpl": "^5.2.0"
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
