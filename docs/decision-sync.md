@@ -74,7 +74,24 @@ Decisions is a folder/file archive:
 - `/decisions?folder=2026-09-11` — files in that folder, grouped pending / decided / superseded / attested
 - `/decisions/D-2026-09-11-01` — full record + **Attest (Hedera Testnet)** (live HCS submit via `POST /api/attest`) + **Mirror on XRPL Testnet** after attest (`POST /api/xrpl-mirror`)
 
-Operator to-dos live on **Decisions → To-do**. Same Blob store, sibling file `resonance/todos.json` (local/dev: `.data/todos.json`).
+Operator to-dos live on **Decisions → To-do** and the left-rail **Todos** entry. Same Blob store, sibling file `resonance/todos.json` (local/dev: `.data/todos.json`).
+
+Reports (digital binder) live on left-rail **Reports** — toolbox, not a node:
+
+- `/reports` — Chicago date folders
+- `/archive/YYYY-MM-DD` — files filed that day
+- `/reports/R-YYYY-MM-DD-NN` — one record + fingerprint + not-yet-attested stub
+
+Same Blob store, sibling file `resonance/reports.json` (local/dev: `.data/reports.json`). First boot seeds one Daily Resonance Brief stub (`R-2026-09-13-01`) if empty.
+
+```bash
+curl -X POST https://YOUR-APP.vercel.app/api/reports \
+  -H "Authorization: Bearer YOUR_SYNC_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Daily Resonance Brief","kind":"brief","body":"Paste the brief.","createdAt":"2026-09-13"}'
+```
+
+`GET /api/reports?day=2026-09-13` lists that Chicago day. `GET /api/reports?id=R-2026-09-13-01` returns one file. `GET /api/health` reports `reportsSync.itemCount` only — no report body.
 
 ```bash
 curl -X POST https://YOUR-APP.vercel.app/api/todos \
@@ -102,6 +119,7 @@ You can also POST a full hub payload (`{ "decisions": [ ... ] }`). Matching ids 
 
 - `GET /api/decisions` — full rows, including sizes. Cookie or Bearer required (unless you left both secrets unset, which is local/dev only).
 - `GET /api/todos` — operator to-do list. Same cookie / Bearer rule.
+- `GET /api/reports` — filed briefs / reports (full body). Same cookie / Bearer rule.
 - `GET /api/public` — redacted index. No outcomes, no evidence, no dollar amounts.
 - `/public` — same rules as before. Target % and redacted questions only.
 
