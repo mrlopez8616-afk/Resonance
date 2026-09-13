@@ -1,8 +1,12 @@
 import {
   coerceStoredReport,
+  createdAtFromWriteFields,
   createBinderSeedStub,
   createReport,
+  findReportByDayAndTitle,
   mergeReportsById,
+  normalizeReportDayKey,
+  preserveReportAttestationIfUnchanged,
   removeReportById,
   reportsForDay,
   sortReports,
@@ -98,9 +102,13 @@ export function writeReportsIntoEnvelope(
   now = new Date().toISOString(),
 ): ReportsStoreEnvelope {
   const materialized: OperatorReport[] = [];
+  const nowDate = new Date(now);
   for (const [index, raw] of items.entries()) {
-    const id = typeof raw.id === "string" ? raw.id.trim() : "";
-    const prev = id ? envelope.reports.find((item) => item.id === id) : undefined;
+    let id = typeof raw.id === "string" ? raw.id.trim() : "";
+    let prev = id
+      ? envelope.reports.find((item) => item.id === id) ??
+        materialized.find((item) => item.id === id)
+      : undefined;
     if (prev && typeof raw.title !== "string" && typeof raw.body !== "string") {
       materialized.push(prev);
       continue;
@@ -110,24 +118,31 @@ export function writeReportsIntoEnvelope(
     if (!title) {
       throw new ReportsImportError(`reports[${index}].title is required.`);
     }
-    materialized.push(
-      createReport({
-        title,
-        kind: raw.kind ?? prev?.kind,
-        body: typeof raw.body === "string" ? raw.body : prev?.body,
-        blobPointer:
-          typeof raw.blobPointer === "string"
-            ? raw.blobPointer
-            : (raw.blobPointer === null ? null : prev?.blobPointer),
-        createdAt:
-          typeof raw.createdAt === "string" || typeof raw.createdAt === "number"
-            ? raw.createdAt
-            : prev?.createdAt,
-        id: id || undefined,
-        now,
-        existing: [...envelope.reports, ...materialized],
-      }),
-    );
+    const createdAtInput = createdAtFromWriteFields(raw) ?? prev?.createdAt;
+    const dayKey = normalizeReportDayKey(createdAtInput, nowDate);
+    if (!id) {
+      const match =
+        findReportByDayAndTitle(materialized, dayKey, title) ??
+        findReportByDayAndTitle(envelope.reports, dayKey, title);
+      if (match) {
+        id = match.id;
+        prev = match;
+      }
+    }
+    const next = createReport({
+      title,
+      kind: raw.kind ?? prev?.kind,
+      body: typeof raw.body === "string" ? raw.body : prev?.body,
+      blobPointer:
+        typeof raw.blobPointer === "string"
+          ? raw.blobPointer
+          : (raw.blobPointer === null ? null : prev?.blobPointer),
+      createdAt: createdAtInput,
+      id: id || undefined,
+      now,
+      existing: [...envelope.reports, ...materialized],
+    });
+    materialized.push(preserveReportAttestationIfUnchanged(prev, next));
   }
   return {
     ...envelope,
@@ -160,6 +175,18 @@ export function findReportById(
   id: string,
 ): OperatorReport | null {
   return envelope.reports.find((row) => row.id === id) ?? null;
+}
+
+export function writeReportAttestationIntoEnvelope(
+  envelope: ReportsStoreEnvelope,
+  report: OperatorReport,
+  now = new Date().toISOString(),
+): ReportsStoreEnvelope {
+  return {
+    ...envelope,
+    updatedAt: now,
+    reports: envelope.reports.map((row) => (row.id === report.id ? report : row)),
+  };
 }
 
 export function reportsStoreHealth(input: {

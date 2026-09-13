@@ -52,7 +52,7 @@ function ReportsPageInner() {
       <PageHeader
         kicker="OS · Binder"
         title="Reports"
-        description="Digital binder for briefs and reports the OS files. Folders are America/Chicago days. Open a day, then a file. Fingerprint is a SHA-256 of the filed record for a later Hedera attest — not yet attested. Printer is later."
+        description="Digital binder for briefs and reports the OS files. Folders are America/Chicago days. Open a day, then a file. Attest writes a Hedera Testnet fingerprint (not the body). Printer is later."
       />
 
       <p className="mb-6 text-sm text-[color:var(--muted)]">{statusLine}</p>
@@ -68,8 +68,11 @@ function ReportsPageInner() {
       <div className="notice notice-warn mt-8">
         <p className="font-medium text-[color:var(--text)]">
           Toolbox, not a node. Same Blob family as Decisions and todos
-          (resonance/reports.json). Hub can POST /api/reports with Bearer
-          RESONANCE_SYNC_SECRET. Full auto-file from every routine is phase 2.
+          (resonance/reports.json). Hub Bearer-files{" "}
+          <span className="font-mono">POST /api/reports</span> with{" "}
+          <span className="font-mono">RESONANCE_SYNC_SECRET</span>. Same
+          day + title merges. Contract:{" "}
+          <span className="font-mono">docs/reports-autofile.md</span>.
         </p>
       </div>
     </div>

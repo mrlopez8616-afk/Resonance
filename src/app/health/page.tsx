@@ -116,7 +116,8 @@ export default function HealthPage() {
 
       <p className="mt-8 text-sm text-[color:var(--muted)]">
         Health never includes operator keys, XRPL seeds, dollar sizes, or
-        private receipts. Attest and mirror stay on Decisions.
+        private receipts. Attest is on Decisions and Reports (fingerprint
+        only). XRPL mirror stays on Decisions.
       </p>
     </div>
   );

@@ -11,7 +11,8 @@ import {
   REPORT_KIND_LABEL,
   reportsArchiveHref,
 } from "@/lib/reports-browser";
-import type { OperatorReport } from "@/lib/reports";
+import { ReportAttestationBadge } from "@/components/badges";
+import { isReportAttested, type OperatorReport } from "@/lib/reports";
 
 export function ReportsArchiveBrowser({
   reports,
@@ -123,6 +124,9 @@ function ReportFileRow({ item }: { item: OperatorReport }) {
       <span className="badge border-[color:var(--border)] bg-[color:var(--surface-2)] text-[color:var(--muted)]">
         {REPORT_KIND_LABEL[item.kind]}
       </span>
+      {isReportAttested(item) ? (
+        <ReportAttestationBadge value={item.attestationStatus} />
+      ) : null}
       <ChevronRight size={16} className="shrink-0 text-[color:var(--muted)]" />
     </Link>
   );

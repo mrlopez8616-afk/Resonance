@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { AttestationError, attestDecision, parseAttestRequestBody } from "@/lib/hedera-attest";
+import {
+  AttestationError,
+  attestDecision,
+  attestReport,
+  parseAttestRequestBody,
+} from "@/lib/hedera-attest";
 import {
   HEDERA_SETUP_STEPS,
   hederaNotConfiguredMessage,
@@ -12,7 +17,14 @@ import {
   isDecisionsSyncConfigured,
   loadDecisionsStore,
   persistDecisionAttestation,
+  persistHederaTopicId,
 } from "@/lib/decisions-store";
+import {
+  asReportWriteError,
+  isReportsSyncConfigured,
+  loadReportById,
+  persistReportAttestation,
+} from "@/lib/reports-store";
 import { authorizeDecisionRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
@@ -54,9 +66,18 @@ export async function POST(request: Request) {
     const parsed = parseAttestRequestBody(body);
     const loaded = await loadDecisionsStore();
     const current = loaded.envelope.decisions.find((row) => row.id === parsed.id);
-    if (!current) {
+    const reportLoaded =
+      !current && isReportsSyncConfigured()
+        ? await loadReportById(parsed.id)
+        : null;
+    const report = reportLoaded?.report ?? null;
+
+    if (!current && !report) {
       return NextResponse.json(
-        { ok: false, error: `Decision ${parsed.id} was not found in the shared store.` },
+        {
+          ok: false,
+          error: `Decision or report ${parsed.id} was not found in the shared store.`,
+        },
         { status: 404 },
       );
     }
@@ -84,8 +105,51 @@ export async function POST(request: Request) {
       );
     }
 
+    if (report) {
+      const attested = await attestReport({
+        report,
+        request: parsed,
+        config,
+        submit: parsed.hederaMessageId
+          ? undefined
+          : (input) => submitHcsAttestation(config, input),
+      });
+      const written = await persistReportAttestation({
+        report: attested.report,
+      });
+      if (attested.topicCreated && attested.topicId) {
+        await persistHederaTopicId(attested.topicId);
+      }
+      const stored =
+        written.envelope.reports.find((row) => row.id === attested.report.id) ??
+        attested.report;
+      return NextResponse.json({
+        ok: true,
+        mode: attested.mode,
+        configured: true,
+        backend: written.backend,
+        updatedAt: written.envelope.updatedAt,
+        report: stored,
+        hedera: {
+          configured: config.configured,
+          network: config.network,
+          operatorId: config.operatorId,
+          topicId: attested.topicId ?? loaded.envelope.hederaTopicId ?? null,
+          messageId: attested.messageId,
+          transactionId: attested.transactionId,
+          explorerUrl:
+            stored.attestLink ??
+            hederaExplorerUrl(config.network, attested.messageId),
+          topicCreated: attested.topicCreated,
+        },
+        note: attested.topicCreated
+          ? `Save HEDERA_TOPIC_ID=${attested.topicId} on Vercel so later attests reuse this topic.`
+          : undefined,
+      });
+    }
+
     const attested = await attestDecision({
-      decision: current,
+      decision: current!,
       request: parsed,
       config,
       submit: parsed.hederaMessageId
@@ -134,7 +198,14 @@ export async function POST(request: Request) {
       }
       return NextResponse.json(payload, { status: error.status });
     }
-    const mapped = asWriteError(error);
+    const decisionMapped = asWriteError(error);
+    if (decisionMapped.status !== 500) {
+      return NextResponse.json(
+        { ok: false, error: decisionMapped.message },
+        { status: decisionMapped.status },
+      );
+    }
+    const mapped = asReportWriteError(error);
     return NextResponse.json(
       { ok: false, error: mapped.message },
       { status: mapped.status },

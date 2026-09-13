@@ -139,10 +139,12 @@ export async function hydrateReportsFromServer(query?: {
 }
 
 export async function fileReportOnServer(input: {
-  title: string;
-  kind: ReportKind;
-  body: string;
+  title?: string;
+  kind?: ReportKind;
+  body?: string;
   createdAt?: string;
+  dayKey?: string;
+  fromDecisionId?: string;
 }): Promise<
   | { ok: true; report: OperatorReport; reports: OperatorReport[] }
   | { ok: false; status: number; message: string }
@@ -202,6 +204,87 @@ export async function fileReportOnServer(input: {
       ok: false,
       status: 0,
       message: "Network error talking to the reports binder.",
+    };
+  }
+}
+
+export function applyReportPatch(
+  id: string,
+  patch: Partial<OperatorReport>,
+): OperatorReport[] {
+  const reports = snapshot.reports.map((row) =>
+    row.id === id ? { ...row, ...patch } : row,
+  );
+  setSnapshot({
+    ...snapshot,
+    reports,
+  });
+  return reports;
+}
+
+export async function attestReportOnServer(
+  id: string,
+): Promise<
+  | {
+      ok: true;
+      report: OperatorReport;
+      messageId: string | null;
+      explorerUrl: string | null;
+      topicId: string | null;
+      note?: string;
+    }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const response = await fetch("/api/attest", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const parsed = await readApiJson<{
+      error?: string;
+      report?: OperatorReport;
+      note?: string;
+      hedera?: {
+        messageId?: string | null;
+        explorerUrl?: string | null;
+        topicId?: string | null;
+      };
+    }>(response, "Could not attest this report.");
+    if (!parsed.parsed) {
+      return {
+        ok: false,
+        status: parsed.status,
+        message: parsed.message,
+      };
+    }
+    const body = parsed.body;
+    if (!response.ok || !body.report) {
+      return {
+        ok: false,
+        status: response.status,
+        message: messageFromApiFailure(
+          response.status,
+          body.error,
+          "Could not attest this report.",
+        ),
+      };
+    }
+    applyReportPatch(body.report.id, body.report);
+    return {
+      ok: true,
+      report: body.report,
+      messageId: body.hedera?.messageId ?? body.report.hederaMessageId,
+      explorerUrl: body.hedera?.explorerUrl ?? body.report.attestLink,
+      topicId: body.hedera?.topicId ?? null,
+      note: body.note,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Network error talking to the attest endpoint.",
     };
   }
 }

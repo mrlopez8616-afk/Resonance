@@ -4,9 +4,11 @@ import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 import {
   assertNoMoneyLeak,
   buildHcsAttestationMemo,
+  buildHcsReportAttestationMemo,
   buildPublicAttestationRecord,
   fingerprintPublicDecision,
 } from "./hedera-fingerprint";
+import { createReport, fingerprintReportContent } from "./reports";
 import type { Decision } from "./types";
 
 function locked(id: string): Decision {
@@ -65,5 +67,32 @@ describe("hedera public fingerprint purity", () => {
 
   it("rejects a record that still contains a dollar size", () => {
     assert.throws(() => assertNoMoneyLeak('{"decision":"Buy $35"}'), /dollar or unit/);
+  });
+
+  it("report HCS memo is only version, report id, fingerprint, and timestamp", () => {
+    const report = createReport({
+      title: "Daily Resonance Brief",
+      kind: "brief",
+      body: "Morning check. No fills to file.",
+      createdAt: "2026-09-13",
+      now: "2026-09-13T16:00:00.000Z",
+    });
+    const fingerprint = fingerprintReportContent({
+      title: report.title,
+      kind: report.kind,
+      createdAt: report.createdAt,
+      body: report.body,
+    });
+    const { memo, json } = buildHcsReportAttestationMemo({
+      reportId: report.id,
+      fingerprint,
+      attestedAt: "2026-09-13T17:00:00.000Z",
+    });
+    assert.deepEqual(Object.keys(memo), ["v", "reportId", "fingerprint", "attestedAt"]);
+    assert.equal(memo.v, 1);
+    assert.equal(memo.reportId, report.id);
+    assert.ok(!json.includes(report.body));
+    assert.ok(!json.includes("$"));
+    assert.ok(!json.includes("Xaman"));
   });
 });

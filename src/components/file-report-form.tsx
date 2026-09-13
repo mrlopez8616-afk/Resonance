@@ -63,8 +63,9 @@ export function FileReportForm({
         <h2 className="text-lg">File today&apos;s brief</h2>
         <p className="mt-1 text-sm text-[color:var(--muted)]">
           Paste a Daily Resonance Brief (or another report). It lands in the{" "}
-          <span className="font-mono">{today}</span> Chicago folder. Auto-file
-          from every routine is later.
+          <span className="font-mono">{today}</span> Chicago folder. Same
+          day + title updates the file. Hub Bearer-files the 7am brief to{" "}
+          <span className="font-mono">POST /api/reports</span>.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

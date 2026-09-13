@@ -6,10 +6,12 @@ import {
   assertAttestationEligible,
   AttestationError,
   attestDecision,
+  attestReport,
   parseAttestRequestBody,
 } from "./hedera-attest";
 import { DEFAULT_HEDERA_OPERATOR_ID, readHederaConfig } from "./hedera-config";
 import { hederaExplorerUrl } from "./hedera-explorer";
+import { createReport, REPORT_ATTESTATION_ATTESTED } from "./reports";
 import type { Decision } from "./types";
 
 function locked(id: string): Decision {
@@ -55,6 +57,7 @@ describe("hedera attestation eligibility and transitions", () => {
 describe("hedera attest request + modes", () => {
   it("parses id aliases and rejects a bad attestedAt", () => {
     assert.equal(parseAttestRequestBody({ decisionId: " D-2026-09-11-04 " }).id, "D-2026-09-11-04");
+    assert.equal(parseAttestRequestBody({ reportId: " R-2026-09-13-01 " }).id, "R-2026-09-13-01");
     assert.throws(
       () => parseAttestRequestBody({ id: "D-1", attestedAt: "not-a-date" }),
       /ISO date/,
@@ -130,6 +133,96 @@ describe("hedera attest request + modes", () => {
         attestDecision({
           decision: locked("D-2026-09-11-04"),
           request: { id: "D-2026-09-11-04" },
+          config: readHederaConfig({}),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AttestationError);
+        assert.equal(error.status, 503);
+        assert.match(error.message, /HEDERA_OPERATOR_KEY/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("hedera report attest hook", () => {
+  const sample = createReport({
+    title: "Daily Resonance Brief",
+    kind: "brief",
+    body: "Morning check. No fills to file.",
+    createdAt: "2026-09-13",
+    now: "2026-09-13T16:00:00.000Z",
+    id: "R-2026-09-13-01",
+  });
+
+  it("manual mode marks a report attested without calling submit", async () => {
+    let called = false;
+    const result = await attestReport({
+      report: sample,
+      request: {
+        id: sample.id,
+        hederaMessageId: "0.0.999/4",
+        attestedAt: "2026-09-13T17:00:00.000Z",
+      },
+      config: readHederaConfig({}),
+      submit: async () => {
+        called = true;
+        return {
+          topicId: "0.0.1",
+          topicCreated: false,
+          messageId: "should-not-use",
+          transactionId: "nope",
+        };
+      },
+    });
+    assert.equal(called, false);
+    assert.equal(result.mode, "manual");
+    assert.equal(result.report.attestationStatus, REPORT_ATTESTATION_ATTESTED);
+    assert.equal(result.report.hederaMessageId, "0.0.999/4");
+    assert.equal(result.report.attestLink, hederaExplorerUrl("testnet", "0.0.999/4"));
+    assert.ok(!JSON.stringify(result.report).includes("should-not-use"));
+  });
+
+  it("live mode submits a fingerprint memo and not the report body", async () => {
+    const result = await attestReport({
+      report: sample,
+      request: { id: sample.id },
+      config: readHederaConfig({
+        HEDERA_OPERATOR_KEY: "not-a-real-key",
+        HEDERA_OPERATOR_ID: DEFAULT_HEDERA_OPERATOR_ID,
+      }),
+      now: "2026-09-13T18:00:00.000Z",
+      submit: async (input) => {
+        const parsed = JSON.parse(input.message) as {
+          v: number;
+          reportId: string;
+          fingerprint: string;
+        };
+        assert.equal(parsed.v, 1);
+        assert.equal(parsed.reportId, sample.id);
+        assert.ok(!input.message.includes(sample.body));
+        assert.ok(!input.message.includes("$"));
+        return {
+          topicId: "0.0.555",
+          topicCreated: true,
+          messageId: "0.0.555/2",
+          transactionId: "0.0.10506907@1.2",
+        };
+      },
+    });
+    assert.equal(result.mode, "live");
+    assert.equal(result.topicCreated, true);
+    assert.equal(result.report.attestationStatus, REPORT_ATTESTATION_ATTESTED);
+    assert.equal(result.report.hederaMessageId, "0.0.555/2");
+    assert.equal(result.report.attestedAt, "2026-09-13T18:00:00.000Z");
+  });
+
+  it("returns 503 when live report submit is requested without a key", async () => {
+    await assert.rejects(
+      () =>
+        attestReport({
+          report: sample,
+          request: { id: sample.id },
           config: readHederaConfig({}),
         }),
       (error: unknown) => {

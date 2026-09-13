@@ -2,18 +2,24 @@ import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  applyReportAttestationWitness,
   chicagoDayKey,
   createBinderSeedStub,
   createReport,
+  draftReportFromDecision,
   fingerprintReportContent,
+  isReportAttested,
   isReportKind,
   nextReportId,
   normalizeReportDayKey,
+  preserveReportAttestationIfUnchanged,
+  REPORT_ATTESTATION_ATTESTED,
   REPORT_ATTESTATION_NOT_YET,
   REPORTS_SEED_DAY,
   reportsForDay,
   REPORTS_DAY_TZ,
 } from "./reports";
+import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 
 describe("reports schema and day key", () => {
   it("derives America/Chicago day keys across the UTC midnight split", () => {
@@ -120,5 +126,62 @@ describe("reports schema and day key", () => {
     assert.equal(seed.attestationStatus, "not_yet_attested");
     assert.match(seed.fingerprint, /^[a-f0-9]{64}$/);
     assert.ok(!/\$\s?\d/.test(seed.body));
+  });
+
+  it("drafts a brief from an existing Decision without extra doctrine", () => {
+    const decision = LOCKED_DECISIONS_2026_09_11.find(
+      (row) => row.id === "D-2026-09-11-04",
+    );
+    assert.ok(decision);
+    const draft = draftReportFromDecision(decision, {
+      dayKey: "2026-09-13",
+      now: "2026-09-13T16:00:00.000Z",
+    });
+    assert.equal(draft.title, "Decision D-2026-09-11-04");
+    assert.equal(draft.kind, "brief");
+    assert.equal(draft.createdAt, "2026-09-13");
+    assert.match(draft.body, /Decision D-2026-09-11-04/);
+    assert.match(draft.body, /Question:/);
+    assert.ok(!draft.body.includes("The OS should"));
+  });
+
+  it("apply + preserve attestation witness around a same-fingerprint rewrite", () => {
+    const report = createReport({
+      title: "Daily Resonance Brief",
+      kind: "brief",
+      body: "Morning check.",
+      createdAt: "2026-09-13",
+      now: "2026-09-13T16:00:00.000Z",
+    });
+    const attested = applyReportAttestationWitness(report, {
+      fingerprint: report.fingerprint,
+      hederaMessageId: "0.0.555/2",
+      attestedAt: "2026-09-13T17:00:00.000Z",
+      attestLink: "https://hashscan.io/testnet/topic/0.0.555/2",
+    });
+    assert.equal(attested.attestationStatus, REPORT_ATTESTATION_ATTESTED);
+    assert.equal(isReportAttested(attested), true);
+    const rewrite = createReport({
+      title: report.title,
+      kind: report.kind,
+      body: report.body,
+      createdAt: report.createdAt,
+      now: "2026-09-13T18:00:00.000Z",
+      id: report.id,
+    });
+    const kept = preserveReportAttestationIfUnchanged(attested, rewrite);
+    assert.equal(kept.attestationStatus, REPORT_ATTESTATION_ATTESTED);
+    assert.equal(kept.hederaMessageId, "0.0.555/2");
+    const changed = createReport({
+      title: report.title,
+      kind: report.kind,
+      body: "Afternoon revision.",
+      createdAt: report.createdAt,
+      now: "2026-09-13T18:00:00.000Z",
+      id: report.id,
+    });
+    const reset = preserveReportAttestationIfUnchanged(attested, changed);
+    assert.equal(reset.attestationStatus, REPORT_ATTESTATION_NOT_YET);
+    assert.equal(reset.hederaMessageId, null);
   });
 });

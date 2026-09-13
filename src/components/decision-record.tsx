@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DecisionAttestPanel } from "@/components/decision-attest";
 import { DecisionXrplMirrorPanel } from "@/components/decision-xrpl-mirror";
+import { FileDecisionAsReport } from "@/components/file-decision-report";
 import { DecisionStatusBadge } from "@/components/badges";
 import { Field } from "@/components/ui";
 import {
@@ -189,6 +190,7 @@ export function DecisionRecordEditor({
       </Field>
       <DecisionAttestPanel item={item} hedera={hedera} onApplied={onUpdate} />
       <DecisionXrplMirrorPanel item={item} xrpl={xrpl} onApplied={onUpdate} />
+      <FileDecisionAsReport item={item} />
       {showDelete && onDelete ? (
         <button
           type="button"

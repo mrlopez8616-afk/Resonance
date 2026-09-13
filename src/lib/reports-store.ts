@@ -14,6 +14,7 @@ import {
   listReportsByDay,
   parseReportsEnvelope,
   REPORTS_BLOB_PATH,
+  writeReportAttestationIntoEnvelope,
   writeReportsIntoEnvelope,
   type ReportsStoreBackend,
   type ReportsStoreEnvelope,
@@ -157,6 +158,27 @@ export async function mergeReportsWrite(body: unknown): Promise<{
     (row) => !beforeIds.has(row.id) || requestedIds.includes(row.id),
   );
   return { envelope, backend: loaded.backend, seeded: loaded.seeded, filed };
+}
+
+export async function persistReportAttestation(input: {
+  report: OperatorReport;
+}): Promise<{
+  envelope: ReportsStoreEnvelope;
+  backend: ReportsStoreBackend;
+  seeded: boolean;
+}> {
+  if (!isReportsSyncConfigured()) {
+    throw new ReportsStoreError(
+      "Report sync is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadReportsStore();
+  const envelope = writeReportAttestationIntoEnvelope(
+    loaded.envelope,
+    input.report,
+  );
+  await persistEnvelope(envelope);
+  return { envelope, backend: loaded.backend, seeded: loaded.seeded };
 }
 
 export async function deleteStoredReport(id: string): Promise<{

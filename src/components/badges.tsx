@@ -1,4 +1,8 @@
 import { venueKind } from "@/lib/robinhood";
+import {
+  REPORT_ATTESTATION_ATTESTED,
+  type ReportAttestationStatus,
+} from "@/lib/reports";
 import type {
   AgenticIntentStatus,
   AttestationStatus,
@@ -104,6 +108,25 @@ export function AttestationStatusBadge({ value }: { value: AttestationStatus }) 
   return (
     <span className={`badge ${attestationStyles[value]}`}>
       {attestationLabel[value]}
+    </span>
+  );
+}
+
+export function ReportAttestationBadge({
+  value,
+}: {
+  value: ReportAttestationStatus;
+}) {
+  if (value === REPORT_ATTESTATION_ATTESTED) {
+    return (
+      <span className={`badge ${attestationStyles.hashgraph_attested}`}>
+        Attested
+      </span>
+    );
+  }
+  return (
+    <span className={`badge ${attestationStyles.web2_only}`}>
+      Not yet attested
     </span>
   );
 }

@@ -1,11 +1,15 @@
 import { sha256 } from "@noble/hashes/sha256";
+import type { Decision } from "./types";
 
 export const REPORTS_DAY_TZ = "America/Chicago";
 export const REPORT_KINDS = ["brief", "rh-ops", "build", "other"] as const;
 export const REPORT_ATTESTATION_NOT_YET = "not_yet_attested" as const;
+export const REPORT_ATTESTATION_ATTESTED = "hashgraph_attested" as const;
 
 export type ReportKind = (typeof REPORT_KINDS)[number];
-export type ReportAttestationStatus = typeof REPORT_ATTESTATION_NOT_YET;
+export type ReportAttestationStatus =
+  | typeof REPORT_ATTESTATION_NOT_YET
+  | typeof REPORT_ATTESTATION_ATTESTED;
 
 export interface OperatorReport {
   id: string;
@@ -19,8 +23,11 @@ export interface OperatorReport {
   /** SHA-256 of the canonical filed record (title, kind, day, body). */
   fingerprint: string;
   attestationStatus: ReportAttestationStatus;
-  /** Hedera / later witness link. Stub slot — unused in this brick. */
+  /** HashScan / explorer link for the Hedera Testnet witness. */
   attestLink: string | null;
+  /** Hedera topic/sequence or transaction id. Same family as Decisions. */
+  hederaMessageId: string | null;
+  attestedAt: string | null;
   filedAt: string;
 }
 
@@ -45,6 +52,18 @@ function asTrimmedString(value: unknown): string | null {
 
 export function isReportKind(value: unknown): value is ReportKind {
   return typeof value === "string" && (REPORT_KINDS as readonly string[]).includes(value);
+}
+
+export function isReportAttestationStatus(
+  value: unknown,
+): value is ReportAttestationStatus {
+  return (
+    value === REPORT_ATTESTATION_NOT_YET || value === REPORT_ATTESTATION_ATTESTED
+  );
+}
+
+export function isReportAttested(report: Pick<OperatorReport, "attestationStatus">): boolean {
+  return report.attestationStatus === REPORT_ATTESTATION_ATTESTED;
 }
 
 export function isIsoDayKey(value: string): boolean {
@@ -139,6 +158,8 @@ export function createBinderSeedStub(
     fingerprint: fingerprintReportContent({ title, kind, createdAt, body }),
     attestationStatus: REPORT_ATTESTATION_NOT_YET,
     attestLink: null,
+    hederaMessageId: null,
+    attestedAt: null,
     filedAt: now,
   };
 }
@@ -186,8 +207,106 @@ export function createReport(input: {
     fingerprint: fingerprintReportContent({ title, kind, createdAt, body }),
     attestationStatus: REPORT_ATTESTATION_NOT_YET,
     attestLink: null,
+    hederaMessageId: null,
+    attestedAt: null,
     filedAt: now.toISOString(),
   };
+}
+
+/** Hub / File-from-Decision payload. Existing record fields only — no invented doctrine. */
+export function draftReportFromDecision(
+  decision: Decision,
+  input?: { dayKey?: string | Date | number | null; now?: Date | string },
+): {
+  title: string;
+  kind: ReportKind;
+  body: string;
+  createdAt: string;
+} {
+  const now =
+    input?.now instanceof Date
+      ? input.now
+      : typeof input?.now === "string"
+        ? new Date(input.now)
+        : new Date();
+  const lines = [
+    `Decision ${decision.id}`,
+    decision.date ? `Date: ${decision.date}` : null,
+    decision.question ? `Question: ${decision.question}` : null,
+    decision.decision ? `Founder decision: ${decision.decision}` : null,
+    decision.authorizedBy ? `Authorized by: ${decision.authorizedBy}` : null,
+    decision.outcome ? `Outcome: ${decision.outcome}` : null,
+    decision.status ? `Status: ${decision.status}` : null,
+  ].filter((line): line is string => Boolean(line));
+  return {
+    title: `Decision ${decision.id}`,
+    kind: "brief",
+    body: lines.join("\n"),
+    createdAt: normalizeReportDayKey(input?.dayKey ?? decision.date, now),
+  };
+}
+
+export function findReportByDayAndTitle(
+  reports: OperatorReport[],
+  dayKey: string,
+  title: string,
+): OperatorReport | undefined {
+  const day = chicagoDayKey(dayKey);
+  const trimmed = title.trim();
+  return reports.find((row) => row.createdAt === day && row.title === trimmed);
+}
+
+export function applyReportAttestationWitness(
+  report: OperatorReport,
+  input: {
+    fingerprint: string;
+    hederaMessageId: string;
+    attestedAt: string;
+    attestLink: string | null;
+  },
+): OperatorReport {
+  return {
+    ...report,
+    fingerprint: input.fingerprint,
+    attestationStatus: REPORT_ATTESTATION_ATTESTED,
+    hederaMessageId: input.hederaMessageId,
+    attestedAt: input.attestedAt,
+    attestLink: input.attestLink,
+  };
+}
+
+export function preserveReportAttestationIfUnchanged(
+  previous: OperatorReport | undefined,
+  next: OperatorReport,
+): OperatorReport {
+  if (
+    previous &&
+    previous.fingerprint === next.fingerprint &&
+    previous.attestationStatus === REPORT_ATTESTATION_ATTESTED
+  ) {
+    return {
+      ...next,
+      attestationStatus: previous.attestationStatus,
+      attestLink: previous.attestLink,
+      hederaMessageId: previous.hederaMessageId,
+      attestedAt: previous.attestedAt,
+    };
+  }
+  return next;
+}
+
+/** Accept hub `dayKey` as an alias for the Chicago folder `createdAt`. */
+export function createdAtFromWriteFields(raw: {
+  dayKey?: unknown;
+  createdAt?: unknown;
+}): string | number | undefined {
+  if (typeof raw.dayKey === "string" || typeof raw.dayKey === "number") {
+    return raw.dayKey;
+  }
+  if (typeof raw.createdAt === "string" || typeof raw.createdAt === "number") {
+    return raw.createdAt;
+  }
+  return undefined;
 }
 
 export function coerceStoredReport(
@@ -215,6 +334,16 @@ export function coerceStoredReport(
     storedFingerprint && /^[a-f0-9]{64}$/i.test(storedFingerprint)
       ? storedFingerprint.toLowerCase()
       : fingerprintReportContent({ title, kind: raw.kind, createdAt, body });
+  const hederaMessageId = asTrimmedString(
+    raw.hederaMessageId ?? raw.hedera_message_id ?? raw.hederaTxId,
+  );
+  const attestedAt = asTrimmedString(raw.attestedAt ?? raw.attested_at);
+  const attestLink = asTrimmedString(raw.attestLink);
+  const attestationStatus = isReportAttestationStatus(raw.attestationStatus)
+    ? raw.attestationStatus
+    : hederaMessageId || attestLink
+      ? REPORT_ATTESTATION_ATTESTED
+      : REPORT_ATTESTATION_NOT_YET;
   return {
     id,
     title,
@@ -223,8 +352,10 @@ export function coerceStoredReport(
     body,
     blobPointer,
     fingerprint,
-    attestationStatus: REPORT_ATTESTATION_NOT_YET,
-    attestLink: asTrimmedString(raw.attestLink),
+    attestationStatus,
+    attestLink,
+    hederaMessageId,
+    attestedAt,
     filedAt,
   };
 }

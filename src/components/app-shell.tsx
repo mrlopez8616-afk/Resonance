@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore } from "react";
 import {
   Activity,
   Archive,
@@ -19,8 +20,16 @@ import {
   Table2,
   X,
 } from "lucide-react";
+import { ReportAttestationBadge } from "@/components/badges";
 import { useStore } from "@/context/store";
 import { lockAppGate } from "@/lib/lock-gate";
+import { isReportAttested } from "@/lib/reports";
+import {
+  getReportsSyncSnapshot,
+  getServerReportsSyncSnapshot,
+  hydrateReportsFromServer,
+  subscribeReportsSync,
+} from "@/lib/reports-client-sync";
 
 const NAV = [
   { href: "/", label: "Node world", icon: CircleGauge },
@@ -36,6 +45,26 @@ const NAV = [
   { href: "/whats-new", label: "What changed", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings2 },
 ];
+
+function ReportsNavMark({ pathname }: { pathname: string }) {
+  const sync = useSyncExternalStore(
+    subscribeReportsSync,
+    getReportsSyncSnapshot,
+    getServerReportsSyncSnapshot,
+  );
+
+  useEffect(() => {
+    if (pathname.startsWith("/reports") || pathname.startsWith("/archive")) {
+      void hydrateReportsFromServer();
+    }
+  }, [pathname]);
+
+  const match = pathname.match(/^\/reports\/([^/]+)$/);
+  const id = match ? decodeURIComponent(match[1]) : "";
+  const item = id ? sync.reports.find((row) => row.id === id) : null;
+  if (!item || !isReportAttested(item)) return null;
+  return <ReportAttestationBadge value={item.attestationStatus} />;
+}
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -64,7 +93,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             }`}
           >
             <Icon size={16} strokeWidth={1.6} />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.href === "/reports" ? (
+              <ReportsNavMark pathname={pathname} />
+            ) : null}
           </Link>
         );
       })}

@@ -80,15 +80,15 @@ Reports (digital binder) live on left-rail **Reports** — toolbox, not a node:
 
 - `/reports` — Chicago date folders
 - `/archive/YYYY-MM-DD` — files filed that day
-- `/reports/R-YYYY-MM-DD-NN` — one record + fingerprint + not-yet-attested stub
+- `/reports/R-YYYY-MM-DD-NN` — one record + **Attest (Hedera Testnet)** (`POST /api/attest` with the report id)
 
-Same Blob store, sibling file `resonance/reports.json` (local/dev: `.data/reports.json`). First boot seeds one Daily Resonance Brief stub (`R-2026-09-13-01`) if empty.
+Same Blob store, sibling file `resonance/reports.json` (local/dev: `.data/reports.json`). First boot seeds one Daily Resonance Brief stub (`R-2026-09-13-01`) if empty. Hub contract: [`reports-autofile.md`](./reports-autofile.md). Same day + title merges. `dayKey` is an alias for `createdAt`.
 
 ```bash
 curl -X POST https://YOUR-APP.vercel.app/api/reports \
   -H "Authorization: Bearer YOUR_SYNC_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Daily Resonance Brief","kind":"brief","body":"Paste the brief.","createdAt":"2026-09-13"}'
+  -d '{"title":"Daily Resonance Brief","kind":"brief","body":"Paste the brief.","dayKey":"2026-09-13"}'
 ```
 
 `GET /api/reports?day=2026-09-13` lists that Chicago day. `GET /api/reports?id=R-2026-09-13-01` returns one file. `GET /api/health` reports `reportsSync.itemCount` only — no report body.

@@ -178,6 +178,31 @@ export async function persistDecisionAttestation(input: {
   return { envelope, backend: loaded.backend, seeded: loaded.seeded };
 }
 
+/** Persist a newly created HCS topic so later Decision / report attests reuse it. */
+export async function persistHederaTopicId(topicId: string | null | undefined): Promise<{
+  envelope: DecisionsStoreEnvelope;
+  backend: DecisionsStoreBackend;
+  seeded: boolean;
+}> {
+  if (!isDecisionsSyncConfigured()) {
+    throw new DecisionsStoreError(
+      "Decision sync is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadDecisionsStore();
+  const nextId = topicId?.trim() || null;
+  if (!nextId || loaded.envelope.hederaTopicId === nextId) {
+    return loaded;
+  }
+  const envelope: DecisionsStoreEnvelope = {
+    ...loaded.envelope,
+    updatedAt: new Date().toISOString(),
+    hederaTopicId: nextId,
+  };
+  await persistEnvelope(envelope);
+  return { envelope, backend: loaded.backend, seeded: loaded.seeded };
+}
+
 /** Operator view-ack only. Hedera submit is persistDecisionAttestation + /api/attest. */
 export async function ackStoredDecision(id: string): Promise<{
   envelope: DecisionsStoreEnvelope;
