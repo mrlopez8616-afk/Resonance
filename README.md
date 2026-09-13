@@ -124,9 +124,23 @@ npm test
 
 No user accounts or API keys are required. Production should lock the site with `RESONANCE_APP_PASSWORD` (see above). Most app data is stored in `localStorage` under `resonance.phase-zero.v1`. Decisions also sync to the shared store when Blob is configured. First load is seeded with founder-reported sample data so the board is not empty.
 
+## Node world overlays (founder)
+
+Barney path after this lands:
+
+1. Merge the PR.
+2. Wait for Vercel **Ready**.
+3. Unlock (site password if the gate is on).
+4. Open `/`.
+5. Toggle **Capital flow**, **Sleeves**, and **Red locks**.
+
+You should see belts between linked nodes plus the Xaman well and queued Agentic dock; which of the twelve sit on Agentic vs founder/Main thesis; and OFF LIMITS stamps on the Xaman well and RH Main. Visibility only — no spend of Main or Xaman principal. Edit the thesis-sleeve stub in `src/lib/node-world.ts` (`FOUNDER_THESIS_SLEEVE_STUB`) if a watch node needs a different note. Do not add or remove tickers.
+
+Playbook: [`docs/node-world.md`](docs/node-world.md).
+
 ## Phase Zero scope
 
-- **Overview** — treasury summary (units, estimated USD when a live XRP price exists, ~daily reward), skeleton nodes (physical AI vs digital), Agentic queued tickets, last decisions, optional YouTube stub. When any node has a pasted holdings snapshot, a **Holdings last synced** line appears (timestamp + source). That is not a live brokerage session.
+- **Overview / Node world** — `/` is the twelve-node Factorio-style map (not a brokerage list). Wheel or +/− zooms world → node → guts. Overlay rack: **Capital flow** (SVG pipes from `node.links`, Xaman→XRP well, queued Agentic intents), **Stamps**, **Sleeves** (Agentic vs founder/Main/thesis on the same twelve boxes), **Red locks** (Xaman well + RH Main marked OFF LIMITS). Sensors and Carla stay stubbed. No private dollar amounts or ticket sizes on the map. Founder path: [`docs/node-world.md`](docs/node-world.md).
 - **Treasury** — editable working balance on **Xaman** (~27,772 XRP seed, founder-reported), principal trail from Aug 28, optional manual XRP/USD for estimates, reward/claim ledger you can add and edit in place (date, amount, fee, note, classification `principal | reward | fee | transfer`). Import/merge the official trail by ID. Robinhood XRP is **not** this balance.
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Main-sleeve learning lots ship funded from the Robinhood snapshot example. Editable name, thesis, failure condition, position status `none | watch | funded`, sleeve, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.
@@ -227,7 +241,7 @@ Server route: `GET /api/prices` (60s cache). Quotes that cannot be fetched are o
 1. **Read-only XRPL address watch** — use the stored public address to verify XRP balance and incoming payments. Still no keys. Manual books remain the source of truth until a print is verified.
 2. **Coinbase export import** — parse a statement/CSV into the ledger instead of typing claims. Robinhood already uses a pasted JSON snapshot; do not add RH OAuth here.
 3. **Equity price source** — a key-backed vendor (or a documented unpaid source that actually stays up from a datacenter) so physical nodes are not dependent on unofficial Yahoo/Stooq.
-4. **Systems map** — a later world-view of nodes (Factorio-style). Not in this MVP; tickers already carry class, thesis, failure condition, and status so a graph can sit on top later.
+4. **Richer belt network** — live sensors and a full animated Factorio belt graph. Phase-0 already draws readable pipes/sleeves/red-locks on the twelve-node map.
 5. Drop the YouTube stub when a real publishing cadence exists.
 
 ## Stack

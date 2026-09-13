@@ -248,6 +248,8 @@ a.file-row:hover {
 }
 
 .node-box {
+  position: relative;
+  z-index: 2;
   width: 100%;
   min-height: 8.5rem;
   padding: 0.95rem 1rem;
@@ -278,10 +280,177 @@ a.file-row:hover {
   border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
 }
 
-.flow-pipe {
+.node-box-dock {
+  min-height: 8.5rem;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  cursor: default;
+}
+
+.node-box[data-sleeve="founder-main"] {
+  box-shadow: inset 3px 0 0 var(--accent-2);
+}
+
+.node-box[data-sleeve="agentic"] {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.node-box[data-sleeve="both"] {
+  box-shadow:
+    inset 3px 0 0 var(--accent-2),
+    inset 7px 0 0 var(--accent);
+}
+
+.node-box[data-sleeve="founder-thesis"] {
+  box-shadow: inset 3px 0 0 var(--muted);
+}
+
+.node-box[data-selected="true"][data-sleeve="founder-main"],
+.node-box[data-selected="true"][data-sleeve="agentic"],
+.node-box[data-selected="true"][data-sleeve="both"],
+.node-box[data-selected="true"][data-sleeve="founder-thesis"] {
+  box-shadow:
+    inset 3px 0 0 currentColor,
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.node-box[data-red-lock="true"],
+.node-box-well[data-red-lock="true"] {
+  border-color: color-mix(in srgb, var(--danger) 72%, var(--border));
+  outline: 1px dashed color-mix(in srgb, var(--danger) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.red-lock-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.node-world-pipes {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  z-index: 1;
+}
+
+.flow-pipe-casing,
+.flow-pipe-inner {
   fill: none;
-  stroke: var(--accent-2);
-  stroke-width: 0.7;
   stroke-linecap: round;
-  opacity: 0.7;
+  stroke-linejoin: round;
+}
+
+.flow-pipe-casing {
+  stroke: color-mix(in srgb, var(--accent-2) 40%, var(--border));
+  stroke-width: 2.55;
+}
+
+.flow-pipe-inner {
+  stroke: var(--accent-2);
+  stroke-width: 1.05;
+  stroke-dasharray: 2.4 1.7;
+  animation: flow-belt 1.7s linear infinite;
+}
+
+.flow-pipe-joint {
+  fill: color-mix(in srgb, var(--accent-2) 70%, var(--surface));
+  stroke: var(--border);
+  stroke-width: 0.25;
+}
+
+.flow-kind-treasury-principal .flow-pipe-casing {
+  stroke: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.flow-kind-treasury-principal .flow-pipe-inner,
+.flow-kind-treasury-principal .flow-pipe-joint {
+  stroke: var(--danger);
+  fill: color-mix(in srgb, var(--danger) 55%, var(--surface));
+}
+
+.flow-kind-agentic-queued .flow-pipe-casing {
+  stroke: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.flow-kind-agentic-queued .flow-pipe-inner,
+.flow-kind-agentic-queued .flow-pipe-joint {
+  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--accent) 55%, var(--surface));
+}
+
+.flow-kind-depends-on .flow-pipe-inner {
+  stroke: var(--accent-2);
+}
+
+.flow-kind-related .flow-pipe-inner {
+  stroke: var(--muted);
+}
+
+.flow-kind-funds .flow-pipe-inner {
+  stroke: var(--ok);
+}
+
+@keyframes flow-belt {
+  to {
+    stroke-dashoffset: -8.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-pipe-inner {
+    animation: none;
+  }
+}
+
+.overlay-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.overlay-chip-pipe {
+  border-color: color-mix(in srgb, var(--accent-2) 40%, var(--border));
+  color: var(--accent-2);
+}
+
+.overlay-chip-well {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  color: var(--danger);
+}
+
+.overlay-chip-agentic {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+
+.overlay-chip-main {
+  border-color: color-mix(in srgb, var(--accent-2) 40%, var(--border));
+  color: var(--accent-2);
+}
+
+.overlay-chip-thesis {
+  color: var(--muted);
+}
+
+.overlay-chip-lock {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
 }
