@@ -130,6 +130,15 @@ describe("node world", () => {
     assert.ok(drawn.some((flow) => flow.id === "flow-treasury-xrp"));
     assert.ok(drawn.some((flow) => flow.kind === "agentic-queued" && flow.to === "PWR"));
     assert.ok(drawn.every((flow) => flow.path.startsWith("M ")));
+    const agenticPaths = drawn
+      .filter((flow) => flow.kind === "agentic-queued")
+      .map((flow) => flow.path);
+    assert.ok(new Set(agenticPaths).size >= 3);
+    const xrp = flowAnchor("XRP");
+    const flr = flowAnchor("FLR");
+    const xrpFlr = drawn.find((flow) => flow.from === "XRP" && flow.to === "FLR");
+    assert.ok(xrp && flr && xrpFlr);
+    assert.notDeepEqual(xrpFlr.fromPoint, xrp);
     assert.ok(flowAnchor("TREASURY"));
     assert.ok(flowAnchor("AGENTIC"));
     assert.ok(flowAnchor("XRP"));

@@ -250,7 +250,7 @@ export function NodeWorld() {
               </div>
               <div className="relative">
                 <FlowOverlay flows={flows} visible={layers["capital-flow"]} />
-                <div className="grid grid-cols-7 gap-3">
+                <div className="grid grid-cols-7 gap-4">
                 {DESKTOP_ROW_ONE.map((id) =>
                   id === "TREASURY" ? (
                     <TreasuryWell

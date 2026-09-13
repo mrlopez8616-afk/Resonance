@@ -246,30 +246,55 @@ export function flowAnchor(id: string): { x: number; y: number } | null {
   return slot ? mapPoint(slot.col, slot.row) : null;
 }
 
-/** Quadratic belt path. Opposite directions bow opposite ways so XRP↔FLR stays readable. */
+/** Walk toward `to` so belts stop at the box edge instead of vanishing under the card. */
+export function moveToward(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  distance: number,
+): { x: number; y: number } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const travel = Math.min(distance, len * 0.42);
+  return {
+    x: from.x + (dx / len) * travel,
+    y: from.y + (dy / len) * travel,
+  };
+}
+
+/** Quadratic belt path. Opposite directions and sibling pipes bow apart so XRP↔FLR and Agentic stacks stay readable. */
 export function pipePath(
   from: { x: number; y: number },
   to: { x: number; y: number },
+  sway = 0,
 ): string {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const bias = from.x + from.y <= to.x + to.y ? 3.2 : -3.2;
-  const midX = (from.x + to.x) / 2 + dy * 0.14 + bias;
-  const midY = (from.y + to.y) / 2 - dx * 0.1 - 3;
-  return `M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`;
+  const start = moveToward(from, to, 6.4);
+  const end = moveToward(to, from, 6.4);
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const bias = start.x + start.y <= end.x + end.y ? 2.2 : -2.2;
+  const midX = (start.x + end.x) / 2 + dy * 0.2 + bias + sway;
+  const midY = (start.y + end.y) / 2 - dx * 0.18 - 1.5 + sway * 0.4;
+  return `M ${start.x} ${start.y} Q ${midX} ${midY} ${end.x} ${end.y}`;
 }
 
 export function drawableCapitalFlows(flows: CapitalFlow[]): DrawableCapitalFlow[] {
+  const sibling = new Map<string, number>();
   const drawn: DrawableCapitalFlow[] = [];
   for (const flow of flows) {
     const fromPoint = flowAnchor(flow.from);
     const toPoint = flowAnchor(flow.to);
     if (!fromPoint || !toPoint) continue;
+    const nth = sibling.get(flow.from) ?? 0;
+    sibling.set(flow.from, nth + 1);
+    const sway = (nth - 1.5) * 3.6;
+    const start = moveToward(fromPoint, toPoint, 6.4);
+    const end = moveToward(toPoint, fromPoint, 6.4);
     drawn.push({
       ...flow,
-      fromPoint,
-      toPoint,
-      path: pipePath(fromPoint, toPoint),
+      fromPoint: start,
+      toPoint: end,
+      path: pipePath(fromPoint, toPoint, sway),
     });
   }
   return drawn;
