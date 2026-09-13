@@ -139,6 +139,14 @@ export function NodeWorld() {
   }
 
   useEffect(() => {
+    if (!selectedTicker || altitude === "world") return;
+    document.getElementById("plant-interior")?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [selectedTicker, altitude]);
+
+  useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     const onWheel = (event: WheelEvent) => {
@@ -196,7 +204,7 @@ export function NodeWorld() {
 
       <div
         ref={canvasRef}
-        className="node-world mb-8"
+        className="node-world"
         tabIndex={0}
         aria-label="Resonance node world. Scroll to zoom altitude."
       >
@@ -247,7 +255,7 @@ export function NodeWorld() {
               <div className="relative">
                 <MainBusGutter live={layers["capital-flow"]} />
                 <FlowOverlay flows={flows} visible={layers["capital-flow"]} />
-                <div className="grid grid-cols-7 gap-4">
+                <div className="grid grid-cols-7 gap-3">
                 {DESKTOP_ROW_ONE.map((id) =>
                   id === "TREASURY" ? (
                     <TreasuryWell
@@ -916,6 +924,7 @@ function NodeDetailLevel({
   const welded = Boolean(redLock || treasuryLock);
   return (
     <section
+      id="plant-interior"
       className={`card plant-interior plant-interior-${skin}`}
       data-plant-skin={skin}
       data-welded={welded ? "true" : "false"}
