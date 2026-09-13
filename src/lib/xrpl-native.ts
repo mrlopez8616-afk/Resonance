@@ -149,7 +149,7 @@ function deriveSecpScalar(bytes: Uint8Array, discrim?: number): bigint {
   const prefix = discrim === undefined ? bytes : concatBytes(bytes, u32(discrim));
   for (let i = 0; i <= 0xffffffff; i += 1) {
     const key = bytesToBigInt(sha512Half(concatBytes(prefix, u32(i))));
-    if (key > 0n && key < order) return key;
+    if (key > BigInt(0) && key < order) return key;
   }
   throw new Error("could not derive a secp256k1 scalar.");
 }
@@ -161,8 +161,8 @@ function u32(value: number): Uint8Array {
 }
 
 function bytesToBigInt(bytes: Uint8Array): bigint {
-  let value = 0n;
-  for (const byte of bytes) value = (value << 8n) | BigInt(byte);
+  let value = BigInt(0);
+  for (const byte of bytes) value = (value << BigInt(8)) | BigInt(byte);
   return value;
 }
 
@@ -227,11 +227,11 @@ function encodeUInt32(value: number): Uint8Array {
 function encodeXrpAmount(drops: string): Uint8Array {
   if (!/^[0-9]+$/.test(drops)) throw new Error("XRP amount must be integer drops.");
   const value = BigInt(drops);
-  if (value < 0n || value > 10_000_000_000_000_000n) {
+  if (value < BigInt(0) || value > BigInt("10000000000000000")) {
     throw new Error("XRP amount is out of range.");
   }
-  const out = encodeUInt32(Number(value >> 32n));
-  const low = encodeUInt32(Number(value & 0xffffffffn));
+  const out = encodeUInt32(Number(value >> BigInt(32)));
+  const low = encodeUInt32(Number(value & BigInt("0xffffffff")));
   const amount = concatBytes(out, low);
   amount[0] |= 0x40;
   return amount;
