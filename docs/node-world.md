@@ -8,12 +8,18 @@ Phase-0 home (`/`) is the twelve-node Factorio-style map. Overlays are visibilit
 2. Vercel preview **Ready**.
 3. Unlock (site password if `RESONANCE_APP_PASSWORD` is set).
 4. Open `/`.
-5. Toggle **Capital flow**, **Sleeves**, and **Red locks**.
-6. Confirm: belts/pipes between linked nodes + Xaman→XRP + queued Agentic dock; Agentic vs founder/Main/thesis chips on the same twelve boxes; Xaman well and RH Main stamped **OFF LIMITS**.
+5. Use the **bottom hotbar** (not a top rack): toggle **Capital flow**, **Sleeves**, and **Red locks**; click **World / Node / Guts** or +/−. Wheel zoom still works.
+6. Confirm: belts ride a main-bus gutter between the two rows (linked nodes + Xaman→XRP + queued Agentic dock). No extra nodes. No dollar amounts.
+7. Click one physical box (PWR / ETN / VRT / GEV / CEG / HUBB) and one crypto box (XRP / FLR / BTC / ETH / SOL / SUI). Physical interiors use the electrification skin; crypto interiors use the liquidity (tank/valve) skin. Existing Web2 / Hedera / XRPL stubs stay. Red locks stay **OFF LIMITS** / welded — visible only.
+8. Left rail still opens Decisions, Treasury, System health, Todos.
 
-Wheel zoom, Stamps, left rail, gate, Decisions attest/mirror, Blob sync, and treasury red-lock rules stay as they were. Sensors and Carla remain stubbed.
+Sensors and Carla remain stubbed. Do not spend from this board.
 
-## Capital flow
+## Bottom hotbar
+
+Layer toggles, altitude (world / node / guts), +/−, and the selected-node chip live on a floor strip. The left rail stays the OS toolbox. Overlay state is the same as before — the rack moved, it was not duplicated.
+
+## Capital flow / main bus
 
 Pipes are built from existing data only:
 
@@ -21,7 +27,16 @@ Pipes are built from existing data only:
 - Xaman treasury well → XRP node
 - queued `agenticIntents` from the Agentic dock under the well
 
-No private dollar amounts or ticket sizes on the overlay. Light CSS dash motion; `prefers-reduced-motion` turns it off.
+Belts drop to a kind-lane in the horizontal gutter, travel, then rise. No private dollar amounts or ticket sizes. Light CSS dash motion; `prefers-reduced-motion` turns it off.
+
+## Plant interiors
+
+Click a locked node (or zoom to Node / Guts). Same twelve tickers.
+
+- Physical AI (`PWR` `ETN` `VRT` `GEV` `CEG` `HUBB`) → electrification skin
+- Digital (`XRP` `FLR` `BTC` `ETH` `SOL` `SUI`) → liquidity skin (tanks / valves)
+
+Web2 record, Hedera stamp, XRPL R1, sleeve overlay, and red-lock stubs stay. Xaman principal and RH Main remain welded shut.
 
 ## Sleeves
 
@@ -44,4 +59,4 @@ Resonance still never spends RH Main or Xaman principal.
 
 ## Out of scope (still)
 
-Live sensors, Carla / human-bridge, full animated belt-network perfection, Mainnet, new secrets, node-list edits without founder auth.
+Live sensors, Carla / human-bridge, Mainnet, new secrets, node-list edits without founder auth.

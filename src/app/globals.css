@@ -210,6 +210,7 @@ a.file-row:hover {
 .node-world {
   position: relative;
   overflow: auto;
+  margin-bottom: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.85rem;
   background:
@@ -232,8 +233,8 @@ a.file-row:hover {
 
 .node-world-grid {
   position: relative;
-  min-height: 22rem;
-  padding: 1.1rem;
+  min-height: 16rem;
+  padding: 0.7rem;
   background-image: radial-gradient(
     color-mix(in srgb, var(--border) 80%, transparent) 1px,
     transparent 1px
@@ -251,8 +252,8 @@ a.file-row:hover {
   position: relative;
   z-index: 2;
   width: 100%;
-  min-height: 8.25rem;
-  padding: 0.8rem 0.75rem;
+  min-height: 6.1rem;
+  padding: 0.6rem 0.65rem;
   border: 1px solid var(--border);
   border-radius: 0.7rem;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
@@ -275,13 +276,13 @@ a.file-row:hover {
 }
 
 .node-box-well {
-  min-height: 8.5rem;
+  min-height: 6.1rem;
   border-style: dashed;
   border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
 }
 
 .node-box-dock {
-  min-height: 8.5rem;
+  min-height: 6.1rem;
   border-style: dashed;
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
@@ -343,7 +344,14 @@ a.file-row:hover {
   width: 100%;
   height: 100%;
   overflow: visible;
-  z-index: 3;
+  z-index: 1;
+}
+
+.node-world-pipes path {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .flow-pipe-casing,
@@ -355,14 +363,14 @@ a.file-row:hover {
 
 .flow-pipe-casing {
   stroke: color-mix(in srgb, var(--accent-2) 40%, var(--border));
-  stroke-width: 3.1;
+  stroke-width: 7px;
 }
 
 .flow-pipe-inner {
   stroke: var(--accent-2);
-  stroke-width: 1.25;
-  stroke-dasharray: 2.4 1.7;
-  animation: flow-belt 1.7s linear infinite;
+  stroke-width: 2px;
+  stroke-dasharray: 6 5;
+  animation: flow-belt 1.25s linear infinite;
 }
 
 .flow-pipe-joint {
@@ -405,7 +413,7 @@ a.file-row:hover {
 
 @keyframes flow-belt {
   to {
-    stroke-dashoffset: -8.2;
+    stroke-dashoffset: -22px;
   }
 }
 
@@ -453,4 +461,293 @@ a.file-row:hover {
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
   background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--danger);
+}
+
+.factory-floor {
+  padding-bottom: 7rem;
+}
+
+.factory-floor .mb-8 {
+  margin-bottom: 1.35rem;
+}
+
+.factory-floor .pb-6 {
+  padding-bottom: 0.85rem;
+}
+
+.factory-floor .notice {
+  margin-bottom: 0.85rem;
+}
+
+.factory-hotbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding: 0.4rem 0.65rem;
+  background: color-mix(in srgb, var(--bg-sidebar) 94%, transparent);
+  border-top: 2px solid var(--border);
+  box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+@media (min-width: 1024px) {
+  .factory-hotbar {
+    left: 240px;
+  }
+}
+
+.hotbar-chip {
+  display: flex;
+  min-width: 9.5rem;
+  max-width: 14rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.hotbar-chip[data-has-selection="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--text);
+}
+
+.hotbar-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hotbar-chip-id {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+.hotbar-chip-meta {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotbar-divider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.hotbar-slots,
+.hotbar-zoom {
+  display: flex;
+  align-items: stretch;
+  gap: 0.3rem;
+}
+
+.hotbar-slot {
+  display: flex;
+  min-width: 3.4rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  padding: 0.28rem 0.4rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 0.2rem;
+  cursor: pointer;
+}
+
+.hotbar-slot:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.hotbar-slot.is-on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+  color: var(--text);
+}
+
+.hotbar-slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hotbar-slot-icon {
+  min-width: 2rem;
+}
+
+.hotbar-slot-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.15;
+  text-align: center;
+  max-width: 4.6rem;
+}
+
+.hotbar-stub {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.main-bus-gutter {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  z-index: 1;
+  opacity: 0.28;
+}
+
+.main-bus-gutter.is-live {
+  opacity: 0.9;
+}
+
+.main-bus-lane {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke: color-mix(in srgb, var(--border) 70%, var(--accent-2));
+  stroke-width: 2px;
+  stroke-dasharray: 3px 4px;
+}
+
+.flow-pipe-casing-outer,
+.flow-pipe-lane {
+  fill: none;
+}
+
+.flow-pipe-casing-outer {
+  stroke: color-mix(in srgb, var(--bg) 55%, var(--border));
+  stroke-width: 12px;
+}
+
+.flow-pipe-lane {
+  stroke: color-mix(in srgb, var(--accent-2) 35%, transparent);
+  stroke-width: 4.5px;
+}
+
+.flow-kind-treasury-principal .flow-pipe-casing-outer {
+  stroke: color-mix(in srgb, var(--danger) 28%, var(--bg));
+}
+
+.flow-kind-treasury-principal .flow-pipe-lane {
+  stroke: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+.flow-kind-agentic-queued .flow-pipe-casing-outer {
+  stroke: color-mix(in srgb, var(--accent) 28%, var(--bg));
+}
+
+.flow-kind-agentic-queued .flow-pipe-lane {
+  stroke: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.plant-interior {
+  position: relative;
+  overflow: hidden;
+}
+
+.plant-interior-electrification {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 7%, transparent),
+      transparent 42%
+    ),
+    var(--surface);
+}
+
+.plant-interior-liquidity {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent-2) 8%, transparent),
+      transparent 42%
+    ),
+    var(--surface);
+}
+
+.plant-interior[data-welded="true"] {
+  outline: 1px dashed color-mix(in srgb, var(--danger) 50%, transparent);
+  outline-offset: -3px;
+}
+
+.plant-chrome {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  margin: -0.35rem 0 0.85rem;
+}
+
+.plant-busbar {
+  height: 0.28rem;
+  flex: 1;
+  background: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: 0 0.35rem 0 color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.plant-cell {
+  width: 1.35rem;
+  height: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.plant-tank {
+  width: 1.15rem;
+  height: 1.55rem;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 50%, var(--border));
+  border-radius: 0.55rem 0.55rem 0.2rem 0.2rem;
+  background: color-mix(in srgb, var(--accent-2) 12%, transparent);
+}
+
+.plant-valve {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 55%, var(--border));
+  transform: rotate(45deg);
+}
+
+.plant-chrome-mark {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.plant-weld {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+  color: var(--danger);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.plant-bay {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.flow-pipe-joint {
+  vector-effect: non-scaling-stroke;
 }

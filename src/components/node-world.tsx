@@ -14,6 +14,7 @@ import {
   Radio,
   Stamp,
   Users,
+  Zap,
 } from "lucide-react";
 import {
   AttestationStatusBadge,
@@ -30,7 +31,10 @@ import {
   capitalFlowsFor,
   drawableCapitalFlows,
   FLOW_KIND_LABEL,
+  mainBusLaneYs,
   nextAltitude,
+  plantSkinFor,
+  PLANT_SKIN_LABEL,
   redactedDecisionQuestion,
   redLocksByTarget,
   SLEEVE_LANE_LABEL,
@@ -43,6 +47,7 @@ import {
   type NodeSleeveOverlay,
   type NodeStampSummary,
   type NodeWorldCard,
+  type PlantSkin,
   type RedLockMark,
   type SleeveOverlayLane,
   type WorldAltitude,
@@ -134,6 +139,14 @@ export function NodeWorld() {
   }
 
   useEffect(() => {
+    if (!selectedTicker || altitude === "world") return;
+    document.getElementById("plant-interior")?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [selectedTicker, altitude]);
+
+  useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     const onWheel = (event: WheelEvent) => {
@@ -155,11 +168,11 @@ export function NodeWorld() {
   }
 
   return (
-    <div>
+    <div className="factory-floor">
       <PageHeader
         kicker="Home"
         title="Node world"
-        description="Twelve Resonance nodes as the outer layer — not a brokerage list. Scroll-wheel or +/− to change altitude. Click a box for the node level. Capital flow, Stamps, Sleeves, and Red locks are live overlays. Sensors and Carla stay stubbed."
+        description="Twelve Resonance nodes as the outer layer — not a brokerage list. Bottom hotbar holds overlay toggles, zoom, and the selected-node chip. Scroll-wheel or +/− still changes altitude. Click a box for the plant interior. Capital flow, Stamps, Sleeves, and Red locks are live overlays. Sensors and Carla stay stubbed."
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/nodes" className="btn btn-secondary">
@@ -179,28 +192,19 @@ export function NodeWorld() {
         or ticket sizes on this surface.
       </div>
 
-      <LayerRack layers={layers} onToggle={toggleLayer} />
       <OverlayKey
         showFlows={layers["capital-flow"]}
         showSleeves={layers.sleeves}
         showRedLocks={layers["red-locks"]}
       />
 
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <AltitudeControls
-          altitude={altitude}
-          selectedTicker={selectedTicker}
-          onZoom={zoom}
-          onSetAltitude={setAltitudeSafe}
-        />
-        <p className="text-xs text-[color:var(--muted)]">
-          {cards.length} nodes · wheel zooms the map
-        </p>
-      </div>
+      <p className="mb-3 text-xs text-[color:var(--muted)]">
+        {cards.length} nodes · wheel zooms the map · tools on the floor hotbar
+      </p>
 
       <div
         ref={canvasRef}
-        className="node-world mb-8"
+        className="node-world"
         tabIndex={0}
         aria-label="Resonance node world. Scroll to zoom altitude."
       >
@@ -249,8 +253,9 @@ export function NodeWorld() {
                 <p className="kicker col-span-3 text-right">Physical AI</p>
               </div>
               <div className="relative">
+                <MainBusGutter live={layers["capital-flow"]} />
                 <FlowOverlay flows={flows} visible={layers["capital-flow"]} />
-                <div className="grid grid-cols-7 gap-4">
+                <div className="grid grid-cols-7 gap-3">
                 {DESKTOP_ROW_ONE.map((id) =>
                   id === "TREASURY" ? (
                     <TreasuryWell
@@ -343,100 +348,115 @@ export function NodeWorld() {
         />
       ) : (
         <p className="text-sm text-[color:var(--muted)]">
-          Click a node box or zoom in to open the architecture level. OS tools
-          stay on the left rail: Decisions, Treasury, System health, Todos.
+          Click a node box or zoom in to open the plant interior. OS tools stay
+          on the left rail: Decisions, Treasury, System health, Todos.
         </p>
       )}
+
+      <FactoryHotbar
+        layers={layers}
+        altitude={altitude}
+        selectedTicker={selectedTicker}
+        selectedName={selected?.name ?? null}
+        selectedSkin={selected ? plantSkinFor(selected.ticker) : null}
+        onToggle={toggleLayer}
+        onZoom={zoom}
+        onSetAltitude={setAltitudeSafe}
+      />
     </div>
   );
 }
 
-function LayerRack({
+function FactoryHotbar({
   layers,
-  onToggle,
-}: {
-  layers: Record<WorldLayerId, boolean>;
-  onToggle: (id: WorldLayerId) => void;
-}) {
-  return (
-    <div
-      className="mb-6 flex flex-wrap gap-2"
-      role="toolbar"
-      aria-label="World layer toggles"
-    >
-      {WORLD_LAYERS.map((layer) => {
-        const Icon = LAYER_ICONS[layer.id];
-        const on = layers[layer.id];
-        return (
-          <button
-            key={layer.id}
-            type="button"
-            disabled={!layer.enabled}
-            title={layer.hint}
-            aria-pressed={layer.enabled ? on : undefined}
-            onClick={() => onToggle(layer.id)}
-            className={`btn ${on ? "btn-primary" : "btn-secondary"}`}
-          >
-            <Icon size={14} strokeWidth={1.7} />
-            {layer.label}
-            {!layer.enabled ? (
-              <span className="text-[10px] uppercase tracking-[0.12em] opacity-70">
-                stub
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function AltitudeControls({
   altitude,
   selectedTicker,
+  selectedName,
+  selectedSkin,
+  onToggle,
   onZoom,
   onSetAltitude,
 }: {
+  layers: Record<WorldLayerId, boolean>;
   altitude: WorldAltitude;
   selectedTicker: string | null;
+  selectedName: string | null;
+  selectedSkin: PlantSkin | null;
+  onToggle: (id: WorldLayerId) => void;
   onZoom: (direction: "in" | "out") => void;
   onSetAltitude: (altitude: WorldAltitude) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        className="btn btn-secondary px-2"
-        aria-label="Zoom out"
-        onClick={() => onZoom("out")}
+    <div className="factory-hotbar" role="toolbar" aria-label="Node world hotbar">
+      <div
+        className="hotbar-chip"
+        data-has-selection={selectedTicker ? "true" : "false"}
       >
-        <Minus size={14} />
-      </button>
-      <button
-        type="button"
-        className="btn btn-secondary px-2"
-        aria-label="Zoom in"
-        onClick={() => onZoom("in")}
-      >
-        <Plus size={14} />
-      </button>
-      {(["world", "node", "guts"] as const).map((level) => (
+        <span className="hotbar-chip-row">
+          <Hexagon size={14} strokeWidth={1.7} aria-hidden />
+          <span className="hotbar-chip-id">{selectedTicker ?? "—"}</span>
+        </span>
+        <span className="hotbar-chip-meta">
+          {selectedTicker
+            ? `${selectedName ?? selectedTicker} · ${altitude}${
+                selectedSkin ? ` · ${PLANT_SKIN_LABEL[selectedSkin]}` : ""
+              }`
+            : "No node"}
+        </span>
+      </div>
+      <div className="hotbar-divider" aria-hidden />
+      <div className="hotbar-slots">
+        {WORLD_LAYERS.map((layer) => {
+          const Icon = LAYER_ICONS[layer.id];
+          const on = layers[layer.id];
+          return (
+            <button
+              key={layer.id}
+              type="button"
+              disabled={!layer.enabled}
+              title={layer.hint}
+              aria-pressed={layer.enabled ? on : undefined}
+              onClick={() => onToggle(layer.id)}
+              className={`hotbar-slot ${on ? "is-on" : ""}`}
+            >
+              <Icon size={14} strokeWidth={1.7} />
+              <span className="hotbar-slot-label">{layer.label}</span>
+              {!layer.enabled ? <span className="hotbar-stub">stub</span> : null}
+            </button>
+          );
+        })}
+      </div>
+      <div className="hotbar-divider" aria-hidden />
+      <div className="hotbar-zoom">
         <button
-          key={level}
           type="button"
-          className={`btn ${altitude === level ? "btn-primary" : "btn-secondary"}`}
-          onClick={() => onSetAltitude(level)}
+          className="hotbar-slot hotbar-slot-icon"
+          aria-label="Zoom out"
+          onClick={() => onZoom("out")}
         >
-          {level === "world" ? "World" : level === "node" ? "Node" : "Guts"}
+          <Minus size={14} />
         </button>
-      ))}
-      <span className="text-xs text-[color:var(--muted)]">
-        {altitude === "world"
-          ? "Outer layer"
-          : selectedTicker
-            ? `${selectedTicker} · ${altitude}`
-            : altitude}
-      </span>
+        <button
+          type="button"
+          className="hotbar-slot hotbar-slot-icon"
+          aria-label="Zoom in"
+          onClick={() => onZoom("in")}
+        >
+          <Plus size={14} />
+        </button>
+        {(["world", "node", "guts"] as const).map((level) => (
+          <button
+            key={level}
+            type="button"
+            className={`hotbar-slot ${altitude === level ? "is-on" : ""}`}
+            onClick={() => onSetAltitude(level)}
+          >
+            <span className="hotbar-slot-label">
+              {level === "world" ? "World" : level === "node" ? "Node" : "Guts"}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -708,6 +728,28 @@ function AgenticDock({
   );
 }
 
+function MainBusGutter({ live }: { live: boolean }) {
+  return (
+    <svg
+      className={`main-bus-gutter ${live ? "is-live" : ""}`}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {mainBusLaneYs().map((y) => (
+        <line
+          key={y}
+          x1="3.5"
+          x2="96.5"
+          y1={y}
+          y2={y}
+          className="main-bus-lane"
+        />
+      ))}
+    </svg>
+  );
+}
+
 function FlowOverlay({
   flows,
   visible,
@@ -729,18 +771,20 @@ function FlowOverlay({
           key={flow.id}
           className={`flow-pipe-group flow-kind-${flow.kind}`}
         >
+          <path d={flow.path} className="flow-pipe-casing-outer" />
           <path d={flow.path} className="flow-pipe-casing" />
+          <path d={flow.path} className="flow-pipe-lane" />
           <path d={flow.path} className="flow-pipe-inner" />
           <circle
             cx={flow.fromPoint.x}
             cy={flow.fromPoint.y}
-            r="1.45"
+            r="1.55"
             className="flow-pipe-joint"
           />
           <circle
             cx={flow.toPoint.x}
             cy={flow.toPoint.y}
-            r="1.45"
+            r="1.55"
             className="flow-pipe-joint"
           />
         </g>
@@ -876,12 +920,22 @@ function NodeDetailLevel({
   onGuts: () => void;
 }) {
   const showGuts = altitude === "guts";
+  const skin = plantSkinFor(card.ticker) ?? "liquidity";
+  const welded = Boolean(redLock || treasuryLock);
   return (
-    <section className="card">
+    <section
+      id="plant-interior"
+      className={`card plant-interior plant-interior-${skin}`}
+      data-plant-skin={skin}
+      data-welded={welded ? "true" : "false"}
+    >
+      <PlantChrome skin={skin} welded={welded} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="kicker">
             {showGuts ? "Guts · architecture" : "Node level"}
+            {" · "}
+            {PLANT_SKIN_LABEL[skin]}
           </p>
           <h2 className="mt-1 font-mono text-xl">{card.ticker}</h2>
           <p className="mt-1 text-sm text-[color:var(--muted)]">{card.name}</p>
@@ -903,7 +957,7 @@ function NodeDetailLevel({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="plant-bays mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ArchStub
           kicker="Web2 record"
           title="Board row"
@@ -1044,6 +1098,43 @@ function NodeDetailLevel({
   );
 }
 
+function PlantChrome({
+  skin,
+  welded,
+}: {
+  skin: PlantSkin;
+  welded: boolean;
+}) {
+  return (
+    <div className={`plant-chrome plant-chrome-${skin}`} aria-hidden>
+      {skin === "electrification" ? (
+        <>
+          <span className="plant-busbar" />
+          <span className="plant-busbar" />
+          <span className="plant-cell" />
+          <span className="plant-cell" />
+          <span className="plant-cell" />
+          <Zap size={14} className="plant-chrome-mark" />
+        </>
+      ) : (
+        <>
+          <span className="plant-tank" />
+          <span className="plant-tank" />
+          <span className="plant-tank" />
+          <span className="plant-valve" />
+          <GitFork size={14} className="plant-chrome-mark" />
+        </>
+      )}
+      {welded ? (
+        <span className="plant-weld">
+          <Lock size={11} />
+          Welded
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function ArchStub({
   kicker,
   title,
@@ -1056,7 +1147,7 @@ function ArchStub({
   href?: string | null;
 }) {
   return (
-    <div className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg)] px-3 py-3">
+    <div className="plant-bay rounded-lg border border-[color:var(--border)] bg-[color:var(--bg)] px-3 py-3">
       <p className="kicker">{kicker}</p>
       <p className="mt-2 text-sm">{title}</p>
       {href ? (
