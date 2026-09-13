@@ -111,6 +111,42 @@ export function deleteDecisionFromEnvelope(
   };
 }
 
+/** Operator ack only. Does not talk to Hedera or invent a message id. */
+export function attestDecisionInEnvelope(
+  envelope: DecisionsStoreEnvelope,
+  id: string,
+  now = new Date().toISOString(),
+): {
+  envelope: DecisionsStoreEnvelope;
+  found: boolean;
+  decision: Decision | null;
+} {
+  const current = envelope.decisions.find((row) => row.id === id) ?? null;
+  if (!current) {
+    return { envelope, found: false, decision: null };
+  }
+  const nextStatus =
+    current.attestationStatus === "web2_only"
+      ? "pending_operator_ack"
+      : current.attestationStatus;
+  const decision: Decision = {
+    ...current,
+    attestationStatus: nextStatus,
+    attestedAt: current.attestedAt || now,
+  };
+  return {
+    envelope: {
+      ...envelope,
+      updatedAt: now,
+      decisions: envelope.decisions.map((row) =>
+        row.id === id ? decision : row,
+      ),
+    },
+    found: true,
+    decision,
+  };
+}
+
 export function decisionsStoreHealth(input: {
   configured: boolean;
   backend: DecisionsStoreBackend;

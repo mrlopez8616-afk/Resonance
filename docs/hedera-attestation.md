@@ -20,4 +20,4 @@ Founder-locked: **Hedera Hashgraph** is the primary attestation / hashgraph witn
 3. **Public view** (`/public`) shows attestation status, reserved memo hash / timestamp (Hedera id when live), **not dollar amounts**.
 4. Main Robinhood lots and Xaman principal never appear in a public memo.
 
-No Hedera SDK, operator keys, or network calls in this phase.
+The **Attest** button on `/decisions/[id]` is operator ack only: it promotes `web2_only` → `pending_operator_ack` and stamps `attestedAt`. `POST /api/attest` does the same. No Hedera SDK, operator keys, or network calls in this phase.

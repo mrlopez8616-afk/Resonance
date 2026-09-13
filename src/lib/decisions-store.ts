@@ -10,6 +10,7 @@ import {
   createEmptyEnvelope,
   DEFAULT_DECISIONS_FILE,
   DECISIONS_BLOB_PATH,
+  attestDecisionInEnvelope,
   deleteDecisionFromEnvelope,
   detectDecisionsBackend,
   ensureSeededEnvelope,
@@ -150,6 +151,30 @@ export async function mergeDecisionsWrite(body: unknown): Promise<{
   const envelope = writeDecisionsIntoEnvelope(loaded.envelope, items);
   await persistEnvelope(envelope);
   return { envelope, backend: loaded.backend, seeded: loaded.seeded };
+}
+
+export async function attestStoredDecision(id: string): Promise<{
+  envelope: DecisionsStoreEnvelope;
+  backend: DecisionsStoreBackend;
+  found: boolean;
+  decision: import("./types").Decision | null;
+}> {
+  if (!isDecisionsSyncConfigured()) {
+    throw new DecisionsStoreError(
+      "Decision sync is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadDecisionsStore();
+  const attested = attestDecisionInEnvelope(loaded.envelope, id);
+  if (attested.found) {
+    await persistEnvelope(attested.envelope);
+  }
+  return {
+    envelope: attested.envelope,
+    backend: loaded.backend,
+    found: attested.found,
+    decision: attested.decision,
+  };
 }
 
 export async function deleteStoredDecision(id: string): Promise<{

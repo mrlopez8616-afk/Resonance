@@ -233,7 +233,11 @@ export default function OverviewPage() {
           ) : (
             <div className="space-y-3">
               {lastDecisions.map((item) => (
-                <div key={item.id} className="card">
+                <Link
+                  key={item.id}
+                  href={`/decisions/${encodeURIComponent(item.id)}`}
+                  className="card block"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="kicker">{item.date}</p>
@@ -258,7 +262,7 @@ export default function OverviewPage() {
                       Outcome: {item.outcome}
                     </p>
                   ) : null}
-                </div>
+                </Link>
               ))}
             </div>
           )}

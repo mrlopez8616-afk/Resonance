@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { LOCKED_DECISIONS_2026_09_11 } from "./decisions";
 import { collectWriteItems } from "./decision-write";
 import {
+  attestDecisionInEnvelope,
   createEmptyEnvelope,
   createSeededEnvelope,
   decisionsStoreHealth,
@@ -85,6 +86,21 @@ describe("decisions store core", () => {
       true,
     );
     assert.equal(isDecisionsSyncConfigured({ VERCEL: "1" }), false);
+  });
+
+  it("operator attest promotes web2_only without inventing a Hedera id", () => {
+    const seeded = createSeededEnvelope("2026-09-12T00:00:00.000Z");
+    const result = attestDecisionInEnvelope(
+      seeded,
+      "D-2026-09-11-01",
+      "2026-09-13T12:00:00.000Z",
+    );
+    assert.equal(result.found, true);
+    assert.equal(result.decision?.attestationStatus, "pending_operator_ack");
+    assert.equal(result.decision?.attestedAt, "2026-09-13T12:00:00.000Z");
+    assert.equal(result.decision?.hederaMessageId, null);
+    const missing = attestDecisionInEnvelope(seeded, "D-missing");
+    assert.equal(missing.found, false);
   });
 
   it("health payload has counts, not decision text", () => {

@@ -71,7 +71,7 @@ curl -X PATCH https://YOUR-APP.vercel.app/api/decisions \
   -d '{"id":"D-2026-09-11-03","outcome":"PWR $35 and VRT $17 FILLED at Monday open.","evidence":"RH order ids here"}'
 ```
 
-Open **/decisions**. The row shows filled. No file import.
+Open **/decisions**, click the `2026-09-11` folder, then the decision file. The row shows filled. No file import.
 
 `GET /api/public` and **/public** still omit dollar amounts, outcomes, and receipts. Full rows are only on `/api/decisions` (cookie or Bearer).
 
@@ -100,7 +100,7 @@ No user accounts or API keys are required. Production should lock the site with 
 - **Nodes** — twelve tracking slots: digital BTC ETH SOL XRP SUI FLR; physical US equities PWR ETN VRT GEV CEG HUBB. Main-sleeve learning lots ship funded from the Robinhood snapshot example. Editable name, thesis, failure condition, position status `none | watch | funded`, sleeve, manual last price, plus optional holding fields `quantity`, `averageCost`, `venue`, `lastSyncedAt`, `syncSource`. Each node has a stable `id` plus optional `links[]` (directed edges) so a later systems map can render without a schema break.
 - **Robinhood / Agentic** — Main (read-only learning / flatten Monday) vs Agentic (autonomous risk sleeve). Venue badges. Queued ≠ filled. The app never places trades.
 - **Prices** — optional public crypto quotes (CoinGecko, Binance fallback) and unpaid equity feeds when they respond. Otherwise a visible **no live feed** state; type USD on Nodes. Failed fetches never show invented numbers. The rest of the board does not depend on this page.
-- **Decisions** — Phase Zero **record book**. Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`). Shared store: `GET/POST/PATCH /api/decisions` (merge by id). `fingerprint` is reserved for a later on-chain hash — unused now. JSON import is the fallback.
+- **Decisions** — Phase Zero **record book** as a file archive. Date folders → decision files → full record on `/decisions/[id]`. Operator to-do list on the same tab (`GET/POST/PATCH /api/todos`). Dated ID, question, proposal, options, founder decision, why, who authorized, outcome (queued ≠ filled), receipt, review trigger, status (`pending | decided | superseded`), Attest (operator ack). Shared store: `GET/POST/PATCH /api/decisions` (merge by id). `fingerprint` is reserved for a later on-chain hash — unused now. JSON import is the fallback.
 - **Settings** — session lock, treasury defaults, venues, **Import holdings snapshot** (paste JSON, preview, apply), optional public XRPL address stored for a *future* read-only watch, full JSON export/import, reset to seed.
 
 Badges:
@@ -116,11 +116,20 @@ Venues (editable): Robinhood (fractional equities + small XRP bag), Coinbase (ge
 
 ## Decisions record book
 
-Decisions is the durable, visible log for founder Andres López — the Phase Zero OS record book. Hub (Resonance Operations) writes structured entries in chat; this page shows them and **imports/merges by decision ID** so hub and site stay aligned without wiping unrelated local rows.
+Decisions is the durable, visible log for founder Andres López — the Phase Zero OS record book. It now looks like a file archive: **date folders**, then **decision files**, then the full record. Hub (Resonance Operations) writes structured entries in chat; this page shows them and **imports/merges by decision ID** so hub and site stay aligned without wiping unrelated local rows.
+
+How to read it:
+
+1. Open **Decisions → Archive**.
+2. Click a date folder (example: `2026-09-11`).
+3. Click a file (`D-2026-09-11-01` … `04`).
+4. Use **← Archive** or **Back to folder** to climb back out.
+
+The **To-do** sub-tab is the operator list (add, check off, delete, optional link to a decision). It uses `/api/todos` and a sibling Blob file (`resonance/todos.json`) when Blob is configured, so the list survives across devices. localStorage is only a cache.
 
 A fresh browser loads tonight’s locked records from seed (`D-2026-09-11-01` … `D-2026-09-11-04`). The shared store seeds those same four ids on first boot if empty. Existing browsers can still merge the file: [`public/examples/decisions-record-book.json`](public/examples/decisions-record-book.json). Export decisions JSON from the page for backup.
 
-Hub writes go to `POST` / `PATCH /api/decisions` (Bearer `RESONANCE_SYNC_SECRET` or the site password). The Decisions page pulls that store and keeps `localStorage` as the offline cache. JSON import remains if sync is off. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
+Hub writes go to `POST` / `PATCH /api/decisions` (Bearer `RESONANCE_SYNC_SECRET` or the site password). Operator ack is `POST /api/attest` with `{ "id": "D-2026-09-11-01" }` — it does not talk to Hedera. The Decisions page pulls that store and keeps `localStorage` as the offline cache. JSON import remains if sync is off. On-chain / XRS recording is **out of scope** for Phase Zero (Web2 only). No wallet signing, no private keys. `fingerprint` stays null until that phase.
 
 Recording-pipeline doctrine (future sensor path, public channel vs gated amounts, export → XRPL/XRS): [`docs/recording-pipeline.md`](docs/recording-pipeline.md).
 
@@ -192,4 +201,4 @@ Server route: `GET /api/prices` (60s cache). Quotes that cannot be fetched are o
 
 ## Stack
 
-Next.js (App Router) + TypeScript + Tailwind. Client state in React context; persistence in `localStorage`, plus a private Vercel Blob JSON file for shared Decisions. Public market data via Next.js Route Handlers so the browser does not hit CORS-blocked finance APIs directly.
+Next.js (App Router) + TypeScript + Tailwind. Client state in React context; persistence in `localStorage`, plus private Vercel Blob JSON files for shared Decisions and operator to-dos. Public market data via Next.js Route Handlers so the browser does not hit CORS-blocked finance APIs directly.
