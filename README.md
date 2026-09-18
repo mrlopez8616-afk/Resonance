@@ -2,6 +2,8 @@
 
 Phase Zero personal operating dashboard for founder **Andres López**.
 
+**Resonance 2.0** (Agentic sleeve fill log) is a separate Next.js app in [`resonance-2/`](resonance-2/). Point a new Vercel project at Root Directory `resonance-2`. This Phase Zero dashboard is unchanged.
+
 A single-user Web2 tracker for treasury, nodes, decisions, and rewards. It is the first piece of an eventual larger OS. Phase Zero is **human-governed** and **manual-first**: you type the books so you learn the operating system. Live prices are optional. The app remembers the board in the browser. Decisions can also sync to a shared store so every device sees the same record book.
 
 ## Run locally
