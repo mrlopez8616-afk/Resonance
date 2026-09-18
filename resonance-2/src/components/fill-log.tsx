@@ -5,10 +5,12 @@ function Field({
   label,
   value,
   tone,
+  wrap = "normal",
 }: {
   label: string;
   value: string;
   tone?: "buy" | "sell" | "ok";
+  wrap?: "normal" | "id";
 }) {
   const toneClass =
     tone === "buy"
@@ -18,14 +20,15 @@ function Field({
         : tone === "ok"
           ? "text-[color:var(--ok)]"
           : "text-[color:var(--text)]";
+  const wrapClass = wrap === "id" ? "break-all" : "break-words";
 
   return (
-    <div className="grid grid-cols-[5.75rem_minmax(0,1fr)] items-baseline gap-x-3 border-t border-[color:var(--border)] py-2.5 first:border-t-0 first:pt-0">
+    <div className="grid grid-cols-[4.75rem_minmax(0,1fr)] items-baseline gap-x-3 border-t border-[color:var(--border)] py-2.5 first:border-t-0 first:pt-0 sm:grid-cols-[5.75rem_minmax(0,1fr)]">
       <dt className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-[color:var(--muted)]">
         {label}
       </dt>
       <dd
-        className={`min-w-0 break-all font-[family-name:var(--font-geist-mono)] text-[0.92rem] leading-6 ${toneClass}`}
+        className={`min-w-0 font-[family-name:var(--font-geist-mono)] text-[0.92rem] leading-6 ${wrapClass} ${toneClass}`}
       >
         {value}
       </dd>
@@ -46,7 +49,7 @@ export function FillCard({ fill }: { fill: Fill }) {
         />
         <Field label="quantity" value={fill.quantity} />
         <Field label="price" value={fill.price} />
-        <Field label="orderId" value={fill.orderId} />
+        <Field label="orderId" value={fill.orderId} wrap="id" />
         <Field label="result" value={fill.result} tone="ok" />
       </dl>
     </article>

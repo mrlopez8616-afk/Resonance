@@ -15,5 +15,5 @@ export function formatFillTime(iso: string): string {
   const match = FILL_TIME.exec(iso);
   if (!match) return iso;
   const offset = match[3] === "Z" ? "UTC" : match[3];
-  return `${match[1]} ${match[2]} ${offset}`;
+  return `${match[1]} ${match[2]}${offset === "UTC" ? " UTC" : offset}`;
 }
