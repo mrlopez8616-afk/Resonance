@@ -8,7 +8,7 @@ SUI is the second live node. Do not copy-paste a third face. Reuse the shared pi
 | --- | --- | --- |
 | Live face UI | `src/components/live-node-face.tsx` | Ticker and `$price` share the same large size; `{units} tokens`, `~$usd live`, and sleeve rows step down and stay inside the square. Polls `/api/spot-price?ticker=` and `/api/sleeves?ticker=` |
 | Face shape | `src/lib/live-face.ts` → `LiveFaceData` / `assembleLiveFace(ticker, sleeves, quote)` | Positions from config. Only `quote.usd` is live. Face qty is `formatSleeveQuantity(quantity)` — `note` is not painted |
-| Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | `quantity` string + optional `note` (off-face copy only; SUI Coinbase shows a clean qty) |
+| Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | `quantity` string. Face rows are label + quantity only. |
 | Spot price | `src/lib/spot-price.ts` → `fetchSpotUsd(ticker)` | CoinGecko → Binance. Add the ticker to `SPOT_TICKERS` + `FEEDS` |
 | Price route | `GET /api/spot-price?ticker=SUI` | Same JSON as the old `/api/xrp-price` (`usd`, `source`, `fetchedAt`) |
 | Tile | `src/components/node-square.tsx` | Flip the row in `FLOOR_NODES` to `live` |
