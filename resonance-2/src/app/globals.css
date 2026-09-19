@@ -303,53 +303,46 @@ body {
 
 .live-head {
   display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
   min-width: 0;
-}
-
-.live-head .node-ticker {
-  flex: 0 0 auto;
-}
-
-.live-head-dot {
-  color: #5f6872;
-  font-size: 0.85rem;
 }
 
 .live-price {
   min-width: 0;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.95rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #f4f6f8;
-}
-
-.live-units {
-  margin-top: 0.45rem;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-size: clamp(1.45rem, 2.6vw, 1.9rem);
   font-weight: 500;
   letter-spacing: -0.03em;
   color: #f4f6f8;
 }
 
-.live-units span,
-.live-value span {
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.68rem;
+.live-units,
+.live-value {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.88rem;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #6b7380;
+  letter-spacing: -0.01em;
+  color: #c9d0d6;
+}
+
+.live-units {
+  margin-top: 0.45rem;
 }
 
 .live-value {
   margin-top: 0.12rem;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.95rem;
-  color: #d7dde2;
+}
+
+.live-units span,
+.live-value span {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b7380;
 }
 
 .live-sleeves {

@@ -6,7 +6,7 @@ SUI is the second live node. Do not copy-paste a third face. Reuse the shared pi
 
 | Piece | Path | Use |
 | --- | --- | --- |
-| Live face UI | `src/components/live-node-face.tsx` | `TICKER · $price`, `{units} total`, `~$usd live`, then sleeve rows. Polls `/api/spot-price?ticker=` |
+| Live face UI | `src/components/live-node-face.tsx` | Ticker, large `$price`, then `{units} tokens` and `~$usd live` at the same smaller size, then sleeve rows. Polls `/api/spot-price?ticker=` |
 | Face shape | `src/lib/live-face.ts` → `LiveFaceData` / `assembleLiveFace(ticker, sleeves, quote)` | Positions from config. Only `quote.usd` is live |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | `quantity` string + optional `note` (buy-print / staked copy) |
 | Spot price | `src/lib/spot-price.ts` → `fetchSpotUsd(ticker)` | CoinGecko → Binance. Add the ticker to `SPOT_TICKERS` + `FEEDS` |
@@ -21,7 +21,7 @@ XRP still uses this same stack. Thin aliases remain at `src/lib/xrp-face.ts` and
 
 - RH Agentic: `8.931` SUI
 - Coinbase: `33.7` with `note: "buy print / staked"` — Coinbase Advanced Trade (2026-09-19) `balance` SUI available=0 hold=0 (staking not exposed on this API key). Face uses the sum of SUI-USD **FILLED buys** only: 16.9 + 16.8 = 33.7. Sells on this book: none. Do **not** invent a separate stake size beyond 33.7.
-- Headline totals: `8.931 + 33.7 = 42.631 total`, then `42.631 × live SUI-USD` as `~$… live`.
+- Headline: `8.931 + 33.7 = 42.631 tokens`, then `42.631 × live SUI-USD` as `~$… live`. Price is the large number; tokens and live USD share a smaller size.
 - No Flare vault
 - No Xaman / gas wallet address
 

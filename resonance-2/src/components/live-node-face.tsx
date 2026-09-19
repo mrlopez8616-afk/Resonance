@@ -75,16 +75,13 @@ export function LiveNodeFace({
     <div className="live-face">
       <header className="live-head">
         <h2 className="node-ticker">{ticker}</h2>
-        <span className="live-head-dot" aria-hidden>
-          ·
-        </span>
         <p className="live-price" title={priceTitle}>
           {face.priceLabel}
         </p>
       </header>
       <p className="live-units">
         {face.totalUnitsLabel}
-        <span> total</span>
+        <span> tokens</span>
       </p>
       <p className="live-value">
         {face.totalUsdLabel}
