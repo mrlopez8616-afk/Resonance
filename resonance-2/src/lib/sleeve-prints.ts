@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { NodeSleeve } from "@/data/sleeves";
+import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { listFills } from "./fills";
@@ -9,15 +10,17 @@ import { loadFillsStore, liveSleevesFromEnvelope } from "./fills-store";
 export async function loadLiveSleeveBooks(): Promise<{
   XRP: readonly NodeSleeve[];
   SUI: readonly NodeSleeve[];
+  PWR: readonly NodeSleeve[];
 }> {
   try {
     const loaded = await loadFillsStore();
     return {
       XRP: liveSleevesFromEnvelope(loaded.envelope, "XRP") ?? XRP_SLEEVES,
       SUI: liveSleevesFromEnvelope(loaded.envelope, "SUI") ?? SUI_SLEEVES,
+      PWR: liveSleevesFromEnvelope(loaded.envelope, "PWR") ?? PWR_SLEEVES,
     };
   } catch {
-    return { XRP: XRP_SLEEVES, SUI: SUI_SLEEVES };
+    return { XRP: XRP_SLEEVES, SUI: SUI_SLEEVES, PWR: PWR_SLEEVES };
   }
 }
 

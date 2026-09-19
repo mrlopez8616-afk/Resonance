@@ -12,12 +12,12 @@ Reuse the existing operator log and live faces. Do not invent a second fill card
 | Log UI | `src/components/fill-log.tsx` | Same `FillLog` / `FillCard` |
 | Sort | `src/lib/fills.ts` → `listFills` | Newest `time` first |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | Quantity stays a string |
-| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts` | Fallback when the durable store has no override |
+| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts` | Fallback when the durable store has no override |
 | Face | `assembleLiveFace` + `LiveNodeFace` | Positions from merged sleeves. Only `quote.usd` is a live price |
 | Auth spirit | Phase Zero `RESONANCE_SYNC_SECRET` Bearer | Server-only. Never `NEXT_PUBLIC_*` |
 | Store spirit | Phase Zero Blob + local file | Private JSON envelope. Local/dev writes `.data/fills.json` |
 
-Live floor remains **XRP + SUI only**. Locked 12 nodes only — never invent a ticker or a sleeve id.
+Live floor is **XRP + SUI + PWR**. Locked 12 nodes only — never invent a ticker or a sleeve id. PWR is an equity face ([`pwr-face.md`](./pwr-face.md)); ingest may write `rh-agentic` only.
 
 ## Who writes what
 
@@ -134,12 +134,12 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 
 ### Which sleeve ids update
 
-| Sleeve id | XRP | SUI | Writer |
-| --- | --- | --- | --- |
-| `rh-main` | yes | **no** (SUI has no Main line) | ingest, venue `robinhood` only |
-| `rh-agentic` | yes | yes | ingest, venue `robinhood` only |
-| `coinbase` | yes | yes | ingest, venue `coinbase` only |
-| `flare-vault` | yes (XRP only) | no such line | **founder / typed constant only** |
+| Sleeve id | XRP | SUI | PWR | Writer |
+| --- | --- | --- | --- | --- |
+| `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | ingest, venue `robinhood` only |
+| `rh-agentic` | yes | yes | yes (`0.001578` seed, shares) | ingest, venue `robinhood` only |
+| `coinbase` | yes | yes | **no** (PWR has no Coinbase line) | ingest, venue `coinbase` only |
+| `flare-vault` | yes (XRP only) | no such line | no such line | **founder / typed constant only** |
 
 Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print:
 
@@ -158,9 +158,9 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 
 ### Live vs offline tickers
 
-- **Live books today:** XRP, SUI. Sleeve apply runs only when that ticker already has the named sleeve id.
-- **Unknown sleeve on a live book** (example: `SUI` + `rh-main`) → **400**. Do not invent a row.
-- **Locked but offline ticker** (PWR, ETN, …) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
+- **Live books today:** XRP, SUI, PWR. Sleeve apply runs only when that ticker already has the named sleeve id.
+- **Unknown sleeve on a live book** (example: `SUI` + `rh-main`, or `PWR` + `coinbase`) → **400**. Do not invent a row.
+- **Locked but offline ticker** (ETN, VRT, …) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
 - Unknown ticker outside the locked 12 → **400**.
 
 ## Durable envelope

@@ -1,8 +1,8 @@
 # Cabinet note — SUI face
 
-SUI is the second live node. Do not copy-paste a third face. Reuse the shared pieces that this brick extracted from XRP.
+SUI is the second live node. PWR (equity) is the third — start at [`pwr-face.md`](./pwr-face.md). Do not copy-paste a fourth face.
 
-## Reuse for the next live node (PWR / physical AI, or the next crypto)
+## Reuse for the next live node (another equity, or the next crypto)
 
 | Piece | Path | Use |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ When a server-side Coinbase connector exists: if `available`/`hold` are both 0, 
 
 1. Keep `OperatorShell` / `NodeSquare` / `LiveNodeFace`.
 2. Add `src/data/<ticker>-sleeves.ts` (or skip sleeves if the node is watch-only).
-3. Register the ticker in `SPOT_TICKERS` **only if** it has a public spot USD feed. Equities need a different server helper — do not pretend CoinGecko has PWR.
+3. Register the ticker in `SPOT_TICKERS` **only if** it has a public crypto spot USD feed. Equities reuse `src/lib/equity-price.ts` — do not pretend CoinGecko has PWR.
 4. Flip `FLOOR_NODES` to `live` and pass the assembled face from `src/app/page.tsx`.
 5. Wire broker connectors server-side only.
 
