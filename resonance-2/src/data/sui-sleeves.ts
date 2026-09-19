@@ -30,6 +30,5 @@ export const SUI_SLEEVES: SuiSleeve[] = [
     quantity: "33.7",
     source: "coinbase-config",
     manual: false,
-    note: "buy print / staked",
   },
 ];

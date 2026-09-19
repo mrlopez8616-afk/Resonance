@@ -246,7 +246,7 @@ body {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 0.95rem 1.85rem 0.85rem 1rem;
+  padding: 0.75rem 1.7rem 0.55rem 0.85rem;
   border: 1px solid #262b32;
   border-radius: 0.7rem;
   background: #101214;
@@ -261,6 +261,7 @@ body {
 }
 
 .node-square.is-live {
+  overflow: hidden;
   border-color: var(--live);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--live) 35%, transparent),
@@ -354,6 +355,7 @@ body {
   flex: 1 1 auto;
   height: 100%;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .live-head {
@@ -366,7 +368,7 @@ body {
 
 .live-face .node-ticker,
 .live-price {
-  font-size: clamp(1.5rem, 2.7vw, 2rem);
+  font-size: clamp(1.18rem, 2.05vw, 1.52rem);
   font-weight: 600;
   line-height: 1.05;
   color: #f4f6f8;
@@ -378,21 +380,26 @@ body {
 
 .live-price {
   min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   letter-spacing: -0.03em;
 }
 
 .live-units,
 .live-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: clamp(1.14rem, 1.85vw, 1.3rem);
+  font-size: clamp(0.84rem, 1.28vw, 0.96rem);
   font-weight: 500;
   letter-spacing: -0.01em;
   color: #c9d0d6;
 }
 
 .live-units {
-  margin-top: 0.7rem;
+  margin-top: 0.32rem;
 }
 
 .live-value {
@@ -402,7 +409,7 @@ body {
 .live-units span,
 .live-value span {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.58rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -413,24 +420,26 @@ body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.9rem;
+  justify-content: flex-start;
+  gap: 0.18rem;
+  margin-top: 0.38rem;
   min-height: 0;
+  overflow: hidden;
 }
 
 .live-sleeves li {
   display: grid;
+  min-width: 0;
   grid-template-columns: 0.6rem minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 1.05rem;
-  line-height: 1.25;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  line-height: 1.15;
 }
 
 .sleeve-mark {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.36rem;
+  height: 0.36rem;
   border: 1px solid #8b939c;
   border-radius: 999px;
 }
@@ -440,17 +449,21 @@ body {
   min-width: 0;
   align-items: baseline;
   gap: 0.4rem;
+  overflow-wrap: anywhere;
   color: #8b939c;
 }
 
 .sleeve-manual {
-  font-size: 0.7rem;
+  font-size: 0.52rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #5f6872;
 }
 
 .sleeve-qty {
+  max-width: 7.25rem;
+  text-align: right;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   color: #c9d0d6;
 }
@@ -609,6 +622,31 @@ body {
     aspect-ratio: auto;
     min-height: 17rem;
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-height: 760px) {
+  .live-face .node-ticker,
+  .live-price {
+    font-size: clamp(1.05rem, 1.8vw, 1.28rem);
+  }
+
+  .live-units,
+  .live-value {
+    font-size: clamp(0.76rem, 1.1vw, 0.86rem);
+  }
+
+  .live-units {
+    margin-top: 0.22rem;
+  }
+
+  .live-sleeves {
+    gap: 0.12rem;
+    margin-top: 0.26rem;
+  }
+
+  .live-sleeves li {
+    font-size: 0.66rem;
   }
 }
 

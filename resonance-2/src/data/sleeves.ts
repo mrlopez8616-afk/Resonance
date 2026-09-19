@@ -6,7 +6,7 @@ export type SleeveSource =
 /**
  * One sleeve row on a live node face.
  * `quantity` is a typed last-known print (string so it stays exact).
- * `note` is optional face copy (e.g. buy print / staked) — not a second number.
+ * `note` is optional internal copy. Live faces show label + quantity only.
  */
 export type NodeSleeve = {
   id: string;
