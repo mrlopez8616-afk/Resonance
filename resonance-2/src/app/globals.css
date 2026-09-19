@@ -354,6 +354,7 @@ body {
   flex: 1 1 auto;
   height: 100%;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .live-head {
@@ -378,12 +379,17 @@ body {
 
 .live-price {
   min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   letter-spacing: -0.03em;
 }
 
 .live-units,
 .live-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: clamp(0.84rem, 1.28vw, 0.96rem);
   font-weight: 500;
@@ -417,6 +423,7 @@ body {
   gap: 0.18rem;
   margin-top: 0.38rem;
   min-height: 0;
+  overflow: hidden;
 }
 
 .live-sleeves li {
@@ -451,6 +458,9 @@ body {
 }
 
 .sleeve-qty {
+  max-width: 7.25rem;
+  text-align: right;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   color: #c9d0d6;
 }

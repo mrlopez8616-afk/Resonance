@@ -101,7 +101,7 @@ export function assembleLiveFace(
       id: sleeve.id,
       label: sleeve.label,
       quantity: sleeve.quantity,
-      quantityLabel: formatSleeveQuantity(sleeve.quantity, sleeve.note),
+      quantityLabel: formatSleeveQuantity(sleeve.quantity),
       source: sleeve.source,
       manual: sleeve.manual,
       note: sleeve.note,
