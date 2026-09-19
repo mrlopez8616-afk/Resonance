@@ -49,7 +49,6 @@ function RailButton({
         href={href}
         aria-current={active ? "page" : undefined}
         aria-label={label}
-        title={label}
         data-tooltip={label}
         className={className}
       >
@@ -63,7 +62,6 @@ function RailButton({
       tabIndex={0}
       aria-disabled="true"
       aria-label={`${label} (not wired)`}
-      title={label}
       data-tooltip={label}
       className={className}
     >

@@ -156,6 +156,12 @@ body {
   margin-top: auto;
 }
 
+.operator-tool-footer::after {
+  top: auto;
+  bottom: 0.15rem;
+  transform: none;
+}
+
 .operator-canvas {
   display: flex;
   min-width: 0;
