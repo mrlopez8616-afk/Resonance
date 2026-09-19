@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Resonance 2.0",
   description:
-    "Agentic sleeve only. Main and the vault are not shown here.",
+    "Operator floor. Live XRP node. Vault locked. Gas wallet hidden.",
 };
 
 export const viewport: Viewport = {

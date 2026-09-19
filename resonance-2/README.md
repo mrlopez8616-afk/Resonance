@@ -1,10 +1,21 @@
 # Resonance 2.0
 
-Agentic sleeve fill log. **Main and the vault are not shown here.**
+Operator floor for Resonance 2.0. **Only XRP is live.** Other node squares are offline placeholders. The Xaman gas wallet is never shown.
 
-This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point a new Vercel project at Root Directory `resonance-2`.
+This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
-Rows come only from [`src/data/fills.ts`](src/data/fills.ts). There is no live brokerage, no seeds, no keys, and no account numbers.
+## Surfaces
+
+- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. XRP face shows live XRP-USD plus sleeve quantities.
+- `/log` — existing agentic sleeve fill log. Same toolbar. Rows still come only from [`src/data/fills.ts`](src/data/fills.ts).
+
+## XRP face (this brick)
+
+Sleeve quantities are typed placeholders in [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (last known Resonance check). Live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/xrp-price.ts`](src/lib/xrp-price.ts). The next brick can replace those quantities with server-side Robinhood / Coinbase connectors. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
+
+Flare vault is a **manual** founder constant (`28273` XRP). It is not a chain read.
+
+Reuse notes for the next node: [`cabinet/xrp-face.md`](cabinet/xrp-face.md).
 
 ## Run locally
 
@@ -40,16 +51,14 @@ npm start
 },
 ```
 
-3. Save. The page reads this file only and sorts by `time` (newest first).
-4. Commit and deploy. Do not paste keys, seeds, account numbers, Main lots, or vault balances into this file.
+3. Save. `/log` reads this file only and sorts by `time` (newest first).
+4. Commit and deploy. Do not paste keys, seeds, account numbers, or the gas wallet address into this file.
 
-## Deploy on Vercel (new project)
-
-Hub should create a **new** Vercel project (do not reuse Project 1):
+## Deploy on Vercel (resonance3)
 
 1. Import this Git repository.
 2. Set **Root Directory** to `resonance-2`.
 3. Framework Preset: Next.js (auto-detected from this folder’s `package.json`).
-4. Leave env vars empty. This app has no secrets.
+4. Leave broker env vars empty in this brick. Public price feeds need no keys.
 
 Project 1 at the repo root stays its own Vercel project with Root Directory `.`.
