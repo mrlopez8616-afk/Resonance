@@ -261,6 +261,7 @@ body {
 }
 
 .node-square.is-live {
+  overflow: hidden;
   border-color: var(--live);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--live) 35%, transparent),
@@ -428,6 +429,7 @@ body {
 
 .live-sleeves li {
   display: grid;
+  min-width: 0;
   grid-template-columns: 0.6rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.35rem;
@@ -447,6 +449,7 @@ body {
   min-width: 0;
   align-items: baseline;
   gap: 0.4rem;
+  overflow-wrap: anywhere;
   color: #8b939c;
 }
 

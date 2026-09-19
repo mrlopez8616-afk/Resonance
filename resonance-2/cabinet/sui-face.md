@@ -33,7 +33,7 @@ When a server-side Coinbase connector exists: if `available`/`hold` are both 0, 
 
 - Shared `LiveNodeFace` replaced `xrp-face.tsx`
 - Shared `fetchSpotUsd` replaced the XRP-only helper
-- Sleeve `note` exists so a zero can stay honest
+- Sleeve `note` is internal only; the face does not render it
 - SUI has no vault line
 
 ## Next brick
