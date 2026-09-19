@@ -305,40 +305,49 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.2rem;
+  gap: 0.12rem;
   min-width: 0;
+}
+
+.live-face .node-ticker,
+.live-price {
+  font-size: clamp(1.5rem, 2.7vw, 2rem);
+  font-weight: 600;
+  line-height: 1.05;
+  color: #f4f6f8;
+}
+
+.live-face .node-ticker {
+  letter-spacing: 0.06em;
 }
 
 .live-price {
   min-width: 0;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: clamp(1.45rem, 2.6vw, 1.9rem);
-  font-weight: 500;
   letter-spacing: -0.03em;
-  color: #f4f6f8;
 }
 
 .live-units,
 .live-value {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.88rem;
+  font-size: clamp(1.08rem, 1.7vw, 1.22rem);
   font-weight: 500;
   letter-spacing: -0.01em;
   color: #c9d0d6;
 }
 
 .live-units {
-  margin-top: 0.45rem;
+  margin-top: 0.7rem;
 }
 
 .live-value {
-  margin-top: 0.12rem;
+  margin-top: 0.2rem;
 }
 
 .live-units span,
 .live-value span {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -349,24 +358,24 @@ body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: 0.28rem;
-  margin-top: 0.7rem;
+  justify-content: space-evenly;
+  gap: 0.42rem;
+  margin-top: 0.85rem;
   min-height: 0;
 }
 
 .live-sleeves li {
   display: grid;
-  grid-template-columns: 0.55rem minmax(0, 1fr) auto;
+  grid-template-columns: 0.6rem minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.72rem;
-  line-height: 1.2;
+  gap: 0.5rem;
+  font-size: 0.98rem;
+  line-height: 1.25;
 }
 
 .sleeve-mark {
-  width: 0.42rem;
-  height: 0.42rem;
+  width: 0.5rem;
+  height: 0.5rem;
   border: 1px solid #8b939c;
   border-radius: 999px;
 }
@@ -375,12 +384,12 @@ body {
   display: flex;
   min-width: 0;
   align-items: baseline;
-  gap: 0.35rem;
+  gap: 0.4rem;
   color: #8b939c;
 }
 
 .sleeve-manual {
-  font-size: 0.58rem;
+  font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #5f6872;
