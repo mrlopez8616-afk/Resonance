@@ -6,7 +6,7 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 
 ## Surfaces
 
-- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show `TICKER · $price`, sleeve-sum units, live USD, then sleeve rows.
+- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show ticker, large spot price, sleeve-sum tokens, live USD, then sleeve rows.
 - `/log` — existing agentic sleeve fill log. Same toolbar. Rows still come only from [`src/data/fills.ts`](src/data/fills.ts).
 
 ## Live faces (this brick)
