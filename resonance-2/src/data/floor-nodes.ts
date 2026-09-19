@@ -8,13 +8,13 @@ export type FloorNode = {
 };
 
 /**
- * Operator-floor squares. XRP and SUI are live in this brick.
- * Do not attach price or sleeve data to the offline tickers yet.
+ * Operator-floor squares. XRP, SUI, and PWR are live in this brick.
+ * Do not attach price or sleeve data to the remaining offline tickers yet.
  */
 export const FLOOR_NODES: FloorNode[] = [
   { id: "xrp", ticker: "XRP", status: "live" },
   { id: "sui", ticker: "SUI", status: "live" },
-  { id: "pwr", ticker: "PWR", status: "offline" },
+  { id: "pwr", ticker: "PWR", status: "live" },
   { id: "etn", ticker: "ETN", status: "offline" },
   { id: "vrt", ticker: "VRT", status: "offline" },
   { id: "gev", ticker: "GEV", status: "offline" },

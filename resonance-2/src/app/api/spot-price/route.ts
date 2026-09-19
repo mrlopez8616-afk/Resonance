@@ -1,10 +1,15 @@
+import { fetchEquityUsd, isEquityTicker } from "@/lib/equity-price";
 import { fetchSpotUsd, isSpotTicker } from "@/lib/spot-price";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const ticker = new URL(request.url).searchParams.get("ticker") ?? "";
-  if (!isSpotTicker(ticker)) {
+  const ticker = (
+    new URL(request.url).searchParams.get("ticker") ?? ""
+  )
+    .trim()
+    .toUpperCase();
+  if (!isSpotTicker(ticker) && !isEquityTicker(ticker)) {
     return Response.json(
       {
         usd: null,
@@ -17,7 +22,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const quote = await fetchSpotUsd(ticker);
+    const quote = isEquityTicker(ticker)
+      ? await fetchEquityUsd(ticker)
+      : await fetchSpotUsd(ticker);
     return Response.json(quote, {
       headers: { "cache-control": "no-store" },
     });

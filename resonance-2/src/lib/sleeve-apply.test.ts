@@ -85,10 +85,35 @@ describe("sleeve apply", () => {
     );
   });
 
+  it("applies RH Agentic fills to the live PWR equity book", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({ ticker: "PWR", sleeve: "rh-agentic", qty: "0.0001" }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.nextQuantity, "0.001678");
+    assert.equal(result.prints.PWR?.["rh-agentic"], "0.001678");
+  });
+
+  it("refuses inventing coinbase on PWR", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "PWR",
+          }),
+        ),
+      /not on the PWR face/,
+    );
+  });
+
   it("skips sleeve apply for an offline locked ticker", () => {
     const result = applyFillToSleevePrints(
       {},
-      event({ ticker: "PWR", sleeve: "rh-agentic" }),
+      event({ ticker: "ETN", sleeve: "rh-agentic" }),
     );
     assert.equal(result.applied, false);
     assert.deepEqual(result.prints, {});

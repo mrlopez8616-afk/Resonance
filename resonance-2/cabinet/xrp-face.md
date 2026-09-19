@@ -2,7 +2,7 @@
 
 Reuse these pieces for the next live node. Do not reinvent a second floor, a second square, or a second price helper.
 
-SUI is already live. Shared extract lives in [`sui-face.md`](./sui-face.md) — start there for the third node.
+SUI and PWR are already live. Shared extract lives in [`sui-face.md`](./sui-face.md). Equity rules: [`pwr-face.md`](./pwr-face.md).
 
 ## Shell
 
@@ -18,7 +18,7 @@ The fill log is still the same component. It lives on `/log` now so the homepage
 
 `src/components/node-square.tsx` is the only tile.
 
-- `live` — solid red rim (XRP and SUI in this brick)
+- `live` — solid red rim (XRP, SUI, and PWR in this brick)
 - `dashed` — offline placeholder
 - `empty` — the `+` slot
 
@@ -62,6 +62,6 @@ Never put the Xaman gas wallet address on a face.
 
 ## Next brick
 
-Fill ingest (RH + Coinbase → operator log + sleeve print) is [`fill-ingest.md`](./fill-ingest.md). SUI reuse is [`sui-face.md`](./sui-face.md). Register the next ticker in `SPOT_TICKERS` only when a public spot feed exists. Equities are a different helper.
+Fill ingest (RH + Coinbase → operator log + sleeve print) is [`fill-ingest.md`](./fill-ingest.md). SUI reuse is [`sui-face.md`](./sui-face.md). PWR equity reuse is [`pwr-face.md`](./pwr-face.md). Register a crypto ticker in `SPOT_TICKERS` only when a public crypto spot feed exists. Equities use `equity-price.ts`, not CoinGecko.
 
 Forbidden: seeds, private keys, API secrets in the client bundle, gas-wallet addresses, click-into guts pages, lighting every square at once.

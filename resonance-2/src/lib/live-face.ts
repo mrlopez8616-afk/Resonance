@@ -16,6 +16,8 @@ export type SleeveFace = {
   note?: string;
 };
 
+export type FaceUnitWord = "tokens" | "shares";
+
 export type LiveFaceData = {
   ticker: string;
   priceUsd: number | null;
@@ -27,7 +29,18 @@ export type LiveFaceData = {
   totalUnitsLabel: string;
   totalUsd: number | null;
   totalUsdLabel: string;
+  /** Equity faces say "shares". Crypto faces keep "tokens". */
+  unitsWord: FaceUnitWord;
 };
+
+/** Live equity faces only. Do not invent offline physical tickers here. */
+export const EQUITY_FACE_TICKERS = ["PWR"] as const;
+
+export function faceUnitWord(ticker: string): FaceUnitWord {
+  return (EQUITY_FACE_TICKERS as readonly string[]).includes(ticker)
+    ? "shares"
+    : "tokens";
+}
 
 export function sleeveQuantityNumber(quantity: string): number {
   const value = Number(quantity);
@@ -46,7 +59,7 @@ export function formatSleeveQuantity(quantity: string, note?: string): string {
   if (quantity.trim() === "" || !Number.isFinite(parsed)) {
     return quantity.trim() || "—";
   }
-  const digits = parsed >= 1000 ? 0 : parsed >= 10 ? 1 : 3;
+  const digits = parsed >= 1000 ? 0 : parsed >= 10 ? 1 : parsed >= 1 ? 3 : 6;
   const formatted = parsed.toLocaleString("en-US", {
     minimumFractionDigits: parsed === 0 ? 0 : digits,
     maximumFractionDigits: digits,
@@ -66,7 +79,7 @@ export function formatSpotPrice(usd: number | null): string {
 
 export function formatTotalUnits(total: number): string {
   if (!Number.isFinite(total)) return "—";
-  const digits = total >= 1000 ? 1 : 3;
+  const digits = total >= 1000 ? 1 : total >= 1 ? 3 : 6;
   return Number(total.toFixed(digits)).toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -110,5 +123,6 @@ export function assembleLiveFace(
     totalUnitsLabel: formatTotalUnits(totalUnits),
     totalUsd,
     totalUsdLabel: formatCompactUsd(totalUsd),
+    unitsWord: faceUnitWord(ticker),
   };
 }
