@@ -1,0 +1,12 @@
+{
+  "venue": "robinhood",
+  "orderId": "REPLACE-WITH-ROBINHOOD-ORDER-ID",
+  "ticker": "SUI",
+  "side": "buy",
+  "qty": "REPLACE-WITH-FILLED-QTY",
+  "price": "REPLACE-WITH-FILLED-PRICE",
+  "sleeve": "rh-agentic",
+  "filledAt": "2026-09-21T08:30:00-05:00",
+  "result": "filled",
+  "note": "Monday Agentic SUI→6 AI"
+}

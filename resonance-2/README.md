@@ -7,20 +7,20 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 ## Surfaces
 
 - `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show ticker, large spot price, sleeve-sum tokens, live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
-- `/log` — existing agentic sleeve fill log. Same toolbar. Rows still come only from [`src/data/fills.ts`](src/data/fills.ts).
+- `/log` — agentic sleeve fill log. Same toolbar. Rows come from the durable fill store, with [`src/data/fills.ts`](src/data/fills.ts) as seed / local fallback.
 
 ## Live faces (this brick)
 
-Sleeve quantities are typed placeholders:
+Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POSTs a fill:
 
 - XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts)
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic 8.931; Coinbase 33.7 buy print / staked)
 
-Live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). The next brick can replace those quantities with server-side Robinhood / Coinbase connectors. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
+Live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 
-Flare vault is a **manual** founder constant (`28273` XRP) on the XRP face only. It is not a chain read. SUI has no vault line.
+Flare vault is a **manual** founder constant (`28273` XRP) on the XRP face only. Ingest cannot write it. SUI has no vault line.
 
-Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md).
+Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
 
 ## Run locally
 
@@ -41,29 +41,15 @@ npm start
 
 ## How to append a later fill
 
-1. Open [`src/data/fills.ts`](src/data/fills.ts).
-2. Append a new object to the `fills` array. Keep the recorded values as strings so quantity and price stay exact:
+Production path: Hub / RH Ops `POST /api/fills` with Bearer `RESONANCE_SYNC_SECRET`. Schema, idempotency, and the Monday Agentic SUI→6 AI fixture are in [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
 
-```ts
-{
-  time: "2026-09-18T12:00:00-05:00", // ISO-8601 with offset
-  symbol: "XRP",
-  side: "buy",                       // "buy" | "sell"
-  quantity: "1.5",
-  price: "1.40",
-  orderId: "uuid-from-the-broker",
-  result: "filled",
-},
-```
-
-3. Save. `/log` reads this file only and sorts by `time` (newest first).
-4. Commit and deploy. Do not paste keys, seeds, account numbers, or the gas wallet address into this file.
+Local/dev without Blob still seeds from [`src/data/fills.ts`](src/data/fills.ts) and writes `.data/fills.json`. Do not paste keys, seeds, account numbers, or the gas wallet address into that file.
 
 ## Deploy on Vercel (resonance3)
 
 1. Import this Git repository.
 2. Set **Root Directory** to `resonance-2`.
 3. Framework Preset: Next.js (auto-detected from this folder’s `package.json`).
-4. Leave broker env vars empty in this brick. Public price feeds need no keys.
+4. Connect a Blob store. Set `RESONANCE_SYNC_SECRET` (server-only). Public price feeds need no keys.
 
 Project 1 at the repo root stays its own Vercel project with Root Directory `.`.

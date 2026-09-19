@@ -6,7 +6,7 @@ SUI is the second live node. Do not copy-paste a third face. Reuse the shared pi
 
 | Piece | Path | Use |
 | --- | --- | --- |
-| Live face UI | `src/components/live-node-face.tsx` | Ticker and `$price` share the same large size; `{units} tokens`, `~$usd live`, and sleeve rows are bigger and fill the square. Polls `/api/spot-price?ticker=` |
+| Live face UI | `src/components/live-node-face.tsx` | Ticker and `$price` share the same large size; `{units} tokens`, `~$usd live`, and sleeve rows are bigger and fill the square. Polls `/api/spot-price?ticker=` and `/api/sleeves?ticker=` |
 | Face shape | `src/lib/live-face.ts` → `LiveFaceData` / `assembleLiveFace(ticker, sleeves, quote)` | Positions from config. Only `quote.usd` is live |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | `quantity` string + optional `note` (buy-print / staked copy) |
 | Spot price | `src/lib/spot-price.ts` → `fetchSpotUsd(ticker)` | CoinGecko → Binance. Add the ticker to `SPOT_TICKERS` + `FEEDS` |
@@ -15,9 +15,11 @@ SUI is the second live node. Do not copy-paste a third face. Reuse the shared pi
 
 XRP still uses this same stack. Thin aliases remain at `src/lib/xrp-face.ts` and `src/lib/xrp-price.ts` / `GET /api/xrp-price`.
 
+Hub fill ingest (RH Agentic / Coinbase prints, never Flare) is [`fill-ingest.md`](./fill-ingest.md). Monday Agentic SUI→6 AI is the first consumer of that path.
+
 ## SUI sleeves
 
-`src/data/sui-sleeves.ts` — 2026-09-19 CT Resonance check. Do not invent lots.
+`src/data/sui-sleeves.ts` — 2026-09-19 CT Resonance check. Do not invent lots. Durable overrides land via fill ingest; seed values below remain the fallback.
 
 - RH Agentic: `8.931` SUI
 - Coinbase: `33.7` with `note: "buy print / staked"` — Coinbase Advanced Trade (2026-09-19) `balance` SUI available=0 hold=0 (staking not exposed on this API key). Face uses the sum of SUI-USD **FILLED buys** only: 16.9 + 16.8 = 33.7. Sells on this book: none. Do **not** invent a separate stake size beyond 33.7.

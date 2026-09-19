@@ -49,8 +49,11 @@ export function FillCard({ fill }: { fill: Fill }) {
         />
         <Field label="quantity" value={fill.quantity} />
         <Field label="price" value={fill.price} />
+        {fill.venue ? <Field label="venue" value={fill.venue} /> : null}
+        {fill.sleeve ? <Field label="sleeve" value={fill.sleeve} /> : null}
         <Field label="orderId" value={fill.orderId} wrap="id" />
         <Field label="result" value={fill.result} tone="ok" />
+        {fill.note ? <Field label="note" value={fill.note} /> : null}
       </dl>
     </article>
   );
@@ -60,7 +63,7 @@ export function FillLog({ fills }: { fills: Fill[] }) {
   if (fills.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-[color:var(--border)] px-4 py-8 text-center text-sm leading-6 text-[color:var(--muted)]">
-        No fills in{" "}
+        No fills in the durable store or{" "}
         <code className="font-[family-name:var(--font-geist-mono)] text-[color:var(--text)]">
           src/data/fills.ts
         </code>
@@ -72,7 +75,7 @@ export function FillLog({ fills }: { fills: Fill[] }) {
   return (
     <ol className="flex flex-col gap-3">
       {fills.map((fill) => (
-        <li key={fill.orderId}>
+        <li key={fill.idempotencyKey ?? `${fill.venue ?? "seed"}:${fill.orderId}`}>
           <FillCard fill={fill} />
         </li>
       ))}
