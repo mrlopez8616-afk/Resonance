@@ -473,19 +473,25 @@ body {
   color: var(--muted);
 }
 
+.floor-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(5, 6, 7, 0.72);
+}
+
 .floor-dialog {
   width: min(22rem, calc(100vw - 2rem));
-  margin: auto;
   padding: 1.15rem 1.2rem 1rem;
   border: 1px solid #2a323c;
   border-radius: 0.7rem;
   background: #101214;
   color: var(--text);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-}
-
-.floor-dialog::backdrop {
-  background: rgba(5, 6, 7, 0.72);
 }
 
 .floor-dialog-title {

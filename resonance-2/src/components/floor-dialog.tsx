@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 export function FloorDialog({
   open,
@@ -13,33 +13,35 @@ export function FloorDialog({
   children: ReactNode;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-
   useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-    } else if (!open && dialog.open) {
-      dialog.close();
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
     }
-  }, [open]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
 
   return (
-    <dialog
-      ref={ref}
-      className="floor-dialog"
-      aria-labelledby="floor-dialog-title"
-      onClose={onClose}
-      onCancel={onClose}
-      onClick={(event) => {
-        if (event.target === ref.current) onClose();
-      }}
+    <div
+      className="floor-dialog-backdrop"
+      role="presentation"
+      onClick={onClose}
     >
-      <h2 id="floor-dialog-title" className="floor-dialog-title">
-        {title}
-      </h2>
-      {children}
-    </dialog>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="floor-dialog-title"
+        className="floor-dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="floor-dialog-title" className="floor-dialog-title">
+          {title}
+        </h2>
+        {children}
+      </div>
+    </div>
   );
 }
