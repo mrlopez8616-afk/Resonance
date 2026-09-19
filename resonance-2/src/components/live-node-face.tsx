@@ -26,31 +26,61 @@ export function LiveNodeFace({
 
     async function refresh() {
       try {
-        const response = await fetch(
-          `/api/spot-price?ticker=${encodeURIComponent(ticker)}`,
-          { cache: "no-store" },
-        );
-        if (!response.ok) return;
-        const quote = (await response.json()) as Partial<SpotQuote> & {
-          error?: string;
-        };
-        if (
-          cancelled ||
-          typeof quote.usd !== "number" ||
-          !Number.isFinite(quote.usd) ||
-          quote.usd <= 0
-        ) {
-          return;
-        }
-        setFace(
-          assembleLiveFace(ticker, sleeves, {
-            usd: quote.usd,
-            source: typeof quote.source === "string" ? quote.source : "spot",
-            fetchedAt:
-              typeof quote.fetchedAt === "string"
-                ? quote.fetchedAt
-                : new Date().toISOString(),
+        const [priceRes, sleeveRes] = await Promise.all([
+          fetch(`/api/spot-price?ticker=${encodeURIComponent(ticker)}`, {
+            cache: "no-store",
           }),
+          fetch(`/api/sleeves?ticker=${encodeURIComponent(ticker)}`, {
+            cache: "no-store",
+          }),
+        ]);
+        if (cancelled) return;
+
+        let nextSleeves = sleeves;
+        if (sleeveRes.ok) {
+          const payload = (await sleeveRes.json()) as {
+            sleeves?: NodeSleeve[];
+          };
+          if (Array.isArray(payload.sleeves) && payload.sleeves.length > 0) {
+            const byId = new Map(sleeves.map((row) => [row.id, row]));
+            nextSleeves = payload.sleeves.map((row) => {
+              const seed = byId.get(row.id);
+              if (seed && (seed.manual || seed.id === "flare-vault")) return seed;
+              return row;
+            });
+          }
+        }
+
+        let quote: SpotQuote | null = null;
+        if (priceRes.ok) {
+          const raw = (await priceRes.json()) as Partial<SpotQuote> & {
+            error?: string;
+          };
+          if (typeof raw.usd === "number" && Number.isFinite(raw.usd) && raw.usd > 0) {
+            quote = {
+              usd: raw.usd,
+              source: typeof raw.source === "string" ? raw.source : "spot",
+              fetchedAt:
+                typeof raw.fetchedAt === "string"
+                  ? raw.fetchedAt
+                  : new Date().toISOString(),
+            };
+          }
+        }
+
+        setFace((current) =>
+          assembleLiveFace(
+            ticker,
+            nextSleeves,
+            quote ??
+              (current.priceUsd != null && current.source && current.fetchedAt
+                ? {
+                    usd: current.priceUsd,
+                    source: current.source,
+                    fetchedAt: current.fetchedAt,
+                  }
+                : null),
+          ),
         );
       } catch {
         // Keep the last good face. Positions never jitter on a failed poll.

@@ -1,5 +1,10 @@
 export type FillSide = "buy" | "sell";
 
+export type FillVenue = "robinhood" | "coinbase";
+
+/** Writable sleeve prints. `flare-vault` is founder-typed and is not a FillSleeveId. */
+export type FillSleeveId = "rh-main" | "rh-agentic" | "coinbase";
+
 export type Fill = {
   time: string;
   symbol: string;
@@ -8,11 +13,18 @@ export type Fill = {
   price: string;
   orderId: string;
   result: string;
+  /** Present on hub-ingested rows. Seed samples may omit venue / sleeve. */
+  venue?: FillVenue;
+  tradeId?: string;
+  sleeve?: FillSleeveId;
+  idempotencyKey?: string;
+  note?: string;
 };
 
 /**
- * Agentic sleeve fills only. Append a later fill as a new object in this array.
- * Newest rows are shown first on the page (sorted by `time`).
+ * Seed / local fallback for the operator log.
+ * Production appends go through POST /api/fills (cabinet/fill-ingest.md).
+ * Newest rows are shown first on `/log` (sorted by `time`).
  */
 export const fills: Fill[] = [
   {

@@ -31,7 +31,7 @@ Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only. Add/de
 | UI | `src/components/live-node-face.tsx` — ticker and `$price` share the same large size; `{units} tokens`, `~$usd live`, and sleeve rows are the next size down and fill the square |
 | Shape / assemble | `src/lib/live-face.ts` → `assembleLiveFace(ticker, sleeves, quote)` |
 | Spot USD | `src/lib/spot-price.ts` → `fetchSpotUsd("XRP" \| "SUI")` |
-| Poll | `GET /api/spot-price?ticker=XRP` |
+| Poll | `GET /api/spot-price?ticker=XRP` (price) and `GET /api/sleeves?ticker=XRP` (durable prints; Flare vault stays founder-typed) |
 
 `src/lib/xrp-face.ts` and `src/lib/xrp-price.ts` are thin aliases.
 
@@ -50,9 +50,9 @@ Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only. Add/de
 }
 ```
 
-Positions come from config. Only `quote.usd` is live. Do not invent fluctuating lots.
+Positions come from config, then from the durable fill-ingest store when a hub POST has landed. Only `quote.usd` is a live price. Do not invent fluctuating lots.
 
-Sleeve quantities: `src/data/xrp-sleeves.ts`
+Sleeve quantities: `src/data/xrp-sleeves.ts` (seed / fallback). Hub writes go through [`fill-ingest.md`](./fill-ingest.md). **Flare vault stays founder-typed** — ingest cannot write `flare-vault`.
 
 - RH Main / RH Agentic — last-known Robinhood prints (typed placeholders)
 - Coinbase — last-known Default-wallet print (stub until a **server-only** Coinbase connector exists)
@@ -62,6 +62,6 @@ Never put the Xaman gas wallet address on a face.
 
 ## Next brick
 
-See [`sui-face.md`](./sui-face.md). Register the next ticker in `SPOT_TICKERS` only when a public spot feed exists. Equities are a different helper.
+Fill ingest (RH + Coinbase → operator log + sleeve print) is [`fill-ingest.md`](./fill-ingest.md). SUI reuse is [`sui-face.md`](./sui-face.md). Register the next ticker in `SPOT_TICKERS` only when a public spot feed exists. Equities are a different helper.
 
 Forbidden: seeds, private keys, API secrets in the client bundle, gas-wallet addresses, click-into guts pages, lighting every square at once.

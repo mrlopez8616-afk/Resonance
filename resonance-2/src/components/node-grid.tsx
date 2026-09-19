@@ -19,12 +19,18 @@ import {
   writeHiddenIds,
 } from "@/lib/floor-registry";
 
-const LIVE_SLEEVES: Record<string, readonly NodeSleeve[]> = {
+const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
   XRP: XRP_SLEEVES,
   SUI: SUI_SLEEVES,
 };
 
-export function NodeGrid({ faces }: { faces: Record<string, LiveFaceData> }) {
+export function NodeGrid({
+  faces,
+  sleeves: sleeveBooks = SEED_SLEEVES,
+}: {
+  faces: Record<string, LiveFaceData>;
+  sleeves?: Record<string, readonly NodeSleeve[]>;
+}) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
     hiddenIdsSnapshot,
@@ -53,7 +59,7 @@ export function NodeGrid({ faces }: { faces: Record<string, LiveFaceData> }) {
         {nodes.map((node) => {
           if (node.status === "live") {
             const face = faces[node.ticker];
-            const sleeves = LIVE_SLEEVES[node.ticker];
+            const sleeves = sleeveBooks[node.ticker] ?? SEED_SLEEVES[node.ticker];
             if (!face || !sleeves) {
               return (
                 <NodeSquare

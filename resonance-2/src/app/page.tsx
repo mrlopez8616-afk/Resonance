@@ -1,22 +1,24 @@
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
-import { SUI_SLEEVES } from "@/data/sui-sleeves";
-import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { assembleLiveFace } from "@/lib/live-face";
+import { loadLiveSleeveBooks } from "@/lib/sleeve-prints";
 import { loadSpotQuotes } from "@/lib/spot-price";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const quotes = await loadSpotQuotes(["XRP", "SUI"]);
+  const [quotes, sleeves] = await Promise.all([
+    loadSpotQuotes(["XRP", "SUI"]),
+    loadLiveSleeveBooks(),
+  ]);
   const faces = {
-    XRP: assembleLiveFace("XRP", XRP_SLEEVES, quotes.XRP),
-    SUI: assembleLiveFace("SUI", SUI_SLEEVES, quotes.SUI),
+    XRP: assembleLiveFace("XRP", sleeves.XRP, quotes.XRP),
+    SUI: assembleLiveFace("SUI", sleeves.SUI, quotes.SUI),
   };
 
   return (
     <OperatorShell>
-      <NodeGrid faces={faces} />
+      <NodeGrid faces={faces} sleeves={sleeves} />
     </OperatorShell>
   );
 }

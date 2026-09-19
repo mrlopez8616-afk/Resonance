@@ -1,10 +1,12 @@
 import { fills, type Fill } from "@/data/fills";
 
-export function listFills(): Fill[] {
-  return [...fills].sort((a, b) => {
+export function listFills(rows: readonly Fill[] = fills): Fill[] {
+  return [...rows].sort((a, b) => {
     const delta = Date.parse(b.time) - Date.parse(a.time);
     if (delta !== 0) return delta;
-    return b.orderId.localeCompare(a.orderId);
+    const keyA = a.idempotencyKey ?? a.orderId;
+    const keyB = b.idempotencyKey ?? b.orderId;
+    return keyB.localeCompare(keyA);
   });
 }
 
