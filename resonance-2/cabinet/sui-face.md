@@ -23,7 +23,7 @@ Hub fill ingest (RH Agentic / Coinbase prints, never Flare) is [`fill-ingest.md`
 
 - RH Agentic: `8.931` SUI
 - Coinbase: `33.7` with `note: "buy print / staked"` — Coinbase Advanced Trade (2026-09-19) `balance` SUI available=0 hold=0 (staking not exposed on this API key). Face uses the sum of SUI-USD **FILLED buys** only: 16.9 + 16.8 = 33.7. Sells on this book: none. Do **not** invent a separate stake size beyond 33.7.
-- Headline: `8.931 + 33.7 = 42.631 tokens`, then `42.631 × live SUI-USD` as `~$… live`. Ticker and live price pop at the same large size; tokens / live USD / sleeves are the next size down.
+- Headline: `8.931 + 33.7 = 42.631 tokens`, then `42.631 × live SUI-USD` as `~$… live`. Ticker and live price pop at the same large size; tokens / live USD / sleeves are the next size down and stay inside the tile.
 - No Flare vault
 - No Xaman / gas wallet address
 
