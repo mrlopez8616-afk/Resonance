@@ -15,6 +15,7 @@ export {
   formatCompactUsd,
   formatSleeveQuantity,
   formatSpotPrice as formatXrpPrice,
+  formatTotalUnits,
   sleeveQuantityNumber,
   totalSleeveQuantity,
 } from "@/lib/live-face";

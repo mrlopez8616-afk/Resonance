@@ -73,9 +73,22 @@ export function LiveNodeFace({
 
   return (
     <div className="live-face">
-      <h2 className="node-ticker">{ticker}</h2>
-      <p className="live-price" title={priceTitle}>
-        {face.priceLabel}
+      <header className="live-head">
+        <h2 className="node-ticker">{ticker}</h2>
+        <span className="live-head-dot" aria-hidden>
+          ·
+        </span>
+        <p className="live-price" title={priceTitle}>
+          {face.priceLabel}
+        </p>
+      </header>
+      <p className="live-units">
+        {face.totalUnitsLabel}
+        <span> total</span>
+      </p>
+      <p className="live-value">
+        {face.totalUsdLabel}
+        <span> live</span>
       </p>
       <ul className="live-sleeves">
         {face.sleeves.map((sleeve) => (
@@ -91,10 +104,6 @@ export function LiveNodeFace({
           </li>
         ))}
       </ul>
-      <p className="live-total">
-        <span>TOTAL USD</span>
-        <span>{face.totalUsdLabel}</span>
-      </p>
     </div>
   );
 }
