@@ -7,7 +7,7 @@ Reuse these pieces for the next live node. Do not reinvent a second floor, a sec
 | Piece | Path | Use |
 | --- | --- | --- |
 | Floor chrome | `src/components/operator-shell.tsx` | Header (`RESONANCE 2.0` + LIVE), canvas, bottom operator strip |
-| Left toolbar | `src/components/operator-toolbar.tsx` | Home + operator log are wired. Calendar / approvals / settings stay placeholders until a route exists |
+| Left toolbar | `src/components/operator-toolbar.tsx` | Home / Floor + operator log are wired. Calendar / approvals / settings stay placeholders until a route exists. Every rail icon uses `title` + `data-tooltip` so hover/focus shows a dark-shell label without a click (`::after` in `globals.css`) |
 | Factory tokens | `src/app/globals.css` | Dark floor, dashed offline squares, red live rim. `--live` is the XRP border |
 
 The fill log is still the same component. It lives on `/log` now so the homepage can be the floor.

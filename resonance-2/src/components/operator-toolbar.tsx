@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   ApprovalsIcon,
   CalendarIcon,
@@ -11,7 +12,7 @@ import {
 } from "@/components/icons";
 
 const PRIMARY = [
-  { href: "/", label: "Home", icon: HomeIcon, exact: true },
+  { href: "/", label: "Home / Floor", icon: HomeIcon, exact: true },
   { href: "/log", label: "Operator log", icon: LogIcon, exact: false },
 ] as const;
 
@@ -19,6 +20,57 @@ const PLACEHOLDERS = [
   { label: "Calendar", icon: CalendarIcon },
   { label: "Approvals", icon: ApprovalsIcon },
 ] as const;
+
+function RailButton({
+  label,
+  active = false,
+  href,
+  footer = false,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  href?: string;
+  footer?: boolean;
+  children: ReactNode;
+}) {
+  const className = [
+    "operator-tool",
+    active ? "is-active" : "",
+    href ? "" : "is-placeholder",
+    footer ? "operator-tool-footer" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        aria-label={label}
+        title={label}
+        data-tooltip={label}
+        className={className}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <span
+      tabIndex={0}
+      aria-disabled="true"
+      aria-label={`${label} (not wired)`}
+      title={label}
+      data-tooltip={label}
+      className={className}
+    >
+      {children}
+    </span>
+  );
+}
 
 export function OperatorToolbar() {
   const pathname = usePathname();
@@ -35,43 +87,28 @@ export function OperatorToolbar() {
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
-            <Link
+            <RailButton
               key={item.href}
               href={item.href}
-              aria-current={active ? "page" : undefined}
-              aria-label={item.label}
-              title={item.label}
-              className={`operator-tool ${active ? "is-active" : ""}`}
+              label={item.label}
+              active={active}
             >
               <Icon />
-            </Link>
+            </RailButton>
           );
         })}
         {PLACEHOLDERS.map((item) => {
           const Icon = item.icon;
           return (
-            <span
-              key={item.label}
-              role="link"
-              aria-disabled="true"
-              aria-label={`${item.label} (not wired)`}
-              title={`${item.label} — not wired yet`}
-              className="operator-tool is-placeholder"
-            >
+            <RailButton key={item.label} label={item.label}>
               <Icon />
-            </span>
+            </RailButton>
           );
         })}
       </nav>
-      <span
-        role="link"
-        aria-disabled="true"
-        aria-label="Settings (not wired)"
-        title="Settings — not wired yet"
-        className="operator-tool operator-tool-footer is-placeholder"
-      >
+      <RailButton label="Settings" footer>
         <SettingsIcon />
-      </span>
+      </RailButton>
     </aside>
   );
 }
