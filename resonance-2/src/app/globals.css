@@ -261,6 +261,7 @@ body {
 }
 
 .node-square.is-live {
+  overflow: hidden;
   border-color: var(--live);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--live) 35%, transparent),
@@ -354,21 +355,22 @@ body {
   flex: 1 1 auto;
   height: 100%;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .live-head {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.12rem;
+  gap: 0.06rem;
   min-width: 0;
 }
 
 .live-face .node-ticker,
 .live-price {
-  font-size: clamp(1.5rem, 2.7vw, 2rem);
+  font-size: clamp(1.22rem, 2.1vw, 1.55rem);
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1;
   color: #f4f6f8;
 }
 
@@ -378,31 +380,37 @@ body {
 
 .live-price {
   min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   letter-spacing: -0.03em;
 }
 
 .live-units,
 .live-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: clamp(1.14rem, 1.85vw, 1.3rem);
+  font-size: clamp(0.92rem, 1.4vw, 1.05rem);
   font-weight: 500;
+  line-height: 1.15;
   letter-spacing: -0.01em;
   color: #c9d0d6;
 }
 
 .live-units {
-  margin-top: 0.7rem;
+  margin-top: 0.42rem;
 }
 
 .live-value {
-  margin-top: 0.2rem;
+  margin-top: 0.1rem;
 }
 
 .live-units span,
 .live-value span {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.66rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -413,24 +421,27 @@ body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.9rem;
+  justify-content: flex-start;
+  gap: 0.28rem;
+  margin-top: 0.5rem;
   min-height: 0;
+  overflow: hidden;
 }
 
 .live-sleeves li {
   display: grid;
-  grid-template-columns: 0.6rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 1.05rem;
-  line-height: 1.25;
+  min-width: 0;
+  grid-template-columns: 0.45rem minmax(0, 1fr) minmax(0, max-content);
+  align-items: start;
+  gap: 0.4rem;
+  font-size: 0.84rem;
+  line-height: 1.2;
 }
 
 .sleeve-mark {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  margin-top: 0.28rem;
   border: 1px solid #8b939c;
   border-radius: 999px;
 }
@@ -439,18 +450,22 @@ body {
   display: flex;
   min-width: 0;
   align-items: baseline;
-  gap: 0.4rem;
+  gap: 0.32rem;
+  overflow-wrap: anywhere;
   color: #8b939c;
 }
 
 .sleeve-manual {
-  font-size: 0.7rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #5f6872;
 }
 
 .sleeve-qty {
+  max-width: 7.25rem;
+  text-align: right;
+  overflow-wrap: anywhere;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   color: #c9d0d6;
 }

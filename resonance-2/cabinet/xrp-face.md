@@ -28,7 +28,7 @@ Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only. Add/de
 
 | Piece | Path |
 | --- | --- |
-| UI | `src/components/live-node-face.tsx` — ticker and `$price` share the same large size; `{units} tokens`, `~$usd live`, and sleeve rows are the next size down and fill the square |
+| UI | `src/components/live-node-face.tsx` — ticker and `$price` share the same large size; `{units} tokens`, `~$usd live`, and sleeve rows are the next size down. Type is scaled to stay inside the tile with padding (overflow hidden / wrap). |
 | Shape / assemble | `src/lib/live-face.ts` → `assembleLiveFace(ticker, sleeves, quote)` |
 | Spot USD | `src/lib/spot-price.ts` → `fetchSpotUsd("XRP" \| "SUI")` |
 | Poll | `GET /api/spot-price?ticker=XRP` (price) and `GET /api/sleeves?ticker=XRP` (durable prints; Flare vault stays founder-typed) |
