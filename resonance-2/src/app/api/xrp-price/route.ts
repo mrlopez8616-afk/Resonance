@@ -1,10 +1,11 @@
-import { fetchXrpUsd } from "@/lib/xrp-price";
+import { fetchSpotUsd } from "@/lib/spot-price";
 
 export const dynamic = "force-dynamic";
 
+/** Kept for the first XRP brick. New faces use `/api/spot-price?ticker=`. */
 export async function GET() {
   try {
-    const quote = await fetchXrpUsd();
+    const quote = await fetchSpotUsd("XRP");
     return Response.json(quote, {
       headers: { "cache-control": "no-store" },
     });

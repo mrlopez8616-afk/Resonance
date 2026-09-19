@@ -1,21 +1,26 @@
 # Resonance 2.0
 
-Operator floor for Resonance 2.0. **Only XRP is live.** Other node squares are offline placeholders. The Xaman gas wallet is never shown.
+Operator floor for Resonance 2.0. **XRP and SUI are live.** Other node squares are offline placeholders. The Xaman gas wallet is never shown.
 
 This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
 ## Surfaces
 
-- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. XRP face shows live XRP-USD plus sleeve quantities.
+- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. XRP and SUI faces show live USD plus sleeve quantities.
 - `/log` — existing agentic sleeve fill log. Same toolbar. Rows still come only from [`src/data/fills.ts`](src/data/fills.ts).
 
-## XRP face (this brick)
+## Live faces (this brick)
 
-Sleeve quantities are typed placeholders in [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (last known Resonance check). Live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/xrp-price.ts`](src/lib/xrp-price.ts). The next brick can replace those quantities with server-side Robinhood / Coinbase connectors. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
+Sleeve quantities are typed placeholders:
 
-Flare vault is a **manual** founder constant (`28273` XRP). It is not a chain read.
+- XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts)
+- SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic 8.931; Coinbase 0 staked/unavailable)
 
-Reuse notes for the next node: [`cabinet/xrp-face.md`](cabinet/xrp-face.md).
+Live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). The next brick can replace those quantities with server-side Robinhood / Coinbase connectors. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
+
+Flare vault is a **manual** founder constant (`28273` XRP) on the XRP face only. It is not a chain read. SUI has no vault line.
+
+Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md).
 
 ## Run locally
 

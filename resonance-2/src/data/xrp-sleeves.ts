@@ -1,3 +1,5 @@
+import type { NodeSleeve } from "@/data/sleeves";
+
 /**
  * XRP sleeve quantities for the live node face.
  *
@@ -13,19 +15,7 @@
 
 export const FLARE_VAULT_XRP = "28273";
 
-export type XrpSleeveSource =
-  | "robinhood-config"
-  | "coinbase-config"
-  | "manual";
-
-export type XrpSleeve = {
-  id: "rh-main" | "rh-agentic" | "coinbase" | "flare-vault";
-  label: string;
-  quantity: string;
-  source: XrpSleeveSource;
-  /** Founder-typed; not a broker or chain print. */
-  manual: boolean;
-};
+export type XrpSleeve = NodeSleeve;
 
 export const XRP_SLEEVES: XrpSleeve[] = [
   {

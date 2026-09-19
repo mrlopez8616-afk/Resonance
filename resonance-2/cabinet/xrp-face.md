@@ -2,13 +2,15 @@
 
 Reuse these pieces for the next live node. Do not reinvent a second floor, a second square, or a second price helper.
 
+SUI is already live. Shared extract lives in [`sui-face.md`](./sui-face.md) — start there for the third node.
+
 ## Shell
 
 | Piece | Path | Use |
 | --- | --- | --- |
 | Floor chrome | `src/components/operator-shell.tsx` | Header (`RESONANCE 2.0` + LIVE), canvas, bottom operator strip |
 | Left toolbar | `src/components/operator-toolbar.tsx` | Home / Floor + operator log are wired. Calendar / approvals / settings stay placeholders until a route exists. Every rail icon uses `aria-label` + `data-tooltip` so hover/focus shows a dark-shell label without a click (`::after` in `globals.css`). Skip native `title` so it does not stack on the CSS chip. |
-| Factory tokens | `src/app/globals.css` | Dark floor, dashed offline squares, red live rim. `--live` is the XRP border |
+| Factory tokens | `src/app/globals.css` | Dark floor, dashed offline squares, red live rim. `--live` is the live-node border |
 
 The fill log is still the same component. It lives on `/log` now so the homepage can be the floor.
 
@@ -16,15 +18,22 @@ The fill log is still the same component. It lives on `/log` now so the homepage
 
 `src/components/node-square.tsx` is the only tile.
 
-- `live` — solid red rim (XRP only in this brick)
+- `live` — solid red rim (XRP and SUI in this brick)
 - `dashed` — offline placeholder
 - `empty` — the `+` slot
 
-Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only. Do not attach prices or sleeves until that node is stood up.
+Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only.
 
-## XRP face data shape
+## Live face (shared — use this, not a new XRP-only file)
 
-`src/lib/xrp-face.ts` → `XrpFaceData` / `XrpSleeveFace`.
+| Piece | Path |
+| --- | --- |
+| UI | `src/components/live-node-face.tsx` |
+| Shape / assemble | `src/lib/live-face.ts` → `assembleLiveFace(ticker, sleeves, quote)` |
+| Spot USD | `src/lib/spot-price.ts` → `fetchSpotUsd("XRP" \| "SUI")` |
+| Poll | `GET /api/spot-price?ticker=XRP` |
+
+`src/lib/xrp-face.ts` and `src/lib/xrp-price.ts` are thin aliases.
 
 ```ts
 {
@@ -33,14 +42,14 @@ Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only. Do not
   priceLabel: string,
   source: string | null,
   fetchedAt: string | null,
-  sleeves: [{ id, label, quantity, quantityLabel, source, manual }],
-  totalXrp: number,
+  sleeves: [{ id, label, quantity, quantityLabel, source, manual, note? }],
+  totalUnits: number,
   totalUsd: number | null,
   totalUsdLabel: string
 }
 ```
 
-Assemble with `assembleXrpFace(sleeves, quote)`. Positions come from config. Only `quote.usd` is live. Do not invent fluctuating lots.
+Positions come from config. Only `quote.usd` is live. Do not invent fluctuating lots.
 
 Sleeve quantities: `src/data/xrp-sleeves.ts`
 
@@ -50,24 +59,8 @@ Sleeve quantities: `src/data/xrp-sleeves.ts`
 
 Never put the Xaman gas wallet address on a face.
 
-## Price fetch
+## Next brick
 
-`src/lib/xrp-price.ts` (marked `server-only`)
-
-- CoinGecko `ripple` USD, then Binance `XRPUSDT`
-- Same public-feed idea as Phase Zero `src/lib/fetch-crypto.ts`, scoped to XRP
-- 30s in-process cache
-- Route: `GET /api/xrp-price` for the client poller
-- Homepage SSR calls `loadXrpQuote()` so the first paint already has a print
-
-No broker keys. No `NEXT_PUBLIC_*` secrets.
-
-## Next brick (SUI, then the rest)
-
-1. Keep `OperatorShell` / `NodeSquare`.
-2. Add a typed sleeve file (or a generic `src/data/<ticker>-sleeves.ts`) if that node has lots.
-3. Reuse `fetchXrpUsd` as a template — extract a shared `fetchSpotUsd(ticker)` only when the second live node needs it.
-4. Flip that row in `FLOOR_NODES` from `offline` to `live` and drop a face into `NodeGrid`.
-5. Wire Robinhood / Coinbase **server-side only** when credentials exist in Vercel env. Replace the placeholder quantities; do not change the face shape.
+See [`sui-face.md`](./sui-face.md). Register the next ticker in `SPOT_TICKERS` only when a public spot feed exists. Equities are a different helper.
 
 Forbidden: seeds, private keys, API secrets in the client bundle, gas-wallet addresses, click-into guts pages, lighting every square at once.

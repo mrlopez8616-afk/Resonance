@@ -1,12 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { XRP_SLEEVES } from "@/data/xrp-sleeves";
-import { assembleXrpFace, type XrpFaceData, type XrpQuote } from "@/lib/xrp-face";
+import type { NodeSleeve } from "@/data/sleeves";
+import {
+  assembleLiveFace,
+  type LiveFaceData,
+  type SpotQuote,
+} from "@/lib/live-face";
 
 const POLL_MS = 45_000;
 
-export function XrpFace({ initial }: { initial: XrpFaceData }) {
+export function LiveNodeFace({
+  ticker,
+  sleeves,
+  initial,
+}: {
+  ticker: string;
+  sleeves: readonly NodeSleeve[];
+  initial: LiveFaceData;
+}) {
   const [face, setFace] = useState(initial);
 
   useEffect(() => {
@@ -14,9 +26,12 @@ export function XrpFace({ initial }: { initial: XrpFaceData }) {
 
     async function refresh() {
       try {
-        const response = await fetch("/api/xrp-price", { cache: "no-store" });
+        const response = await fetch(
+          `/api/spot-price?ticker=${encodeURIComponent(ticker)}`,
+          { cache: "no-store" },
+        );
         if (!response.ok) return;
-        const quote = (await response.json()) as Partial<XrpQuote> & {
+        const quote = (await response.json()) as Partial<SpotQuote> & {
           error?: string;
         };
         if (
@@ -28,7 +43,7 @@ export function XrpFace({ initial }: { initial: XrpFaceData }) {
           return;
         }
         setFace(
-          assembleXrpFace(XRP_SLEEVES, {
+          assembleLiveFace(ticker, sleeves, {
             usd: quote.usd,
             source: typeof quote.source === "string" ? quote.source : "spot",
             fetchedAt:
@@ -50,19 +65,19 @@ export function XrpFace({ initial }: { initial: XrpFaceData }) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [sleeves, ticker]);
 
   const priceTitle = face.source
     ? `${face.source}${face.fetchedAt ? ` · ${face.fetchedAt}` : ""}`
-    : "Waiting for XRP-USD";
+    : `Waiting for ${ticker}-USD`;
 
   return (
-    <div className="xrp-face">
-      <h2 className="node-ticker">XRP</h2>
-      <p className="xrp-price" title={priceTitle}>
+    <div className="live-face">
+      <h2 className="node-ticker">{ticker}</h2>
+      <p className="live-price" title={priceTitle}>
         {face.priceLabel}
       </p>
-      <ul className="xrp-sleeves">
+      <ul className="live-sleeves">
         {face.sleeves.map((sleeve) => (
           <li key={sleeve.id}>
             <span className="sleeve-mark" aria-hidden />
@@ -76,7 +91,7 @@ export function XrpFace({ initial }: { initial: XrpFaceData }) {
           </li>
         ))}
       </ul>
-      <p className="xrp-total">
+      <p className="live-total">
         <span>TOTAL USD</span>
         <span>{face.totalUsdLabel}</span>
       </p>
