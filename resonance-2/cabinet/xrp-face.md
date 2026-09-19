@@ -22,7 +22,7 @@ The fill log is still the same component. It lives on `/log` now so the homepage
 - `dashed` — offline placeholder
 - `empty` — the `+` slot
 
-Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only.
+Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only. Add/delete chrome: [`floor-nodes.md`](./floor-nodes.md).
 
 ## Live face (shared — use this, not a new XRP-only file)
 
