@@ -28,7 +28,7 @@ Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only.
 
 | Piece | Path |
 | --- | --- |
-| UI | `src/components/live-node-face.tsx` |
+| UI | `src/components/live-node-face.tsx` — `TICKER · $price` / `{units} total` / `~$usd live` / sleeve rows |
 | Shape / assemble | `src/lib/live-face.ts` → `assembleLiveFace(ticker, sleeves, quote)` |
 | Spot USD | `src/lib/spot-price.ts` → `fetchSpotUsd("XRP" \| "SUI")` |
 | Poll | `GET /api/spot-price?ticker=XRP` |
@@ -44,6 +44,7 @@ Grid order is `src/data/floor-nodes.ts`. Offline tickers are labels only.
   fetchedAt: string | null,
   sleeves: [{ id, label, quantity, quantityLabel, source, manual, note? }],
   totalUnits: number,
+  totalUnitsLabel: string,
   totalUsd: number | null,
   totalUsdLabel: string
 }

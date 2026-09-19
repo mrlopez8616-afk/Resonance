@@ -24,6 +24,7 @@ export type LiveFaceData = {
   fetchedAt: string | null;
   sleeves: SleeveFace[];
   totalUnits: number;
+  totalUnitsLabel: string;
   totalUsd: number | null;
   totalUsdLabel: string;
 };
@@ -63,17 +64,21 @@ export function formatSpotPrice(usd: number | null): string {
   });
 }
 
+export function formatTotalUnits(total: number): string {
+  if (!Number.isFinite(total)) return "—";
+  const digits = total >= 1000 ? 1 : 3;
+  return Number(total.toFixed(digits)).toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
 export function formatCompactUsd(usd: number | null): string {
   if (usd === null || !Number.isFinite(usd)) return "—";
   if (Math.abs(usd) >= 1000) {
     return `~$${(usd / 1000).toFixed(1)}k`;
   }
-  return usd.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return `~$${usd.toFixed(2)}`;
 }
 
 export function assembleLiveFace(
@@ -102,6 +107,7 @@ export function assembleLiveFace(
       note: sleeve.note,
     })),
     totalUnits,
+    totalUnitsLabel: formatTotalUnits(totalUnits),
     totalUsd,
     totalUsdLabel: formatCompactUsd(totalUsd),
   };
