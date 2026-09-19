@@ -14,7 +14,7 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 Sleeve quantities are typed placeholders:
 
 - XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts)
-- SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic 8.931; Coinbase 0 staked/unavailable)
+- SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic 8.931; Coinbase 33.7 buy print / staked)
 
 Live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). The next brick can replace those quantities with server-side Robinhood / Coinbase connectors. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 
