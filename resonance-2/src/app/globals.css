@@ -294,14 +294,14 @@ body {
   color: #6b7380;
 }
 
-.xrp-face {
+.live-face {
   display: flex;
   min-height: 0;
   flex: 1;
   flex-direction: column;
 }
 
-.xrp-price {
+.live-price {
   margin-top: 0.35rem;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: clamp(1.35rem, 2.4vw, 1.85rem);
@@ -310,7 +310,7 @@ body {
   color: #f4f6f8;
 }
 
-.xrp-sleeves {
+.live-sleeves {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -320,7 +320,7 @@ body {
   min-height: 0;
 }
 
-.xrp-sleeves li {
+.live-sleeves li {
   display: grid;
   grid-template-columns: 0.55rem minmax(0, 1fr) auto;
   align-items: center;
@@ -356,7 +356,7 @@ body {
   color: #c9d0d6;
 }
 
-.xrp-total {
+.live-total {
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
@@ -368,7 +368,7 @@ body {
   color: #6b7380;
 }
 
-.xrp-total span:last-child {
+.live-total span:last-child {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   letter-spacing: 0;
   text-transform: none;
