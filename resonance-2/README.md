@@ -16,7 +16,7 @@ Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POS
 - XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts)
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic 8.931; Coinbase 33.7)
 - PWR — [`src/data/pwr-sleeves.ts`](src/data/pwr-sleeves.ts) (RH Agentic `0.001578` **shares** only)
-- ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (RH Agentic **TBD shares** — no last-known Agentic fill; do not invent a lot)
+- ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (RH Agentic `0.002374` **shares** only)
 
 Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). PWR and ETN use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 

@@ -137,7 +137,7 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 | Sleeve id | XRP | SUI | PWR | ETN | Writer |
 | --- | --- | --- | --- | --- | --- |
 | `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | ingest, venue `robinhood` only |
-| `rh-agentic` | yes | yes | yes (`0.001578` seed, shares) | yes (`TBD` seed, shares — first fill starts from 0) | ingest, venue `robinhood` only |
+| `rh-agentic` | yes | yes | yes (`0.001578` seed, shares) | yes (`0.002374` seed, shares) | ingest, venue `robinhood` only |
 | `coinbase` | yes | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | ingest, venue `coinbase` only |
 | `flare-vault` | yes (XRP only) | no such line | no such line | no such line | **founder / typed constant only** |
 

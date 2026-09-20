@@ -110,14 +110,14 @@ describe("sleeve apply", () => {
     );
   });
 
-  it("applies RH Agentic fills to ETN starting from TBD as 0", () => {
+  it("applies RH Agentic fills to the live ETN equity book", () => {
     const result = applyFillToSleevePrints(
       {},
       event({ ticker: "ETN", sleeve: "rh-agentic", qty: "0.001" }),
     );
     assert.equal(result.applied, true);
-    assert.equal(result.nextQuantity, "0.001");
-    assert.equal(result.prints.ETN?.["rh-agentic"], "0.001");
+    assert.equal(result.nextQuantity, "0.003374");
+    assert.equal(result.prints.ETN?.["rh-agentic"], "0.003374");
   });
 
   it("refuses inventing coinbase on ETN", () => {

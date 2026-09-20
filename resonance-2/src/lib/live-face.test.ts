@@ -10,11 +10,14 @@ import {
 } from "./live-face";
 
 describe("live face units", () => {
-  it("keeps the founder PWR share print instead of rounding to 0.002", () => {
+  it("keeps founder PWR and ETN share prints instead of rounding", () => {
     assert.equal(formatSleeveQuantity("0.001578"), "0.001578");
     assert.equal(formatTotalUnits(0.001578), "0.001578");
+    assert.equal(formatSleeveQuantity("0.002374"), "0.002374");
+    assert.equal(formatTotalUnits(0.002374), "0.002374");
     assert.equal(formatSleeveQuantity("8.931"), "8.931");
     assert.equal(formatSleeveQuantity("33.7"), "33.7");
+    assert.equal(formatSleeveQuantity("TBD"), "TBD");
   });
 
   it("labels PWR and ETN shares and crypto tokens", () => {
@@ -35,21 +38,18 @@ describe("live face units", () => {
     assert.equal(face.sleeves[0]?.id, "rh-agentic");
   });
 
-  it("keeps ETN Agentic qty as TBD instead of inventing a lot", () => {
-    assert.equal(formatSleeveQuantity("TBD"), "TBD");
-
+  it("labels ETN shares from the hub Agentic lock, not a Main lot", () => {
     const face = assembleLiveFace("ETN", ETN_SLEEVES, {
-      usd: 400,
+      usd: 424.77,
       source: "test",
       fetchedAt: "2026-09-20T00:00:00.000Z",
     });
     assert.equal(face.unitsWord, "shares");
-    assert.equal(face.totalUnitsLabel, "TBD");
-    assert.equal(face.totalUsdLabel, "—");
-    assert.equal(face.sleeves[0]?.quantity, "TBD");
-    assert.equal(face.sleeves[0]?.quantityLabel, "TBD");
+    assert.equal(face.totalUnitsLabel, "0.002374");
+    assert.equal(face.sleeves[0]?.quantity, "0.002374");
+    assert.equal(face.sleeves[0]?.quantityLabel, "0.002374");
     assert.equal(face.sleeves.length, 1);
     assert.equal(face.sleeves[0]?.id, "rh-agentic");
-    assert.equal(face.priceLabel, "$400.000");
+    assert.equal(face.priceLabel, "$424.770");
   });
 });
