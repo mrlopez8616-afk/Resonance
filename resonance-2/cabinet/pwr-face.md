@@ -10,7 +10,7 @@ PWR is the third live node and the first **equity** face. Do not copy-paste a fo
 | Sleeve this brick | **RH Agentic only** — last-known print `0.001578` shares as of 2026-09-19. Do not invent Main, Coinbase, or vault lots |
 | Spot | Public equity feed on the server. **Not** CoinGecko / Binance. Phase Zero already solved this in `src/lib/fetch-equities.ts` (Yahoo quote → Yahoo chart → Stooq) |
 | Weekend context | Last trade ~**$636.5** (2026-09-19 weekend). Cabinet context only. Prefer a live public print. If every unpaid feed is dark, the face shows `—` — do not hardcode $636.5 as a live price |
-| Locked 12 | Flip PWR to live. Leave ETN VRT GEV CEG HUBB dashed. XRP + SUI stay live |
+| Locked 12 | Flip PWR to live. Leave VRT GEV CEG HUBB dashed. XRP + SUI stay live. ETN is the next equity brick ([`etn-face.md`](./etn-face.md)) |
 
 ## Reuse
 
@@ -46,12 +46,12 @@ Durable overrides land via fill ingest on `rh-agentic` only. Seed `0.001578` rem
 - New equity helper instead of adding PWR to `SPOT_TICKERS`
 - `unitsWord: "shares"` on the assembled face
 - One sleeve, not two
-- Fill-ingest skip-for-offline no longer applies to PWR (use ETN / VRT / … for log-only)
+- Fill-ingest skip-for-offline no longer applies to PWR (use VRT / GEV / … for log-only; ETN is now its own live book)
 
 ## Next brick
 
 1. Keep `OperatorShell` / `NodeSquare` / `LiveNodeFace`.
-2. Next live node is one at a time. Another physical equity reuses `equity-price.ts` + a new `*-sleeves.ts`. Another crypto reuses `spot-price.ts`.
+2. Next live node is one at a time. ETN reuses `equity-price.ts` + [`etn-face.md`](./etn-face.md). Another crypto reuses `spot-price.ts`.
 3. Do not register equities in `SPOT_TICKERS`.
 4. Wire broker connectors server-side only.
 

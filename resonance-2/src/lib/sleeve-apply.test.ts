@@ -110,10 +110,46 @@ describe("sleeve apply", () => {
     );
   });
 
+  it("applies RH Agentic fills to ETN starting from TBD as 0", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({ ticker: "ETN", sleeve: "rh-agentic", qty: "0.001" }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.nextQuantity, "0.001");
+    assert.equal(result.prints.ETN?.["rh-agentic"], "0.001");
+  });
+
+  it("refuses inventing coinbase on ETN", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "ETN",
+          }),
+        ),
+      /not on the ETN face/,
+    );
+  });
+
+  it("refuses inventing rh-main on ETN", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({ ticker: "ETN", sleeve: "rh-main" }),
+        ),
+      /not on the ETN face/,
+    );
+  });
+
   it("skips sleeve apply for an offline locked ticker", () => {
     const result = applyFillToSleevePrints(
       {},
-      event({ ticker: "ETN", sleeve: "rh-agentic" }),
+      event({ ticker: "VRT", sleeve: "rh-agentic" }),
     );
     assert.equal(result.applied, false);
     assert.deepEqual(result.prints, {});
