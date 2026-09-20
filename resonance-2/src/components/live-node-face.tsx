@@ -111,7 +111,7 @@ export function LiveNodeFace({
       </header>
       <p className="live-units">
         {face.totalUnitsLabel}
-        <span> tokens</span>
+        <span> {face.unitsWord}</span>
       </p>
       <p className="live-value">
         {face.totalUsdLabel}
