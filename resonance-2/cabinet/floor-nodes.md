@@ -16,7 +16,7 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 - `src/data/xrp-sleeves.ts` / Flare vault `28273`
 - `src/data/sui-sleeves.ts`
 - `src/data/pwr-sleeves.ts` / RH Agentic `0.001578` shares
-- `src/data/etn-sleeves.ts` / RH Agentic `TBD` shares
+- `src/data/etn-sleeves.ts` / RH Agentic `0.002374` shares
 - `src/data/fills.ts` / `/log` and the durable fill store (`POST /api/fills`)
 - Broker keys, env, gas wallet addresses
 
