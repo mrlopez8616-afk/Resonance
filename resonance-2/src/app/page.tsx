@@ -10,13 +10,14 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const [cryptoQuotes, equityQuotes, sleeves] = await Promise.all([
     loadSpotQuotes(["XRP", "SUI"]),
-    loadEquityQuotes(["PWR"]),
+    loadEquityQuotes(["PWR", "ETN"]),
     loadLiveSleeveBooks(),
   ]);
   const faces = {
     XRP: assembleLiveFace("XRP", sleeves.XRP, cryptoQuotes.XRP),
     SUI: assembleLiveFace("SUI", sleeves.SUI, cryptoQuotes.SUI),
     PWR: assembleLiveFace("PWR", sleeves.PWR, equityQuotes.PWR),
+    ETN: assembleLiveFace("ETN", sleeves.ETN, equityQuotes.ETN),
   };
 
   return (

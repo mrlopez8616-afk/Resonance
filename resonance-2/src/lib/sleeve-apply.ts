@@ -1,9 +1,10 @@
 import type { FillSleeveId } from "@/data/fills";
 import type { NodeSleeve } from "@/data/sleeves";
+import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
-import { addDecimal, subtractDecimal } from "@/lib/decimal";
+import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 import {
   FLARE_VAULT_SLEEVE_ID,
   FillIngestError,
@@ -15,6 +16,7 @@ export const LIVE_SLEEVE_SEEDS: Record<string, readonly NodeSleeve[]> = {
   XRP: XRP_SLEEVES,
   SUI: SUI_SLEEVES,
   PWR: PWR_SLEEVES,
+  ETN: ETN_SLEEVES,
 };
 
 export type SleevePrints = Record<string, Record<string, string>>;
@@ -80,12 +82,15 @@ export function applyFillToSleevePrints(
     );
   }
 
-  const current = currentSleeveQuantity(prints, event.ticker, event.sleeve);
-  if (current == null) {
+  const currentRaw = currentSleeveQuantity(prints, event.ticker, event.sleeve);
+  if (currentRaw == null) {
     throw new FillIngestError(
       `no seed quantity for ${event.ticker} ${event.sleeve}.`,
     );
   }
+  // TBD / non-numeric seeds are honest placeholders, not lots. First fill
+  // starts from 0 so the hub qty becomes the print.
+  const current = isDecimalString(currentRaw) ? currentRaw.trim() : "0";
 
   const nextQuantity = applyQuantityDelta(current, event.side, event.qty);
   const nextTicker = {

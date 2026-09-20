@@ -141,8 +141,8 @@ async function fetchStooq(ticker: EquityFaceTicker): Promise<SpotQuote> {
 
 /**
  * Live equity USD from unpaid public feeds. Same cascade as Phase Zero.
- * Weekend last-trade context (~$636.5 on 2026-09-19) stays in the cabinet —
- * it is not returned as a live print.
+ * Weekend last-trade context stays in the cabinet — it is not returned
+ * as a live print.
  */
 export async function fetchEquityUsd(
   ticker: EquityFaceTicker,

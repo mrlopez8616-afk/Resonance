@@ -1,12 +1,12 @@
 # Resonance 2.0
 
-Operator floor for Resonance 2.0. **XRP, SUI, and PWR are live.** Other node squares are offline placeholders. The Xaman gas wallet is never shown.
+Operator floor for Resonance 2.0. **XRP, SUI, PWR, and ETN are live.** Other node squares are offline placeholders. The Xaman gas wallet is never shown.
 
 This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
 ## Surfaces
 
-- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for PWR), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
+- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for PWR/ETN), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
 - `/log` — agentic sleeve fill log. Same toolbar. Rows come from the durable fill store, with [`src/data/fills.ts`](src/data/fills.ts) as seed / local fallback.
 
 ## Live faces (this brick)
@@ -16,12 +16,13 @@ Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POS
 - XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts)
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic 8.931; Coinbase 33.7)
 - PWR — [`src/data/pwr-sleeves.ts`](src/data/pwr-sleeves.ts) (RH Agentic `0.001578` **shares** only)
+- ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (RH Agentic **TBD shares** — no last-known Agentic fill; do not invent a lot)
 
-Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). PWR uses the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
+Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). PWR and ETN use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 
-Flare vault is a **manual** founder constant (`28273` XRP) on the XRP face only. Ingest cannot write it. SUI and PWR have no vault line.
+Flare vault is a **manual** founder constant (`28273` XRP) on the XRP face only. Ingest cannot write it. SUI, PWR, and ETN have no vault line.
 
-Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), [`cabinet/pwr-face.md`](cabinet/pwr-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
+Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), [`cabinet/pwr-face.md`](cabinet/pwr-face.md), [`cabinet/etn-face.md`](cabinet/etn-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
 
 ## Run locally
 

@@ -19,6 +19,7 @@ describe("decimal-string math", () => {
     assert.equal(isDecimalString("8.931"), true);
     assert.equal(isDecimalString("10"), true);
     assert.equal(isDecimalString("REPLACE-WITH-FILLED-QTY"), false);
+    assert.equal(isDecimalString("TBD"), false);
     assert.equal(isDecimalString(""), false);
   });
 });

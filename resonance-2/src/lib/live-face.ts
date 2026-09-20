@@ -1,4 +1,5 @@
 import type { NodeSleeve } from "@/data/sleeves";
+import { isDecimalString } from "@/lib/decimal";
 
 export type SpotQuote = {
   usd: number;
@@ -34,7 +35,7 @@ export type LiveFaceData = {
 };
 
 /** Live equity faces only. Do not invent offline physical tickers here. */
-export const EQUITY_FACE_TICKERS = ["PWR"] as const;
+export const EQUITY_FACE_TICKERS = ["PWR", "ETN"] as const;
 
 export function faceUnitWord(ticker: string): FaceUnitWord {
   return (EQUITY_FACE_TICKERS as readonly string[]).includes(ticker)
@@ -99,10 +100,12 @@ export function assembleLiveFace(
   sleeves: readonly NodeSleeve[],
   quote: SpotQuote | null = null,
 ): LiveFaceData {
-  const totalUnits = totalSleeveQuantity(sleeves);
+  const qtyKnown = sleeves.every((sleeve) => isDecimalString(sleeve.quantity));
+  const totalUnits = qtyKnown ? totalSleeveQuantity(sleeves) : Number.NaN;
   const priceUsd =
     quote && Number.isFinite(quote.usd) && quote.usd > 0 ? quote.usd : null;
-  const totalUsd = priceUsd === null ? null : totalUnits * priceUsd;
+  const totalUsd =
+    priceUsd === null || !qtyKnown ? null : totalUnits * priceUsd;
 
   return {
     ticker,
@@ -120,7 +123,7 @@ export function assembleLiveFace(
       note: sleeve.note,
     })),
     totalUnits,
-    totalUnitsLabel: formatTotalUnits(totalUnits),
+    totalUnitsLabel: qtyKnown ? formatTotalUnits(totalUnits) : "TBD",
     totalUsd,
     totalUsdLabel: formatCompactUsd(totalUsd),
     unitsWord: faceUnitWord(ticker),
