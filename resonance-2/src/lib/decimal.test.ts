@@ -17,6 +17,7 @@ describe("decimal-string math", () => {
 
   it("accepts integer and decimal strings only", () => {
     assert.equal(isDecimalString("8.931"), true);
+    assert.equal(isDecimalString("0"), true);
     assert.equal(isDecimalString("10"), true);
     assert.equal(isDecimalString("REPLACE-WITH-FILLED-QTY"), false);
     assert.equal(isDecimalString("TBD"), false);

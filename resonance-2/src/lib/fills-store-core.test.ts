@@ -46,14 +46,14 @@ describe("fills store core", () => {
     assert.equal(first.deduped, false);
     assert.equal(first.applied, true);
     assert.equal(first.envelope.fills.length, seedFills.length + 1);
-    assert.equal(first.envelope.sleevePrints.SUI?.["rh-agentic"], "10.931");
+    assert.equal(first.envelope.sleevePrints.SUI?.["rh-agentic"], "2");
     assert.equal(first.fill.idempotencyKey, "robinhood:monday-sui-6ai");
 
     const retry = ingestFillIntoEnvelope(first.envelope, mondayBuy());
     assert.equal(retry.deduped, true);
     assert.equal(retry.applied, false);
     assert.equal(retry.envelope.fills.length, first.envelope.fills.length);
-    assert.equal(retry.envelope.sleevePrints.SUI?.["rh-agentic"], "10.931");
+    assert.equal(retry.envelope.sleevePrints.SUI?.["rh-agentic"], "2");
     assert.equal(retry.fill.orderId, first.fill.orderId);
   });
 

@@ -1,6 +1,6 @@
 # Cabinet note — SUI face
 
-SUI is the second live node. PWR (equity) is the third — start at [`pwr-face.md`](./pwr-face.md). ETN is the fourth — [`etn-face.md`](./etn-face.md). Do not copy-paste a fifth face.
+SUI is the second live node. PWR (equity) is the third — start at [`pwr-face.md`](./pwr-face.md). ETN is the fourth — [`etn-face.md`](./etn-face.md). VRT is the fifth — [`vrt-face.md`](./vrt-face.md). Do not copy-paste a sixth face.
 
 ## Reuse for the next live node (another equity, or the next crypto)
 
@@ -19,11 +19,11 @@ Hub fill ingest (RH Agentic / Coinbase prints, never Flare) is [`fill-ingest.md`
 
 ## SUI sleeves
 
-`src/data/sui-sleeves.ts` — 2026-09-19 CT Resonance check. Do not invent lots. Durable overrides land via fill ingest; seed values below remain the fallback.
+`src/data/sui-sleeves.ts` — hub live lock 2026-09-21. Do not invent lots. Durable overrides land via fill ingest; seed values below remain the fallback.
 
-- RH Agentic: `8.931` SUI
+- RH Agentic: `0` SUI (sold). Keep the row; do not drop the sleeve.
 - Coinbase: `33.7` — clean face qty (`Coinbase 33.7`), no “buy print / staked” label. Coinbase Advanced Trade (2026-09-19) `balance` SUI available=0 hold=0 (staking not exposed on this API key). The number is the sum of SUI-USD **FILLED buys** only: 16.9 + 16.8 = 33.7. Sells on this book: none. Do **not** invent a separate stake size beyond 33.7.
-- Headline: `8.931 + 33.7 = 42.631 tokens`, then `42.631 × live SUI-USD` as `~$… live`. Ticker and live price pop at the same large size; tokens / live USD / sleeves step down and stay inside the square.
+- Headline: `0 + 33.7 = 33.7 tokens`, then `33.7 × live SUI-USD` as `~$… live`. Ticker and live price pop at the same large size; tokens / live USD / sleeves step down and stay inside the square.
 - No Flare vault
 - No Xaman / gas wallet address
 
@@ -40,7 +40,7 @@ When a server-side Coinbase connector exists: if `available`/`hold` are both 0, 
 
 1. Keep `OperatorShell` / `NodeSquare` / `LiveNodeFace`.
 2. Add `src/data/<ticker>-sleeves.ts` (or skip sleeves if the node is watch-only).
-3. Register the ticker in `SPOT_TICKERS` **only if** it has a public crypto spot USD feed. Equities reuse `src/lib/equity-price.ts` — do not pretend CoinGecko has PWR or ETN.
+3. Register the ticker in `SPOT_TICKERS` **only if** it has a public crypto spot USD feed. Equities reuse `src/lib/equity-price.ts` — do not pretend CoinGecko has PWR, ETN, or VRT.
 4. Flip `FLOOR_NODES` to `live` and pass the assembled face from `src/app/page.tsx`.
 5. Wire broker connectors server-side only.
 

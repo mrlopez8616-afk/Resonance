@@ -1,6 +1,6 @@
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
-import { loadEquityQuotes } from "@/lib/equity-price";
+import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { assembleLiveFace } from "@/lib/live-face";
 import { loadLiveSleeveBooks } from "@/lib/sleeve-prints";
 import { loadSpotQuotes } from "@/lib/spot-price";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const [cryptoQuotes, equityQuotes, sleeves] = await Promise.all([
     loadSpotQuotes(["XRP", "SUI"]),
-    loadEquityQuotes(["PWR", "ETN"]),
+    loadEquityQuotes(EQUITY_FACE_TICKERS),
     loadLiveSleeveBooks(),
   ]);
   const faces = {
@@ -18,6 +18,7 @@ export default async function Home() {
     SUI: assembleLiveFace("SUI", sleeves.SUI, cryptoQuotes.SUI),
     PWR: assembleLiveFace("PWR", sleeves.PWR, equityQuotes.PWR),
     ETN: assembleLiveFace("ETN", sleeves.ETN, equityQuotes.ETN),
+    VRT: assembleLiveFace("VRT", sleeves.VRT, equityQuotes.VRT),
   };
 
   return (

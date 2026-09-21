@@ -4,12 +4,13 @@ import type { NodeSleeve } from "@/data/sleeves";
  * SUI sleeve quantities for the live node face.
  *
  * Same rule as XRP: no Robinhood / Coinbase calls in this brick. Quantities
- * are last-known live prints (2026-09-19 CT Resonance check). Do not invent
- * a Coinbase lot beyond the filled-buy sum below.
+ * are last-known live prints. Do not invent a Coinbase lot beyond the
+ * filled-buy sum below.
  *
- * Coinbase Advanced Trade (2026-09-19): SUI available=0 hold=0 (staking not
- * on this API key). Use the sum of SUI-USD FILLED buys instead:
- * 16.9 + 16.8 = 33.7. Sells on this book: none.
+ * Hub live lock 2026-09-21: RH Agentic sold to 0. Coinbase Advanced Trade
+ * (2026-09-19): SUI available=0 hold=0 (staking not on this API key). Use
+ * the sum of SUI-USD FILLED buys instead: 16.9 + 16.8 = 33.7. Sells on
+ * this book: none.
  *
  * No Flare vault line. Never show an Xaman / gas wallet address.
  */
@@ -20,7 +21,7 @@ export const SUI_SLEEVES: SuiSleeve[] = [
   {
     id: "rh-agentic",
     label: "RH Agentic",
-    quantity: "8.931",
+    quantity: "0",
     source: "robinhood-config",
     manual: false,
   },

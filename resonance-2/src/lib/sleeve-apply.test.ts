@@ -30,15 +30,15 @@ describe("sleeve apply", () => {
 
     const bought = applyFillToSleevePrints({}, event());
     assert.equal(bought.applied, true);
-    assert.equal(bought.nextQuantity, "10.931");
-    assert.equal(bought.prints.SUI?.["rh-agentic"], "10.931");
+    assert.equal(bought.nextQuantity, "2");
+    assert.equal(bought.prints.SUI?.["rh-agentic"], "2");
 
     const sold = applyFillToSleevePrints(bought.prints, event({
       orderId: "order-2",
       side: "sell",
       qty: "1",
     }));
-    assert.equal(sold.nextQuantity, "9.931");
+    assert.equal(sold.nextQuantity, "1");
   });
 
   it("updates Coinbase from a Coinbase fill", () => {
@@ -91,8 +91,8 @@ describe("sleeve apply", () => {
       event({ ticker: "PWR", sleeve: "rh-agentic", qty: "0.0001" }),
     );
     assert.equal(result.applied, true);
-    assert.equal(result.nextQuantity, "0.001678");
-    assert.equal(result.prints.PWR?.["rh-agentic"], "0.001678");
+    assert.equal(result.nextQuantity, "0.004017");
+    assert.equal(result.prints.PWR?.["rh-agentic"], "0.004017");
   });
 
   it("refuses inventing coinbase on PWR", () => {
@@ -110,14 +110,50 @@ describe("sleeve apply", () => {
     );
   });
 
-  it("applies RH Agentic fills to ETN starting from TBD as 0", () => {
+  it("applies RH Agentic fills to ETN from the 2026-09-21 seed", () => {
     const result = applyFillToSleevePrints(
       {},
       event({ ticker: "ETN", sleeve: "rh-agentic", qty: "0.001" }),
     );
     assert.equal(result.applied, true);
-    assert.equal(result.nextQuantity, "0.001");
-    assert.equal(result.prints.ETN?.["rh-agentic"], "0.001");
+    assert.equal(result.nextQuantity, "0.006844");
+    assert.equal(result.prints.ETN?.["rh-agentic"], "0.006844");
+  });
+
+  it("applies RH Agentic fills to the live VRT equity book", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({ ticker: "VRT", sleeve: "rh-agentic", qty: "0.0001" }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.nextQuantity, "0.010091");
+    assert.equal(result.prints.VRT?.["rh-agentic"], "0.010091");
+  });
+
+  it("refuses inventing coinbase on VRT", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "VRT",
+          }),
+        ),
+      /not on the VRT face/,
+    );
+  });
+
+  it("refuses inventing rh-main on VRT", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({ ticker: "VRT", sleeve: "rh-main" }),
+        ),
+      /not on the VRT face/,
+    );
   });
 
   it("refuses inventing coinbase on ETN", () => {
@@ -149,7 +185,7 @@ describe("sleeve apply", () => {
   it("skips sleeve apply for an offline locked ticker", () => {
     const result = applyFillToSleevePrints(
       {},
-      event({ ticker: "VRT", sleeve: "rh-agentic" }),
+      event({ ticker: "GEV", sleeve: "rh-agentic" }),
     );
     assert.equal(result.applied, false);
     assert.deepEqual(result.prints, {});

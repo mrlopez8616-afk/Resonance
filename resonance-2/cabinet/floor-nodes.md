@@ -14,13 +14,14 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 ## What delete does **not** touch
 
 - `src/data/xrp-sleeves.ts` / Flare vault `28273`
-- `src/data/sui-sleeves.ts`
-- `src/data/pwr-sleeves.ts` / RH Agentic `0.001578` shares
-- `src/data/etn-sleeves.ts` / RH Agentic `TBD` shares
+- `src/data/sui-sleeves.ts` / RH Agentic `0` (sold) + Coinbase `33.7`
+- `src/data/pwr-sleeves.ts` / RH Agentic `0.003917` shares
+- `src/data/etn-sleeves.ts` / RH Agentic `0.005844` shares
+- `src/data/vrt-sleeves.ts` / RH Agentic `0.009991` shares
 - `src/data/fills.ts` / `/log` and the durable fill store (`POST /api/fills`)
 - Broker keys, env, gas wallet addresses
 
-Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, or ETN re-stands the live face from those files. Restoring an offline ticker brings the dashed placeholder back.
+Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, or VRT re-stands the live face from those files. Restoring an offline ticker brings the dashed placeholder back.
 
 ## Confirm
 
