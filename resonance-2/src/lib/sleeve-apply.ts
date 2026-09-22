@@ -1,6 +1,9 @@
 import type { FillSleeveId } from "@/data/fills";
 import type { NodeSleeve } from "@/data/sleeves";
+import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
+import { GEV_SLEEVES } from "@/data/gev-sleeves";
+import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
@@ -19,6 +22,9 @@ export const LIVE_SLEEVE_SEEDS: Record<string, readonly NodeSleeve[]> = {
   PWR: PWR_SLEEVES,
   ETN: ETN_SLEEVES,
   VRT: VRT_SLEEVES,
+  GEV: GEV_SLEEVES,
+  CEG: CEG_SLEEVES,
+  HUBB: HUBB_SLEEVES,
 };
 
 export type SleevePrints = Record<string, Record<string, string>>;

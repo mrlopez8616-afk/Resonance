@@ -156,6 +156,114 @@ describe("sleeve apply", () => {
     );
   });
 
+  it("applies RH Agentic fills to the live GEV equity book", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({ ticker: "GEV", sleeve: "rh-agentic", qty: "0.0001" }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.nextQuantity, "0.00274");
+    assert.equal(result.prints.GEV?.["rh-agentic"], "0.00274");
+  });
+
+  it("refuses inventing coinbase on GEV", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "GEV",
+          }),
+        ),
+      /not on the GEV face/,
+    );
+  });
+
+  it("refuses inventing rh-main on GEV", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({ ticker: "GEV", sleeve: "rh-main" }),
+        ),
+      /not on the GEV face/,
+    );
+  });
+
+  it("applies RH Agentic fills to the live CEG equity book", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({ ticker: "CEG", sleeve: "rh-agentic", qty: "0.0001" }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.nextQuantity, "0.009717");
+    assert.equal(result.prints.CEG?.["rh-agentic"], "0.009717");
+  });
+
+  it("refuses inventing coinbase on CEG", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "CEG",
+          }),
+        ),
+      /not on the CEG face/,
+    );
+  });
+
+  it("refuses inventing rh-main on CEG", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({ ticker: "CEG", sleeve: "rh-main" }),
+        ),
+      /not on the CEG face/,
+    );
+  });
+
+  it("applies RH Agentic fills to the live HUBB equity book", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({ ticker: "HUBB", sleeve: "rh-agentic", qty: "0.0001" }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.nextQuantity, "0.005666");
+    assert.equal(result.prints.HUBB?.["rh-agentic"], "0.005666");
+  });
+
+  it("refuses inventing coinbase on HUBB", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "HUBB",
+          }),
+        ),
+      /not on the HUBB face/,
+    );
+  });
+
+  it("refuses inventing rh-main on HUBB", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({ ticker: "HUBB", sleeve: "rh-main" }),
+        ),
+      /not on the HUBB face/,
+    );
+  });
+
   it("refuses inventing coinbase on ETN", () => {
     assert.throws(
       () =>
@@ -185,7 +293,7 @@ describe("sleeve apply", () => {
   it("skips sleeve apply for an offline locked ticker", () => {
     const result = applyFillToSleevePrints(
       {},
-      event({ ticker: "GEV", sleeve: "rh-agentic" }),
+      event({ ticker: "BTC", sleeve: "rh-agentic" }),
     );
     assert.equal(result.applied, false);
     assert.deepEqual(result.prints, {});

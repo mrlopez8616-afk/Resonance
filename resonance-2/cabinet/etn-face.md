@@ -10,7 +10,7 @@ ETN is the fourth live node and the second **equity** face. Do not copy-paste a 
 | Sleeve this brick | **RH Agentic only** — hub live lock 2026-09-21 print `0.005844` shares. Supersedes draft [#34](https://github.com/mrlopez8616-afk/Resonance/pull/34) (`0.002374`) and the TBD placeholder. The 2026-09-11 snapshot `0.041504` is **RH Main**, not this sleeve. Do not invent a Main lot |
 | Spot | Reuse `src/lib/equity-price.ts`. **Not** CoinGecko / Binance. Same unpaid cascade as PWR (Yahoo quote → Yahoo chart → Stooq) |
 | Weekend / last-trade | Prefer a live public print. If every unpaid feed is dark, the face shows `—` — do not invent a USD number |
-| Locked 12 | ETN stays live. VRT is its own brick ([`vrt-face.md`](./vrt-face.md)). Leave GEV CEG HUBB (and remaining crypto squares) dashed. XRP + SUI + PWR stay live |
+| Locked 12 | ETN stays live. VRT is its own brick ([`vrt-face.md`](./vrt-face.md)). GEV, CEG, and HUBB are the remaining equity batch ([`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)). Leave BTC ETH SOL dashed. XRP + SUI + PWR stay live |
 
 ## Reuse
 
@@ -45,12 +45,12 @@ Durable overrides land via fill ingest on `rh-agentic` only. Seed `0.005844` rem
 
 - Reused `equity-price.ts` instead of adding a third price helper
 - Same one-sleeve RH Agentic shape
-- Fill-ingest skip-for-offline no longer applies to ETN (use GEV / CEG / HUBB / remaining crypto for log-only; VRT is now its own live book)
+- Fill-ingest skip-for-offline no longer applies to ETN (use BTC / ETH / SOL / FLR for log-only; VRT, GEV, CEG, and HUBB are their own live books)
 
 ## Next brick
 
 1. Keep `OperatorShell` / `NodeSquare` / `LiveNodeFace`.
-2. Next live node is one at a time. VRT reuses `equity-price.ts` + [`vrt-face.md`](./vrt-face.md). Another crypto reuses `spot-price.ts`.
+2. Physical equities on this floor are live (VRT, then the GEV / CEG / HUBB batch). Another crypto reuses `spot-price.ts`.
 3. Do not register equities in `SPOT_TICKERS`.
 4. Wire broker connectors server-side only.
 

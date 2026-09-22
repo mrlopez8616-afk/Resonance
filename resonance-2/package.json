@@ -2,7 +2,7 @@
   "name": "resonance-2",
   "version": "0.1.0",
   "private": true,
-  "description": "Resonance 2.0 operator floor. Live XRP, SUI, PWR, ETN, and VRT nodes plus agentic sleeve fill log. Separate from the Phase Zero dashboard.",
+  "description": "Resonance 2.0 operator floor. Live XRP, SUI, PWR, ETN, VRT, GEV, CEG, and HUBB nodes plus agentic sleeve fill log. Separate from the Phase Zero dashboard.",
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3001",
     "build": "next build",

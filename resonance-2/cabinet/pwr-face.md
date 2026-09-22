@@ -10,7 +10,7 @@ PWR is the third live node and the first **equity** face. Do not copy-paste a ne
 | Sleeve this brick | **RH Agentic only** — hub live lock 2026-09-21 print `0.003917` shares (supersedes 2026-09-19 `0.001578`). Do not invent Main, Coinbase, or vault lots |
 | Spot | Public equity feed on the server. **Not** CoinGecko / Binance. Phase Zero already solved this in `src/lib/fetch-equities.ts` (Yahoo quote → Yahoo chart → Stooq) |
 | Weekend context | Last trade ~**$636.5** (2026-09-19 weekend). Cabinet context only. Prefer a live public print. If every unpaid feed is dark, the face shows `—` — do not hardcode $636.5 as a live price |
-| Locked 12 | PWR stays live. VRT is its own brick ([`vrt-face.md`](./vrt-face.md)). Leave GEV CEG HUBB dashed. XRP + SUI + ETN stay live |
+| Locked 12 | PWR stays live. VRT is its own brick ([`vrt-face.md`](./vrt-face.md)). GEV, CEG, and HUBB are the remaining equity batch ([`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)). Leave BTC ETH SOL dashed. XRP + SUI + ETN stay live |
 
 ## Reuse
 
@@ -46,12 +46,12 @@ Durable overrides land via fill ingest on `rh-agentic` only. Seed `0.003917` rem
 - New equity helper instead of adding PWR to `SPOT_TICKERS`
 - `unitsWord: "shares"` on the assembled face
 - One sleeve, not two
-- Fill-ingest skip-for-offline no longer applies to PWR (use GEV / CEG / HUBB / remaining crypto for log-only; ETN and VRT are their own live books)
+- Fill-ingest skip-for-offline no longer applies to PWR (use BTC / ETH / SOL / FLR for log-only; ETN, VRT, GEV, CEG, and HUBB are their own live books)
 
 ## Next brick
 
 1. Keep `OperatorShell` / `NodeSquare` / `LiveNodeFace`.
-2. Next live node is one at a time. VRT reuses `equity-price.ts` + [`vrt-face.md`](./vrt-face.md). Another crypto reuses `spot-price.ts`.
+2. Physical equities on this floor are live (VRT, then the GEV / CEG / HUBB batch). Another crypto reuses `spot-price.ts`.
 3. Do not register equities in `SPOT_TICKERS`.
 4. Wire broker connectors server-side only.
 

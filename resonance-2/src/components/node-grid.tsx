@@ -5,7 +5,10 @@ import { FloorDialog } from "@/components/floor-dialog";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
 import type { FloorNode } from "@/data/floor-nodes";
+import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
+import { GEV_SLEEVES } from "@/data/gev-sleeves";
+import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
@@ -28,6 +31,9 @@ const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
   PWR: PWR_SLEEVES,
   ETN: ETN_SLEEVES,
   VRT: VRT_SLEEVES,
+  GEV: GEV_SLEEVES,
+  CEG: CEG_SLEEVES,
+  HUBB: HUBB_SLEEVES,
 };
 
 export function NodeGrid({
@@ -162,7 +168,7 @@ export function NodeGrid({
         {removed.length === 0 ? (
           <p className="floor-dialog-copy">
             No removed nodes. Delete a square first, then restore it here as it
-            last stood (live XRP/SUI/PWR/ETN/VRT re-stand; others come back offline).
+            last stood (live XRP/SUI/PWR/ETN/VRT/GEV/CEG/HUBB re-stand; others come back offline).
           </p>
         ) : (
           <ul className="floor-restore-list">

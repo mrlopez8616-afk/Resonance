@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { NodeSleeve } from "@/data/sleeves";
+import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
+import { GEV_SLEEVES } from "@/data/gev-sleeves";
+import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
@@ -15,6 +18,9 @@ export async function loadLiveSleeveBooks(): Promise<{
   PWR: readonly NodeSleeve[];
   ETN: readonly NodeSleeve[];
   VRT: readonly NodeSleeve[];
+  GEV: readonly NodeSleeve[];
+  CEG: readonly NodeSleeve[];
+  HUBB: readonly NodeSleeve[];
 }> {
   try {
     const loaded = await loadFillsStore();
@@ -24,6 +30,9 @@ export async function loadLiveSleeveBooks(): Promise<{
       PWR: liveSleevesFromEnvelope(loaded.envelope, "PWR") ?? PWR_SLEEVES,
       ETN: liveSleevesFromEnvelope(loaded.envelope, "ETN") ?? ETN_SLEEVES,
       VRT: liveSleevesFromEnvelope(loaded.envelope, "VRT") ?? VRT_SLEEVES,
+      GEV: liveSleevesFromEnvelope(loaded.envelope, "GEV") ?? GEV_SLEEVES,
+      CEG: liveSleevesFromEnvelope(loaded.envelope, "CEG") ?? CEG_SLEEVES,
+      HUBB: liveSleevesFromEnvelope(loaded.envelope, "HUBB") ?? HUBB_SLEEVES,
     };
   } catch {
     return {
@@ -32,6 +41,9 @@ export async function loadLiveSleeveBooks(): Promise<{
       PWR: PWR_SLEEVES,
       ETN: ETN_SLEEVES,
       VRT: VRT_SLEEVES,
+      GEV: GEV_SLEEVES,
+      CEG: CEG_SLEEVES,
+      HUBB: HUBB_SLEEVES,
     };
   }
 }
