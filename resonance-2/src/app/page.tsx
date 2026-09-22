@@ -19,6 +19,9 @@ export default async function Home() {
     PWR: assembleLiveFace("PWR", sleeves.PWR, equityQuotes.PWR),
     ETN: assembleLiveFace("ETN", sleeves.ETN, equityQuotes.ETN),
     VRT: assembleLiveFace("VRT", sleeves.VRT, equityQuotes.VRT),
+    GEV: assembleLiveFace("GEV", sleeves.GEV, equityQuotes.GEV),
+    CEG: assembleLiveFace("CEG", sleeves.CEG, equityQuotes.CEG),
+    HUBB: assembleLiveFace("HUBB", sleeves.HUBB, equityQuotes.HUBB),
   };
 
   return (

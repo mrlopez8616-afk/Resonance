@@ -10,7 +10,7 @@ VRT is the fifth live node and the third **equity** face. Do not copy-paste a si
 | Sleeve this brick | **RH Agentic only** — hub live lock 2026-09-21 print `0.009991` shares. Do not invent Main, Coinbase, or vault lots |
 | Spot | Reuse `src/lib/equity-price.ts`. **Not** CoinGecko / Binance. Same unpaid cascade as PWR / ETN (Yahoo quote → Yahoo chart → Stooq) |
 | Weekend / last-trade | Prefer a live public print. If every unpaid feed is dark, the face shows `—` — do not invent a USD number |
-| Locked 12 | Flip VRT to live. Leave GEV CEG HUBB (and remaining crypto squares) dashed. XRP + SUI + PWR + ETN stay live |
+| Locked 12 | VRT stays live. GEV, CEG, and HUBB are the remaining equity batch ([`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)). Leave BTC ETH SOL (and FLR, which has no floor square) dashed. XRP + SUI + PWR + ETN stay live |
 
 ## Reuse
 
@@ -41,27 +41,27 @@ Headline: `0.009991 shares`, then `0.009991 × live VRT-USD` as `~$… live`. Ti
 
 Durable overrides land via fill ingest on `rh-agentic` only. Seed `0.009991` remains the fallback until a hub POST applies.
 
-## Later faces (do not light)
+## Later equity batch (now live)
 
-2026-09-21 Agentic prints, cabinet-only until their own brick:
+2026-09-21 Agentic prints, lit together after this brick:
 
-- GEV `0.002640`
-- CEG `0.009617`
-- HUBB `0.005566`
+- GEV `0.002640` — [`gev-face.md`](./gev-face.md)
+- CEG `0.009617` — [`ceg-face.md`](./ceg-face.md)
+- HUBB `0.005566` — [`hubb-face.md`](./hubb-face.md)
 
-Leave those squares dashed. Do not invent Main lots or Coinbase rows for them.
+RH Agentic only on each. Do not invent Main lots or Coinbase rows for them.
 
 ## What changed vs the ETN brick
 
 - Reused `equity-price.ts` instead of adding a fourth price helper
 - `EQUITY_FACE_TICKERS` is now `PWR` + `ETN` + `VRT`
 - Same one-sleeve RH Agentic shape, qty is the post-trade print `0.009991`
-- Fill-ingest skip-for-offline no longer applies to VRT (use GEV / CEG / HUBB / remaining crypto for log-only)
+- Fill-ingest skip-for-offline no longer applies to VRT (use BTC / ETH / SOL / FLR for log-only; GEV, CEG, and HUBB are their own live books)
 
 ## Next brick
 
 1. Keep `OperatorShell` / `NodeSquare` / `LiveNodeFace`.
-2. Next live node is one at a time. Another physical equity reuses `equity-price.ts` + a new `*-sleeves.ts`. Another crypto reuses `spot-price.ts`.
+2. Remaining offline squares are crypto. Another crypto reuses `spot-price.ts`. Physical equities on this floor are live.
 3. Do not register equities in `SPOT_TICKERS`.
 4. Wire broker connectors server-side only.
 

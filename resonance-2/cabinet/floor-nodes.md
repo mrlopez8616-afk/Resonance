@@ -18,10 +18,13 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 - `src/data/pwr-sleeves.ts` / RH Agentic `0.003917` shares
 - `src/data/etn-sleeves.ts` / RH Agentic `0.005844` shares
 - `src/data/vrt-sleeves.ts` / RH Agentic `0.009991` shares
+- `src/data/gev-sleeves.ts` / RH Agentic `0.002640` shares
+- `src/data/ceg-sleeves.ts` / RH Agentic `0.009617` shares
+- `src/data/hubb-sleeves.ts` / RH Agentic `0.005566` shares
 - `src/data/fills.ts` / `/log` and the durable fill store (`POST /api/fills`)
 - Broker keys, env, gas wallet addresses
 
-Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, or VRT re-stands the live face from those files. Restoring an offline ticker brings the dashed placeholder back.
+Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, VRT, GEV, CEG, or HUBB re-stands the live face from those files. Restoring an offline ticker brings the dashed placeholder back.
 
 ## Confirm
 

@@ -12,12 +12,12 @@ Reuse the existing operator log and live faces. Do not invent a second fill card
 | Log UI | `src/components/fill-log.tsx` | Same `FillLog` / `FillCard` |
 | Sort | `src/lib/fills.ts` → `listFills` | Newest `time` first |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | Quantity stays a string |
-| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts` | Fallback when the durable store has no override |
+| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts`, `src/data/gev-sleeves.ts`, `src/data/ceg-sleeves.ts`, `src/data/hubb-sleeves.ts` | Fallback when the durable store has no override |
 | Face | `assembleLiveFace` + `LiveNodeFace` | Positions from merged sleeves. Only `quote.usd` is a live price |
 | Auth spirit | Phase Zero `RESONANCE_SYNC_SECRET` Bearer | Server-only. Never `NEXT_PUBLIC_*` |
 | Store spirit | Phase Zero Blob + local file | Private JSON envelope. Local/dev writes `.data/fills.json` |
 
-Live floor is **XRP + SUI + PWR + ETN + VRT**. Locked 12 nodes only — never invent a ticker or a sleeve id. PWR, ETN, and VRT are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md)); ingest may write `rh-agentic` only on those three.
+Live floor is **XRP + SUI + PWR + ETN + VRT + GEV + CEG + HUBB**. Locked 12 nodes only — never invent a ticker or a sleeve id. PWR, ETN, VRT, GEV, CEG, and HUBB are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md), [`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)); ingest may write `rh-agentic` only on those six.
 
 ## Who writes what
 
@@ -134,12 +134,12 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 
 ### Which sleeve ids update
 
-| Sleeve id | XRP | SUI | PWR | ETN | VRT | Writer |
-| --- | --- | --- | --- | --- | --- | --- |
-| `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | ingest, venue `robinhood` only |
-| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | ingest, venue `robinhood` only |
-| `coinbase` | yes | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | ingest, venue `coinbase` only |
-| `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | **founder / typed constant only** |
+| Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | Writer |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | ingest, venue `robinhood` only |
+| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | ingest, venue `robinhood` only |
+| `coinbase` | yes | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | ingest, venue `coinbase` only |
+| `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
 
 Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print:
 
@@ -158,9 +158,9 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 
 ### Live vs offline tickers
 
-- **Live books today:** XRP, SUI, PWR, ETN, VRT. Sleeve apply runs only when that ticker already has the named sleeve id.
-- **Unknown sleeve on a live book** (example: `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, or `VRT` + `rh-main`) → **400**. Do not invent a row.
-- **Locked but offline ticker** (GEV, CEG, HUBB, remaining crypto) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
+- **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB. Sleeve apply runs only when that ticker already has the named sleeve id.
+- **Unknown sleeve on a live book** (example: `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, or `GEV` + `rh-main`) → **400**. Do not invent a row.
+- **Locked but offline ticker** (BTC, ETH, SOL, FLR) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
 - Unknown ticker outside the locked 12 → **400**.
 
 ## Durable envelope
@@ -213,7 +213,7 @@ Retry of the same key: `"deduped": true` and the original stored fill. Sleeve qu
 
 ## First consumer — Monday Agentic SUI → 6 AI
 
-Monday’s Agentic SUI packet is the first hub caller. It lands on the **RH Agentic** sleeve of the **SUI** live face. It is not a Coinbase print. It is not Flare. It does not light GEV / CEG / HUBB.
+Monday’s Agentic SUI packet is the first hub caller. It lands on the **RH Agentic** sleeve of the **SUI** live face. It is not a Coinbase print. It is not Flare. It does not light BTC / ETH / SOL / FLR.
 
 Hub substitutes the real Robinhood order id, filled qty, filled price, and fill time. **Do not treat the fixture numbers as a live lot.** This brick does not invent the Monday size.
 

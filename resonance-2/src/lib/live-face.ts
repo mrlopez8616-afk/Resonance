@@ -34,8 +34,15 @@ export type LiveFaceData = {
   unitsWord: FaceUnitWord;
 };
 
-/** Live equity faces only. Do not invent offline physical tickers here. */
-export const EQUITY_FACE_TICKERS = ["PWR", "ETN", "VRT"] as const;
+/** Live equity faces only. Do not invent offline tickers here. */
+export const EQUITY_FACE_TICKERS = [
+  "PWR",
+  "ETN",
+  "VRT",
+  "GEV",
+  "CEG",
+  "HUBB",
+] as const;
 
 export function faceUnitWord(ticker: string): FaceUnitWord {
   return (EQUITY_FACE_TICKERS as readonly string[]).includes(ticker)
