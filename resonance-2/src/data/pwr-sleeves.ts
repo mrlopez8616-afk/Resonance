@@ -3,14 +3,15 @@ import type { NodeSleeve } from "@/data/sleeves";
 /**
  * PWR sleeve quantities for the live equity face.
  *
- * Founder lock 2026-09-19: RH Agentic only, 0.001578 shares.
- * Do not invent RH Main, Coinbase, or vault lots. Units are shares,
- * not crypto tokens. No Robinhood calls in this brick.
+ * Hub live lock 2026-09-21: RH Agentic only, 0.003917 shares.
+ * Supersedes the 2026-09-19 print 0.001578. Do not invent RH Main,
+ * Coinbase, or vault lots. Units are shares, not crypto tokens.
+ * No Robinhood calls in this brick.
  */
 
 export type PwrSleeve = NodeSleeve;
 
-export const PWR_AGENTIC_SHARES = "0.001578";
+export const PWR_AGENTIC_SHARES = "0.003917";
 
 export const PWR_SLEEVES: PwrSleeve[] = [
   {

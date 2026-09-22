@@ -3,6 +3,7 @@ import type { NodeSleeve } from "@/data/sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
+import { VRT_SLEEVES } from "@/data/vrt-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 import {
@@ -17,6 +18,7 @@ export const LIVE_SLEEVE_SEEDS: Record<string, readonly NodeSleeve[]> = {
   SUI: SUI_SLEEVES,
   PWR: PWR_SLEEVES,
   ETN: ETN_SLEEVES,
+  VRT: VRT_SLEEVES,
 };
 
 export type SleevePrints = Record<string, Record<string, string>>;
