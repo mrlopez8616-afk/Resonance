@@ -8,7 +8,9 @@ export type FloorNode = {
 };
 
 /**
- * Operator-floor squares. XRP, SUI, PWR, ETN, VRT, GEV, CEG, and HUBB are live.
+ * Operator-floor roster. XRP, SUI, PWR, ETN, VRT, GEV, CEG, and HUBB are live
+ * and paint on the homepage. BTC, ETH, and SOL stay here while offline and are
+ * not painted until they are live. FLR is locked but has no floor square.
  * Do not attach price or sleeve data to the remaining offline tickers yet.
  */
 export const FLOOR_NODES: FloorNode[] = [

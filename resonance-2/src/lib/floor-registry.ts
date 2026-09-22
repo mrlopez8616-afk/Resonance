@@ -50,12 +50,17 @@ export function hiddenIdsServerSnapshot(): string {
   return "[]";
 }
 
+/**
+ * Homepage paint list: live faces that are not hidden, plus the one `+` slot.
+ * Offline catalog rows stay in the roster and are not painted until they are live.
+ */
 export function visibleNodes(hiddenIds: readonly string[]): FloorNode[] {
   const hidden = new Set(hiddenIds);
-  const nodes = FLOOR_NODES.filter(
-    (node) => node.status === "empty" || !hidden.has(node.id),
-  );
-  return nodes;
+  return FLOOR_NODES.filter((node) => {
+    if (node.status === "empty") return true;
+    if (node.status === "offline") return false;
+    return !hidden.has(node.id);
+  });
 }
 
 export function removedNodes(hiddenIds: readonly string[]): FloorNode[] {

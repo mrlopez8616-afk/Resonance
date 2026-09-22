@@ -26,7 +26,7 @@ This brick does **not** poll Robinhood or Coinbase. It does **not** light new no
 
 Nodes strip: every locked ticker with a non-zero live sleeve quantity, or a fill whose quantity is a non-zero decimal. A zero print (SUI Agentic `0`) does not qualify by itself. Order follows the locked 12. Each block opens that ticker’s pane. The strip is omitted when none qualify. It is not a time window and it is not a second store.
 
-A live node click is `GET /log?ticker=<symbol>`. Offline squares do not open a pane. The desk can still search a locked ticker that is offline on the floor, because ingest may already have logged that transfer.
+A live node click is `GET /log?ticker=<symbol>`. Offline roster tickers are not painted on the homepage, so they have no square to open. The desk can still search a locked ticker that is offline, because ingest may already have logged that transfer.
 
 ## Forbidden
 

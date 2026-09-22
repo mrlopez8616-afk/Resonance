@@ -1,12 +1,12 @@
 # Resonance 2.0
 
-Operator floor for Resonance 2.0. **XRP, SUI, PWR, ETN, VRT, GEV, CEG, and HUBB are live.** Other node squares are offline placeholders. The Xaman gas wallet is never shown.
+Operator floor for Resonance 2.0. **XRP, SUI, PWR, ETN, VRT, GEV, CEG, and HUBB are live.** The homepage paints those faces plus the one `+` slot. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. The Xaman gas wallet is never shown.
 
 This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
 ## Surfaces
 
-- `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for PWR/ETN/VRT/GEV/CEG/HUBB), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
+- `/` — factory-floor shell: left toolbar, live node squares, one `+` slot, LIVE chip, operator status strip. Offline roster rows are not painted. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for PWR/ETN/VRT/GEV/CEG/HUBB), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
 - `/log` — search desk over the one fill store ([`src/data/fills.ts`](src/data/fills.ts) is the seed / local fallback). Filter by ticker, date range, sleeve, and source. A nodes strip lists every locked ticker with a non-zero live sleeve print or a fill quantity. A live node click opens that ticker’s pane (`/log?ticker=…`). Same fill card. Ingest is unchanged.
 
 ## Live faces (this brick)

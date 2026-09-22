@@ -6,9 +6,10 @@ Operator-floor chrome only. This is not a broker action and not a books wipe.
 
 | Control | Where | What it does |
 | --- | --- | --- |
-| Delete | `×` on every live and offline square (`aria-label="Delete node"`) | Confirm dialog, then hide that id from the grid |
+| Delete | `×` on every painted live square (`aria-label="Delete node"`) | Confirm dialog, then hide that id from the grid. Hide only — sleeve files stay |
 | Open log | Click a live square (not the `×`) | `/log?ticker=THAT` on the one fill store |
 | Add | `+` empty slot (`aria-label="Add node"`) | Restore a previously removed catalog ticker |
+| Paint | Homepage grid | Live faces plus the one `+` slot. Offline roster rows are not painted |
 
 Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key `resonance-2.floor-hidden` via `src/lib/floor-registry.ts`.
 
@@ -25,7 +26,9 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 - `src/data/fills.ts` / `/log` and the durable fill store (`POST /api/fills`)
 - Broker keys, env, gas wallet addresses
 
-Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, VRT, GEV, CEG, or HUBB re-stands the live face from those files. Restoring an offline ticker brings the dashed placeholder back.
+Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, VRT, GEV, CEG, or HUBB re-stands the live face from those files.
+
+BTC, ETH, and SOL stay in `FLOOR_NODES` with status `offline`. They are not painted on the homepage while offline, including after a `+` restore. When a row flips to `live`, it paints again unless that id is still hidden. FLR stays in the locked-12 ingest roster and has no floor square. Do not invent a square for it.
 
 ## Confirm
 

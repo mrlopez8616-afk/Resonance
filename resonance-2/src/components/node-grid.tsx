@@ -125,17 +125,7 @@ export function NodeGrid({
             );
           }
 
-          return (
-            <NodeSquare
-              key={node.id}
-              dashed
-              label={`${node.ticker} offline`}
-              onDelete={() => setPending(node)}
-            >
-              <h2 className="node-ticker">{node.ticker}</h2>
-              <p className="node-note">{node.note ?? "offline"}</p>
-            </NodeSquare>
-          );
+          return null;
         })}
       </section>
 
@@ -176,8 +166,9 @@ export function NodeGrid({
       >
         {removed.length === 0 ? (
           <p className="floor-dialog-copy">
-            No removed nodes. Delete a square first, then restore it here as it
-            last stood (live XRP/SUI/PWR/ETN/VRT/GEV/CEG/HUBB re-stand; others come back offline).
+            No removed nodes. Delete a live square first, then restore it here.
+            Live nodes re-stand. Offline roster tickers stay in the cabinet and
+            stay off this floor until they are live.
           </p>
         ) : (
           <ul className="floor-restore-list">
