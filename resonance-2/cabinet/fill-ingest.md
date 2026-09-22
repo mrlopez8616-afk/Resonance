@@ -193,7 +193,7 @@ Backend pick (same as Phase Zero):
 | Method | Path | Auth | Behavior |
 | --- | --- | --- | --- |
 | `POST` | `/api/fills` | Bearer secret (or open if unset) | Ingest one fill. 200 + `deduped` |
-| `GET` | `/api/fills` | public | Operator log rows, newest first. Seed fallback if store empty / unconfigured |
+| `GET` | `/api/fills` | public | Operator log rows, newest first. Seed fallback if store empty / unconfigured. The search desk filters this same list; it does not add a query store |
 | `GET` | `/api/sleeves?ticker=XRP` | public | Merged sleeve rows for a live face. Flare vault stays founder-typed |
 
 POST 200 body:
@@ -210,6 +210,8 @@ POST 200 body:
 ```
 
 Retry of the same key: `"deduped": true` and the original stored fill. Sleeve quantities unchanged.
+
+The operator log desk (`/log`, live-node drill-down) is a read of this envelope. See [`operator-log.md`](./operator-log.md). It does not change POST, idempotency, or sleeve apply.
 
 ## First consumer — Monday Agentic SUI → 6 AI
 

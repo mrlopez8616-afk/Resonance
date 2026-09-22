@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { FloorDialog } from "@/components/floor-dialog";
 import { LiveNodeFace } from "@/components/live-node-face";
@@ -14,6 +15,7 @@ import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import type { NodeSleeve } from "@/data/sleeves";
+import { fillDeskHref } from "@/lib/fill-desk";
 import type { LiveFaceData } from "@/lib/live-face";
 import {
   hiddenIdsServerSnapshot,
@@ -92,11 +94,18 @@ export function NodeGrid({
                 label={`${node.ticker} live node`}
                 onDelete={() => setPending(node)}
               >
-                <LiveNodeFace
-                  ticker={node.ticker}
-                  sleeves={sleeves}
-                  initial={face}
-                />
+                <Link
+                  href={fillDeskHref({ ticker: node.ticker })}
+                  className="node-log-link"
+                  title={`Open ${node.ticker} log`}
+                >
+                  <span className="sr-only">Open {node.ticker} operator log</span>
+                  <LiveNodeFace
+                    ticker={node.ticker}
+                    sleeves={sleeves}
+                    initial={face}
+                  />
+                </Link>
               </NodeSquare>
             );
           }

@@ -470,7 +470,29 @@ body {
 
 .log-canvas {
   width: 100%;
-  max-width: 36rem;
+  max-width: 52rem;
+}
+
+.node-log-link {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  border-radius: 0.35rem;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.node-log-link:hover .node-ticker,
+.node-log-link:focus-visible .node-ticker {
+  color: #ffffff;
+}
+
+.node-log-link:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  outline-offset: 2px;
 }
 
 .log-header {
@@ -495,6 +517,135 @@ body {
   margin-top: 0.4rem;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.log-nodes {
+  margin-bottom: 1rem;
+}
+
+.log-nodes ol {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+.log-nodes a {
+  display: flex;
+  min-width: 5.5rem;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.log-nodes a.is-current {
+  border-color: color-mix(in srgb, var(--live) 50%, var(--border));
+}
+
+.log-nodes a:hover,
+.log-nodes a:focus-visible {
+  border-color: #4a545e;
+  background: #161a1f;
+}
+
+.log-nodes a:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.log-nodes-ticker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.log-nodes-mark {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.log-desk {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));
+  gap: 0.7rem 0.75rem;
+  margin-bottom: 1.15rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+.log-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.log-field span {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.log-field select,
+.log-field input,
+.log-search,
+.log-clear {
+  min-width: 0;
+  border: 1px solid #2a323c;
+  border-radius: 0.4rem;
+  background: #161a1f;
+  color: #d7dde2;
+  font-size: 0.78rem;
+}
+
+.log-field select,
+.log-field input {
+  width: 100%;
+  padding: 0.42rem 0.5rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.log-field select:focus-visible,
+.log-field input:focus-visible,
+.log-search:focus-visible,
+.log-clear:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.log-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.log-search,
+.log-clear {
+  padding: 0.42rem 0.7rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.log-search {
+  border-color: color-mix(in srgb, var(--live) 40%, var(--border));
+  color: #f4f6f8;
+}
+
+.log-search:hover,
+.log-clear:hover {
+  background: #1c2127;
 }
 
 .floor-dialog-backdrop {
