@@ -8,22 +8,23 @@ import {
   fillDeskHref,
   fillDeskIsActive,
   filterFills,
-  recentFills,
+  nodesWithValue,
   type FillDeskQuery,
 } from "@/lib/fill-desk";
-import { fillRowKey, formatFillTime } from "@/lib/fills";
 
 export function FillDesk({
   fills,
+  sleeves,
   query,
   storeLabel,
 }: {
   fills: Fill[];
+  sleeves: Readonly<Record<string, readonly { quantity: string }[] | undefined>>;
   query: FillDeskQuery;
   storeLabel: string;
 }) {
   const visible = filterFills(fills, query);
-  const recent = recentFills(fills);
+  const nodes = nodesWithValue(fills, sleeves);
   const active = fillDeskIsActive(query);
   const title = query.ticker ? `${query.ticker} fills` : "Agentic sleeve fills";
   const counted = active ? fills.length : visible.length;
@@ -40,25 +41,22 @@ export function FillDesk({
         </p>
       </header>
 
-      {recent.length > 0 ? (
-        <section className="log-recent" aria-label="Recent fills">
-          <p className="log-kicker">Recent</p>
+      {nodes.length > 0 ? (
+        <section className="log-nodes" aria-label="Nodes">
+          <p className="log-kicker">Nodes</p>
           <ol>
-            {recent.map((fill) => {
-              const href = fillDeskHref({ ticker: fill.symbol });
+            {nodes.map((node) => {
+              const href = fillDeskHref({ ticker: node.ticker });
               const current = href === fillDeskHref(query);
               return (
-                <li key={fillRowKey(fill)}>
+                <li key={node.ticker}>
                   <Link
                     href={href}
                     className={current ? "is-current" : undefined}
                     aria-current={current ? "true" : undefined}
                   >
-                    <span className="log-recent-ticker">{fill.symbol}</span>
-                    <span className={fill.side === "sell" ? "is-sell" : "is-buy"}>
-                      {fill.side}
-                    </span>
-                    <span className="log-recent-time">{formatFillTime(fill.time)}</span>
+                    <span className="log-nodes-ticker">{node.ticker}</span>
+                    <span className="log-nodes-mark">{node.mark}</span>
                   </Link>
                 </li>
               );

@@ -1,15 +1,21 @@
 import type { Fill, FillSleeveId, FillVenue } from "@/data/fills";
+import { isDecimalString } from "@/lib/decimal";
 import {
   isFillVenue,
   isLockedTicker,
   isWritableSleeveId,
+  LOCKED_TICKERS,
   type LockedTicker,
 } from "@/lib/fill-event";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Newest rows shown on the search-desk strip. The strip reads the same store. */
-export const RECENT_FILL_LIMIT = 6;
+export type DeskNodeMark = "sleeve" | "fills";
+
+export type DeskNode = {
+  ticker: LockedTicker;
+  mark: DeskNodeMark;
+};
 
 export const DESK_SLEEVES = [
   { id: "rh-main", label: "RH Main" },
@@ -133,12 +139,45 @@ export function filterFills(rows: readonly Fill[], query: FillDeskQuery): Fill[]
   });
 }
 
-export function recentFills(
-  rows: readonly Fill[],
-  limit = RECENT_FILL_LIMIT,
-): Fill[] {
-  if (limit <= 0) return [];
-  return rows.slice(0, limit);
+/** Non-zero decimal quantity. Blank, TBD, and `0` are not a live print. */
+export function quantityHasValue(quantity: string): boolean {
+  const trimmed = quantity.trim();
+  if (!isDecimalString(trimmed)) return false;
+  const unsigned = trimmed.replace(/^-/, "");
+  const [whole = "0", frac = ""] = unsigned.split(".");
+  return /[1-9]/.test(`${whole}${frac}`);
+}
+
+/**
+ * Nodes strip. One block per locked ticker that has a non-zero live sleeve
+ * print, or a fill whose quantity is a non-zero decimal. Catalog order.
+ * Not a time window. Same store; nothing is written.
+ */
+export function nodesWithValue(
+  fills: readonly Fill[],
+  sleeves: Readonly<Record<string, readonly { quantity: string }[] | undefined>>,
+): DeskNode[] {
+  const sleeveTickers = new Set<string>();
+  for (const [ticker, rows] of Object.entries(sleeves)) {
+    if (!isLockedTicker(ticker)) continue;
+    if (rows?.some((row) => quantityHasValue(row.quantity))) {
+      sleeveTickers.add(ticker);
+    }
+  }
+
+  const fillTickers = new Set<string>();
+  for (const fill of fills) {
+    const ticker = fill.symbol.trim().toUpperCase();
+    if (!isLockedTicker(ticker)) continue;
+    if (quantityHasValue(fill.quantity)) fillTickers.add(ticker);
+  }
+
+  const nodes: DeskNode[] = [];
+  for (const ticker of LOCKED_TICKERS) {
+    if (sleeveTickers.has(ticker)) nodes.push({ ticker, mark: "sleeve" });
+    else if (fillTickers.has(ticker)) nodes.push({ ticker, mark: "fills" });
+  }
+  return nodes;
 }
 
 export function fillDeskHref(

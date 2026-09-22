@@ -7,7 +7,7 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 ## Surfaces
 
 - `/` — factory-floor shell: left toolbar, equal node squares, LIVE chip, operator status strip. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for PWR/ETN/VRT/GEV/CEG/HUBB), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
-- `/log` — search desk over the one fill store ([`src/data/fills.ts`](src/data/fills.ts) is the seed / local fallback). Filter by ticker, date range, sleeve, and source. A live node click opens that ticker’s pane (`/log?ticker=…`). Same fill card. Ingest is unchanged.
+- `/log` — search desk over the one fill store ([`src/data/fills.ts`](src/data/fills.ts) is the seed / local fallback). Filter by ticker, date range, sleeve, and source. A nodes strip lists every locked ticker with a non-zero live sleeve print or a fill quantity. A live node click opens that ticker’s pane (`/log?ticker=…`). Same fill card. Ingest is unchanged.
 
 ## Live faces (this brick)
 

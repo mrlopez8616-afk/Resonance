@@ -519,11 +519,11 @@ body {
   color: var(--muted);
 }
 
-.log-recent {
+.log-nodes {
   margin-bottom: 1rem;
 }
 
-.log-recent ol {
+.log-nodes ol {
   display: flex;
   gap: 0.45rem;
   margin-top: 0.45rem;
@@ -531,9 +531,9 @@ body {
   padding-bottom: 0.15rem;
 }
 
-.log-recent a {
+.log-nodes a {
   display: flex;
-  min-width: 8.5rem;
+  min-width: 5.5rem;
   flex-direction: column;
   gap: 0.12rem;
   padding: 0.45rem 0.6rem;
@@ -544,38 +544,31 @@ body {
   text-decoration: none;
 }
 
-.log-recent a.is-current {
+.log-nodes a.is-current {
   border-color: color-mix(in srgb, var(--live) 50%, var(--border));
 }
 
-.log-recent a:hover,
-.log-recent a:focus-visible {
+.log-nodes a:hover,
+.log-nodes a:focus-visible {
   border-color: #4a545e;
   background: #161a1f;
 }
 
-.log-recent a:focus-visible {
+.log-nodes a:focus-visible {
   outline: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
   outline-offset: 2px;
 }
 
-.log-recent-ticker {
+.log-nodes-ticker {
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.08em;
 }
 
-.log-recent a span.is-buy {
-  color: var(--buy);
-}
-
-.log-recent a span.is-sell {
-  color: var(--sell);
-}
-
-.log-recent-time {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.68rem;
+.log-nodes-mark {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 

@@ -24,7 +24,7 @@ This brick does **not** poll Robinhood or Coinbase. It does **not** light new no
 | sleeve | `sleeve` | `rh-main` \| `rh-agentic` \| `coinbase` \| `unset` (seed rows with no sleeve). `flare-vault` is not a fill sleeve and is ignored |
 | source | `source` | Venue: `robinhood` \| `coinbase` \| `unset`. Unknown venues are ignored |
 
-Recent strip: the newest six rows from the same list. Each chip opens that ticker’s pane. It is omitted when the store is empty.
+Nodes strip: every locked ticker with a non-zero live sleeve quantity, or a fill whose quantity is a non-zero decimal. A zero print (SUI Agentic `0`) does not qualify by itself. Order follows the locked 12. Each block opens that ticker’s pane. The strip is omitted when none qualify. It is not a time window and it is not a second store.
 
 A live node click is `GET /log?ticker=<symbol>`. Offline squares do not open a pane. The desk can still search a locked ticker that is offline on the floor, because ingest may already have logged that transfer.
 

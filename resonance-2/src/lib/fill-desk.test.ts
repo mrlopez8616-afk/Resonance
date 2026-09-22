@@ -5,9 +5,11 @@ import {
   fillDeskHref,
   fillDeskIsActive,
   filterFills,
+  nodesWithValue,
   parseFillDeskQuery,
-  recentFills,
+  quantityHasValue,
 } from "./fill-desk";
+import { LIVE_SLEEVE_SEEDS } from "./sleeve-apply";
 
 const rows: Fill[] = [
   {
@@ -115,9 +117,40 @@ describe("operator log desk", () => {
       "/log?ticker=XRP&source=robinhood",
     );
     assert.equal(fillDeskHref({ ticker: "NOPE" }), "/log");
+  });
+
+  it("lists every node with a non-zero sleeve print or fill quantity", () => {
+    assert.equal(quantityHasValue("0"), false);
+    assert.equal(quantityHasValue("0.000"), false);
+    assert.equal(quantityHasValue("TBD"), false);
+    assert.equal(quantityHasValue("0.003917"), true);
+
     assert.deepEqual(
-      recentFills(rows, 2).map((fill) => fill.orderId),
-      ["sui-agentic", "sui-seed"],
+      nodesWithValue([], LIVE_SLEEVE_SEEDS).map((node) => node.ticker),
+      ["XRP", "SUI", "PWR", "ETN", "VRT", "GEV", "CEG", "HUBB"],
+    );
+    assert.equal(
+      nodesWithValue([], { SUI: [{ quantity: "0" }] }).length,
+      0,
+    );
+
+    const btcFill: Fill = {
+      time: "2026-09-01T00:00:00Z",
+      symbol: "btc",
+      side: "buy",
+      quantity: "0.01",
+      price: "1",
+      orderId: "btc-1",
+      result: "filled",
+    };
+    const zeroSol: Fill = { ...btcFill, symbol: "SOL", quantity: "0", orderId: "sol-0" };
+    const nodes = nodesWithValue([btcFill, zeroSol, rows[0]], {
+      XRP: [{ quantity: "0" }, { quantity: "28273" }],
+      SUI: [{ quantity: "0" }],
+    });
+    assert.deepEqual(
+      nodes.map((node) => `${node.ticker}:${node.mark}`),
+      ["BTC:fills", "XRP:sleeve", "SUI:fills"],
     );
   });
 });
