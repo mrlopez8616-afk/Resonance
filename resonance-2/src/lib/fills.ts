@@ -10,6 +10,11 @@ export function listFills(rows: readonly Fill[] = fills): Fill[] {
   });
 }
 
+/** Stable row identity for the operator log. Seed rows predate venue keys. */
+export function fillRowKey(fill: Fill): string {
+  return fill.idempotencyKey ?? `${fill.venue ?? "seed"}:${fill.orderId}`;
+}
+
 const FILL_TIME =
   /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2}|Z)$/;
 

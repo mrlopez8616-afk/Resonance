@@ -7,6 +7,7 @@ Operator-floor chrome only. This is not a broker action and not a books wipe.
 | Control | Where | What it does |
 | --- | --- | --- |
 | Delete | `×` on every live and offline square (`aria-label="Delete node"`) | Confirm dialog, then hide that id from the grid |
+| Open log | Click a live square (not the `×`) | `/log?ticker=THAT` on the one fill store |
 | Add | `+` empty slot (`aria-label="Add node"`) | Restore a previously removed catalog ticker |
 
 Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key `resonance-2.floor-hidden` via `src/lib/floor-registry.ts`.

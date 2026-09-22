@@ -1,12 +1,18 @@
-import { FillLog } from "@/components/fill-log";
+import { FillDesk } from "@/components/fill-desk";
 import { OperatorShell } from "@/components/operator-shell";
+import { parseFillDeskQuery, type FillDeskSearch } from "@/lib/fill-desk";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 
 export const dynamic = "force-dynamic";
 
-export default async function OperatorLogPage() {
+export default async function OperatorLogPage({
+  searchParams,
+}: {
+  searchParams: Promise<FillDeskSearch>;
+}) {
+  const query = parseFillDeskQuery(await searchParams);
   const { fills, backend, configured } = await loadOperatorFills();
-  const source =
+  const storeLabel =
     configured && backend === "blob"
       ? "durable store"
       : configured
@@ -15,17 +21,7 @@ export default async function OperatorLogPage() {
 
   return (
     <OperatorShell>
-      <div className="log-canvas">
-        <header className="log-header">
-          <p className="log-kicker">Operator log</p>
-          <h2 className="log-title">Agentic sleeve fills</h2>
-          <p className="log-meta">
-            {fills.length} fill{fills.length === 1 ? "" : "s"} · {source} ·
-            hub POST · no live brokerage
-          </p>
-        </header>
-        <FillLog fills={fills} />
-      </div>
+      <FillDesk fills={fills} query={query} storeLabel={storeLabel} />
     </OperatorShell>
   );
 }

@@ -1,4 +1,4 @@
-import { formatFillTime } from "@/lib/fills";
+import { fillRowKey, formatFillTime } from "@/lib/fills";
 import type { Fill } from "@/data/fills";
 
 function Field({
@@ -59,8 +59,22 @@ export function FillCard({ fill }: { fill: Fill }) {
   );
 }
 
-export function FillLog({ fills }: { fills: Fill[] }) {
+export function FillLog({
+  fills,
+  empty = "store",
+}: {
+  fills: Fill[];
+  empty?: "store" | "desk";
+}) {
   if (fills.length === 0) {
+    if (empty === "desk") {
+      return (
+        <p className="rounded-xl border border-dashed border-[color:var(--border)] px-4 py-8 text-center text-sm leading-6 text-[color:var(--muted)]">
+          No fills match this desk. The store is unchanged.
+        </p>
+      );
+    }
+
     return (
       <p className="rounded-xl border border-dashed border-[color:var(--border)] px-4 py-8 text-center text-sm leading-6 text-[color:var(--muted)]">
         No fills in the durable store or{" "}
@@ -75,7 +89,7 @@ export function FillLog({ fills }: { fills: Fill[] }) {
   return (
     <ol className="flex flex-col gap-3">
       {fills.map((fill) => (
-        <li key={fill.idempotencyKey ?? `${fill.venue ?? "seed"}:${fill.orderId}`}>
+        <li key={fillRowKey(fill)}>
           <FillCard fill={fill} />
         </li>
       ))}
