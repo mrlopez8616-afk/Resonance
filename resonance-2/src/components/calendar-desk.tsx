@@ -112,7 +112,7 @@ export function CalendarDesk({
   const title = civilWeekdayLong(query.day);
   const noun = visible.length === 1 ? "event" : "events";
   const when = query.day === today ? "Today" : formatCivilDate(query.day);
-  const emptyLane = query.lane ? CALENDAR_LANE_LABELS[query.lane].toLowerCase() : "";
+  const emptyLane = query.lane ? CALENDAR_LANE_LABELS[query.lane] : "";
 
   return (
     <div className="log-canvas">
