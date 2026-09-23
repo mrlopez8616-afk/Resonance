@@ -14,9 +14,13 @@ export {
   writeProtectionEnabled,
 };
 
-export function authorizeFillRequest(request: Request): SyncAuthResult {
+export function authorizeSyncRequest(request: Request): SyncAuthResult {
   return authorizeSyncAccess({
     syncSecret: getSyncSecret(),
     bearer: readBearerToken(request.headers.get("authorization")),
   });
+}
+
+export function authorizeFillRequest(request: Request): SyncAuthResult {
+  return authorizeSyncRequest(request);
 }
