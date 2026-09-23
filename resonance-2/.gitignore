@@ -37,7 +37,7 @@ yarn-error.log*
 # vercel
 .vercel
 
-# local fill store (used when Blob is not configured)
+# local fill + calendar stores (used when Blob is not configured)
 .data/
 
 # typescript

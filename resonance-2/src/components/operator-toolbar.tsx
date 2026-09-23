@@ -14,12 +14,10 @@ import {
 const PRIMARY = [
   { href: "/", label: "Home / Floor", icon: HomeIcon, exact: true },
   { href: "/log", label: "Operator log", icon: LogIcon, exact: false },
+  { href: "/calendar", label: "Calendar", icon: CalendarIcon, exact: false },
 ] as const;
 
-const PLACEHOLDERS = [
-  { label: "Calendar", icon: CalendarIcon },
-  { label: "Approvals", icon: ApprovalsIcon },
-] as const;
+const PLACEHOLDERS = [{ label: "Approvals", icon: ApprovalsIcon }] as const;
 
 function RailButton({
   label,
