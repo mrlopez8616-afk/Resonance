@@ -23,4 +23,9 @@ jobs:
         env:
           RESONANCE_SYNC_SECRET: ${{ secrets.RESONANCE_SYNC_SECRET }}
           CALENDAR_URL: https://resonance3.vercel.app/api/calendar
-        run: npx tsx scripts/post-build-pr.ts
+        run: |
+          if [ -z "$RESONANCE_SYNC_SECRET" ]; then
+            echo "RESONANCE_SYNC_SECRET is not set. Add the Vercel Bearer as an Actions repository secret to fill the Build lane. Same value as resonance3. No second secret name."
+            exit 0
+          fi
+          npx tsx scripts/post-build-pr.ts

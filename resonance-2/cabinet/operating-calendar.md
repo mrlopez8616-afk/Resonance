@@ -195,7 +195,7 @@ If the calendar write fails, the fill response stays successful. Fills are not r
 
 `start` stays the pull request `created_at`. `link` is the pull request URL.
 
-**Repository secret to add** (Actions, not Vercel, not the client): `RESONANCE_SYNC_SECRET`, the same value already set on the Vercel project `resonance3`. No second name. Until that secret exists, the workflow exits before it calls the calendar.
+**Repository secret to add** (Actions, not Vercel, not the client): `RESONANCE_SYNC_SECRET`, the same value already set on the Vercel project `resonance3`. No second name. Until that secret exists, the workflow logs the missing secret and does not call the calendar. A manual `npm run` against the live host still refuses to POST without the Bearer.
 
 ## Desk
 
