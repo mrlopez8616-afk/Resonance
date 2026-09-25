@@ -59,6 +59,54 @@ describe("calendar event parse", () => {
     );
   });
 
+  it("accepts a catalyst and refuses an invented node", () => {
+    const event = parseCalendarEvent({
+      id: "xrpl-batchv1-1-activation-2026",
+      kind: "catalyst",
+      node: "xrp",
+      writer: "agent",
+      start: "2026-09-29T09:06:00-05:00",
+      title: "XRPL BatchV1_1 amendment earliest activation",
+      status: "tentative",
+      source_url: "https://xrpscan.com/amendment/BatchV1_1",
+      end: "2026-09-29",
+      date_precision: "day",
+    });
+    assert.equal(event.kind, "catalyst");
+    assert.equal(event.node, "XRP");
+    assert.equal(event.lane, undefined);
+    assert.equal(event.sourceUrl, "https://xrpscan.com/amendment/BatchV1_1");
+    assert.equal(event.status, "tentative");
+
+    assert.throws(
+      () =>
+        parseCalendarEvent({
+          kind: "catalyst",
+          node: "DOGE",
+          writer: "agent",
+          start: "2026-09-29T09:06:00-05:00",
+          title: "Invented",
+          status: "confirmed",
+          source_url: "https://example.com/nope",
+        }),
+      (error: unknown) =>
+        error instanceof CalendarWriteError && error.message.includes("node"),
+    );
+
+    assert.throws(
+      () =>
+        parseCalendarEvent({
+          kind: "catalyst",
+          node: "XRP",
+          writer: "agent",
+          start: "2026-09-29T09:06:00-05:00",
+          title: "Missing source",
+          status: "confirmed",
+        }),
+      (error: unknown) => error instanceof CalendarWriteError,
+    );
+  });
+
   it("refuses recurrence outside cadence and unsafe links", () => {
     assert.throws(
       () =>

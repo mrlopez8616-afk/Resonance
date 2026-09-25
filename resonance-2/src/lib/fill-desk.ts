@@ -80,6 +80,11 @@ function readSource(value: string): DeskSource | "" {
   return isFillVenue(normalized) ? normalized : "";
 }
 
+/** Fills whose printed calendar day is `day`. Read-only. Does not write the store. */
+export function fillsOnPrintedDay(rows: readonly Fill[], day: string): Fill[] {
+  return rows.filter((fill) => fillCalendarDate(fill.time) === day);
+}
+
 /**
  * Calendar day printed on the fill card (the offset in the stored timestamp).
  * Range filters use that day so the desk matches what the operator reads.
