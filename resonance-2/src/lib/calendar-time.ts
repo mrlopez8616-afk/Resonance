@@ -192,3 +192,61 @@ export function formatChicagoStamp(iso: string): string {
   if (Number.isNaN(date.getTime())) return iso;
   return formatChicagoIso(date).replace("T", " ");
 }
+
+const MONTHS_LONG = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+export function formatCivilMonth(day: string): string {
+  const [year, month] = day.split("-").map(Number);
+  return `${MONTHS_LONG[month - 1] ?? ""} ${year}`;
+}
+
+export function civilMonthKey(day: string): string {
+  return day.slice(0, 7);
+}
+
+/** Last civil day of the month containing `day`. */
+export function civilMonthLastDay(day: string): string {
+  const [year, month] = day.split("-").map(Number);
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${pad(month)}-${pad(last)}`;
+}
+
+/**
+ * Monday-start month grid, including the leading and trailing days
+ * needed to finish each week.
+ */
+export function civilMonthGrid(day: string): string[] {
+  const [year, month] = day.split("-").map(Number);
+  const first = `${year}-${pad(month)}-01`;
+  const last = civilMonthLastDay(first);
+  const start = civilWeek(first)[0] ?? first;
+  const end = civilWeek(last)[6] ?? last;
+  const cells: string[] = [];
+  for (let cursor = start; cursor <= end; cursor = addCivilDays(cursor, 1)) {
+    cells.push(cursor);
+  }
+  return cells;
+}
+
+/** Same day-of-month in another month, clamped to that month's length. */
+export function adjacentMonth(day: string, delta: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + delta, 1));
+  const nextYear = target.getUTCFullYear();
+  const nextMonth = target.getUTCMonth();
+  const last = new Date(Date.UTC(nextYear, nextMonth + 1, 0)).getUTCDate();
+  return `${nextYear}-${pad(nextMonth + 1)}-${pad(Math.min(date, last))}`;
+}

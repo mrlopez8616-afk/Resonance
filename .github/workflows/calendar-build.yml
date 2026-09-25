@@ -1,0 +1,26 @@
+name: Operating calendar build lane
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, closed]
+
+jobs:
+  post-build-row:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: resonance-2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: resonance-2/package-lock.json
+      - run: npm ci
+      - name: Post build calendar row
+        env:
+          RESONANCE_SYNC_SECRET: ${{ secrets.RESONANCE_SYNC_SECRET }}
+          CALENDAR_URL: https://resonance3.vercel.app/api/calendar
+        run: npx tsx scripts/post-build-pr.ts

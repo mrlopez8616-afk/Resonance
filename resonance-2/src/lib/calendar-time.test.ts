@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   addCivilDays,
+  adjacentMonth,
   chicagoDay,
   chicagoInstant,
   chicagoToday,
+  civilMonthGrid,
   civilWeek,
   formatChicagoClock,
   formatChicagoIso,
@@ -43,6 +45,15 @@ describe("calendar time", () => {
     assert.equal(addCivilDays("2026-09-30", 1), "2026-10-01");
     assert.equal(isCivilWeekday("2026-09-23"), true);
     assert.equal(isCivilWeekday("2026-09-26"), false);
+  });
+
+  it("builds a Monday-start October 2026 grid and steps a month", () => {
+    const cells = civilMonthGrid("2026-10-15");
+    assert.equal(cells[0], "2026-09-28");
+    assert.equal(cells.at(-1), "2026-11-01");
+    assert.equal(cells.length, 35);
+    assert.equal(adjacentMonth("2026-10-31", 1), "2026-11-30");
+    assert.equal(adjacentMonth("2026-10-07", -1), "2026-09-07");
   });
 
   it("reports today in America/Chicago", () => {

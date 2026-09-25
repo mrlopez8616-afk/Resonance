@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
 import { CalendarWriteError, parseCalendarEvent } from "./calendar-event";
 import {
+  calendarCatalog,
   createEmptyCalendarEnvelope,
   createSeededCalendarEnvelope,
   detectCalendarBackend,
@@ -12,12 +14,15 @@ import {
 } from "./calendar-store-core";
 
 describe("calendar store core", () => {
-  it("seeds cadence and the Monday capital history only", () => {
+  it("seeds cadence, the Monday capital history, and the catalyst catalog once", () => {
     const seeded = ensureSeededCalendarEnvelope(createEmptyCalendarEnvelope());
     assert.equal(seeded.seeded, true);
-    assert.deepEqual(
-      seeded.envelope.events.map((event) => event.lane),
-      ["cadence", "capital"],
+    assert.equal(seeded.envelope.events.length, calendarSeed.length + catalystSeed.length);
+    assert.equal(seeded.envelope.events[0]?.id, "cadence-daily-brief");
+    assert.equal(seeded.envelope.events[1]?.id, "capital-monday-agentic-sui-6ai");
+    assert.equal(
+      seeded.envelope.events.filter((event) => event.kind === "catalyst").length,
+      34,
     );
     assert.equal(
       seeded.envelope.events.some((event) => event.lane === "build"),
@@ -29,7 +34,48 @@ describe("calendar store core", () => {
     );
     const again = ensureSeededCalendarEnvelope(seeded.envelope);
     assert.equal(again.seeded, false);
-    assert.equal(again.envelope.events.length, calendarSeed.length);
+    assert.equal(again.envelope.events.length, calendarCatalog().length);
+  });
+
+  it("re-seeds an existing store by id without duplicating cadence or capital", () => {
+    const legacy = createEmptyCalendarEnvelope("2026-09-23T12:00:00.000Z");
+    legacy.events = calendarSeed.map((row) => ({ ...row }));
+    legacy.seededAt = "2026-09-23T12:00:00.000Z";
+    const merged = ensureSeededCalendarEnvelope(legacy, "2026-09-25T12:00:00.000Z");
+    assert.equal(merged.seeded, true);
+    assert.equal(
+      merged.envelope.events.filter((event) => event.id === "cadence-daily-brief").length,
+      1,
+    );
+    assert.equal(
+      merged.envelope.events.filter((event) => event.id === "capital-monday-agentic-sui-6ai")
+        .length,
+      1,
+    );
+    assert.equal(merged.envelope.events.length, calendarSeed.length + catalystSeed.length);
+
+    const changed = {
+      ...merged.envelope,
+      events: merged.envelope.events.map((event) =>
+        event.id === "xrpl-batchv1-1-activation-2026"
+          ? { ...event, title: "Edited title" }
+          : event,
+      ),
+    };
+    const restored = ensureSeededCalendarEnvelope(changed, "2026-09-26T12:00:00.000Z");
+    assert.equal(restored.seeded, true);
+    assert.equal(restored.envelope.events.length, changed.events.length);
+    assert.equal(
+      restored.envelope.events.find((event) => event.id === "xrpl-batchv1-1-activation-2026")
+        ?.title,
+      "XRPL BatchV1_1 amendment earliest activation",
+    );
+
+    const roundTrip = parseCalendarEnvelope(JSON.parse(JSON.stringify(restored.envelope)));
+    assert.ok(roundTrip);
+    const held = ensureSeededCalendarEnvelope(roundTrip, "2026-09-26T12:00:00.000Z");
+    assert.equal(held.seeded, false);
+    assert.equal(held.envelope.events.length, roundTrip.events.length);
   });
 
   it("appends a build event, dedupes the same body, and updates status", () => {
@@ -45,7 +91,7 @@ describe("calendar store core", () => {
     const first = writeCalendarEventIntoEnvelope(seeded, pending);
     assert.equal(first.deduped, false);
     assert.equal(first.updated, false);
-    assert.equal(first.envelope.events.length, calendarSeed.length + 1);
+    assert.equal(first.envelope.events.length, calendarCatalog().length + 1);
 
     const retry = writeCalendarEventIntoEnvelope(first.envelope, pending);
     assert.equal(retry.deduped, true);

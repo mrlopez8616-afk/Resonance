@@ -19,6 +19,30 @@ export type CalendarWriter = (typeof CALENDAR_WRITERS)[number];
 
 export const CALENDAR_TIME_ZONE = "America/Chicago";
 
+/** Catalyst tags. Do not invent a node outside this list. */
+export const CATALYST_NODES = [
+  "XRP",
+  "SUI",
+  "FLR",
+  "PWR",
+  "ETN",
+  "VRT",
+  "GEV",
+  "CEG",
+  "HUBB",
+  "MACRO",
+] as const;
+
+export type CatalystNode = (typeof CATALYST_NODES)[number];
+
+export const CATALYST_STATUSES = ["confirmed", "tentative"] as const;
+
+export type CatalystStatus = (typeof CATALYST_STATUSES)[number];
+
+export const DATE_PRECISIONS = ["day", "window", "month"] as const;
+
+export type DatePrecision = (typeof DATE_PRECISIONS)[number];
+
 /** Weekday rhythm. Occurrences are derived in America/Chicago; they are not stored as rows. */
 export type CalendarRecurrence = {
   freq: "weekdays";
@@ -29,26 +53,53 @@ export type CalendarRecurrence = {
 
 /**
  * One Resonance-owned calendar row.
+ * Lane rows keep Cadence, Capital, Build, and Gates.
+ * Catalysts are a separate type (`kind: "catalyst"`), tagged with a node.
  * Agents write cadence, capital, and build. The founder writes gates.
  */
 export type CalendarEvent = {
   id: string;
-  lane: CalendarLane;
+  /** Set on catalysts. Lane rows omit it. */
+  kind?: "catalyst";
+  /** Required on lane rows. Omitted on catalysts. */
+  lane?: CalendarLane;
+  /** Required on catalysts. One of the ten catalyst nodes. */
+  node?: CatalystNode;
   /** ISO-8601 with a numeric offset or `Z`. */
   start: string;
+  /** Inclusive civil end `YYYY-MM-DD` for a multi-day row. */
+  end?: string;
   title: string;
-  status: CalendarStatus;
+  status: CalendarStatus | CatalystStatus;
   writer: CalendarWriter;
   link?: string;
+  /** Required on catalysts. https URL shown in the detail. */
+  sourceUrl?: string;
   note?: string;
+  location?: string;
+  /** `month` is a month-level item. `window` spans a range and is not an exact day. */
+  datePrecision?: DatePrecision;
+  /** No wall clock. The desk prints "All day" instead of midnight. */
+  allDay?: boolean;
   recurrence?: CalendarRecurrence;
 };
+
+export function isCatalystNode(value: string): value is CatalystNode {
+  return (CATALYST_NODES as readonly string[]).includes(value);
+}
 
 export const CALENDAR_LANE_LABELS: Record<CalendarLane, string> = {
   cadence: "Cadence",
   capital: "Capital",
   build: "Build",
   gates: "Gates",
+};
+
+export const CALENDAR_LANE_CHIP: Record<CalendarLane, string> = {
+  cadence: "Cad",
+  capital: "Cap",
+  build: "Bld",
+  gates: "Gate",
 };
 
 /**

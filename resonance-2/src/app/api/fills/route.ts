@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { writeStoredCalendarEvent } from "@/lib/calendar-store";
+import { capitalCalendarBody } from "@/lib/calendar-writers";
 import { listFills } from "@/lib/fills";
 import {
   asFillWriteError,
@@ -64,6 +66,14 @@ export async function POST(request: Request) {
 
   try {
     const written = await ingestStoredFill(body);
+    try {
+      await writeStoredCalendarEvent(capitalCalendarBody(written.fill));
+    } catch (error) {
+      console.error(
+        "capital calendar write failed",
+        error instanceof Error ? error.message : error,
+      );
+    }
     const sleeves = liveSleevesFromEnvelope(
       written.envelope,
       written.fill.symbol,

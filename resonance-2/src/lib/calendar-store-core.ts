@@ -1,10 +1,18 @@
-import { calendarSeed, type CalendarEvent } from "@/data/calendar";
+import { catalystSeed } from "@/data/catalyst-seed";
+import {
+  calendarSeed,
+  isCatalystNode,
+  type CalendarEvent,
+  type CatalystStatus,
+  type DatePrecision,
+} from "@/data/calendar";
 import {
   CalendarWriteError,
   isCalendarLane,
   isCalendarStatus,
   isCalendarWriter,
 } from "@/lib/calendar-event";
+import { isCivilDay } from "@/lib/calendar-time";
 
 export const CALENDAR_STORE_VERSION = 1;
 export const CALENDAR_BLOB_PATH = "resonance-2/calendar.json";
@@ -46,6 +54,17 @@ export function createEmptyCalendarEnvelope(
   };
 }
 
+export function calendarCatalog(): CalendarEvent[] {
+  return [...calendarSeed, ...catalystSeed].map(cloneCalendarEvent);
+}
+
+function cloneCalendarEvent(row: CalendarEvent): CalendarEvent {
+  return {
+    ...row,
+    recurrence: row.recurrence ? { ...row.recurrence } : undefined,
+  };
+}
+
 export function createSeededCalendarEnvelope(
   now = new Date().toISOString(),
 ): CalendarStoreEnvelope {
@@ -53,21 +72,32 @@ export function createSeededCalendarEnvelope(
     version: CALENDAR_STORE_VERSION,
     updatedAt: now,
     seededAt: now,
-    events: calendarSeed.map((row) => ({
-      ...row,
-      recurrence: row.recurrence ? { ...row.recurrence } : undefined,
-    })),
+    events: calendarCatalog(),
   };
 }
 
+/**
+ * Upsert the committed catalog by id.
+ * Same id + same body is a no-op. Same id + changed body updates.
+ * Rows that are not in the catalog (fills, briefs, pull requests) stay.
+ */
 export function ensureSeededCalendarEnvelope(
   current: CalendarStoreEnvelope | null,
   now = new Date().toISOString(),
 ): { envelope: CalendarStoreEnvelope; seeded: boolean } {
-  if (!current || current.events.length === 0) {
-    return { envelope: createSeededCalendarEnvelope(now), seeded: true };
+  let envelope = current ?? createEmptyCalendarEnvelope(now);
+  let seeded = !current || current.events.length === 0;
+  for (const row of calendarCatalog()) {
+    const written = writeCalendarEventIntoEnvelope(envelope, row, now);
+    if (!written.deduped) {
+      envelope = written.envelope;
+      seeded = true;
+    }
   }
-  return { envelope: current, seeded: false };
+  if (seeded && !envelope.seededAt) {
+    envelope = { ...envelope, seededAt: now };
+  }
+  return { envelope, seeded };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -79,16 +109,27 @@ function recurrenceKey(recurrence: CalendarEvent["recurrence"]): string {
   return `${recurrence.freq}|${recurrence.timeZone}|${recurrence.time}`;
 }
 
+function optionalText(value: string | undefined): string {
+  return value ?? "";
+}
+
 export function calendarEventsMatch(left: CalendarEvent, right: CalendarEvent): boolean {
   return (
     left.id === right.id &&
-    left.lane === right.lane &&
+    (left.kind ?? "") === (right.kind ?? "") &&
+    (left.lane ?? "") === (right.lane ?? "") &&
+    (left.node ?? "") === (right.node ?? "") &&
     left.start === right.start &&
+    optionalText(left.end) === optionalText(right.end) &&
     left.title === right.title &&
     left.status === right.status &&
     left.writer === right.writer &&
-    (left.link ?? "") === (right.link ?? "") &&
-    (left.note ?? "") === (right.note ?? "") &&
+    optionalText(left.link) === optionalText(right.link) &&
+    optionalText(left.sourceUrl) === optionalText(right.sourceUrl) &&
+    optionalText(left.note) === optionalText(right.note) &&
+    optionalText(left.location) === optionalText(right.location) &&
+    (left.datePrecision ?? "") === (right.datePrecision ?? "") &&
+    Boolean(left.allDay) === Boolean(right.allDay) &&
     recurrenceKey(left.recurrence) === recurrenceKey(right.recurrence)
   );
 }
@@ -102,16 +143,63 @@ function coerceRecurrence(raw: unknown): CalendarEvent["recurrence"] | undefined
   return { freq: "weekdays", timeZone: "America/Chicago", time: raw.time };
 }
 
+function readStoredHttps(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 500 || /\s/.test(trimmed)) return undefined;
+  if (!/^https:\/\/[^\s]+$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+function readStoredCivil(value: unknown): string | undefined {
+  if (typeof value !== "string" || !isCivilDay(value)) return undefined;
+  return value;
+}
+
+function readStoredPrecision(value: unknown): DatePrecision | undefined {
+  if (value === "day" || value === "window" || value === "month") return value;
+  return undefined;
+}
+
+function coerceCatalyst(raw: Record<string, unknown>): CalendarEvent | null {
+  if (typeof raw.node !== "string" || !isCatalystNode(raw.node)) return null;
+  if (raw.status !== "confirmed" && raw.status !== "tentative") return null;
+  const sourceUrl = readStoredHttps(raw.sourceUrl ?? raw.source_url);
+  if (!sourceUrl) return null;
+  const event: CalendarEvent = {
+    id: raw.id as string,
+    kind: "catalyst",
+    node: raw.node,
+    start: raw.start as string,
+    title: (raw.title as string).trim(),
+    status: raw.status as CatalystStatus,
+    writer: raw.writer as CalendarEvent["writer"],
+    sourceUrl,
+  };
+  const end = readStoredCivil(raw.end);
+  if (end) event.end = end;
+  if (typeof raw.link === "string" && raw.link.trim()) event.link = raw.link.trim();
+  if (typeof raw.note === "string" && raw.note.trim()) event.note = raw.note.trim();
+  if (typeof raw.location === "string" && raw.location.trim()) {
+    event.location = raw.location.trim().slice(0, 80);
+  }
+  const precision = readStoredPrecision(raw.datePrecision ?? raw.date_precision);
+  if (precision) event.datePrecision = precision;
+  if (raw.allDay === true) event.allDay = true;
+  return event;
+}
+
 function coerceStoredEvent(raw: unknown): CalendarEvent | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(raw.id)) {
     return null;
   }
-  if (typeof raw.lane !== "string" || !isCalendarLane(raw.lane)) return null;
   if (typeof raw.start !== "string" || Number.isNaN(Date.parse(raw.start))) return null;
   if (typeof raw.title !== "string" || !raw.title.trim()) return null;
-  if (typeof raw.status !== "string" || !isCalendarStatus(raw.status)) return null;
   if (typeof raw.writer !== "string" || !isCalendarWriter(raw.writer)) return null;
+  if (raw.kind === "catalyst") return coerceCatalyst(raw);
+  if (typeof raw.lane !== "string" || !isCalendarLane(raw.lane)) return null;
+  if (typeof raw.status !== "string" || !isCalendarStatus(raw.status)) return null;
   if (raw.lane === "gates" && raw.writer === "agent") return null;
   const event: CalendarEvent = {
     id: raw.id,
@@ -182,7 +270,14 @@ export function writeCalendarEventIntoEnvelope(
   if (!existing) {
     throw new CalendarWriteError("Calendar event was missing.");
   }
-  if (existing.lane !== event.lane) {
+  if ((existing.kind ?? "") !== (event.kind ?? "")) {
+    throw new CalendarWriteError("kind is fixed once an event id exists.");
+  }
+  if (existing.kind === "catalyst") {
+    if (existing.node !== event.node) {
+      throw new CalendarWriteError("node is fixed once an event id exists.");
+    }
+  } else if (existing.lane !== event.lane) {
     throw new CalendarWriteError("lane is fixed once an event id exists.");
   }
   if (existing.writer !== event.writer) {
