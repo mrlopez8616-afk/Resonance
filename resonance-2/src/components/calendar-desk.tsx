@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   CALENDAR_LANE_LABELS,
+  CALENDAR_LANES,
   CATALYST_NODES,
   type CalendarEvent,
   type CalendarLane,
@@ -8,11 +9,13 @@ import {
 } from "@/data/calendar";
 import {
   adjacentWeekDay,
+  calendarDayHref,
   calendarHref,
   calendarWeekDays,
   CALENDAR_LANE_FILTERS,
   chipsOnDay,
   eventWhenLabel,
+  laneCountsOnDay,
   monthKeyForDay,
   monthLevelEvents,
   occurrenceClock,
@@ -672,7 +675,11 @@ export function CalendarDesk({
                   {row.map((day) => {
                     const outside = monthKeyForDay(day) !== monthKey;
                     const packed = chipsOnDay(events, day, query.lane, query.node);
+                    const counts = laneCountsOnDay(events, day, query.lane, query.node);
                     const count = occurrencesOnDay(events, day, query.lane, query.node).length;
+                    const laneLabelText = CALENDAR_LANES.map(
+                      (lane) => `${CALENDAR_LANE_LABELS[lane]} ${counts[lane]}`,
+                    ).join(", ");
                     const className = [
                       outside ? "is-outside" : "",
                       day === today ? "is-today" : "",
@@ -683,18 +690,25 @@ export function CalendarDesk({
                     return (
                       <td key={day} className={className || undefined}>
                         <Link
-                          href={calendarHref({
+                          href={calendarDayHref({
                             day,
-                            view: "day",
+                            anchor: query.day,
                             lane: query.lane,
                             node: query.node,
-                            today,
                           })}
-                          aria-label={`${formatCivilDate(day)}, ${count} ${count === 1 ? "event" : "events"}`}
-                          aria-current={day === query.day ? "date" : undefined}
+                          className="calendar-day-node"
+                          aria-label={`${formatCivilDate(day)}. ${laneLabelText}. ${count} ${count === 1 ? "event" : "events"}`}
                         >
                           <span className="calendar-month-date">{Number(day.slice(8))}</span>
                           <ChipList chips={packed.chips} overflow={packed.overflow} />
+                          <span className="calendar-lane-counts">
+                            {CALENDAR_LANES.map((lane) => (
+                              <span key={lane} data-tone={lane} data-count={counts[lane]}>
+                                <span className="sr-only">{CALENDAR_LANE_LABELS[lane]} </span>
+                                {counts[lane]}
+                              </span>
+                            ))}
+                          </span>
                         </Link>
                       </td>
                     );

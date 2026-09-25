@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LockIcon } from "@/components/icons";
 import type { NodeSleeve } from "@/data/sleeves";
 import {
   assembleLiveFace,
@@ -124,7 +125,10 @@ export function LiveNodeFace({
             <span className="sleeve-label">
               {sleeve.label}
               {sleeve.manual ? (
-                <span className="sleeve-manual">manual</span>
+                <span className="sleeve-manual">
+                  <LockIcon size={11} />
+                  manual
+                </span>
               ) : null}
             </span>
             <span className="sleeve-qty">{sleeve.quantityLabel}</span>

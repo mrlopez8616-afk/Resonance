@@ -11,6 +11,7 @@ This brick does **not** sync Google. It does **not** push a phone. It does **not
 | Lane seed | `src/data/calendar.ts` | Daily Brief rhythm + Monday Agentic SUI→6 AI |
 | Catalyst seed | `src/data/catalyst-events.json` | 34 verified catalysts. Mapped by `src/data/catalyst-seed.ts` |
 | Desk | `src/components/calendar-desk.tsx` | `/calendar`. Day default. Week board. Month grid |
+| Day node | `src/app/calendar/[day]/page.tsx` | `/calendar/YYYY-MM-DD`. Month square drill-down. Back returns to the month map |
 | Route | `GET` + `POST /api/calendar` | Read is public. Write is Bearer |
 | Cadence writer | `npm run calendar:brief` | `scripts/post-daily-brief.ts` |
 | Capital writer | `POST /api/fills` | Also upserts a Capital row. Fill ingest still succeeds if that write fails |
@@ -76,6 +77,8 @@ Catalyst row (`kind: "catalyst"`). No `lane`.
 `datePrecision: "month"` is a month-level item. It is not painted on a fake day. `window` spans the civil range and is labeled Window. A multi-day row with no precision (or `day`) appears on each civil day from `start` through `end`.
 
 Display and the Daily Brief rhythm use **America/Chicago**. The standing weekday brief is derived on read. It is not copied into the file. A posted row `cadence-daily-brief-YYYY-MM-DD` replaces that day's rhythm row so the itinerary shows one brief.
+
+A month square is a day node. It links to `/calendar/YYYY-MM-DD` (a real route, not a modal). The query keeps `anchor` (the month you left), `lane`, `node`, and `event`. The day page lists Cadence, Capital, Build, and Gates, then catalysts with their source links, then that day's fills read from the fills store. It does not write `resonance-2/fills.json`. Month map sends you back to `/calendar?view=month` with the same filters. Browser back follows the same history.
 
 ## Who writes what
 

@@ -4,6 +4,7 @@ import type { Fill } from "@/data/fills";
 import {
   fillDeskHref,
   fillDeskIsActive,
+  fillsOnPrintedDay,
   filterFills,
   nodesWithValue,
   parseFillDeskQuery,
@@ -152,5 +153,15 @@ describe("operator log desk", () => {
       nodes.map((node) => `${node.ticker}:${node.mark}`),
       ["BTC:fills", "XRP:sleeve", "SUI:fills"],
     );
+  });
+
+  it("reads fills for one printed day without changing the list", () => {
+    const day = fillsOnPrintedDay(rows, "2026-09-21");
+    assert.deepEqual(
+      day.map((fill) => fill.orderId),
+      ["sui-agentic"],
+    );
+    assert.equal(fillsOnPrintedDay(rows, "2026-09-25").length, 0);
+    assert.equal(rows.length, 4);
   });
 });

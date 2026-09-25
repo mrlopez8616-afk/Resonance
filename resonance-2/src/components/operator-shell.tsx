@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LockIcon } from "@/components/icons";
 import { OperatorToolbar } from "@/components/operator-toolbar";
 
 export function OperatorShell({ children }: { children: ReactNode }) {
@@ -15,9 +16,13 @@ export function OperatorShell({ children }: { children: ReactNode }) {
         </header>
         <div className="operator-main">{children}</div>
         <footer className="operator-status">
-          <span className="status-dot" aria-hidden />
           <p>
-            Operator floor · vault locked · gas wallet hidden
+            Operator floor ·{" "}
+            <span className="lock-badge">
+              <LockIcon size={12} />
+              vault locked
+            </span>{" "}
+            · <span className="warn-badge">gas wallet hidden</span>
           </p>
         </footer>
       </div>

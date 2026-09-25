@@ -66,6 +66,15 @@ export function ApprovalsIcon(props: IconProps) {
   );
 }
 
+export function LockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="6" y="11" width="12" height="8.5" rx="1.5" />
+      <path d="M8.5 11V8.2a3.5 3.5 0 0 1 7 0V11" />
+    </Svg>
+  );
+}
+
 export function SettingsIcon(props: IconProps) {
   return (
     <Svg {...props}>

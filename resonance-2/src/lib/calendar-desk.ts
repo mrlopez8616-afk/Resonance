@@ -273,6 +273,83 @@ export function adjacentWeekDay(day: string, weeks: number): string {
   return addCivilDays(day, weeks * 7);
 }
 
+export type CalendarDaySearch = {
+  anchor?: RawParam;
+  lane?: RawParam;
+  node?: RawParam;
+  event?: RawParam;
+};
+
+export function parseCalendarDaySearch(raw: CalendarDaySearch = {}): {
+  anchor: string;
+  lane: CalendarLane | "";
+  node: CatalystNode | "";
+  event: string;
+} {
+  const anchorRaw = firstParam(raw.anchor);
+  const laneRaw = firstParam(raw.lane).toLowerCase();
+  const nodeRaw = firstParam(raw.node).toUpperCase();
+  return {
+    anchor: isCivilDay(anchorRaw) ? anchorRaw : "",
+    lane: isCalendarLane(laneRaw) ? laneRaw : "",
+    node: isCatalystNode(nodeRaw) ? nodeRaw : "",
+    event: firstParam(raw.event),
+  };
+}
+
+/** Real day route. Anchor keeps the month map you drilled out of. */
+export function calendarDayHref(input: {
+  day: string;
+  anchor?: string;
+  lane?: CalendarLane | "";
+  node?: CatalystNode | "";
+  event?: string;
+}): string {
+  const params = new URLSearchParams();
+  if (input.anchor && isCivilDay(input.anchor)) params.set("anchor", input.anchor);
+  if (input.lane) params.set("lane", input.lane);
+  if (input.node) params.set("node", input.node);
+  if (input.event) params.set("event", input.event);
+  const query = params.toString();
+  return query ? `/calendar/${input.day}?${query}` : `/calendar/${input.day}`;
+}
+
+/** Back out of a day node onto the month map, filters intact. */
+export function calendarMonthBackHref(input: {
+  day: string;
+  anchor?: string;
+  lane?: CalendarLane | "";
+  node?: CatalystNode | "";
+  today?: string;
+}): string {
+  const anchor = input.anchor && isCivilDay(input.anchor) ? input.anchor : input.day;
+  return calendarHref({
+    day: anchor,
+    view: "month",
+    lane: input.lane,
+    node: input.node,
+    today: input.today,
+  });
+}
+
+export function laneCountsOnDay(
+  events: readonly CalendarEvent[],
+  day: string,
+  lane: CalendarLane | "" = "",
+  node: CatalystNode | "" = "",
+): Record<CalendarLane, number> {
+  const counts: Record<CalendarLane, number> = {
+    cadence: 0,
+    capital: 0,
+    build: 0,
+    gates: 0,
+  };
+  for (const item of occurrencesOnDay(events, day, lane, node)) {
+    if (item.event.lane) counts[item.event.lane] += 1;
+  }
+  return counts;
+}
+
 export function monthKeyForDay(day: string): string {
   return civilMonthKey(day);
 }

@@ -3,10 +3,14 @@ import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
 import {
+  calendarDayHref,
   calendarHref,
+  calendarMonthBackHref,
   chipsOnDay,
+  laneCountsOnDay,
   monthLevelEvents,
   occurrencesOnDay,
+  parseCalendarDaySearch,
   parseCalendarDeskQuery,
 } from "./calendar-desk";
 
@@ -126,5 +130,56 @@ describe("calendar desk", () => {
       day.map((item) => item.event.id),
       ["cadence-daily-brief-2026-09-23"],
     );
+  });
+
+  it("builds a day route and returns to the month map with filters", () => {
+    const search = parseCalendarDaySearch({
+      anchor: "2026-10-07",
+      lane: "build",
+      node: "xrp",
+      event: "ripple-swell",
+    });
+    assert.deepEqual(search, {
+      anchor: "2026-10-07",
+      lane: "build",
+      node: "XRP",
+      event: "ripple-swell",
+    });
+    assert.deepEqual(parseCalendarDaySearch({ lane: "nope", node: "DOGE", anchor: "nope" }), {
+      anchor: "",
+      lane: "",
+      node: "",
+      event: "",
+    });
+    assert.equal(
+      calendarDayHref({
+        day: "2026-09-25",
+        anchor: "2026-10-07",
+        lane: "capital",
+        node: "SUI",
+        event: "sui-basecamp",
+      }),
+      "/calendar/2026-09-25?anchor=2026-10-07&lane=capital&node=SUI&event=sui-basecamp",
+    );
+    assert.equal(calendarDayHref({ day: "2026-09-25" }), "/calendar/2026-09-25");
+    assert.equal(
+      calendarMonthBackHref({
+        day: "2026-09-28",
+        anchor: "2026-10-07",
+        lane: "capital",
+        node: "XRP",
+        today,
+      }),
+      "/calendar?day=2026-10-07&view=month&lane=capital&node=XRP",
+    );
+    assert.equal(
+      calendarMonthBackHref({ day: "2026-09-23", anchor: today, today }),
+      "/calendar?view=month",
+    );
+    const counts = laneCountsOnDay([...calendarSeed, ...catalystSeed], "2026-10-07");
+    assert.equal(counts.cadence, 1);
+    assert.equal(counts.capital, 0);
+    assert.equal(counts.build, 0);
+    assert.equal(counts.gates, 0);
   });
 });
