@@ -13,7 +13,7 @@ import type { NodeSleeve } from "@/data/sleeves";
  * gas wallet address. Do not treat this as a chain read.
  */
 
-export const FLARE_VAULT_XRP = "28273";
+export const FLARE_VAULT_XRP = "28281";
 
 export type XrpSleeve = NodeSleeve;
 
