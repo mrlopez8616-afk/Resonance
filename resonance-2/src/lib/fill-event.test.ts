@@ -83,7 +83,7 @@ describe("fill event parse + idempotency", () => {
     );
     assert.throws(
       () => parseFillEvent({ ...mondayPacket, ticker: "DOGE" }),
-      /locked 12/,
+      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM\)/,
     );
   });
 

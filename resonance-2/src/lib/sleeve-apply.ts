@@ -3,10 +3,12 @@ import type { NodeSleeve } from "@/data/sleeves";
 import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { GEV_SLEEVES } from "@/data/gev-sleeves";
+import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
 import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
+import { XLM_SLEEVES } from "@/data/xlm-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 import {
@@ -25,6 +27,8 @@ export const LIVE_SLEEVE_SEEDS: Record<string, readonly NodeSleeve[]> = {
   GEV: GEV_SLEEVES,
   CEG: CEG_SLEEVES,
   HUBB: HUBB_SLEEVES,
+  HBAR: HBAR_SLEEVES,
+  XLM: XLM_SLEEVES,
 };
 
 export type SleevePrints = Record<string, Record<string, string>>;

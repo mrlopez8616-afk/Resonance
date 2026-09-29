@@ -8,10 +8,11 @@ export type FloorNode = {
 };
 
 /**
- * Operator-floor roster. XRP, SUI, PWR, ETN, VRT, GEV, CEG, and HUBB are live
- * and paint on the homepage. BTC, ETH, and SOL stay here while offline and are
- * not painted until they are live. FLR is locked but has no floor square.
- * Do not attach price or sleeve data to the remaining offline tickers yet.
+ * Operator-floor roster. XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, and
+ * XLM are live and paint on the homepage. BTC, ETH, and SOL stay here while
+ * offline and are not painted until they are live. FLR is locked but has no
+ * floor square. Do not attach price or sleeve data to the remaining offline
+ * tickers yet.
  */
 export const FLOOR_NODES: FloorNode[] = [
   { id: "xrp", ticker: "XRP", status: "live" },
@@ -22,6 +23,8 @@ export const FLOOR_NODES: FloorNode[] = [
   { id: "gev", ticker: "GEV", status: "live" },
   { id: "ceg", ticker: "CEG", status: "live" },
   { id: "hubb", ticker: "HUBB", status: "live" },
+  { id: "hbar", ticker: "HBAR", status: "live" },
+  { id: "xlm", ticker: "XLM", status: "live" },
   { id: "btc", ticker: "BTC", status: "offline" },
   { id: "eth", ticker: "ETH", status: "offline" },
   { id: "sol", ticker: "SOL", status: "offline" },

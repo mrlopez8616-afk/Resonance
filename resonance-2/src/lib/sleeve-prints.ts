@@ -4,10 +4,12 @@ import type { NodeSleeve } from "@/data/sleeves";
 import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { GEV_SLEEVES } from "@/data/gev-sleeves";
+import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
 import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
+import { XLM_SLEEVES } from "@/data/xlm-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { listFills } from "./fills";
 import { loadFillsStore, liveSleevesFromEnvelope } from "./fills-store";
@@ -21,6 +23,8 @@ export async function loadLiveSleeveBooks(): Promise<{
   GEV: readonly NodeSleeve[];
   CEG: readonly NodeSleeve[];
   HUBB: readonly NodeSleeve[];
+  HBAR: readonly NodeSleeve[];
+  XLM: readonly NodeSleeve[];
 }> {
   try {
     const loaded = await loadFillsStore();
@@ -33,6 +37,8 @@ export async function loadLiveSleeveBooks(): Promise<{
       GEV: liveSleevesFromEnvelope(loaded.envelope, "GEV") ?? GEV_SLEEVES,
       CEG: liveSleevesFromEnvelope(loaded.envelope, "CEG") ?? CEG_SLEEVES,
       HUBB: liveSleevesFromEnvelope(loaded.envelope, "HUBB") ?? HUBB_SLEEVES,
+      HBAR: liveSleevesFromEnvelope(loaded.envelope, "HBAR") ?? HBAR_SLEEVES,
+      XLM: liveSleevesFromEnvelope(loaded.envelope, "XLM") ?? XLM_SLEEVES,
     };
   } catch {
     return {
@@ -44,6 +50,8 @@ export async function loadLiveSleeveBooks(): Promise<{
       GEV: GEV_SLEEVES,
       CEG: CEG_SLEEVES,
       HUBB: HUBB_SLEEVES,
+      HBAR: HBAR_SLEEVES,
+      XLM: XLM_SLEEVES,
     };
   }
 }

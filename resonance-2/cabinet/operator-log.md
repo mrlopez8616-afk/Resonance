@@ -19,12 +19,12 @@ This brick does **not** poll Robinhood or Coinbase. It does **not** light new no
 
 | Control | Query | Rule |
 | --- | --- | --- |
-| ticker | `ticker` | Locked 12 only (`BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB`). Anything else is ignored |
+| ticker | `ticker` | Locked nodes only (`BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM`). Anything else is ignored |
 | from / to | `from`, `to` | `YYYY-MM-DD`, inclusive, on the calendar day printed on the card. A reversed range is swapped |
 | sleeve | `sleeve` | `rh-main` \| `rh-agentic` \| `coinbase` \| `unset` (seed rows with no sleeve). `flare-vault` is not a fill sleeve and is ignored |
 | source | `source` | Venue: `robinhood` \| `coinbase` \| `unset`. Unknown venues are ignored |
 
-Nodes strip: every locked ticker with a non-zero live sleeve quantity, or a fill whose quantity is a non-zero decimal. A zero print (SUI Agentic `0`) does not qualify by itself. Order follows the locked 12. Each block opens that ticker’s pane. The strip is omitted when none qualify. It is not a time window and it is not a second store.
+Nodes strip: every locked ticker with a non-zero live sleeve quantity, or a fill whose quantity is a non-zero decimal. A zero print (SUI Agentic `0`) does not qualify by itself. Order follows the locked roster. Each block opens that ticker’s pane. The strip is omitted when none qualify. It is not a time window and it is not a second store.
 
 A live node click is `GET /log?ticker=<symbol>`. Offline roster tickers are not painted on the homepage, so they have no square to open. The desk can still search a locked ticker that is offline, because ingest may already have logged that transfer.
 
