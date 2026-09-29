@@ -1,7 +1,7 @@
 import type { Fill, FillSide, FillSleeveId, FillVenue } from "@/data/fills";
 import { isDecimalString } from "@/lib/decimal";
 
-/** Locked 12. Never invent a ticker. */
+/** Locked nodes. Never invent a ticker. Append only. */
 export const LOCKED_TICKERS = [
   "BTC",
   "ETH",
@@ -15,6 +15,8 @@ export const LOCKED_TICKERS = [
   "GEV",
   "CEG",
   "HUBB",
+  "HBAR",
+  "XLM",
 ] as const;
 
 export type LockedTicker = (typeof LOCKED_TICKERS)[number];
@@ -126,7 +128,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
   const ticker = readTicker(raw);
   if (!isLockedTicker(ticker)) {
     throw new FillIngestError(
-      "ticker must be one of the locked 12 nodes (BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB).",
+      "ticker must be one of the locked nodes (BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM).",
     );
   }
 

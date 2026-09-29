@@ -12,12 +12,12 @@ Reuse the existing operator log and live faces. Do not invent a second fill card
 | Log UI | `src/components/fill-log.tsx` | Same `FillLog` / `FillCard` |
 | Sort | `src/lib/fills.ts` → `listFills` | Newest `time` first |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | Quantity stays a string |
-| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts`, `src/data/gev-sleeves.ts`, `src/data/ceg-sleeves.ts`, `src/data/hubb-sleeves.ts` | Fallback when the durable store has no override |
+| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts`, `src/data/gev-sleeves.ts`, `src/data/ceg-sleeves.ts`, `src/data/hubb-sleeves.ts`, `src/data/hbar-sleeves.ts`, `src/data/xlm-sleeves.ts` | Fallback when the durable store has no override |
 | Face | `assembleLiveFace` + `LiveNodeFace` | Positions from merged sleeves. Only `quote.usd` is a live price |
 | Auth spirit | Phase Zero `RESONANCE_SYNC_SECRET` Bearer | Server-only. Never `NEXT_PUBLIC_*` |
 | Store spirit | Phase Zero Blob + local file | Private JSON envelope. Local/dev writes `.data/fills.json` |
 
-Live floor is **XRP + SUI + PWR + ETN + VRT + GEV + CEG + HUBB**. Locked 12 nodes only — never invent a ticker or a sleeve id. PWR, ETN, VRT, GEV, CEG, and HUBB are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md), [`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)); ingest may write `rh-agentic` only on those six.
+Live floor is **XRP + SUI + PWR + ETN + VRT + GEV + CEG + HUBB + HBAR + XLM**. Locked nodes only — never invent a ticker or a sleeve id. PWR, ETN, VRT, GEV, CEG, and HUBB are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md), [`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)); ingest may write `rh-agentic` only on those six. HBAR and XLM are crypto faces ([`hbar-face.md`](./hbar-face.md), [`xlm-face.md`](./xlm-face.md)); ingest may write `rh-agentic` only on those two as well.
 
 ## Who writes what
 
@@ -67,7 +67,7 @@ Canonical ingest object. Strings stay strings so quantity and price stay exact.
 | --- | --- | --- |
 | `venue` | yes | `robinhood` \| `coinbase` (lowercase after normalize) |
 | `orderId` or `tradeId` | one required | Trimmed. Used for the idempotency key. Prefer `orderId` when both exist |
-| `ticker` | yes | Uppercase. Must be one of the locked 12: `BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB` |
+| `ticker` | yes | Uppercase. Must be one of the locked nodes: `BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM` |
 | `side` | yes | `buy` \| `sell` |
 | `qty` | yes | Positive decimal string. Alias: `quantity` (existing `Fill` field) |
 | `price` | yes | Non-negative decimal string |
@@ -134,12 +134,12 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 
 ### Which sleeve ids update
 
-| Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | Writer |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | ingest, venue `robinhood` only |
-| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | ingest, venue `robinhood` only |
-| `coinbase` | yes | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | ingest, venue `coinbase` only |
-| `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
+| Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | HBAR | XLM | Writer |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | **no** (XLM has no Main line) | ingest, venue `robinhood` only |
+| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`3846.51` seed, tokens) | yes (`1910.31` seed, tokens) | ingest, venue `robinhood` only |
+| `coinbase` | yes | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | **no** (XLM has no Coinbase line) | ingest, venue `coinbase` only |
+| `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
 
 Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print:
 
@@ -158,10 +158,10 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 
 ### Live vs offline tickers
 
-- **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB. Sleeve apply runs only when that ticker already has the named sleeve id.
-- **Unknown sleeve on a live book** (example: `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, or `GEV` + `rh-main`) → **400**. Do not invent a row.
+- **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, XLM. Sleeve apply runs only when that ticker already has the named sleeve id.
+- **Unknown sleeve on a live book** (example: `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, `GEV` + `rh-main`, `HBAR` + `rh-main`, or `XLM` + `coinbase`) → **400**. Do not invent a row.
 - **Locked but offline ticker** (BTC, ETH, SOL, FLR) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
-- Unknown ticker outside the locked 12 → **400**.
+- Unknown ticker outside the locked roster → **400**.
 
 ## Durable envelope
 

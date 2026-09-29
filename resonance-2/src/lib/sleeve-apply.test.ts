@@ -253,6 +253,44 @@ describe("sleeve apply", () => {
     );
   });
 
+  it("applies RH Agentic fills to the live HBAR and XLM books", () => {
+    const hbar = applyFillToSleevePrints(
+      {},
+      event({ ticker: "HBAR", sleeve: "rh-agentic", qty: "0.01" }),
+    );
+    assert.equal(hbar.applied, true);
+    assert.equal(hbar.prints.HBAR?.["rh-agentic"], "3846.52");
+
+    const xlm = applyFillToSleevePrints(
+      {},
+      event({ ticker: "XLM", sleeve: "rh-agentic", qty: "0.01" }),
+    );
+    assert.equal(xlm.prints.XLM?.["rh-agentic"], "1910.32");
+  });
+
+  it("refuses inventing rh-main or coinbase on HBAR and XLM", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({ ticker: "HBAR", sleeve: "rh-main" }),
+        ),
+      /not on the HBAR face/,
+    );
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "XLM",
+          }),
+        ),
+      /not on the XLM face/,
+    );
+  });
+
   it("refuses inventing rh-main on HUBB", () => {
     assert.throws(
       () =>
@@ -312,7 +350,7 @@ describe("sleeve apply", () => {
     );
     const vault = merged.find((row) => row.id === "flare-vault");
     const agentic = merged.find((row) => row.id === "rh-agentic");
-    assert.equal(vault?.quantity, "28273");
+    assert.equal(vault?.quantity, "28281");
     assert.equal(vault?.manual, true);
     assert.equal(agentic?.quantity, "60");
 

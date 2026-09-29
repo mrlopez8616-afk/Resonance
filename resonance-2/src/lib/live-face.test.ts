@@ -3,10 +3,13 @@ import { describe, it } from "node:test";
 import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { GEV_SLEEVES } from "@/data/gev-sleeves";
+import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
 import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
+import { XLM_SLEEVES } from "@/data/xlm-sleeves";
+import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import {
   assembleLiveFace,
   faceUnitWord,
@@ -26,6 +29,11 @@ describe("live face units", () => {
     assert.equal(formatSleeveQuantity("0"), "0");
     assert.equal(formatSleeveQuantity("8.931"), "8.931");
     assert.equal(formatSleeveQuantity("33.7"), "33.7");
+    assert.equal(formatSleeveQuantity("28281"), "28,281");
+    assert.equal(formatSleeveQuantity("3846.51"), "3,846.51");
+    assert.equal(formatSleeveQuantity("1910.31"), "1,910.31");
+    assert.equal(formatTotalUnits(3846.51), "3,846.51");
+    assert.equal(formatTotalUnits(1910.31), "1,910.31");
   });
 
   it("labels PWR ETN VRT GEV CEG HUBB shares and crypto tokens", () => {
@@ -37,6 +45,8 @@ describe("live face units", () => {
     assert.equal(faceUnitWord("HUBB"), "shares");
     assert.equal(faceUnitWord("XRP"), "tokens");
     assert.equal(faceUnitWord("SUI"), "tokens");
+    assert.equal(faceUnitWord("HBAR"), "tokens");
+    assert.equal(faceUnitWord("XLM"), "tokens");
 
     const face = assembleLiveFace("PWR", PWR_SLEEVES, {
       usd: 636.5,
@@ -127,5 +137,45 @@ describe("live face units", () => {
     assert.equal(face.sleeves[1]?.id, "coinbase");
     assert.equal(face.sleeves[1]?.quantity, "33.7");
     assert.equal(face.totalUnitsLabel, "33.700");
+  });
+
+  it("paints HBAR and XLM Agentic token prints without rounding them away", () => {
+    const quote = {
+      usd: 0.12,
+      source: "test",
+      fetchedAt: "2026-09-29T00:00:00.000Z",
+    };
+    const hbar = assembleLiveFace("HBAR", HBAR_SLEEVES, quote);
+    assert.equal(hbar.unitsWord, "tokens");
+    assert.equal(hbar.sleeves.length, 1);
+    assert.equal(hbar.sleeves[0]?.id, "rh-agentic");
+    assert.equal(hbar.sleeves[0]?.quantity, "3846.51");
+    assert.equal(hbar.sleeves[0]?.quantityLabel, "3,846.51");
+    assert.equal(hbar.totalUnitsLabel, "3,846.51");
+    assert.equal(hbar.priceLabel, "$0.120");
+
+    const xlm = assembleLiveFace("XLM", XLM_SLEEVES, {
+      ...quote,
+      usd: 0.23,
+    });
+    assert.equal(xlm.unitsWord, "tokens");
+    assert.equal(xlm.sleeves.length, 1);
+    assert.equal(xlm.sleeves[0]?.id, "rh-agentic");
+    assert.equal(xlm.sleeves[0]?.quantity, "1910.31");
+    assert.equal(xlm.sleeves[0]?.quantityLabel, "1,910.31");
+    assert.equal(xlm.totalUnitsLabel, "1,910.31");
+  });
+
+  it("keeps the XRP vault integer and the existing thousand-scale total", () => {
+    const face = assembleLiveFace("XRP", XRP_SLEEVES, {
+      usd: 1.2,
+      source: "test",
+      fetchedAt: "2026-09-29T00:00:00.000Z",
+    });
+    assert.equal(
+      face.sleeves.find((row) => row.id === "flare-vault")?.quantityLabel,
+      "28,281",
+    );
+    assert.equal(face.totalUnitsLabel, "29,698.5");
   });
 });
