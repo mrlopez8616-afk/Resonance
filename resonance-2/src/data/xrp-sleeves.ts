@@ -5,12 +5,18 @@ import type { NodeSleeve } from "@/data/sleeves";
  *
  * This brick does not call Robinhood or Coinbase. Broker connectors belong
  * on the server in a later brick — never in a Client Component and never
- * behind NEXT_PUBLIC_*. Quantities below are the last known live prints
- * (2026-09 Resonance check) used as typed placeholders so the face can
- * render without inventing fluctuating positions.
+ * behind NEXT_PUBLIC_*.
  *
- * Flare vault is a MANUAL founder entry only. Do not display the Xaman
- * gas wallet address. Do not treat this as a chain read.
+ * 2026-09-30 read-only Robinhood pull:
+ * - RH Agentic holds 51.601 XRP. Confirmed cost basis $72.99 is not a
+ *   sleeve field; the face prints quantity only.
+ * - RH Main returned no positions on that pull. The seeded 587.718 line
+ *   stays. Do not zero it from this agent's Main read. Hub confirms it.
+ * - Coinbase 778.178708 is gone. The founder no longer holds that lot.
+ *
+ * Flare vault is a MANUAL founder entry only (`FLARE_VAULT_XRP`). Do not
+ * display the Xaman gas wallet address. Do not treat this as a chain read.
+ * Do not edit the vault constant from a broker pull.
  */
 
 export const FLARE_VAULT_XRP = "28281";
@@ -30,15 +36,6 @@ export const XRP_SLEEVES: XrpSleeve[] = [
     label: "RH Agentic",
     quantity: "51.601",
     source: "robinhood-config",
-    manual: false,
-  },
-  {
-    id: "coinbase",
-    label: "Coinbase",
-    // Default wallet is readable via Coinbase API when server env exists.
-    // No Coinbase credentials are wired in this Vercel app yet — stub.
-    quantity: "778.178708",
-    source: "coinbase-config",
     manual: false,
   },
   {

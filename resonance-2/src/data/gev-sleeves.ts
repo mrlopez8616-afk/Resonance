@@ -4,6 +4,7 @@ import type { NodeSleeve } from "@/data/sleeves";
  * GEV sleeve quantities for the live equity face.
  *
  * Hub live lock 2026-09-21: RH Agentic only, 0.002640 shares.
+ * Confirmed again 2026-09-30 (avg cost $946.97 is not a sleeve field).
  * Do not invent RH Main, Coinbase, or vault lots. Units are shares,
  * not crypto tokens. No Robinhood calls in this brick.
  */

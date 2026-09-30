@@ -41,6 +41,27 @@ describe("sleeve apply", () => {
     assert.equal(sold.nextQuantity, "1");
   });
 
+  it("refuses a Coinbase fill on XRP after that lot was removed", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "XRP",
+            qty: "1",
+          }),
+        ),
+      /sleeve coinbase is not on the XRP face/,
+    );
+    const cleaned = sanitizeSleevePrints({
+      XRP: { coinbase: "778.178708", "rh-agentic": "51.601" },
+    });
+    assert.equal(cleaned.XRP?.coinbase, undefined);
+    assert.equal(cleaned.XRP?.["rh-agentic"], "51.601");
+  });
+
   it("updates Coinbase from a Coinbase fill", () => {
     const result = applyFillToSleevePrints(
       {},

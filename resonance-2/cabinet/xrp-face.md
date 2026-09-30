@@ -54,9 +54,10 @@ Positions come from config, then from the durable fill-ingest store when a hub P
 
 Sleeve quantities: `src/data/xrp-sleeves.ts` (seed / fallback). Hub writes go through [`fill-ingest.md`](./fill-ingest.md). **Flare vault stays founder-typed** — ingest cannot write `flare-vault`.
 
-- RH Main / RH Agentic — last-known Robinhood prints (typed placeholders)
-- Coinbase — last-known Default-wallet print (stub until a **server-only** Coinbase connector exists)
-- Flare vault — `FLARE_VAULT_XRP = "28273"`, `manual: true`
+- RH Agentic — `51.601` (2026-09-30 read-only pull). Cost basis `$72.99` is not a sleeve field.
+- RH Main — seeded `587.718`. The same pull returned no Main positions. Do not zero this line from that read. Flag for hub confirmation.
+- Coinbase — removed. The founder no longer holds the old `778.178708` lot. A Coinbase fill aimed at XRP is **400**.
+- Flare vault — `FLARE_VAULT_XRP = "28281"`, `manual: true`. Do not edit this constant from a broker pull.
 
 Never put the Xaman gas wallet address on a face.
 

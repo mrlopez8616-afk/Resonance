@@ -166,16 +166,29 @@ describe("live face units", () => {
     assert.equal(xlm.totalUnitsLabel, "1,910.31");
   });
 
-  it("keeps the XRP vault integer and the existing thousand-scale total", () => {
+  it("keeps the XRP vault integer and drops the closed Coinbase lot", () => {
     const face = assembleLiveFace("XRP", XRP_SLEEVES, {
       usd: 1.2,
       source: "test",
-      fetchedAt: "2026-09-29T00:00:00.000Z",
+      fetchedAt: "2026-09-30T00:00:00.000Z",
     });
+    assert.deepEqual(
+      face.sleeves.map((row) => row.id),
+      ["rh-main", "rh-agentic", "flare-vault"],
+    );
+    assert.equal(
+      face.sleeves.find((row) => row.id === "rh-main")?.quantity,
+      "587.718",
+    );
+    assert.equal(
+      face.sleeves.find((row) => row.id === "rh-agentic")?.quantity,
+      "51.601",
+    );
     assert.equal(
       face.sleeves.find((row) => row.id === "flare-vault")?.quantityLabel,
       "28,281",
     );
-    assert.equal(face.totalUnitsLabel, "29,698.5");
+    assert.equal(face.sleeves.some((row) => row.id === "coinbase"), false);
+    assert.equal(face.totalUnitsLabel, "28,920.32");
   });
 });

@@ -7,10 +7,13 @@ import type { NodeSleeve } from "@/data/sleeves";
  * are last-known live prints. Do not invent a Coinbase lot beyond the
  * filled-buy sum below.
  *
- * Hub live lock 2026-09-21: RH Agentic sold to 0. Coinbase Advanced Trade
+ * Hub live lock 2026-09-21: RH Agentic sold to 0. The 2026-09-30
+ * Agentic pull still has no SUI position, so the zero stays.
+ * Coinbase Advanced Trade
  * (2026-09-19): SUI available=0 hold=0 (staking not on this API key). Use
  * the sum of SUI-USD FILLED buys instead: 16.9 + 16.8 = 33.7. Sells on
- * this book: none.
+ * this book: none. Keep 33.7. Do not replace it from the Robinhood pull.
+ * Flag that Coinbase line for hub confirmation.
  *
  * No Flare vault line. Never show an Xaman / gas wallet address.
  */

@@ -4,6 +4,7 @@ import type { NodeSleeve } from "@/data/sleeves";
  * HBAR sleeve quantities for the live crypto face.
  *
  * Robinhood Agentic position pull 2026-09-29: 3846.51 HBAR.
+ * Confirmed again 2026-09-30. Cost basis $438.01 is not a sleeve field.
  * One filled buy. Do not invent RH Main, Coinbase, or vault lots.
  * This brick does not call Robinhood. The typed print is the fallback
  * until a hub POST applies.
