@@ -163,6 +163,20 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 - **Locked but offline ticker** (BTC, ETH, SOL, FLR) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
 - Unknown ticker outside the locked roster → **400**.
 
+### Position fills already in the HBAR and XLM seeds
+
+The 2026-09-29 Agentic prints are the open positions, not a zero book plus a later buy.
+
+| Ticker | Seed | Cost basis | Order | Qty | Avg price | Notional | Filled |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| HBAR | `3846.51` | $438.01 | `6abbe0d2-3966-4255-9e10-8c160f667d88` | `3846.51` | `0.11387193` | $438.01 | `2026-09-29T12:01:22-04:00` |
+| XLM | `1910.31` | $438.01 | `6abbe0e4-575c-4abe-a90e-90368b43a1b6` | `1891.36` | `0.22928558` | $433.67 | `2026-09-29T12:01:40-04:00` |
+| XLM | `1910.31` | $438.01 | `6abbe113-41cb-4aa8-9e7c-0a986335b95a` | `18.95` | `0.2289895` | $4.34 | `2026-09-29T12:02:27-04:00` |
+
+Ingest of those three order ids appends the operator-log row and does **not** write `sleevePrints`. The face stays on the seed (`3846.51` HBAR, `1910.31` XLM). The stored row has `logOnly: true`. A second POST of the same order id is a no-op. A different order id on `rh-agentic` still moves the print.
+
+Missing rows are inserted on the next fills-store read, through the same ingest function. `npm run fills:log` POSTs the same bodies. Run that only after this reconcile is deployed. A host that still applies every buy would double the position.
+
 ## Durable envelope
 
 One private JSON file (atomic fill + sleeve write — same spirit as Phase Zero `resonance/decisions.json`):

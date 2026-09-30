@@ -8,7 +8,9 @@ import { postCalendarEvent } from "./post-calendar-event";
  *   RESONANCE_SYNC_SECRET=... npm run calendar:brief -- 2026-09-25
  *   RESONANCE_SYNC_SECRET=... npm run calendar:brief -- 2026-09-25 --note "Desk note" --link https://example.com/brief
  *
- * Weekdays only. Id is cadence-daily-brief-YYYY-MM-DD. Repeat calls update that row.
+ * Weekdays only. Id is cadence-daily-brief-YYYY-MM-DD. Start is 07:02 America/Chicago.
+ * Status is sent once that instant has passed, otherwise scheduled.
+ * Repeat calls with the same body update nothing. A changed body updates that id.
  * Omit the date to use today in America/Chicago.
  */
 function readArgs(argv: string[]): { day: string; note: string; link: string } {

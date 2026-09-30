@@ -19,6 +19,11 @@ export type Fill = {
   sleeve?: FillSleeveId;
   idempotencyKey?: string;
   note?: string;
+  /**
+   * The row is on the operator log only. The typed position seed already
+   * includes this fill, so sleeve math must not run again.
+   */
+  logOnly?: boolean;
 };
 
 /**

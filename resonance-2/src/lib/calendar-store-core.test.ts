@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
+import { DAILY_BRIEF_BACKFILL_DAYS } from "@/lib/calendar-writers";
 import { CalendarWriteError, parseCalendarEvent } from "./calendar-event";
 import {
   calendarCatalog,
@@ -17,7 +18,10 @@ describe("calendar store core", () => {
   it("seeds cadence, the Monday capital history, and the catalyst catalog once", () => {
     const seeded = ensureSeededCalendarEnvelope(createEmptyCalendarEnvelope());
     assert.equal(seeded.seeded, true);
-    assert.equal(seeded.envelope.events.length, calendarSeed.length + catalystSeed.length);
+    assert.equal(
+      seeded.envelope.events.length,
+      calendarSeed.length + catalystSeed.length + DAILY_BRIEF_BACKFILL_DAYS.length,
+    );
     assert.equal(seeded.envelope.events[0]?.id, "cadence-daily-brief");
     assert.equal(seeded.envelope.events[1]?.id, "capital-monday-agentic-sui-6ai");
     assert.equal(
@@ -34,7 +38,10 @@ describe("calendar store core", () => {
     );
     const again = ensureSeededCalendarEnvelope(seeded.envelope);
     assert.equal(again.seeded, false);
-    assert.equal(again.envelope.events.length, calendarCatalog().length);
+    assert.equal(
+      again.envelope.events.length,
+      calendarCatalog().length + DAILY_BRIEF_BACKFILL_DAYS.length,
+    );
   });
 
   it("re-seeds an existing store by id without duplicating cadence or capital", () => {
@@ -52,7 +59,10 @@ describe("calendar store core", () => {
         .length,
       1,
     );
-    assert.equal(merged.envelope.events.length, calendarSeed.length + catalystSeed.length);
+    assert.equal(
+      merged.envelope.events.length,
+      calendarSeed.length + catalystSeed.length + DAILY_BRIEF_BACKFILL_DAYS.length,
+    );
 
     const changed = {
       ...merged.envelope,
@@ -76,6 +86,44 @@ describe("calendar store core", () => {
     const held = ensureSeededCalendarEnvelope(roundTrip, "2026-09-26T12:00:00.000Z");
     assert.equal(held.seeded, false);
     assert.equal(held.envelope.events.length, roundTrip.events.length);
+  });
+
+  it("inserts missing Daily Briefs and does not overwrite an existing id", () => {
+    const now = "2026-09-30T18:00:00.000Z";
+    const seeded = ensureSeededCalendarEnvelope(createEmptyCalendarEnvelope(now), now);
+    for (const day of DAILY_BRIEF_BACKFILL_DAYS) {
+      const rows = seeded.envelope.events.filter(
+        (event) => event.id === `cadence-daily-brief-${day}`,
+      );
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0]?.lane, "cadence");
+      assert.equal(rows[0]?.title, "Daily Brief");
+      assert.equal(rows[0]?.status, "sent");
+      assert.equal(rows[0]?.writer, "agent");
+      assert.equal(rows[0]?.start, `${day}T07:02:00-05:00`);
+    }
+
+    const kept = {
+      ...seeded.envelope,
+      events: seeded.envelope.events.map((event) =>
+        event.id === "cadence-daily-brief-2026-09-28"
+          ? { ...event, title: "Hub brief", note: "already posted", status: "scheduled" as const }
+          : event,
+      ),
+    };
+    const again = ensureSeededCalendarEnvelope(kept, "2026-10-01T18:00:00.000Z");
+    const row = again.envelope.events.find(
+      (event) => event.id === "cadence-daily-brief-2026-09-28",
+    );
+    assert.equal(row?.title, "Hub brief");
+    assert.equal(row?.note, "already posted");
+    assert.equal(row?.status, "scheduled");
+    assert.equal(
+      again.envelope.events.filter((event) => event.id === "cadence-daily-brief-2026-09-28")
+        .length,
+      1,
+    );
+    assert.equal(again.seeded, false);
   });
 
   it("appends a build event, dedupes the same body, and updates status", () => {

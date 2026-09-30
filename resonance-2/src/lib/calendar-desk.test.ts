@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
+import { civilMonthGrid } from "@/lib/calendar-time";
+import { ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
 import {
   calendarDayHref,
   calendarHref,
   calendarMonthBackHref,
+  calendarWeekDays,
   chipsOnDay,
   laneCountsOnDay,
   monthLevelEvents,
@@ -113,6 +116,58 @@ describe("calendar desk", () => {
     assert.equal(batch[0]?.event.id, "xrpl-batchv1-1-activation-2026");
     assert.equal(batch[0]?.event.status, "tentative");
     assert.match(batch[0]?.start ?? "", /T09:06:00/);
+  });
+
+  it("renders posted Daily Briefs on the cadence lane for day, week, and month", () => {
+    const now = "2026-09-30T18:00:00.000Z";
+    const { envelope } = ensureSeededCalendarEnvelope(null, now);
+    const events = envelope.events;
+
+    for (const day of ["2026-09-28", "2026-09-29"]) {
+      const cadence = occurrencesOnDay(events, day, "cadence");
+      assert.equal(cadence.length, 1);
+      assert.equal(cadence[0]?.event.id, `cadence-daily-brief-${day}`);
+      assert.equal(cadence[0]?.event.title, "Daily Brief");
+      assert.equal(cadence[0]?.event.lane, "cadence");
+      assert.equal(cadence[0]?.event.status, "sent");
+      assert.equal(cadence[0]?.start, `${day}T07:02:00-05:00`);
+      assert.equal(laneCountsOnDay(events, day).cadence, 1);
+      assert.equal(
+        chipsOnDay(events, day, "cadence").chips.some(
+          (chip) => chip.id === `cadence-daily-brief-${day}`,
+        ),
+        true,
+      );
+      assert.equal(
+        occurrencesOnDay(events, day).some((item) => item.event.id === "cadence-daily-brief"),
+        false,
+      );
+    }
+
+    const week = calendarWeekDays("2026-09-28", "2026-09-30").flatMap((item) =>
+      occurrencesOnDay(events, item.date, "cadence"),
+    );
+    assert.equal(
+      week.filter((item) => item.event.id === "cadence-daily-brief-2026-09-28").length,
+      1,
+    );
+    assert.equal(
+      week.filter((item) => item.event.id === "cadence-daily-brief-2026-09-29").length,
+      1,
+    );
+
+    const september = civilMonthGrid("2026-09-30").filter((day) =>
+      day.startsWith("2026-09"),
+    );
+    for (const day of ["2026-09-28", "2026-09-29"]) {
+      assert.equal(september.includes(day), true);
+      assert.equal(
+        occurrencesOnDay(events, day, "cadence").some(
+          (item) => item.event.id === `cadence-daily-brief-${day}`,
+        ),
+        true,
+      );
+    }
   });
 
   it("lets a posted weekday brief replace the standing rhythm row", () => {

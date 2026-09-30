@@ -9,7 +9,9 @@
     "start": "next start --hostname 0.0.0.0 --port 3001",
     "lint": "eslint",
     "test": "tsx --test src/lib/*.test.ts",
-    "calendar:brief": "tsx scripts/post-daily-brief.ts"
+    "calendar:brief": "tsx scripts/post-daily-brief.ts",
+    "calendar:brief:backfill": "tsx scripts/post-daily-brief-backfill.ts",
+    "fills:log": "tsx scripts/post-position-log-fills.ts"
   },
   "engines": {
     "node": ">=20"

@@ -41,6 +41,6 @@ Durable overrides land via fill ingest on `rh-agentic` only. Seed `3846.51` rema
 
 ## What this brick does not store
 
-The seed is the position print, same as the other live books. It is not a replay of the buy into `src/data/fills.ts`. Those two sample rows stay as they are.
+The seed is the position print. The confirmed buy is on the operator log as a `logOnly` row (order `6abbe0d2-3966-4255-9e10-8c160f667d88`) and does not add to `3846.51`. Cost basis stays $438.01. The two older sample rows in `src/data/fills.ts` stay as they are.
 
 Forbidden: seeds, keys, `NEXT_PUBLIC_*` secrets, gas-wallet addresses, lighting BTC / ETH / SOL / FLR, inventing lots, hardcoding a live USD print, writing RH Main.

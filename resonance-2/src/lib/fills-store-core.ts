@@ -1,5 +1,14 @@
 import { fills as seedFills, type Fill } from "@/data/fills";
-import { eventToFill, fillMatchesEvent, type NormalizedFillEvent } from "@/lib/fill-event";
+import {
+  isPositionLogOrder,
+  POSITION_LOG_FILLS,
+} from "@/data/position-log-fills";
+import {
+  eventToFill,
+  fillMatchesEvent,
+  parseFillEvent,
+  type NormalizedFillEvent,
+} from "@/lib/fill-event";
 import {
   applyFillToSleevePrints,
   sanitizeSleevePrints,
@@ -64,16 +73,46 @@ export function ensureSeededFillsEnvelope(
   current: FillsStoreEnvelope | null,
   now = new Date().toISOString(),
 ): { envelope: FillsStoreEnvelope; seeded: boolean } {
+  let envelope: FillsStoreEnvelope;
+  let seeded: boolean;
   if (!current || current.fills.length === 0) {
-    return { envelope: createSeededFillsEnvelope(now), seeded: true };
-  }
-  return {
-    envelope: {
+    envelope = createSeededFillsEnvelope(now);
+    seeded = true;
+  } else {
+    envelope = {
       ...current,
       sleevePrints: sanitizeSleevePrints(current.sleevePrints),
-    },
-    seeded: false,
-  };
+    };
+    seeded = false;
+  }
+  const logged = mergePositionLogFills(envelope, now);
+  if (logged.inserted) seeded = true;
+  return { envelope: logged.envelope, seeded };
+}
+
+/**
+ * Append the confirmed HBAR / XLM position fills when their order ids are
+ * missing. Sleeve prints stay as they are. A second pass is a no-op.
+ */
+export function mergePositionLogFills(
+  envelope: FillsStoreEnvelope,
+  now = new Date().toISOString(),
+): { envelope: FillsStoreEnvelope; inserted: boolean } {
+  let next = envelope;
+  let inserted = false;
+  for (const body of POSITION_LOG_FILLS) {
+    const written = ingestFillIntoEnvelope(next, parseFillEvent(body), now);
+    if (written.applied) {
+      throw new Error(
+        `position log fill ${body.orderId} must not move a sleeve.`,
+      );
+    }
+    if (!written.deduped) {
+      next = written.envelope;
+      inserted = true;
+    }
+  }
+  return { envelope: next, inserted };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -116,6 +155,7 @@ function coerceStoredFill(raw: unknown): Fill | null {
   if (typeof raw.note === "string" && raw.note.trim()) {
     fill.note = raw.note.trim();
   }
+  if (raw.logOnly === true) fill.logOnly = true;
   return fill;
 }
 
@@ -175,6 +215,23 @@ export function ingestFillIntoEnvelope(
       envelope,
       fill: existing,
       deduped: true,
+      applied: false,
+    };
+  }
+
+  // These order ids are already the typed HBAR / XLM position seeds.
+  // Logging them must not add the quantity a second time.
+  if (isPositionLogOrder(event.orderId)) {
+    const fill: Fill = { ...eventToFill(event), logOnly: true };
+    return {
+      envelope: {
+        ...envelope,
+        updatedAt: now,
+        fills: [...envelope.fills, fill],
+        sleevePrints: envelope.sleevePrints,
+      },
+      fill,
+      deduped: false,
       applied: false,
     };
   }

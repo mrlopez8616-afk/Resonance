@@ -4,6 +4,7 @@ export type CalendarLane = (typeof CALENDAR_LANES)[number];
 
 export const CALENDAR_STATUSES = [
   "scheduled",
+  "sent",
   "history",
   "pending",
   "awaiting",

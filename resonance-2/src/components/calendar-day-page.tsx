@@ -70,7 +70,10 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
   const { event } = item;
   const link = event.link;
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
-  const settled = event.status === "history" || event.status === "merged";
+  const settled =
+    event.status === "history" ||
+    event.status === "merged" ||
+    event.status === "sent";
   const statusTone =
     event.status === "tentative"
       ? "tentative"
