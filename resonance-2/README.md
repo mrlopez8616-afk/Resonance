@@ -14,7 +14,7 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 
 Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POSTs a fill:
 
-- XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts)
+- XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (RH Agentic `51.601`; Flare vault `28281`; no RH Main sleeve; no Coinbase sleeve)
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic `0` sold; Coinbase 33.7)
 - PWR — [`src/data/pwr-sleeves.ts`](src/data/pwr-sleeves.ts) (RH Agentic `0.003917` **shares** only)
 - ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (RH Agentic `0.005844` **shares** only)

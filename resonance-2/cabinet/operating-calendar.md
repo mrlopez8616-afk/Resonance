@@ -46,7 +46,7 @@ Lane row:
   lane,          // cadence | capital | build | gates
   start,         // ISO-8601 with offset or Z
   title,
-  status,        // scheduled | history | pending | awaiting | merged | open
+  status,        // scheduled | sent | history | pending | awaiting | merged | open
   writer,        // agent | founder
   link?,         // site path (/log?…) or https URL
   note?,
@@ -84,7 +84,7 @@ A month square is a day node. It links to `/calendar/YYYY-MM-DD` (a real route, 
 
 | Lane / type | Writer | Seed |
 | --- | --- | --- |
-| Cadence | agent | Standing Daily Brief, weekdays 7:00 AM America/Chicago. A concrete weekday row is posted by the brief |
+| Cadence | agent | Standing Daily Brief, weekdays 7:00 AM America/Chicago, until a dated row replaces that day. A posted weekday row is 7:02 AM. `sent` once that instant has passed, otherwise `scheduled` |
 | Capital | agent | Monday 2026-09-21 Agentic SUI→6 AI, status `history`, link `/log?ticker=SUI&from=2026-09-21&to=2026-09-21`. New RH / Coinbase fills upsert another Capital row |
 | Build | agent | empty until a pull request posts |
 | Gates | founder | empty. `writer: "agent"` is **400** |
@@ -155,13 +155,13 @@ curl -X POST https://resonance3.vercel.app/api/calendar \
     "id": "cadence-daily-brief-2026-09-25",
     "lane": "cadence",
     "writer": "agent",
-    "start": "2026-09-25T07:00:00-05:00",
+    "start": "2026-09-25T07:02:00-05:00",
     "title": "Daily Brief",
-    "status": "scheduled"
+    "status": "sent"
   }'
 ```
 
-`start` is 07:00 America/Chicago. September is `-05:00`. January is `-06:00`. From this repo the helper applies the offset:
+`start` is 07:02 America/Chicago. September is `-05:00`. January is `-06:00`. Status is `sent` when that instant has passed (a past day, or a brief posted at or after 07:02). A future weekday is `scheduled`. From this repo the helper applies the offset:
 
 ```bash
 cd resonance-2
@@ -170,6 +170,12 @@ RESONANCE_SYNC_SECRET=... npm run calendar:brief -- 2026-09-25 --note "Desk note
 ```
 
 Omit the date and the helper uses today in America/Chicago. Weekends exit with an error. `CALENDAR_URL` overrides the host (default `https://resonance3.vercel.app/api/calendar`).
+
+The same id on a later POST updates that row. It does not insert a second one. A posted `cadence-daily-brief-YYYY-MM-DD` replaces the standing 07:00 rhythm on that day in the day itinerary, the week board, the month grid, and `/calendar/YYYY-MM-DD`.
+
+The desk prints `sent` once that occurrence has started and `scheduled` while it is still ahead. A hub row already stored as `scheduled` is left in the file. The print changes; the row is not rewritten.
+
+Sep 28 and Sep 29 2026 are inserted on the next calendar-store read when those ids are missing. An existing row is left as the hub wrote it. `npm run calendar:brief:backfill` is the same insert over POST: it skips ids already in the store. Run it only after this status is deployed.
 
 ### Capital — fill ingest
 

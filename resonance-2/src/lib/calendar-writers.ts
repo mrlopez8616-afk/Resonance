@@ -59,28 +59,59 @@ export function dailyBriefEventId(day: string): string {
   return `cadence-daily-brief-${day}`;
 }
 
+/** Wall clock for a posted Daily Brief. America/Chicago. */
+export const DAILY_BRIEF_CLOCK = "07:02";
+
+/**
+ * Weekdays whose brief row is inserted when missing.
+ * An existing id is left alone, including a hub row with a different body.
+ */
+export const DAILY_BRIEF_BACKFILL_DAYS = ["2026-09-28", "2026-09-29"] as const;
+
+/**
+ * Past or already-issued briefs are `sent`. A brief whose 07:02 Chicago
+ * instant is still ahead is `scheduled`.
+ */
+export function dailyBriefStatus(
+  day: string,
+  now = new Date(),
+): "sent" | "scheduled" {
+  const start = chicagoInstant(day, DAILY_BRIEF_CLOCK);
+  return start.getTime() <= now.getTime() ? "sent" : "scheduled";
+}
+
 /**
  * One weekday Daily Brief row. The external brief POSTs this body.
  * Same id on a later call updates the row; it does not insert a second one.
  */
 export function dailyBriefCalendarBody(
   day: string,
-  options: { note?: string; link?: string } = {},
+  options: { note?: string; link?: string; now?: Date } = {},
 ): Record<string, unknown> {
   if (!isCivilDay(day)) throw new Error("day must be YYYY-MM-DD.");
   if (!isCivilWeekday(day)) throw new Error("Daily Brief rows are weekdays.");
   const note = options.note?.trim().slice(0, 400) ?? "";
   const link = options.link?.trim() ?? "";
+  const now = options.now ?? new Date();
   return {
     id: dailyBriefEventId(day),
     lane: "cadence",
     writer: "agent",
-    start: formatChicagoIso(chicagoInstant(day, "07:00")),
+    start: formatChicagoIso(chicagoInstant(day, DAILY_BRIEF_CLOCK)),
     title: "Daily Brief",
-    status: "scheduled",
+    status: dailyBriefStatus(day, now),
     ...(note ? { note } : {}),
     ...(link ? { link } : {}),
   };
+}
+
+/** Bodies for the insert-only backfill. Same shape as `calendar:brief`. */
+export function dailyBriefBackfillBodies(
+  now = new Date(),
+): Record<string, unknown>[] {
+  return DAILY_BRIEF_BACKFILL_DAYS.map((day) =>
+    dailyBriefCalendarBody(day, { now }),
+  );
 }
 
 export function buildPrEventId(number: number): string {

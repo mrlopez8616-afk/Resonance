@@ -68,13 +68,16 @@ export function formatSleeveQuantity(quantity: string, note?: string): string {
     return quantity.trim() || "—";
   }
   // Lots at or above 1,000 keep an integer print (Flare vault) and up to two
-  // stored decimals (HBAR / XLM). Smaller bands stay on the original steps.
+  // stored decimals (HBAR / XLM). Mid-size lots keep up to three stored
+  // decimals so 51.601 XRP is not printed as 51.6. Smaller bands stay
+  // on the original steps.
+  const storedFraction =
+    quantity.trim().split(".")[1]?.replace(/0+$/, "").length ?? 0;
   const storedHundredths =
-    parsed >= 1000
-      ? Math.min(2, quantity.trim().split(".")[1]?.replace(/0+$/, "").length ?? 0)
-      : null;
+    parsed >= 1000 ? Math.min(2, storedFraction) : null;
   const digits =
-    storedHundredths ?? (parsed >= 10 ? 1 : parsed >= 1 ? 3 : 6);
+    storedHundredths ??
+    (parsed >= 10 ? Math.max(1, Math.min(3, storedFraction)) : parsed >= 1 ? 3 : 6);
   const formatted = parsed.toLocaleString("en-US", {
     minimumFractionDigits: parsed === 0 ? 0 : digits,
     maximumFractionDigits: digits,
@@ -95,10 +98,13 @@ export function formatSpotPrice(usd: number | null): string {
 export function formatTotalUnits(total: number): string {
   if (!Number.isFinite(total)) return "—";
   if (total >= 1000) {
+    const thousandths = Number(total.toFixed(3));
     const hundredths = Number(total.toFixed(2));
     const tenths = Number(total.toFixed(1));
-    const digits = hundredths === tenths ? 1 : 2;
-    return hundredths.toLocaleString("en-US", {
+    const digits =
+      thousandths !== hundredths ? 3 : hundredths === tenths ? 1 : 2;
+    const rounded = digits === 3 ? thousandths : digits === 2 ? hundredths : tenths;
+    return rounded.toLocaleString("en-US", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     });

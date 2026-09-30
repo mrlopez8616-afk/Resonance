@@ -41,6 +41,47 @@ describe("sleeve apply", () => {
     assert.equal(sold.nextQuantity, "1");
   });
 
+  it("refuses a Coinbase fill on XRP after that lot was removed", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            venue: "coinbase",
+            sleeve: "coinbase",
+            ticker: "XRP",
+            qty: "1",
+          }),
+        ),
+      /sleeve coinbase is not on the XRP face/,
+    );
+    const cleaned = sanitizeSleevePrints({
+      XRP: { coinbase: "778.178708", "rh-agentic": "51.601" },
+    });
+    assert.equal(cleaned.XRP?.coinbase, undefined);
+    assert.equal(cleaned.XRP?.["rh-agentic"], "51.601");
+  });
+
+  it("refuses an RH Main fill on XRP after that lot was removed", () => {
+    assert.throws(
+      () =>
+        applyFillToSleevePrints(
+          {},
+          event({
+            ticker: "XRP",
+            sleeve: "rh-main",
+            qty: "1",
+          }),
+        ),
+      /sleeve rh-main is not on the XRP face/,
+    );
+    const cleaned = sanitizeSleevePrints({
+      XRP: { "rh-main": "587.718", "rh-agentic": "51.601" },
+    });
+    assert.equal(cleaned.XRP?.["rh-main"], undefined);
+    assert.equal(cleaned.XRP?.["rh-agentic"], "51.601");
+  });
+
   it("updates Coinbase from a Coinbase fill", () => {
     const result = applyFillToSleevePrints(
       {},
@@ -355,9 +396,10 @@ describe("sleeve apply", () => {
     assert.equal(agentic?.quantity, "60");
 
     const cleaned = sanitizeSleevePrints({
-      XRP: { "flare-vault": "1", "rh-main": "100" },
+      XRP: { "flare-vault": "1", "rh-main": "100", "rh-agentic": "51.601" },
     });
     assert.equal(cleaned.XRP?.["flare-vault"], undefined);
-    assert.equal(cleaned.XRP?.["rh-main"], "100");
+    assert.equal(cleaned.XRP?.["rh-main"], undefined);
+    assert.equal(cleaned.XRP?.["rh-agentic"], "51.601");
   });
 });

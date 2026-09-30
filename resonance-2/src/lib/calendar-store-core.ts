@@ -11,8 +11,10 @@ import {
   isCalendarLane,
   isCalendarStatus,
   isCalendarWriter,
+  parseCalendarEvent,
 } from "@/lib/calendar-event";
 import { isCivilDay } from "@/lib/calendar-time";
+import { dailyBriefBackfillBodies } from "@/lib/calendar-writers";
 
 export const CALENDAR_STORE_VERSION = 1;
 export const CALENDAR_BLOB_PATH = "resonance-2/calendar.json";
@@ -77,9 +79,32 @@ export function createSeededCalendarEnvelope(
 }
 
 /**
+ * Insert a Daily Brief only when that id is absent.
+ * A hub row with the same id keeps its title, start, status, and note.
+ */
+export function insertMissingDailyBriefs(
+  envelope: CalendarStoreEnvelope,
+  now = new Date().toISOString(),
+): { envelope: CalendarStoreEnvelope; inserted: boolean } {
+  const clock = new Date(now);
+  const when = Number.isNaN(clock.getTime()) ? new Date() : clock;
+  let next = envelope;
+  let inserted = false;
+  for (const body of dailyBriefBackfillBodies(when)) {
+    const event = parseCalendarEvent(body);
+    if (next.events.some((row) => row.id === event.id)) continue;
+    const written = writeCalendarEventIntoEnvelope(next, event, now);
+    next = written.envelope;
+    inserted = true;
+  }
+  return { envelope: next, inserted };
+}
+
+/**
  * Upsert the committed catalog by id.
  * Same id + same body is a no-op. Same id + changed body updates.
  * Rows that are not in the catalog (fills, briefs, pull requests) stay.
+ * Missing Sep 28 and Sep 29 Daily Briefs are inserted and never overwritten.
  */
 export function ensureSeededCalendarEnvelope(
   current: CalendarStoreEnvelope | null,
@@ -94,6 +119,9 @@ export function ensureSeededCalendarEnvelope(
       seeded = true;
     }
   }
+  const briefs = insertMissingDailyBriefs(envelope, now);
+  envelope = briefs.envelope;
+  if (briefs.inserted) seeded = true;
   if (seeded && !envelope.seededAt) {
     envelope = { ...envelope, seededAt: now };
   }

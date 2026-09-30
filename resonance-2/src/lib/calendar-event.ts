@@ -256,7 +256,7 @@ function parseLaneEvent(raw: Record<string, unknown>): CalendarEvent {
   const status = asTrimmed(raw.status).toLowerCase();
   if (!isCalendarStatus(status)) {
     throw new CalendarWriteError(
-      "status must be scheduled, history, pending, awaiting, merged, or open.",
+      "status must be scheduled, sent, history, pending, awaiting, merged, or open.",
     );
   }
 

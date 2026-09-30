@@ -13,6 +13,7 @@ import {
   calendarDayHref,
   calendarMonthBackHref,
   CALENDAR_LANE_FILTERS,
+  displayedCalendarStatus,
   eventWhenLabel,
   occurrenceClock,
   occurrencesOnDay,
@@ -70,11 +71,12 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
   const { event } = item;
   const link = event.link;
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
-  const settled = event.status === "history" || event.status === "merged";
+  const status = displayedCalendarStatus(event, item.start);
+  const settled = status === "history" || status === "merged" || status === "sent";
   const statusTone =
-    event.status === "tentative"
+    status === "tentative"
       ? "tentative"
-      : settled || event.status === "confirmed"
+      : settled || status === "confirmed"
         ? "ok"
         : undefined;
   const when = eventWhenLabel(event);
@@ -88,7 +90,7 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
         {event.node ? <Field label="node" value={event.node} /> : null}
         {event.lane ? <Field label="lane" value={CALENDAR_LANE_LABELS[event.lane]} /> : null}
         <Field label="title" value={event.title} />
-        <Field label="status" value={event.status} tone={statusTone} />
+        <Field label="status" value={status} tone={statusTone} />
         <Field label="writer" value={event.writer} />
         {event.location ? <Field label="where" value={event.location} /> : null}
         {event.note ? <Field label="note" value={event.note} /> : null}
@@ -163,7 +165,9 @@ function DayRows({
               <time dateTime={item.event.allDay ? item.day : item.start}>{occurrenceClock(item)}</time>
               <span className="calendar-row-lane">{rowMark(item.event)}</span>
               <span className="calendar-row-title">{item.event.title}</span>
-              <span className="calendar-row-status">{item.event.status}</span>
+              <span className="calendar-row-status">
+                {displayedCalendarStatus(item.event, item.start)}
+              </span>
             </Link>
             {item.event.sourceUrl ? (
               <a className="calendar-source" href={item.event.sourceUrl} rel="noreferrer">

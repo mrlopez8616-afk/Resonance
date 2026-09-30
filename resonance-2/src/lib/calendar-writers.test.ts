@@ -67,12 +67,32 @@ describe("calendar writers", () => {
   });
 
   it("posts one weekday Daily Brief id and refuses Saturday", () => {
-    const body = dailyBriefCalendarBody("2026-09-25", { note: "Filed." });
+    const postedAt = new Date("2026-09-25T13:00:00-05:00");
+    const body = dailyBriefCalendarBody("2026-09-25", {
+      note: "Filed.",
+      now: postedAt,
+    });
     assert.equal(body.id, dailyBriefEventId("2026-09-25"));
     assert.equal(body.id, "cadence-daily-brief-2026-09-25");
-    assert.equal(body.start, "2026-09-25T07:00:00-05:00");
+    assert.equal(body.start, "2026-09-25T07:02:00-05:00");
+    assert.equal(body.title, "Daily Brief");
     assert.equal(body.lane, "cadence");
+    assert.equal(body.status, "sent");
     assert.doesNotThrow(() => parseCalendarEvent(body));
+    const again = dailyBriefCalendarBody("2026-09-25", {
+      note: "Filed.",
+      now: postedAt,
+    });
+    assert.deepEqual(again, body);
+
+    const future = dailyBriefCalendarBody("2026-09-30", {
+      now: new Date("2026-09-29T12:00:00-05:00"),
+    });
+    assert.equal(future.status, "scheduled");
+    assert.equal(future.start, "2026-09-30T07:02:00-05:00");
+    assert.equal(future.id, "cadence-daily-brief-2026-09-30");
+    assert.doesNotThrow(() => parseCalendarEvent(future));
+
     assert.throws(() => dailyBriefCalendarBody("2026-09-26"), /weekdays/);
   });
 
