@@ -136,7 +136,7 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 
 | Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | HBAR | XLM | Writer |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `rh-main` | yes | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | **no** (XLM has no Main line) | ingest, venue `robinhood` only |
+| `rh-main` | **no** (founder closed the XRP Main lot) | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | **no** (XLM has no Main line) | ingest, venue `robinhood` only |
 | `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`3846.51` seed, tokens) | yes (`1910.31` seed, tokens) | ingest, venue `robinhood` only |
 | `coinbase` | **no** (founder closed the XRP Coinbase lot) | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | **no** (XLM has no Coinbase line) | ingest, venue `coinbase` only |
 | `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
@@ -159,7 +159,7 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 ### Live vs offline tickers
 
 - **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, XLM. Sleeve apply runs only when that ticker already has the named sleeve id.
-- **Unknown sleeve on a live book** (example: `XRP` + `coinbase`, `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, `GEV` + `rh-main`, `HBAR` + `rh-main`, or `XLM` + `coinbase`) → **400**. Do not invent a row. A stored XRP `coinbase` override is dropped on read once that sleeve is gone from the seed.
+- **Unknown sleeve on a live book** (example: `XRP` + `rh-main`, `XRP` + `coinbase`, `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, `GEV` + `rh-main`, `HBAR` + `rh-main`, or `XLM` + `coinbase`) → **400**. Do not invent a row. A stored XRP `rh-main` or `coinbase` override is dropped on read once that sleeve is gone from the seed.
 - **Locked but offline ticker** (BTC, ETH, SOL, FLR) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
 - Unknown ticker outside the locked roster → **400**.
 

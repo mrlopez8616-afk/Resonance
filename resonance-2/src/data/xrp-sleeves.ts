@@ -7,11 +7,11 @@ import type { NodeSleeve } from "@/data/sleeves";
  * on the server in a later brick — never in a Client Component and never
  * behind NEXT_PUBLIC_*.
  *
- * 2026-09-30 read-only Robinhood pull:
+ * 2026-09-30 founder confirmation:
  * - RH Agentic holds 51.601 XRP. Confirmed cost basis $72.99 is not a
  *   sleeve field; the face prints quantity only.
- * - RH Main returned no positions on that pull. The seeded 587.718 line
- *   stays. Do not zero it from this agent's Main read. Hub confirms it.
+ * - RH Main 587.718 is gone. That lot moved into Agentic and was used
+ *   to buy the XLM and HBAR. Do not put the line back.
  * - Coinbase 778.178708 is gone. The founder no longer holds that lot.
  *
  * Flare vault is a MANUAL founder entry only (`FLARE_VAULT_XRP`). Do not
@@ -24,13 +24,6 @@ export const FLARE_VAULT_XRP = "28281";
 export type XrpSleeve = NodeSleeve;
 
 export const XRP_SLEEVES: XrpSleeve[] = [
-  {
-    id: "rh-main",
-    label: "RH Main",
-    quantity: "587.718",
-    source: "robinhood-config",
-    manual: false,
-  },
   {
     id: "rh-agentic",
     label: "RH Agentic",

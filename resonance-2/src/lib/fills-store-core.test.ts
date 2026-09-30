@@ -92,23 +92,31 @@ describe("fills store core", () => {
     assert.deepEqual(result.envelope.sleevePrints, {});
   });
 
-  it("does not write flare-vault into sleevePrints on a successful XRP Main fill", () => {
+  it("refuses an XRP Main fill and does not write flare-vault", () => {
     const seeded = createSeededFillsEnvelope();
-    const result = ingestFillIntoEnvelope(
-      seeded,
-      parseFillEvent({
-        venue: "robinhood",
-        orderId: "xrp-main-1",
-        ticker: "XRP",
-        side: "buy",
-        qty: "1",
-        price: "1.40",
-        sleeve: "rh-main",
-        filledAt: "2026-09-21T09:00:00-05:00",
-      }),
+    assert.throws(
+      () =>
+        ingestFillIntoEnvelope(
+          seeded,
+          parseFillEvent({
+            venue: "robinhood",
+            orderId: "xrp-main-1",
+            ticker: "XRP",
+            side: "buy",
+            qty: "1",
+            price: "1.40",
+            sleeve: "rh-main",
+            filledAt: "2026-09-21T09:00:00-05:00",
+          }),
+        ),
+      /sleeve rh-main is not on the XRP face/,
     );
-    assert.equal(result.envelope.sleevePrints.XRP?.["rh-main"], "588.718");
-    assert.equal(result.envelope.sleevePrints.XRP?.["flare-vault"], undefined);
+    assert.equal(seeded.sleevePrints.XRP?.["rh-main"], undefined);
+    assert.equal(seeded.sleevePrints.XRP?.["flare-vault"], undefined);
+    assert.equal(
+      seeded.fills.some((fill) => fill.orderId === "xrp-main-1"),
+      false,
+    );
   });
 
   it("strips a tampered flare-vault override when parsing", () => {

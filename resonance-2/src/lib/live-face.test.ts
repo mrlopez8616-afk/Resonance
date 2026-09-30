@@ -29,6 +29,8 @@ describe("live face units", () => {
     assert.equal(formatSleeveQuantity("0"), "0");
     assert.equal(formatSleeveQuantity("8.931"), "8.931");
     assert.equal(formatSleeveQuantity("33.7"), "33.7");
+    assert.equal(formatSleeveQuantity("51.601"), "51.601");
+    assert.equal(formatTotalUnits(28332.601), "28,332.601");
     assert.equal(formatSleeveQuantity("28281"), "28,281");
     assert.equal(formatSleeveQuantity("3846.51"), "3,846.51");
     assert.equal(formatSleeveQuantity("1910.31"), "1,910.31");
@@ -166,7 +168,7 @@ describe("live face units", () => {
     assert.equal(xlm.totalUnitsLabel, "1,910.31");
   });
 
-  it("keeps the XRP vault integer and drops the closed Coinbase lot", () => {
+  it("keeps the XRP vault integer and the Agentic lot after Main and Coinbase closed", () => {
     const face = assembleLiveFace("XRP", XRP_SLEEVES, {
       usd: 1.2,
       source: "test",
@@ -174,21 +176,26 @@ describe("live face units", () => {
     });
     assert.deepEqual(
       face.sleeves.map((row) => row.id),
-      ["rh-main", "rh-agentic", "flare-vault"],
-    );
-    assert.equal(
-      face.sleeves.find((row) => row.id === "rh-main")?.quantity,
-      "587.718",
+      ["rh-agentic", "flare-vault"],
     );
     assert.equal(
       face.sleeves.find((row) => row.id === "rh-agentic")?.quantity,
       "51.601",
     );
     assert.equal(
+      face.sleeves.find((row) => row.id === "rh-agentic")?.quantityLabel,
+      "51.601",
+    );
+    assert.equal(
+      face.sleeves.find((row) => row.id === "flare-vault")?.quantity,
+      "28281",
+    );
+    assert.equal(
       face.sleeves.find((row) => row.id === "flare-vault")?.quantityLabel,
       "28,281",
     );
+    assert.equal(face.sleeves.some((row) => row.id === "rh-main"), false);
     assert.equal(face.sleeves.some((row) => row.id === "coinbase"), false);
-    assert.equal(face.totalUnitsLabel, "28,920.32");
+    assert.equal(face.totalUnitsLabel, "28,332.601");
   });
 });
