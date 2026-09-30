@@ -18,6 +18,7 @@ import {
   laneCountsOnDay,
   monthKeyForDay,
   monthLevelEvents,
+  displayedCalendarStatus,
   occurrenceClock,
   occurrencesOnDay,
   type CalendarChip,
@@ -96,12 +97,11 @@ function EventDetail({
   const { event } = item;
   const link = event.link;
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
+  const status = displayedCalendarStatus(event, item.start);
   const settled =
-    event.status === "history" ||
-    event.status === "merged" ||
-    event.status === "sent";
+    status === "history" || status === "merged" || status === "sent";
   const statusTone =
-    event.status === "tentative" ? "tentative" : settled || event.status === "confirmed" ? "ok" : undefined;
+    status === "tentative" ? "tentative" : settled || status === "confirmed" ? "ok" : undefined;
   const when = eventWhenLabel(event);
   const showWhen = event.kind === "catalyst" || Boolean(event.end) || event.datePrecision === "month";
 
@@ -113,7 +113,7 @@ function EventDetail({
         {event.node ? <Field label="node" value={event.node} /> : null}
         {event.lane ? <Field label="lane" value={CALENDAR_LANE_LABELS[event.lane]} /> : null}
         <Field label="title" value={event.title} />
-        <Field label="status" value={event.status} tone={statusTone} />
+        <Field label="status" value={status} tone={statusTone} />
         <Field label="writer" value={event.writer} />
         {event.datePrecision && event.datePrecision !== "day" ? (
           <Field label="precision" value={event.datePrecision} />
@@ -231,7 +231,9 @@ function Itinerary({
               </time>
               <span className="calendar-row-lane">{rowMark(item.event)}</span>
               <span className="calendar-row-title">{item.event.title}</span>
-              <span className="calendar-row-status">{item.event.status}</span>
+              <span className="calendar-row-status">
+                {displayedCalendarStatus(item.event, item.start)}
+              </span>
             </Link>
             {current && showDetail ? (
               <EventDetail

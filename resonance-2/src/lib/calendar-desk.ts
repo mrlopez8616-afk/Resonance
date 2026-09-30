@@ -65,6 +65,26 @@ export type CalendarChip = {
 /** Standing weekday rhythm. A posted row with the dated id replaces it that day. */
 export const STANDING_DAILY_BRIEF_ID = "cadence-daily-brief";
 
+/**
+ * Daily Brief rows print `sent` once their occurrence has started and
+ * `scheduled` while it is still ahead. A hub row stored as `scheduled`
+ * is not rewritten. Other lanes keep their stored status.
+ */
+export function displayedCalendarStatus(
+  event: CalendarEvent,
+  occurrenceStart: string,
+  now = new Date(),
+): string {
+  const brief =
+    event.lane === "cadence" &&
+    (event.id === STANDING_DAILY_BRIEF_ID ||
+      event.id.startsWith(`${STANDING_DAILY_BRIEF_ID}-`));
+  if (!brief) return event.status;
+  const instant = Date.parse(occurrenceStart);
+  if (Number.isNaN(instant)) return event.status;
+  return instant <= now.getTime() ? "sent" : "scheduled";
+}
+
 export const MONTH_CHIP_LIMIT = 3;
 
 function firstParam(value: RawParam): string {

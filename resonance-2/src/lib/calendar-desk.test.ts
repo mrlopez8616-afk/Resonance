@@ -10,6 +10,7 @@ import {
   calendarMonthBackHref,
   calendarWeekDays,
   chipsOnDay,
+  displayedCalendarStatus,
   laneCountsOnDay,
   monthLevelEvents,
   occurrencesOnDay,
@@ -168,6 +169,31 @@ describe("calendar desk", () => {
         true,
       );
     }
+  });
+
+  it("prints sent for a past hub brief stored as scheduled", () => {
+    const posted = {
+      id: "cadence-daily-brief-2026-09-25",
+      lane: "cadence" as const,
+      start: "2026-09-25T07:02:00-05:00",
+      title: "Daily Brief",
+      status: "scheduled" as const,
+      writer: "agent" as const,
+    };
+    const now = new Date("2026-09-30T18:00:00.000Z");
+    assert.equal(displayedCalendarStatus(posted, posted.start, now), "sent");
+    const future = {
+      ...posted,
+      id: "cadence-daily-brief-2026-10-01",
+      start: "2026-10-01T07:02:00-05:00",
+    };
+    assert.equal(displayedCalendarStatus(future, future.start, now), "scheduled");
+    const capital = calendarSeed[1];
+    assert.ok(capital);
+    assert.equal(
+      displayedCalendarStatus(capital, capital.start, now),
+      capital.status,
+    );
   });
 
   it("lets a posted weekday brief replace the standing rhythm row", () => {

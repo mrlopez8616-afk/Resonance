@@ -173,6 +173,8 @@ Omit the date and the helper uses today in America/Chicago. Weekends exit with a
 
 The same id on a later POST updates that row. It does not insert a second one. A posted `cadence-daily-brief-YYYY-MM-DD` replaces the standing 07:00 rhythm on that day in the day itinerary, the week board, the month grid, and `/calendar/YYYY-MM-DD`.
 
+The desk prints `sent` once that occurrence has started and `scheduled` while it is still ahead. A hub row already stored as `scheduled` is left in the file. The print changes; the row is not rewritten.
+
 Sep 28 and Sep 29 2026 are inserted on the next calendar-store read when those ids are missing. An existing row is left as the hub wrote it. `npm run calendar:brief:backfill` is the same insert over POST: it skips ids already in the store. Run it only after this status is deployed.
 
 ### Capital — fill ingest
