@@ -219,8 +219,8 @@ export function ingestFillIntoEnvelope(
     };
   }
 
-  // These order ids are already the typed HBAR / XLM position seeds.
-  // Logging them must not add the quantity a second time.
+  // These order ids are already inside the typed HBAR / XLM position seeds,
+  // including the 2026-10-01 XLM sell. Logging them must not move the sleeve.
   if (isPositionLogOrder(event.orderId)) {
     const fill: Fill = { ...eventToFill(event), logOnly: true };
     return {

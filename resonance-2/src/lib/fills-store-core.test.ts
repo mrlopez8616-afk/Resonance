@@ -6,7 +6,7 @@ import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
 import { XLM_AGENTIC_TOKENS } from "@/data/xlm-sleeves";
 import { parseFillDeskQuery, filterFills } from "./fill-desk";
 import { parseFillEvent } from "./fill-event";
-import { addDecimal } from "./decimal";
+import { addDecimal, subtractDecimal } from "./decimal";
 import { listFills } from "./fills";
 import { mergeSleeveBook } from "./sleeve-apply";
 import {
@@ -146,6 +146,7 @@ describe("fills store core", () => {
       assert.equal(written.fill.logOnly, true);
       assert.equal(written.fill.orderId, body.orderId);
       assert.equal(written.fill.symbol, body.ticker);
+      assert.equal(written.fill.side, body.side);
       assert.equal(written.fill.quantity, body.qty);
       assert.equal(written.fill.price, body.price);
       assert.equal(written.fill.sleeve, "rh-agentic");
@@ -163,32 +164,54 @@ describe("fills store core", () => {
       mergeSleeveBook("XLM", envelope.sleevePrints)[0]?.quantity,
       XLM_AGENTIC_TOKENS,
     );
-    assert.equal(HBAR_AGENTIC_TOKENS, "3846.51");
-    assert.equal(XLM_AGENTIC_TOKENS, "1910.31");
-    assert.equal(addDecimal("1891.36", "18.95"), "1910.31");
+    assert.equal(HBAR_AGENTIC_TOKENS, "7809.65");
+    assert.equal(XLM_AGENTIC_TOKENS, "0");
+    assert.equal(addDecimal("3846.51", "3963.14"), "7809.65");
+    assert.equal(addDecimal("438.01", "409.10"), "847.11");
+    assert.equal(subtractDecimal("1910.31", "1910.31"), "0");
 
-    const notionals = { HBAR: "0", XLM: "0" };
+    const buyNotionals = { HBAR: "0", XLM: "0" };
     for (const body of POSITION_LOG_FILLS) {
-      notionals[body.ticker] = addDecimal(notionals[body.ticker], body.notional);
+      if (body.side !== "buy") continue;
+      buyNotionals[body.ticker] = addDecimal(
+        buyNotionals[body.ticker],
+        body.notional,
+      );
     }
-    assert.equal(notionals.HBAR, "438.01");
-    assert.equal(notionals.XLM, "438.01");
+    assert.equal(buyNotionals.HBAR, "847.11");
+    assert.equal(buyNotionals.XLM, "438.01");
+    const xlmSell = POSITION_LOG_FILLS.find(
+      (row) => row.ticker === "XLM" && row.side === "sell",
+    );
+    assert.equal(xlmSell?.orderId, "6abed758-0215-4703-8d11-c412686df9be");
+    assert.equal(xlmSell?.qty, "1910.31");
+    assert.equal(xlmSell?.price, "0.216176882");
+    assert.equal(xlmSell?.notional, "412.96");
+    assert.equal(xlmSell?.filledAt, "2026-10-01T17:57:44-04:00");
 
     const listed = listFills(envelope.fills);
     assert.deepEqual(
       filterFills(listed, parseFillDeskQuery({ ticker: "HBAR" })).map(
         (fill) => fill.orderId,
       ),
-      ["6abbe0d2-3966-4255-9e10-8c160f667d88"],
+      [
+        "6abed771-773a-43df-9015-3bf44caf9938",
+        "6abbe0d2-3966-4255-9e10-8c160f667d88",
+      ],
     );
     assert.deepEqual(
       filterFills(listed, parseFillDeskQuery({ ticker: "XLM" })).map(
         (fill) => fill.orderId,
       ),
       [
+        "6abed758-0215-4703-8d11-c412686df9be",
         "6abbe113-41cb-4aa8-9e7c-0a986335b95a",
         "6abbe0e4-575c-4abe-a90e-90368b43a1b6",
       ],
+    );
+    assert.equal(
+      filterFills(listed, parseFillDeskQuery({ ticker: "XLM" }))[0]?.side,
+      "sell",
     );
 
     for (const body of POSITION_LOG_FILLS) {
@@ -217,11 +240,11 @@ describe("fills store core", () => {
     assert.equal(withoutFlag.envelope.sleevePrints.HBAR, undefined);
     assert.equal(
       mergeSleeveBook("HBAR", withoutFlag.envelope.sleevePrints)[0]?.quantity,
-      "3846.51",
+      "7809.65",
     );
     assert.equal(
       mergeSleeveBook("XLM", withoutFlag.envelope.sleevePrints)[0]?.quantity,
-      "1910.31",
+      "0",
     );
 
     const roundTrip = parseFillsEnvelope(JSON.parse(JSON.stringify(envelope)));
@@ -252,7 +275,7 @@ describe("fills store core", () => {
     );
     assert.equal(later.applied, true);
     assert.equal(later.fill.logOnly, undefined);
-    assert.equal(later.envelope.sleevePrints.HBAR?.["rh-agentic"], "3847.51");
+    assert.equal(later.envelope.sleevePrints.HBAR?.["rh-agentic"], "7810.65");
     assert.equal(later.envelope.sleevePrints.XLM, undefined);
   });
 

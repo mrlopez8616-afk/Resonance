@@ -137,7 +137,7 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 | Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | HBAR | XLM | Writer |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `rh-main` | **no** (founder closed the XRP Main lot) | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | **no** (XLM has no Main line) | ingest, venue `robinhood` only |
-| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`3846.51` seed, tokens) | yes (`1910.31` seed, tokens) | ingest, venue `robinhood` only |
+| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`7809.65` seed, tokens) | yes (`0` seed, sold) | ingest, venue `robinhood` only |
 | `coinbase` | **no** (founder closed the XRP Coinbase lot) | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | **no** (XLM has no Coinbase line) | ingest, venue `coinbase` only |
 | `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
 
@@ -165,15 +165,17 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 
 ### Position fills already in the HBAR and XLM seeds
 
-The 2026-09-29 Agentic prints are the open positions, not a zero book plus a later buy.
+The 2026-10-01 Agentic prints are the open positions. HBAR `7809.65` already includes both buys (cost basis $847.11). XLM `0` already includes the sell of the prior lot. Replaying any of these order ids would double-count.
 
-| Ticker | Seed | Cost basis | Order | Qty | Avg price | Notional | Filled |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| HBAR | `3846.51` | $438.01 | `6abbe0d2-3966-4255-9e10-8c160f667d88` | `3846.51` | `0.11387193` | $438.01 | `2026-09-29T12:01:22-04:00` |
-| XLM | `1910.31` | $438.01 | `6abbe0e4-575c-4abe-a90e-90368b43a1b6` | `1891.36` | `0.22928558` | $433.67 | `2026-09-29T12:01:40-04:00` |
-| XLM | `1910.31` | $438.01 | `6abbe113-41cb-4aa8-9e7c-0a986335b95a` | `18.95` | `0.2289895` | $4.34 | `2026-09-29T12:02:27-04:00` |
+| Ticker | Seed | Cost basis | Side | Order | Qty | Avg price | Notional | Filled |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| HBAR | `7809.65` | $847.11 | buy | `6abbe0d2-3966-4255-9e10-8c160f667d88` | `3846.51` | `0.11387193` | $438.01 | `2026-09-29T12:01:22-04:00` |
+| XLM | `0` | — | buy | `6abbe0e4-575c-4abe-a90e-90368b43a1b6` | `1891.36` | `0.22928558` | $433.67 | `2026-09-29T12:01:40-04:00` |
+| XLM | `0` | — | buy | `6abbe113-41cb-4aa8-9e7c-0a986335b95a` | `18.95` | `0.2289895` | $4.34 | `2026-09-29T12:02:27-04:00` |
+| XLM | `0` | — | sell | `6abed758-0215-4703-8d11-c412686df9be` | `1910.31` | `0.216176882` | $412.96 | `2026-10-01T17:57:44-04:00` |
+| HBAR | `7809.65` | $847.11 | buy | `6abed771-773a-43df-9015-3bf44caf9938` | `3963.14` | `0.10322475` | $409.10 | `2026-10-01T17:58:10-04:00` |
 
-Ingest of those three order ids appends the operator-log row and does **not** write `sleevePrints`. The face stays on the seed (`3846.51` HBAR, `1910.31` XLM). The stored row has `logOnly: true`. A second POST of the same order id is a no-op. A different order id on `rh-agentic` still moves the print.
+Ingest of those order ids appends the operator-log row and does **not** write `sleevePrints`. The face stays on the seed (`7809.65` HBAR, `0` XLM). The stored row has `logOnly: true`. A second POST of the same order id is a no-op. A different order id on `rh-agentic` still moves the print. `/log?ticker=HBAR` and `/log?ticker=XLM` list the rows. Sell is a normal fill side.
 
 Missing rows are inserted on the next fills-store read, through the same ingest function. `npm run fills:log` POSTs the same bodies. Run that only after this reconcile is deployed. A host that still applies every buy would double the position.
 

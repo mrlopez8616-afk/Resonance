@@ -97,6 +97,9 @@ export function formatSpotPrice(usd: number | null): string {
 
 export function formatTotalUnits(total: number): string {
   if (!Number.isFinite(total)) return "—";
+  // A closed book prints the same "0" as a zero sleeve row (SUI Agentic).
+  // Six fraction digits would ellipsis inside the square.
+  if (total === 0) return "0";
   if (total >= 1000) {
     const thousandths = Number(total.toFixed(3));
     const hundredths = Number(total.toFixed(2));
