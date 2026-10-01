@@ -35,9 +35,11 @@ describe("live face units", () => {
     assert.equal(formatSleeveQuantity("3846.51"), "3,846.51");
     assert.equal(formatSleeveQuantity("1910.31"), "1,910.31");
     assert.equal(formatSleeveQuantity("7809.65"), "7,809.65");
+    assert.equal(formatSleeveQuantity("7847.91"), "7,847.91");
     assert.equal(formatTotalUnits(3846.51), "3,846.51");
     assert.equal(formatTotalUnits(1910.31), "1,910.31");
     assert.equal(formatTotalUnits(7809.65), "7,809.65");
+    assert.equal(formatTotalUnits(7847.91), "7,847.91");
     assert.equal(formatTotalUnits(0), "0");
   });
 
@@ -154,10 +156,10 @@ describe("live face units", () => {
     assert.equal(hbar.unitsWord, "tokens");
     assert.equal(hbar.sleeves.length, 1);
     assert.equal(hbar.sleeves[0]?.id, "rh-agentic");
-    assert.equal(hbar.sleeves[0]?.quantity, "7809.65");
-    assert.equal(hbar.sleeves[0]?.quantityLabel, "7,809.65");
-    assert.equal(hbar.totalUnits, 7809.65);
-    assert.equal(hbar.totalUnitsLabel, "7,809.65");
+    assert.equal(hbar.sleeves[0]?.quantity, "7847.91");
+    assert.equal(hbar.sleeves[0]?.quantityLabel, "7,847.91");
+    assert.equal(hbar.totalUnits, 7847.91);
+    assert.equal(hbar.totalUnitsLabel, "7,847.91");
     assert.equal(hbar.priceLabel, "$0.120");
     assert.equal(hbar.totalUnitsLabel.includes("NaN"), false);
 

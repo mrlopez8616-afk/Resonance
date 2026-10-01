@@ -3,8 +3,8 @@ import { POSITION_LOG_FILLS } from "../src/data/position-log-fills";
 /**
  * POST the confirmed HBAR / XLM Agentic fills through /api/fills.
  *
- * Those order ids are already the typed position seeds (7809.65 HBAR,
- * cost basis $847.11, and 0 XLM after the 2026-10-01 sell). After this
+ * Those order ids are already the typed position seeds (7847.91 HBAR,
+ * cost basis $851.06, and 0 XLM after the 2026-10-01 sell). After this
  * code is deployed, ingest writes the log row and does not move the
  * sleeve. A second POST is a no-op.
  *

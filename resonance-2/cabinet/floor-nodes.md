@@ -23,7 +23,7 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 - `src/data/gev-sleeves.ts` / RH Agentic `0.002640` shares
 - `src/data/ceg-sleeves.ts` / RH Agentic `0.009617` shares
 - `src/data/hubb-sleeves.ts` / RH Agentic `0.005566` shares
-- `src/data/hbar-sleeves.ts` / RH Agentic `7809.65` tokens
+- `src/data/hbar-sleeves.ts` / RH Agentic `7847.91` tokens
 - `src/data/xlm-sleeves.ts` / RH Agentic `0` tokens (sold; the square stays until the founder deletes it)
 - `src/data/fills.ts` / `/log` and the durable fill store (`POST /api/fills`)
 - Broker keys, env, gas wallet addresses

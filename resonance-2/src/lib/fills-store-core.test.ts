@@ -164,10 +164,10 @@ describe("fills store core", () => {
       mergeSleeveBook("XLM", envelope.sleevePrints)[0]?.quantity,
       XLM_AGENTIC_TOKENS,
     );
-    assert.equal(HBAR_AGENTIC_TOKENS, "7809.65");
+    assert.equal(HBAR_AGENTIC_TOKENS, "7847.91");
     assert.equal(XLM_AGENTIC_TOKENS, "0");
-    assert.equal(addDecimal("3846.51", "3963.14"), "7809.65");
-    assert.equal(addDecimal("438.01", "409.10"), "847.11");
+    assert.equal(addDecimal(addDecimal("3846.51", "3963.14"), "38.26"), "7847.91");
+    assert.equal(addDecimal(addDecimal("438.01", "409.10"), "3.95"), "851.06");
     assert.equal(subtractDecimal("1910.31", "1910.31"), "0");
 
     const buyNotionals = { HBAR: "0", XLM: "0" };
@@ -178,7 +178,7 @@ describe("fills store core", () => {
         body.notional,
       );
     }
-    assert.equal(buyNotionals.HBAR, "847.11");
+    assert.equal(buyNotionals.HBAR, "851.06");
     assert.equal(buyNotionals.XLM, "438.01");
     const xlmSell = POSITION_LOG_FILLS.find(
       (row) => row.ticker === "XLM" && row.side === "sell",
@@ -195,6 +195,7 @@ describe("fills store core", () => {
         (fill) => fill.orderId,
       ),
       [
+        "6abed82c-87a4-49c7-9bd7-083c6a543efd",
         "6abed771-773a-43df-9015-3bf44caf9938",
         "6abbe0d2-3966-4255-9e10-8c160f667d88",
       ],
@@ -240,7 +241,7 @@ describe("fills store core", () => {
     assert.equal(withoutFlag.envelope.sleevePrints.HBAR, undefined);
     assert.equal(
       mergeSleeveBook("HBAR", withoutFlag.envelope.sleevePrints)[0]?.quantity,
-      "7809.65",
+      "7847.91",
     );
     assert.equal(
       mergeSleeveBook("XLM", withoutFlag.envelope.sleevePrints)[0]?.quantity,
@@ -275,7 +276,7 @@ describe("fills store core", () => {
     );
     assert.equal(later.applied, true);
     assert.equal(later.fill.logOnly, undefined);
-    assert.equal(later.envelope.sleevePrints.HBAR?.["rh-agentic"], "7810.65");
+    assert.equal(later.envelope.sleevePrints.HBAR?.["rh-agentic"], "7848.91");
     assert.equal(later.envelope.sleevePrints.XLM, undefined);
   });
 
