@@ -68,7 +68,7 @@ export function formatSleeveQuantity(quantity: string, note?: string): string {
     return quantity.trim() || "—";
   }
   // Lots at or above 1,000 keep an integer print (Flare vault) and up to two
-  // stored decimals (HBAR / XLM). Mid-size lots keep up to three stored
+  // stored decimals. Mid-size lots keep up to three stored
   // decimals so 51.601 XRP is not printed as 51.6. Smaller bands stay
   // on the original steps.
   const storedFraction =

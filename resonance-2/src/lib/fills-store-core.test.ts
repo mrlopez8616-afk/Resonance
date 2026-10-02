@@ -3,12 +3,11 @@ import { describe, it } from "node:test";
 import { fills as seedFills } from "@/data/fills";
 import { HBAR_AGENTIC_TOKENS } from "@/data/hbar-sleeves";
 import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
-import { XLM_AGENTIC_TOKENS } from "@/data/xlm-sleeves";
-import { parseFillDeskQuery, filterFills } from "./fill-desk";
+import { parseFillDeskQuery, filterFills, nodesWithValue } from "./fill-desk";
 import { parseFillEvent } from "./fill-event";
 import { addDecimal, subtractDecimal } from "./decimal";
 import { listFills } from "./fills";
-import { mergeSleeveBook } from "./sleeve-apply";
+import { mergeSleeveBook, seedBookForTicker } from "./sleeve-apply";
 import {
   createEmptyFillsEnvelope,
   createSeededFillsEnvelope,
@@ -156,16 +155,13 @@ describe("fills store core", () => {
 
     assert.equal(envelope.sleevePrints.HBAR, undefined);
     assert.equal(envelope.sleevePrints.XLM, undefined);
+    assert.equal(seedBookForTicker("XLM"), null);
     assert.equal(
       mergeSleeveBook("HBAR", envelope.sleevePrints)[0]?.quantity,
       HBAR_AGENTIC_TOKENS,
     );
-    assert.equal(
-      mergeSleeveBook("XLM", envelope.sleevePrints)[0]?.quantity,
-      XLM_AGENTIC_TOKENS,
-    );
+    assert.equal(mergeSleeveBook("XLM", envelope.sleevePrints).length, 0);
     assert.equal(HBAR_AGENTIC_TOKENS, "7847.91");
-    assert.equal(XLM_AGENTIC_TOKENS, "0");
     assert.equal(addDecimal(addDecimal("3846.51", "3963.14"), "38.26"), "7847.91");
     assert.equal(addDecimal(addDecimal("438.01", "409.10"), "3.95"), "851.06");
     assert.equal(subtractDecimal("1910.31", "1910.31"), "0");
@@ -244,8 +240,20 @@ describe("fills store core", () => {
       "7847.91",
     );
     assert.equal(
-      mergeSleeveBook("XLM", withoutFlag.envelope.sleevePrints)[0]?.quantity,
-      "0",
+      mergeSleeveBook("XLM", withoutFlag.envelope.sleevePrints).length,
+      0,
+    );
+    assert.equal(
+      nodesWithValue(listed, {
+        HBAR: mergeSleeveBook("HBAR", envelope.sleevePrints),
+      })
+        .map((node) => String(node.ticker))
+        .includes("XLM"),
+      false,
+    );
+    assert.equal(
+      filterFills(listed, parseFillDeskQuery({})).some((fill) => fill.symbol === "XLM"),
+      true,
     );
 
     const roundTrip = parseFillsEnvelope(JSON.parse(JSON.stringify(envelope)));
@@ -254,6 +262,41 @@ describe("fills store core", () => {
     assert.equal(again.seeded, false);
     assert.equal(again.envelope.fills.length, envelope.fills.length);
     assert.deepEqual(again.envelope.sleevePrints, {});
+    assert.equal(
+      again.envelope.fills.filter((fill) => fill.symbol === "XLM").length,
+      3,
+    );
+  });
+
+  it("keeps a stored XLM fill when the ticker is not a floor node", () => {
+    const parsed = parseFillsEnvelope({
+      version: 1,
+      updatedAt: "2026-10-01T22:00:00.000Z",
+      seededAt: "2026-10-01T22:00:00.000Z",
+      fills: [
+        {
+          time: "2026-10-01T17:57:44-04:00",
+          symbol: "XLM",
+          side: "sell",
+          quantity: "1910.31",
+          price: "0.216176882",
+          orderId: "6abed758-0215-4703-8d11-c412686df9be",
+          result: "filled",
+          venue: "robinhood",
+          sleeve: "rh-agentic",
+          logOnly: true,
+        },
+      ],
+      sleevePrints: { XLM: { "rh-agentic": "1" } },
+    });
+    assert.ok(parsed);
+    assert.equal(parsed.fills[0]?.symbol, "XLM");
+    assert.equal(parsed.sleevePrints.XLM, undefined);
+    assert.equal(
+      filterFills(listFills(parsed.fills), parseFillDeskQuery({ ticker: "XLM" })).length,
+      1,
+    );
+    assert.doesNotThrow(() => nodesWithValue(parsed.fills, {}));
   });
 
   it("still applies a later HBAR order that is not in the position log", () => {

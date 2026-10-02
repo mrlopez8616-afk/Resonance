@@ -91,8 +91,9 @@ export function ensureSeededFillsEnvelope(
 }
 
 /**
- * Append the confirmed HBAR / XLM position fills when their order ids are
- * missing. Sleeve prints stay as they are. A second pass is a no-op.
+ * Append the confirmed HBAR position fills and the retained XLM log rows
+ * when their order ids are missing. Sleeve prints stay as they are.
+ * A second pass is a no-op.
  */
 export function mergePositionLogFills(
   envelope: FillsStoreEnvelope,
@@ -219,8 +220,8 @@ export function ingestFillIntoEnvelope(
     };
   }
 
-  // These order ids are already inside the typed HBAR / XLM position seeds,
-  // including the 2026-10-01 XLM sell. Logging them must not move the sleeve.
+  // These order ids are already accounted for: HBAR inside its sleeve seed,
+  // XLM only on the operator log. Logging them must not move a sleeve.
   if (isPositionLogOrder(event.orderId)) {
     const fill: Fill = { ...eventToFill(event), logOnly: true };
     return {

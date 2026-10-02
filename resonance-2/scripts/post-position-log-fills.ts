@@ -1,16 +1,18 @@
 import { POSITION_LOG_FILLS } from "../src/data/position-log-fills";
 
 /**
- * POST the confirmed HBAR / XLM Agentic fills through /api/fills.
+ * POST the confirmed HBAR Agentic fills and the retained XLM log rows
+ * through /api/fills.
  *
- * Those order ids are already the typed position seeds (7847.91 HBAR,
- * cost basis $851.06, and 0 XLM after the 2026-10-01 sell). After this
- * code is deployed, ingest writes the log row and does not move the
- * sleeve. A second POST is a no-op.
+ * The HBAR order ids are already the typed position seed (7847.91 HBAR,
+ * cost basis $851.06). XLM is not a floor node. After this code is
+ * deployed, ingest writes the log row and does not move a sleeve.
+ * A second POST is a no-op.
  *
- * Do not run this against a host that still applies every HBAR/XLM buy.
- * That host would double the position. The fills-store read path inserts
- * the same rows on deploy; this script is the hub retry of that ingest.
+ * Do not run this against a host that still applies every HBAR buy or
+ * every XLM fill. That host would double the HBAR position. The
+ * fills-store read path inserts the same rows on deploy; this script
+ * is the hub retry of that ingest.
  *
  *   RESONANCE_SYNC_SECRET=... npm run fills:log
  */

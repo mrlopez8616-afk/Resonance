@@ -83,7 +83,37 @@ describe("fill event parse + idempotency", () => {
     );
     assert.throws(
       () => parseFillEvent({ ...mondayPacket, ticker: "DOGE" }),
-      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM\)/,
+      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR\)/,
+    );
+  });
+
+  it("keeps the three historical XLM fills and refuses a new XLM order", () => {
+    for (const orderId of [
+      "6abbe0e4-575c-4abe-a90e-90368b43a1b6",
+      "6abbe113-41cb-4aa8-9e7c-0a986335b95a",
+      "6abed758-0215-4703-8d11-c412686df9be",
+    ]) {
+      const event = parseFillEvent({
+        venue: "robinhood",
+        orderId,
+        ticker: "XLM",
+        side: orderId.startsWith("6abed758") ? "sell" : "buy",
+        qty: "1",
+        price: "0.22",
+        sleeve: "rh-agentic",
+        filledAt: "2026-09-29T12:01:40-04:00",
+      });
+      assert.equal(event.ticker, "XLM");
+      assert.equal(eventToFill(event).symbol, "XLM");
+    }
+    assert.throws(
+      () =>
+        parseFillEvent({
+          ...mondayPacket,
+          orderId: "new-xlm-order",
+          ticker: "XLM",
+        }),
+      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR\)/,
     );
   });
 

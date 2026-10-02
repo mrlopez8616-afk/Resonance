@@ -12,12 +12,12 @@ Reuse the existing operator log and live faces. Do not invent a second fill card
 | Log UI | `src/components/fill-log.tsx` | Same `FillLog` / `FillCard` |
 | Sort | `src/lib/fills.ts` → `listFills` | Newest `time` first |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | Quantity stays a string |
-| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts`, `src/data/gev-sleeves.ts`, `src/data/ceg-sleeves.ts`, `src/data/hubb-sleeves.ts`, `src/data/hbar-sleeves.ts`, `src/data/xlm-sleeves.ts` | Fallback when the durable store has no override |
+| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts`, `src/data/gev-sleeves.ts`, `src/data/ceg-sleeves.ts`, `src/data/hubb-sleeves.ts`, `src/data/hbar-sleeves.ts` | Fallback when the durable store has no override |
 | Face | `assembleLiveFace` + `LiveNodeFace` | Positions from merged sleeves. Only `quote.usd` is a live price |
 | Auth spirit | Phase Zero `RESONANCE_SYNC_SECRET` Bearer | Server-only. Never `NEXT_PUBLIC_*` |
 | Store spirit | Phase Zero Blob + local file | Private JSON envelope. Local/dev writes `.data/fills.json` |
 
-Live floor is **XRP + SUI + PWR + ETN + VRT + GEV + CEG + HUBB + HBAR + XLM**. Locked nodes only — never invent a ticker or a sleeve id. PWR, ETN, VRT, GEV, CEG, and HUBB are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md), [`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)); ingest may write `rh-agentic` only on those six. HBAR and XLM are crypto faces ([`hbar-face.md`](./hbar-face.md), [`xlm-face.md`](./xlm-face.md)); ingest may write `rh-agentic` only on those two as well.
+Live floor is **XRP + SUI + PWR + ETN + VRT + GEV + CEG + HUBB + HBAR**. Locked nodes only — never invent a ticker or a sleeve id. PWR, ETN, VRT, GEV, CEG, and HUBB are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md), [`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)); ingest may write `rh-agentic` only on those six. HBAR is a crypto face ([`hbar-face.md`](./hbar-face.md)); ingest may write `rh-agentic` only on that book. XLM is not a floor node ([`xlm-face.md`](./xlm-face.md)).
 
 ## Who writes what
 
@@ -67,7 +67,7 @@ Canonical ingest object. Strings stay strings so quantity and price stay exact.
 | --- | --- | --- |
 | `venue` | yes | `robinhood` \| `coinbase` (lowercase after normalize) |
 | `orderId` or `tradeId` | one required | Trimmed. Used for the idempotency key. Prefer `orderId` when both exist |
-| `ticker` | yes | Uppercase. Must be one of the locked nodes: `BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM` |
+| `ticker` | yes | Uppercase. Must be one of the locked nodes: `BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR`. The three retained XLM order ids still parse; any other XLM order is refused |
 | `side` | yes | `buy` \| `sell` |
 | `qty` | yes | Positive decimal string. Alias: `quantity` (existing `Fill` field) |
 | `price` | yes | Non-negative decimal string |
@@ -134,12 +134,12 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 
 ### Which sleeve ids update
 
-| Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | HBAR | XLM | Writer |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `rh-main` | **no** (founder closed the XRP Main lot) | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | **no** (XLM has no Main line) | ingest, venue `robinhood` only |
-| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`7847.91` seed, tokens) | yes (`0` seed, sold) | ingest, venue `robinhood` only |
-| `coinbase` | **no** (founder closed the XRP Coinbase lot) | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | **no** (XLM has no Coinbase line) | ingest, venue `coinbase` only |
-| `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
+| Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | HBAR | Writer |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `rh-main` | **no** (founder closed the XRP Main lot) | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | ingest, venue `robinhood` only |
+| `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`7847.91` seed, tokens) | ingest, venue `robinhood` only |
+| `coinbase` | **no** (founder closed the XRP Coinbase lot) | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | ingest, venue `coinbase` only |
+| `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
 
 Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print:
 
@@ -158,25 +158,25 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 
 ### Live vs offline tickers
 
-- **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, XLM. Sleeve apply runs only when that ticker already has the named sleeve id.
-- **Unknown sleeve on a live book** (example: `XRP` + `rh-main`, `XRP` + `coinbase`, `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, `GEV` + `rh-main`, `HBAR` + `rh-main`, or `XLM` + `coinbase`) → **400**. Do not invent a row. A stored XRP `rh-main` or `coinbase` override is dropped on read once that sleeve is gone from the seed.
+- **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR. Sleeve apply runs only when that ticker already has the named sleeve id.
+- **Unknown sleeve on a live book** (example: `XRP` + `rh-main`, `XRP` + `coinbase`, `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, `GEV` + `rh-main`, or `HBAR` + `rh-main`) → **400**. Do not invent a row. A stored XRP `rh-main` or `coinbase` override is dropped on read once that sleeve is gone from the seed.
 - **Locked but offline ticker** (BTC, ETH, SOL, FLR) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
 - Unknown ticker outside the locked roster → **400**.
 
-### Position fills already in the HBAR and XLM seeds
+### Position fills already in the HBAR seed, plus the retained XLM log rows
 
-The 2026-10-01 Agentic prints are the open positions. HBAR `7847.91` already includes all three buys (cost basis $851.06). XLM `0` already includes the sell of the prior lot. Replaying any of these order ids would double-count.
+The 2026-10-01 HBAR Agentic print is the open position. HBAR `7847.91` already includes all three buys (cost basis $851.06). XLM has no sleeve seed and no floor square. Replaying any of these order ids must not move a sleeve.
 
 | Ticker | Seed | Cost basis | Side | Order | Qty | Avg price | Notional | Filled |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | HBAR | `7847.91` | $851.06 | buy | `6abbe0d2-3966-4255-9e10-8c160f667d88` | `3846.51` | `0.11387193` | $438.01 | `2026-09-29T12:01:22-04:00` |
-| XLM | `0` | — | buy | `6abbe0e4-575c-4abe-a90e-90368b43a1b6` | `1891.36` | `0.22928558` | $433.67 | `2026-09-29T12:01:40-04:00` |
-| XLM | `0` | — | buy | `6abbe113-41cb-4aa8-9e7c-0a986335b95a` | `18.95` | `0.2289895` | $4.34 | `2026-09-29T12:02:27-04:00` |
-| XLM | `0` | — | sell | `6abed758-0215-4703-8d11-c412686df9be` | `1910.31` | `0.216176882` | $412.96 | `2026-10-01T17:57:44-04:00` |
+| XLM | — | — | buy | `6abbe0e4-575c-4abe-a90e-90368b43a1b6` | `1891.36` | `0.22928558` | $433.67 | `2026-09-29T12:01:40-04:00` |
+| XLM | — | — | buy | `6abbe113-41cb-4aa8-9e7c-0a986335b95a` | `18.95` | `0.2289895` | $4.34 | `2026-09-29T12:02:27-04:00` |
+| XLM | — | — | sell | `6abed758-0215-4703-8d11-c412686df9be` | `1910.31` | `0.216176882` | $412.96 | `2026-10-01T17:57:44-04:00` |
 | HBAR | `7847.91` | $851.06 | buy | `6abed771-773a-43df-9015-3bf44caf9938` | `3963.14` | `0.10322475` | $409.10 | `2026-10-01T17:58:10-04:00` |
 | HBAR | `7847.91` | $851.06 | buy | `6abed82c-87a4-49c7-9bd7-083c6a543efd` | `38.26` | `0.10321862` | $3.95 | `2026-10-01T18:01:16-04:00` |
 
-Ingest of those order ids appends the operator-log row and does **not** write `sleevePrints`. The face stays on the seed (`7847.91` HBAR, `0` XLM). The stored row has `logOnly: true`. A second POST of the same order id is a no-op. A different order id on `rh-agentic` still moves the print. `/log?ticker=HBAR` and `/log?ticker=XLM` list the rows. Sell is a normal fill side.
+Ingest of those order ids appends the operator-log row and does **not** write `sleevePrints`. The HBAR face stays on the seed (`7847.91`). There is no XLM face. The stored row has `logOnly: true`. A second POST of the same order id is a no-op. A different HBAR order id on `rh-agentic` still moves that print. A different XLM order id is refused. `/log` All includes the XLM rows, and `/log?ticker=HBAR` and `/log?ticker=XLM` list their rows. Sell is a normal fill side. A log row whose ticker is not a floor node does not crash the desk.
 
 Missing rows are inserted on the next fills-store read, through the same ingest function. `npm run fills:log` POSTs the same bodies. Run that only after this reconcile is deployed. A host that still applies every buy would double the position.
 

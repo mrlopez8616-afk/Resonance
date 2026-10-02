@@ -294,22 +294,16 @@ describe("sleeve apply", () => {
     );
   });
 
-  it("applies RH Agentic fills to the live HBAR and XLM books", () => {
+  it("applies RH Agentic fills to the live HBAR book", () => {
     const hbar = applyFillToSleevePrints(
       {},
       event({ ticker: "HBAR", sleeve: "rh-agentic", qty: "0.01" }),
     );
     assert.equal(hbar.applied, true);
     assert.equal(hbar.prints.HBAR?.["rh-agentic"], "7847.92");
-
-    const xlm = applyFillToSleevePrints(
-      {},
-      event({ ticker: "XLM", sleeve: "rh-agentic", qty: "0.01" }),
-    );
-    assert.equal(xlm.prints.XLM?.["rh-agentic"], "0.01");
   });
 
-  it("refuses inventing rh-main or coinbase on HBAR and XLM", () => {
+  it("refuses inventing rh-main on HBAR and does not invent an XLM book", () => {
     assert.throws(
       () =>
         applyFillToSleevePrints(
@@ -320,16 +314,24 @@ describe("sleeve apply", () => {
     );
     assert.throws(
       () =>
-        applyFillToSleevePrints(
-          {},
-          event({
-            venue: "coinbase",
-            sleeve: "coinbase",
-            ticker: "XLM",
-          }),
-        ),
-      /not on the XLM face/,
+        event({
+          orderId: "new-xlm-order",
+          ticker: "XLM",
+          sleeve: "rh-agentic",
+        }),
+      /locked nodes/,
     );
+    const retained = applyFillToSleevePrints(
+      {},
+      event({
+        orderId: "6abbe0e4-575c-4abe-a90e-90368b43a1b6",
+        ticker: "XLM",
+        sleeve: "rh-agentic",
+        qty: "1891.36",
+      }),
+    );
+    assert.equal(retained.applied, false);
+    assert.equal(retained.prints.XLM, undefined);
   });
 
   it("refuses inventing rh-main on HUBB", () => {

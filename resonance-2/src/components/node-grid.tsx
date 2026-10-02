@@ -14,7 +14,6 @@ import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
-import { XLM_SLEEVES } from "@/data/xlm-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
@@ -39,7 +38,6 @@ const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
   CEG: CEG_SLEEVES,
   HUBB: HUBB_SLEEVES,
   HBAR: HBAR_SLEEVES,
-  XLM: XLM_SLEEVES,
 };
 
 export function NodeGrid({

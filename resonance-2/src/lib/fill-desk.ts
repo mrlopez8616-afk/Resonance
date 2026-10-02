@@ -1,10 +1,12 @@
 import type { Fill, FillSleeveId, FillVenue } from "@/data/fills";
 import { isDecimalString } from "@/lib/decimal";
 import {
+  isFillSymbol,
   isFillVenue,
   isLockedTicker,
   isWritableSleeveId,
   LOCKED_TICKERS,
+  type FillSymbol,
   type LockedTicker,
 } from "@/lib/fill-event";
 
@@ -34,7 +36,7 @@ export type DeskSleeve = FillSleeveId | "unset";
 export type DeskSource = FillVenue | "unset";
 
 export type FillDeskQuery = {
-  ticker: LockedTicker | "";
+  ticker: FillSymbol | "";
   from: string;
   to: string;
   sleeve: DeskSleeve | "";
@@ -108,7 +110,7 @@ export function parseFillDeskQuery(raw: FillDeskSearch = {}): FillDeskQuery {
   }
 
   return {
-    ticker: isLockedTicker(tickerRaw) ? tickerRaw : "",
+    ticker: isFillSymbol(tickerRaw) ? tickerRaw : "",
     from,
     to,
     sleeve: readSleeve(firstParam(raw.sleeve)),
