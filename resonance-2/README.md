@@ -22,8 +22,8 @@ Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POS
 - GEV — [`src/data/gev-sleeves.ts`](src/data/gev-sleeves.ts) (RH Agentic `0.002640` **shares** only)
 - CEG — [`src/data/ceg-sleeves.ts`](src/data/ceg-sleeves.ts) (RH Agentic `0.009617` **shares** only)
 - HUBB — [`src/data/hubb-sleeves.ts`](src/data/hubb-sleeves.ts) (RH Agentic `0.005566` **shares** only)
-- HBAR — [`src/data/hbar-sleeves.ts`](src/data/hbar-sleeves.ts) (RH Agentic `3846.51` **tokens** only)
-- XLM — [`src/data/xlm-sleeves.ts`](src/data/xlm-sleeves.ts) (RH Agentic `1910.31` **tokens** only)
+- HBAR — [`src/data/hbar-sleeves.ts`](src/data/hbar-sleeves.ts) (RH Agentic `7847.91` **tokens** only)
+- XLM — [`src/data/xlm-sleeves.ts`](src/data/xlm-sleeves.ts) (RH Agentic `0` **tokens** only; the node stays on the floor)
 
 Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). PWR, ETN, VRT, GEV, CEG, and HUBB use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 

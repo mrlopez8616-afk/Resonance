@@ -300,13 +300,13 @@ describe("sleeve apply", () => {
       event({ ticker: "HBAR", sleeve: "rh-agentic", qty: "0.01" }),
     );
     assert.equal(hbar.applied, true);
-    assert.equal(hbar.prints.HBAR?.["rh-agentic"], "3846.52");
+    assert.equal(hbar.prints.HBAR?.["rh-agentic"], "7847.92");
 
     const xlm = applyFillToSleevePrints(
       {},
       event({ ticker: "XLM", sleeve: "rh-agentic", qty: "0.01" }),
     );
-    assert.equal(xlm.prints.XLM?.["rh-agentic"], "1910.32");
+    assert.equal(xlm.prints.XLM?.["rh-agentic"], "0.01");
   });
 
   it("refuses inventing rh-main or coinbase on HBAR and XLM", () => {
