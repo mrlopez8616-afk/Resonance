@@ -51,6 +51,8 @@ export type BetFill = FillBase & {
   fight: string;
   fightSlug: string;
   pick: string;
+  hubLean?: string;
+  agreesWithLean?: boolean;
   stake: string;
   oddsPct: number;
   payout: string;

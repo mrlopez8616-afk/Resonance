@@ -1,4 +1,12 @@
-import { BET_TICKER, BET_VENUE, betSeed, type Bet, type BetStatus } from "@/lib/bets";
+import {
+  BET_TICKER,
+  BET_VENUE,
+  betSeed,
+  readOptionalLean,
+  withStoredLean,
+  type Bet,
+  type BetStatus,
+} from "@/lib/bets";
 
 export const BETS_STORE_VERSION = 1;
 export const BETS_BLOB_PATH = "resonance-2/bets.json";
@@ -62,6 +70,23 @@ export function ensureSeededBetsEnvelope(
   };
 }
 
+/**
+ * Fill missing hubLean / agreesWithLean. Settled status and P&L stay put.
+ * A second pass is a no-op. A stored lean is not replaced by the catalog.
+ */
+export function backfillBetLeans(
+  envelope: BetsStoreEnvelope,
+  now = new Date().toISOString(),
+): { envelope: BetsStoreEnvelope; changed: boolean } {
+  const bets = envelope.bets.map((bet) => withStoredLean(bet));
+  const changed = bets.some((bet, index) => bet !== envelope.bets[index]);
+  if (!changed) return { envelope, changed: false };
+  return {
+    envelope: { ...envelope, updatedAt: now, bets },
+    changed: true,
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -103,6 +128,9 @@ function coerceBet(raw: unknown): Bet | null {
   if (typeof raw.settledAt === "string" && raw.settledAt.trim()) {
     bet.settledAt = raw.settledAt.trim();
   }
+  const lean = readOptionalLean(raw);
+  if (lean.hubLean) bet.hubLean = lean.hubLean;
+  if (typeof lean.agreesWithLean === "boolean") bet.agreesWithLean = lean.agreesWithLean;
   return bet;
 }
 

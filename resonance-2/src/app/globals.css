@@ -613,6 +613,43 @@ body {
   color: var(--muted);
 }
 
+.log-nodes a.is-bet {
+  min-width: 7.5rem;
+}
+
+.bet-score {
+  margin-bottom: 1rem;
+}
+
+.bet-score dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));
+  gap: 0.45rem;
+}
+
+.bet-score dl div {
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--surface);
+}
+
+.bet-score dt {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bet-score dd {
+  margin-top: 0.12rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
 .log-desk {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));

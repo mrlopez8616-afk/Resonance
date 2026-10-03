@@ -60,6 +60,14 @@ export function BetFillCard({ fill }: { fill: BetFill }) {
         <Field label="event" value={fill.event} />
         <Field label="fight" value={fill.fight} />
         <Field label="pick" value={fill.pick} />
+        {fill.hubLean ? <Field label="hub lean" value={fill.hubLean} /> : null}
+        {typeof fill.agreesWithLean === "boolean" ? (
+          <Field
+            label="lean"
+            value={fill.agreesWithLean ? "with" : "against"}
+            tone={fill.agreesWithLean ? "ok" : "sell"}
+          />
+        ) : null}
         <Field label="stake" value={formatUsd(fill.stake)} />
         <Field label="odds" value={oddsLabel(fill)} />
         <Field label="payout" value={payout} />

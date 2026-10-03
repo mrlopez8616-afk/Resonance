@@ -175,6 +175,7 @@ export function quantityHasValue(quantity: string): boolean {
 /**
  * Nodes strip. One block per locked ticker that has a non-zero live sleeve
  * print, or a fill whose quantity is a non-zero decimal. Catalog order.
+ * Bet rows are skipped. UFC is a separate log tile and is not a floor node.
  * Not a time window. Same store; nothing is written.
  */
 export function nodesWithValue(

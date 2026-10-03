@@ -36,6 +36,7 @@ export default async function OperatorLogPage({
         sleeves={sleeves}
         query={query}
         storeLabel={storeLabel}
+        bets={bets}
       />
     </OperatorShell>
   );
