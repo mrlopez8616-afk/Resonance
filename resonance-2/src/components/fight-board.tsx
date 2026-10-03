@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BetScorecard } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
-import { betsOnFight, formatUsd } from "@/lib/bets";
+import { betsOnFight, formatUsd, summarizeBets } from "@/lib/bets";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import {
   UFC_332_EVENT,
@@ -75,6 +75,7 @@ export function FightIndex({ bets }: { bets: readonly Bet[] }) {
 }
 
 export function FightEvent({ bets }: { bets: readonly Bet[] }) {
+  const summary = summarizeBets(bets);
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -86,6 +87,10 @@ export function FightEvent({ bets }: { bets: readonly Bet[] }) {
         <p className="log-meta">
           {UFC_332_EVENT.venue}, {UFC_332_EVENT.city} · {civilWeekdayLong(UFC_332_EVENT.date)}{" "}
           {formatCivilDate(UFC_332_EVENT.date)} · America/Chicago
+        </p>
+        <p className="log-meta">
+          {summary.stakedLabel} staked · {summary.potentialLabel}{" "}
+          {summary.estimated ? "return est." : "return"}
         </p>
       </header>
       {UFC_332_EVENT.segments.map((segment) => {
@@ -157,7 +162,7 @@ function SideHead({ side }: { side: FighterSide }) {
   );
 }
 
-function OddsColumn({ side, bet }: { side: FighterSide; bet?: Bet }) {
+function OddsColumn({ side, bets }: { side: FighterSide; bets: readonly Bet[] }) {
   return (
     <div>
       <h3>{side.name}</h3>
@@ -168,12 +173,13 @@ function OddsColumn({ side, bet }: { side: FighterSide; bet?: Bet }) {
         {side.books.map((row) => (
           <Field key={row.book} label={row.book} value={moneyline(row.moneyline)} />
         ))}
-        {bet ? (
+        {bets.map((bet) => (
           <Field
+            key={bet.id}
             label="Your ticket"
             value={`${ticketOdds(bet)} · ${formatUsd(bet.stake)} → ${formatUsd(bet.payout)}${bet.estimated ? " est." : ""} · ${bet.status}`}
           />
-        ) : null}
+        ))}
       </dl>
     </div>
   );
@@ -181,7 +187,7 @@ function OddsColumn({ side, bet }: { side: FighterSide; bet?: Bet }) {
 
 export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readonly Bet[] }) {
   const stakes = betsOnFight(bets, fight.slug);
-  const betFor = (name: string) => stakes.find((bet) => bet.pick === name);
+  const ticketsFor = (name: string) => stakes.filter((bet) => bet.pick === name);
   const labels = fight.A.stats.map((row) => row.label);
   return (
     <div className="log-canvas">
@@ -269,8 +275,8 @@ export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readon
           Your ticket is the founder Coinbase Predict price.
         </p>
         <div className="fight-split">
-          <OddsColumn side={fight.A} bet={betFor(fight.A.name)} />
-          <OddsColumn side={fight.B} bet={betFor(fight.B.name)} />
+          <OddsColumn side={fight.A} bets={ticketsFor(fight.A.name)} />
+          <OddsColumn side={fight.B} bets={ticketsFor(fight.B.name)} />
         </div>
       </section>
 
@@ -315,6 +321,7 @@ export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readon
                     value={`${formatUsd(bet.payout)}${bet.estimated ? " est." : ""}`}
                   />
                   <Field label="Status" value={bet.status} />
+                  {bet.note ? <Field label="Note" value={bet.note} /> : null}
                   {bet.realizedPnl ? <Field label="P&L" value={formatUsd(bet.realizedPnl)} /> : null}
                   <Field label="Venue" value="Coinbase Predict" />
                 </dl>

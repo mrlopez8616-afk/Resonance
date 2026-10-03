@@ -1,6 +1,7 @@
 import {
   BET_TICKER,
   BET_VENUE,
+  betOrderKey,
   betSeed,
   readOptionalLean,
   withStoredLean,
@@ -47,15 +48,19 @@ export function createEmptyBetsEnvelope(now = new Date().toISOString()): BetsSto
 
 /**
  * Insert seed ids that are missing.
- * A settled row with the same id is left alone. A second pass is a no-op.
+ * A row already stored under that id or orderId is left alone, including a settled row.
+ * A second pass is a no-op.
  */
 export function ensureSeededBetsEnvelope(
   current: BetsStoreEnvelope | null,
   now = new Date().toISOString(),
 ): { envelope: BetsStoreEnvelope; seeded: boolean } {
   const envelope = current ?? createEmptyBetsEnvelope(now);
-  const present = new Set(envelope.bets.map((bet) => bet.id));
-  const missing = betSeed().filter((bet) => !present.has(bet.id));
+  const presentIds = new Set(envelope.bets.map((bet) => bet.id));
+  const presentOrders = new Set(envelope.bets.map((bet) => betOrderKey(bet)));
+  const missing = betSeed().filter(
+    (bet) => !presentIds.has(bet.id) && !presentOrders.has(betOrderKey(bet)),
+  );
   if (missing.length === 0) {
     return { envelope, seeded: false };
   }
@@ -127,6 +132,13 @@ function coerceBet(raw: unknown): Bet | null {
   }
   if (typeof raw.settledAt === "string" && raw.settledAt.trim()) {
     bet.settledAt = raw.settledAt.trim();
+  }
+  if (typeof raw.orderId === "string") {
+    const orderId = raw.orderId.trim().toLowerCase();
+    if (BET_ID.test(orderId)) bet.orderId = orderId;
+  }
+  if (typeof raw.note === "string" && raw.note.trim()) {
+    bet.note = raw.note.trim();
   }
   const lean = readOptionalLean(raw);
   if (lean.hubLean) bet.hubLean = lean.hubLean;
