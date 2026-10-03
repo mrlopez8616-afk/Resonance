@@ -1,0 +1,115 @@
+[
+  {
+    "id": "ufc-332-nolan",
+    "fight": 1,
+    "pick": "Eric Nolan",
+    "stake": "4.84",
+    "payout": "7.12",
+    "oddsPct": 68
+  },
+  {
+    "id": "ufc-332-naurdiev",
+    "fight": 2,
+    "pick": "Ismail Naurdiev",
+    "stake": "4.82",
+    "payout": "8.45",
+    "oddsPct": 55
+  },
+  {
+    "id": "ufc-332-hernandez",
+    "fight": 3,
+    "pick": "Alexander Hernandez",
+    "stake": "14.58",
+    "payout": "20.25",
+    "oddsPct": 71
+  },
+  {
+    "id": "ufc-332-smith",
+    "fight": 4,
+    "pick": "Jacobe Smith",
+    "stake": "4.88",
+    "payout": "5.48",
+    "oddsPct": 89
+  },
+  {
+    "id": "ufc-332-walker",
+    "fight": 5,
+    "pick": "Johnny Walker",
+    "stake": "4.80",
+    "payout": "9.24",
+    "oddsPct": 52
+  },
+  {
+    "id": "ufc-332-wint",
+    "fight": 6,
+    "pick": "Anthony Wint",
+    "stake": "14.64",
+    "payout": "17.85",
+    "oddsPct": 82
+  },
+  {
+    "id": "ufc-332-mcghee",
+    "fight": 7,
+    "pick": "Marcus McGhee",
+    "stake": "4.87",
+    "payout": "6.01",
+    "oddsPct": 81
+  },
+  {
+    "id": "ufc-332-pinas",
+    "fight": 8,
+    "pick": "Damian Pinas",
+    "stake": "4.87",
+    "payout": "5.94",
+    "oddsPct": 82
+  },
+  {
+    "id": "ufc-332-coria",
+    "fight": 9,
+    "pick": "Alden Coria",
+    "stake": "19.13",
+    "payout": "42.51",
+    "oddsPct": 45,
+    "estimated": true
+  },
+  {
+    "id": "ufc-332-gautier",
+    "fight": 10,
+    "pick": "Ateba Gautier",
+    "stake": "9.69",
+    "payout": "14.04",
+    "oddsPct": 69
+  },
+  {
+    "id": "ufc-332-soldic",
+    "fight": 11,
+    "pick": "Roberto Soldic",
+    "stake": "4.84",
+    "payout": "7.33",
+    "oddsPct": 66
+  },
+  {
+    "id": "ufc-332-ribovics",
+    "fight": 12,
+    "pick": "Esteban Ribovics",
+    "stake": "14.54",
+    "payout": "22.37",
+    "oddsPct": 65
+  },
+  {
+    "id": "ufc-332-talbott",
+    "fight": 13,
+    "pick": "Payton Talbott",
+    "stake": "14.65",
+    "payout": "17.23",
+    "oddsPct": 85
+  },
+  {
+    "id": "ufc-332-wang-cong",
+    "fight": 14,
+    "pick": "Wang Cong",
+    "stake": "42.75",
+    "payout": "118.76",
+    "oddsPct": 36
+  }
+]

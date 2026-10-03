@@ -1,4 +1,4 @@
-import type { Fill, FillSide, FillSleeveId, FillVenue } from "@/data/fills";
+import type { Fill, FillSide, FillSleeveId, FillVenue, TradeFill } from "@/data/fills";
 import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
 import { isDecimalString } from "@/lib/decimal";
 
@@ -223,7 +223,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
   };
 }
 
-export function eventToFill(event: NormalizedFillEvent): Fill {
+export function eventToFill(event: NormalizedFillEvent): TradeFill {
   return {
     time: event.filledAt,
     symbol: event.ticker,

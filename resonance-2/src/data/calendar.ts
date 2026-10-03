@@ -1,4 +1,4 @@
-export const CALENDAR_LANES = ["cadence", "capital", "build", "gates"] as const;
+export const CALENDAR_LANES = ["cadence", "capital", "build", "gates", "fights"] as const;
 
 export type CalendarLane = (typeof CALENDAR_LANES)[number];
 
@@ -54,14 +54,16 @@ export type CalendarRecurrence = {
 
 /**
  * One Resonance-owned calendar row.
- * Lane rows keep Cadence, Capital, Build, and Gates.
+ * Lane rows keep Cadence, Capital, Build, Gates, and Fights.
  * Catalysts are a separate type (`kind: "catalyst"`), tagged with a node.
- * Agents write cadence, capital, and build. The founder writes gates.
+ * Seeded fight sessions may also use `kind: "fight"` with no lane.
+ * Hub rows use `lane: "fights"`. Agents write cadence, capital, build, and fights.
+ * The founder writes gates.
  */
 export type CalendarEvent = {
   id: string;
-  /** Set on catalysts. Lane rows omit it. */
-  kind?: "catalyst";
+  /** Set on catalysts and fights. Lane rows omit it. */
+  kind?: "catalyst" | "fight";
   /** Required on lane rows. Omitted on catalysts. */
   lane?: CalendarLane;
   /** Required on catalysts. One of the ten catalyst nodes. */
@@ -76,6 +78,8 @@ export type CalendarEvent = {
   link?: string;
   /** Required on catalysts. https URL shown in the detail. */
   sourceUrl?: string;
+  /** Fight card slug. The desk links `/fights/<slug>` only when that page exists. */
+  eventSlug?: string;
   note?: string;
   location?: string;
   /** `month` is a month-level item. `window` spans a range and is not an exact day. */
@@ -94,6 +98,7 @@ export const CALENDAR_LANE_LABELS: Record<CalendarLane, string> = {
   capital: "Capital",
   build: "Build",
   gates: "Gates",
+  fights: "Fights",
 };
 
 export const CALENDAR_LANE_CHIP: Record<CalendarLane, string> = {
@@ -101,6 +106,7 @@ export const CALENDAR_LANE_CHIP: Record<CalendarLane, string> = {
   capital: "Cap",
   build: "Bld",
   gates: "Gate",
+  fights: "Fight",
 };
 
 /**

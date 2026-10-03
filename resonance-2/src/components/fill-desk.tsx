@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Fill } from "@/data/fills";
 import { FillLog } from "@/components/fill-log";
-import { isLockedTicker, LOCKED_TICKERS } from "@/lib/fill-event";
+import { LOCKED_TICKERS } from "@/lib/fill-event";
 import {
+  BET_DESK_TICKER,
   DESK_SLEEVES,
   DESK_SOURCES,
   fillDeskHref,
@@ -24,16 +25,33 @@ export function FillDesk({
   storeLabel: string;
 }) {
   const visible = filterFills(fills, query);
-  const tickerOptions =
-    query.ticker && !isLockedTicker(query.ticker)
-      ? [...LOCKED_TICKERS, query.ticker]
-      : LOCKED_TICKERS;
+  const tickerOptions: string[] = [...LOCKED_TICKERS, BET_DESK_TICKER];
+  if (query.ticker && !tickerOptions.includes(query.ticker)) {
+    tickerOptions.push(query.ticker);
+  }
   const nodes = nodesWithValue(fills, sleeves);
   const active = fillDeskIsActive(query);
-  const title = query.ticker ? `${query.ticker} fills` : "Agentic sleeve fills";
+  const title =
+    query.ticker === BET_DESK_TICKER
+      ? "UFC bets"
+      : query.ticker
+        ? `${query.ticker} fills`
+        : "Agentic sleeve fills";
   const counted = active ? fills.length : visible.length;
-  const count = active ? `${visible.length} of ${fills.length}` : `${fills.length}`;
-  const noun = counted === 1 ? "fill" : "fills";
+  const count =
+    query.ticker === BET_DESK_TICKER
+      ? `${visible.length}`
+      : active
+        ? `${visible.length} of ${fills.length}`
+        : `${fills.length}`;
+  const noun =
+    query.ticker === BET_DESK_TICKER
+      ? visible.length === 1
+        ? "bet"
+        : "bets"
+      : counted === 1
+        ? "fill"
+        : "fills";
 
   return (
     <div className="log-canvas">

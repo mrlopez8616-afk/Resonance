@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { fillRowKey, formatFillTime } from "@/lib/fills";
-import type { Fill } from "@/data/fills";
+import type { BetFill, Fill } from "@/data/fills";
+import { formatUsd } from "@/lib/bets";
 
 function Field({
   label,
@@ -36,7 +38,49 @@ function Field({
   );
 }
 
+function venueLabel(venue: string): string {
+  if (venue === "coinbase-predict") return "Coinbase Predict";
+  return venue;
+}
+
+function oddsLabel(fill: BetFill): string {
+  const pct = `${fill.oddsPct}%`;
+  return fill.estimated ? `~${pct}` : pct;
+}
+
+export function BetFillCard({ fill }: { fill: BetFill }) {
+  const payout = fill.estimated ? `${formatUsd(fill.payout)} est.` : formatUsd(fill.payout);
+  return (
+    <article className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 sm:px-5">
+      <dl>
+        <Field label="time" value={formatFillTime(fill.time)} />
+        <Field label="ticker" value={fill.symbol} />
+        <Field label="kind" value="bet" tone="ok" />
+        <Field label="venue" value={venueLabel(fill.venue)} />
+        <Field label="event" value={fill.event} />
+        <Field label="fight" value={fill.fight} />
+        <Field label="pick" value={fill.pick} />
+        <Field label="stake" value={formatUsd(fill.stake)} />
+        <Field label="odds" value={oddsLabel(fill)} />
+        <Field label="payout" value={payout} />
+        <Field label="status" value={fill.betStatus} tone={fill.betStatus === "lost" ? "sell" : "ok"} />
+        {fill.realizedPnl ? (
+          <Field label="P&L" value={formatUsd(fill.realizedPnl)} />
+        ) : null}
+        <Field label="id" value={fill.orderId} wrap="id" />
+        {fill.note ? <Field label="note" value={fill.note} /> : null}
+      </dl>
+      <p className="mt-3 text-sm">
+        <Link href={`/fights/ufc-332/${fill.fightSlug}`} className="text-[color:var(--live)]">
+          Open fight
+        </Link>
+      </p>
+    </article>
+  );
+}
+
 export function FillCard({ fill }: { fill: Fill }) {
+  if (fill.kind === "bet") return <BetFillCard fill={fill} />;
   return (
     <article className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 sm:px-5">
       <dl>

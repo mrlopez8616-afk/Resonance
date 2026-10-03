@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
+import { fightCalendar } from "@/data/fight-calendar";
 import { civilMonthGrid } from "@/lib/calendar-time";
 import { ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
+import { parseCalendarEvent } from "@/lib/calendar-event";
+import { calendarOpenHref, fightPageHref } from "@/lib/fight-pages";
 import {
   calendarDayHref,
   calendarHref,
@@ -262,5 +265,79 @@ describe("calendar desk", () => {
     assert.equal(counts.capital, 0);
     assert.equal(counts.build, 0);
     assert.equal(counts.gates, 0);
+  });
+
+  it("shows the UFC 332 sessions on the day, the week, and the month", () => {
+    const events = [...calendarSeed, ...catalystSeed, ...fightCalendar];
+    const day = occurrencesOnDay(events, "2026-10-03");
+    assert.deepEqual(
+      day.filter((item) => item.event.kind === "fight").map((item) => item.event.id),
+      ["ufc-332-early-prelims", "ufc-332-prelims", "ufc-332-main-card"],
+    );
+    assert.equal(day.every((item) => item.event.link === "/fights/ufc-332" || item.event.kind !== "fight"), true);
+    const week = calendarWeekDays("2026-10-03", "2026-10-03");
+    const weekIds = week.flatMap((item) =>
+      occurrencesOnDay(events, item.date)
+        .filter((row) => row.event.kind === "fight")
+        .map((row) => row.event.id),
+    );
+    assert.deepEqual(weekIds, [
+      "ufc-332-early-prelims",
+      "ufc-332-prelims",
+      "ufc-332-main-card",
+    ]);
+    const fightsOnly = occurrencesOnDay(events, "2026-10-03", "fights");
+    assert.equal(fightsOnly.length, 3);
+    assert.equal(fightsOnly.every((item) => item.event.kind === "fight"), true);
+    const chips = chipsOnDay(events, "2026-10-03");
+    assert.ok(chips.chips.some((chip) => chip.tone === "fight" && chip.href === "/fights/ufc-332"));
+    assert.equal(laneCountsOnDay(events, "2026-10-03").fights, 3);
+    const month = civilMonthGrid("2026-10-03");
+    assert.equal(month.includes("2026-10-03"), true);
+  });
+
+  it("shows a posted fights lane in day, week, and month, and skips a missing card", () => {
+    const published = parseCalendarEvent({
+      id: "ufc-332-hub-main",
+      lane: "fights",
+      writer: "agent",
+      start: "2026-10-03T19:00:00-05:00",
+      title: "UFC 332 main card",
+      status: "scheduled",
+      eventSlug: "ufc-332",
+    });
+    const missing = parseCalendarEvent({
+      id: "ufc-325-main-card",
+      lane: "fights",
+      writer: "agent",
+      start: "2027-01-16T19:00:00-06:00",
+      title: "UFC 325 main card",
+      status: "scheduled",
+      eventSlug: "ufc-325",
+      href: "/fights/ufc-325",
+    });
+    const events = [published, missing];
+    assert.equal(fightPageHref(published), "/fights/ufc-332");
+    assert.equal(fightPageHref(missing), undefined);
+    assert.equal(calendarOpenHref(missing), undefined);
+    assert.equal(calendarOpenHref(published), "/fights/ufc-332");
+
+    const day = occurrencesOnDay(events, "2026-10-03");
+    assert.deepEqual(day.map((item) => item.event.id), ["ufc-332-hub-main"]);
+    const week = calendarWeekDays("2026-10-03", "2026-10-03").flatMap((item) =>
+      occurrencesOnDay(events, item.date, "fights").map((row) => row.event.id),
+    );
+    assert.deepEqual(week, ["ufc-332-hub-main"]);
+    assert.equal(civilMonthGrid("2027-01-16").includes("2027-01-16"), true);
+    const january = occurrencesOnDay(events, "2027-01-16", "fights");
+    assert.deepEqual(january.map((item) => item.event.id), ["ufc-325-main-card"]);
+    const octoberChips = chipsOnDay(events, "2026-10-03");
+    assert.equal(octoberChips.chips[0]?.href, "/fights/ufc-332");
+    const januaryChips = chipsOnDay(events, "2027-01-16");
+    assert.equal(januaryChips.chips[0]?.label, "Fight");
+    assert.equal(januaryChips.chips[0]?.href, undefined);
+    assert.equal(laneCountsOnDay(events, "2027-01-16").fights, 1);
+    assert.equal(parseCalendarDeskQuery({ lane: "fights" }, "2026-10-03").lane, "fights");
+    assert.equal(parseCalendarDeskQuery({ lane: "ufc" }, "2026-10-03").lane, "");
   });
 });

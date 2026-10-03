@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
+import { fightCalendar } from "@/data/fight-calendar";
 import { DAILY_BRIEF_BACKFILL_DAYS } from "@/lib/calendar-writers";
 import { CalendarWriteError, parseCalendarEvent } from "./calendar-event";
 import {
@@ -20,7 +21,10 @@ describe("calendar store core", () => {
     assert.equal(seeded.seeded, true);
     assert.equal(
       seeded.envelope.events.length,
-      calendarSeed.length + catalystSeed.length + DAILY_BRIEF_BACKFILL_DAYS.length,
+      calendarSeed.length +
+        catalystSeed.length +
+        fightCalendar.length +
+        DAILY_BRIEF_BACKFILL_DAYS.length,
     );
     assert.equal(seeded.envelope.events[0]?.id, "cadence-daily-brief");
     assert.equal(seeded.envelope.events[1]?.id, "capital-monday-agentic-sui-6ai");
@@ -61,7 +65,10 @@ describe("calendar store core", () => {
     );
     assert.equal(
       merged.envelope.events.length,
-      calendarSeed.length + catalystSeed.length + DAILY_BRIEF_BACKFILL_DAYS.length,
+      calendarSeed.length +
+        catalystSeed.length +
+        fightCalendar.length +
+        DAILY_BRIEF_BACKFILL_DAYS.length,
     );
 
     const changed = {
@@ -173,6 +180,54 @@ describe("calendar store core", () => {
           }),
         ),
       (error: unknown) => error instanceof CalendarWriteError,
+    );
+  });
+
+  it("stores a fights lane row and drops an unknown lane", () => {
+    const posted = parseCalendarEvent({
+      id: "ufc-326-early-prelims",
+      lane: "fights",
+      writer: "agent",
+      start: "2027-02-06T15:00:00-06:00",
+      title: "UFC 326 early prelims",
+      status: "scheduled",
+      eventSlug: "ufc-326",
+      href: "/fights/ufc-326",
+    });
+    const written = writeCalendarEventIntoEnvelope(createEmptyCalendarEnvelope(), posted);
+    assert.equal(written.deduped, false);
+    assert.equal(written.event.lane, "fights");
+    const roundTrip = parseCalendarEnvelope(JSON.parse(JSON.stringify(written.envelope)));
+    assert.ok(roundTrip);
+    assert.equal(roundTrip.events.length, 1);
+    assert.equal(roundTrip.events[0]?.lane, "fights");
+    assert.equal(roundTrip.events[0]?.eventSlug, "ufc-326");
+    assert.equal(roundTrip.events[0]?.link, "/fights/ufc-326");
+    assert.equal(roundTrip.events[0]?.writer, "agent");
+
+    const again = writeCalendarEventIntoEnvelope(written.envelope, posted);
+    assert.equal(again.deduped, true);
+
+    const unknown = parseCalendarEnvelope({
+      version: 1,
+      updatedAt: "2026-10-03T12:00:00.000Z",
+      seededAt: null,
+      events: [
+        {
+          id: "not-a-lane",
+          lane: "ufc",
+          writer: "agent",
+          start: "2026-10-03T19:00:00-05:00",
+          title: "Unknown",
+          status: "scheduled",
+        },
+        posted,
+      ],
+    });
+    assert.ok(unknown);
+    assert.deepEqual(
+      unknown.events.map((event) => event.id),
+      ["ufc-326-early-prelims"],
     );
   });
 

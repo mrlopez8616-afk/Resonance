@@ -11,7 +11,8 @@
     "test": "tsx --test src/lib/*.test.ts",
     "calendar:brief": "tsx scripts/post-daily-brief.ts",
     "calendar:brief:backfill": "tsx scripts/post-daily-brief-backfill.ts",
-    "fills:log": "tsx scripts/post-position-log-fills.ts"
+    "fills:log": "tsx scripts/post-position-log-fills.ts",
+    "bets:settle": "tsx scripts/settle-bet.ts"
   },
   "engines": {
     "node": ">=20"

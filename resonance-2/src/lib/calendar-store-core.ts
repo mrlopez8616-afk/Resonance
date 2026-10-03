@@ -1,4 +1,5 @@
 import { catalystSeed } from "@/data/catalyst-seed";
+import { fightCalendar } from "@/data/fight-calendar";
 import {
   calendarSeed,
   isCatalystNode,
@@ -57,7 +58,7 @@ export function createEmptyCalendarEnvelope(
 }
 
 export function calendarCatalog(): CalendarEvent[] {
-  return [...calendarSeed, ...catalystSeed].map(cloneCalendarEvent);
+  return [...calendarSeed, ...catalystSeed, ...fightCalendar].map(cloneCalendarEvent);
 }
 
 function cloneCalendarEvent(row: CalendarEvent): CalendarEvent {
@@ -154,6 +155,7 @@ export function calendarEventsMatch(left: CalendarEvent, right: CalendarEvent): 
     left.writer === right.writer &&
     optionalText(left.link) === optionalText(right.link) &&
     optionalText(left.sourceUrl) === optionalText(right.sourceUrl) &&
+    optionalText(left.eventSlug) === optionalText(right.eventSlug) &&
     optionalText(left.note) === optionalText(right.note) &&
     optionalText(left.location) === optionalText(right.location) &&
     (left.datePrecision ?? "") === (right.datePrecision ?? "") &&
@@ -182,6 +184,13 @@ function readStoredHttps(value: unknown): string | undefined {
 function readStoredCivil(value: unknown): string | undefined {
   if (typeof value !== "string" || !isCivilDay(value)) return undefined;
   return value;
+}
+
+function readStoredSlug(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const slug = value.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)) return undefined;
+  return slug;
 }
 
 function readStoredPrecision(value: unknown): DatePrecision | undefined {
@@ -217,6 +226,27 @@ function coerceCatalyst(raw: Record<string, unknown>): CalendarEvent | null {
   return event;
 }
 
+function coerceFight(raw: Record<string, unknown>): CalendarEvent | null {
+  if (typeof raw.status !== "string" || !isCalendarStatus(raw.status)) return null;
+  if (raw.lane != null || raw.node != null) return null;
+  const event: CalendarEvent = {
+    id: raw.id as string,
+    kind: "fight",
+    start: raw.start as string,
+    title: (raw.title as string).trim(),
+    status: raw.status,
+    writer: raw.writer as CalendarEvent["writer"],
+  };
+  if (typeof raw.link === "string" && raw.link.trim()) event.link = raw.link.trim();
+  const eventSlug = readStoredSlug(raw.eventSlug ?? raw.event_slug);
+  if (eventSlug) event.eventSlug = eventSlug;
+  if (typeof raw.note === "string" && raw.note.trim()) event.note = raw.note.trim();
+  if (typeof raw.location === "string" && raw.location.trim()) {
+    event.location = raw.location.trim().slice(0, 80);
+  }
+  return event;
+}
+
 function coerceStoredEvent(raw: unknown): CalendarEvent | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(raw.id)) {
@@ -226,6 +256,8 @@ function coerceStoredEvent(raw: unknown): CalendarEvent | null {
   if (typeof raw.title !== "string" || !raw.title.trim()) return null;
   if (typeof raw.writer !== "string" || !isCalendarWriter(raw.writer)) return null;
   if (raw.kind === "catalyst") return coerceCatalyst(raw);
+  if (raw.kind === "fight") return coerceFight(raw);
+  if (raw.kind) return null;
   if (typeof raw.lane !== "string" || !isCalendarLane(raw.lane)) return null;
   if (typeof raw.status !== "string" || !isCalendarStatus(raw.status)) return null;
   if (raw.lane === "gates" && raw.writer === "agent") return null;
@@ -238,6 +270,8 @@ function coerceStoredEvent(raw: unknown): CalendarEvent | null {
     writer: raw.writer,
   };
   if (typeof raw.link === "string" && raw.link.trim()) event.link = raw.link.trim();
+  const eventSlug = readStoredSlug(raw.eventSlug ?? raw.event_slug);
+  if (eventSlug) event.eventSlug = eventSlug;
   if (typeof raw.note === "string" && raw.note.trim()) event.note = raw.note.trim();
   if (raw.lane === "cadence") {
     const recurrence = coerceRecurrence(raw.recurrence);
@@ -304,6 +338,10 @@ export function writeCalendarEventIntoEnvelope(
   if (existing.kind === "catalyst") {
     if (existing.node !== event.node) {
       throw new CalendarWriteError("node is fixed once an event id exists.");
+    }
+  } else if (existing.kind === "fight") {
+    if (event.lane || event.node) {
+      throw new CalendarWriteError("fight rows are not lanes or nodes.");
     }
   } else if (existing.lane !== event.lane) {
     throw new CalendarWriteError("lane is fixed once an event id exists.");
