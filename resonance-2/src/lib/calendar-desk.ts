@@ -7,8 +7,9 @@ import {
   type CatalystNode,
 } from "@/data/calendar";
 import { isCalendarLane } from "@/lib/calendar-event";
+import { fightPageHref } from "@/lib/fight-pages";
 
-/** Desk filter only. Stored fight rows use `kind: "fight"` and have no lane. */
+/** Lane value for hub fight rows and the desk filter. */
 export const FIGHT_DESK_LANE = "fights" as const;
 
 export type FightDeskLane = typeof FIGHT_DESK_LANE;
@@ -71,7 +72,13 @@ export type CalendarChip = {
   tone: string;
   tentative: boolean;
   window: boolean;
+  /** Set only when `/fights/<slug>` is a real page. */
+  href?: string;
 };
+
+export function isFightEvent(event: CalendarEvent): boolean {
+  return event.kind === "fight" || event.lane === "fights";
+}
 
 /** Standing weekday rhythm. A posted row with the dated id replaces it that day. */
 export const STANDING_DAILY_BRIEF_ID = "cadence-daily-brief";
@@ -148,7 +155,7 @@ export function eventVisible(
   node: CatalystNode | "" = "",
 ): boolean {
   if (lane === FIGHT_DESK_LANE) {
-    return event.kind === "fight" && (!node || event.node === node);
+    return isFightEvent(event) && (!node || event.node === node);
   }
   if (lane && event.lane !== lane) return false;
   if (node && event.node !== node) return false;
@@ -259,15 +266,14 @@ export function chipsOnDay(
   return {
     chips: visible.map((item) => ({
       id: item.event.id,
-      label:
-        item.event.kind === "fight"
-          ? "Fight"
-          : (item.event.node ?? (item.event.lane ? CALENDAR_LANE_CHIP[item.event.lane] : "Cad")),
+      label: isFightEvent(item.event)
+        ? "Fight"
+        : (item.event.node ?? (item.event.lane ? CALENDAR_LANE_CHIP[item.event.lane] : "Cad")),
       title: item.event.title,
-      tone:
-        item.event.kind === "fight"
-          ? "fight"
-          : (item.event.node ?? item.event.lane ?? "cadence"),
+      tone: isFightEvent(item.event)
+        ? "fight"
+        : (item.event.node ?? item.event.lane ?? "cadence"),
+      href: fightPageHref(item.event),
       tentative: item.event.status === "tentative",
       window: item.event.datePrecision === "window",
     })),
@@ -383,9 +389,11 @@ export function laneCountsOnDay(
     capital: 0,
     build: 0,
     gates: 0,
+    fights: 0,
   };
   for (const item of occurrencesOnDay(events, day, lane, node)) {
-    if (item.event.lane) counts[item.event.lane] += 1;
+    if (isFightEvent(item.event)) counts.fights += 1;
+    else if (item.event.lane) counts[item.event.lane] += 1;
   }
   return counts;
 }

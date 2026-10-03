@@ -3,6 +3,7 @@ import { FightEvent } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
 import { betSeed } from "@/lib/bets";
 import { loadBetsStore } from "@/lib/bets-store";
+import { isPublishedFightEvent } from "@/lib/fight-pages";
 import { UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ event: string }>;
 }) {
   const { event } = await params;
-  const title = event === UFC_332_EVENT.id ? UFC_332_EVENT.name : "Fights";
+  const title = isPublishedFightEvent(event) ? UFC_332_EVENT.name : "Fights";
   return { title: `${title} · Resonance 2.0` };
 }
 
@@ -23,7 +24,7 @@ export default async function FightEventPage({
   params: Promise<{ event: string }>;
 }) {
   const { event } = await params;
-  if (event !== UFC_332_EVENT.id) notFound();
+  if (!isPublishedFightEvent(event)) notFound();
   const bets = await loadBetsStore()
     .then((loaded) => loaded.envelope.bets)
     .catch(() => betSeed());

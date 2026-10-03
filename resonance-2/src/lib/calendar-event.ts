@@ -83,6 +83,21 @@ export function calendarEventId(input: {
   return generated;
 }
 
+function readEventSlug(raw: Record<string, unknown>): string | undefined {
+  const slug = asTrimmed(raw.eventSlug ?? raw.event_slug).toLowerCase();
+  if (!slug) return undefined;
+  if (!EVENT_ID.test(slug)) {
+    throw new CalendarWriteError("eventSlug must be a lowercase slug.");
+  }
+  return slug;
+}
+
+function readEventLink(raw: Record<string, unknown>): string | undefined {
+  const link = asTrimmed(raw.link);
+  const href = asTrimmed(raw.href);
+  return readLink(link || href);
+}
+
 function readLink(value: string): string | undefined {
   if (!value) return undefined;
   if (value.length > 500 || /\s/.test(value)) {
@@ -240,7 +255,7 @@ function parseLaneEvent(raw: Record<string, unknown>): CalendarEvent {
   const lane = asTrimmed(raw.lane).toLowerCase();
   if (!isCalendarLane(lane)) {
     throw new CalendarWriteError(
-      "lane must be cadence, capital, build, or gates.",
+      "lane must be cadence, capital, build, gates, or fights.",
     );
   }
 
@@ -272,10 +287,12 @@ function parseLaneEvent(raw: Record<string, unknown>): CalendarEvent {
     title,
     status,
     writer,
-    link: readLink(asTrimmed(raw.link)),
+    link: readEventLink(raw),
     note: readNote(raw),
     recurrence: readRecurrence(raw.recurrence, lane),
   };
+  const eventSlug = readEventSlug(raw);
+  if (eventSlug) event.eventSlug = eventSlug;
   return event;
 }
 
@@ -295,17 +312,20 @@ function parseFight(raw: Record<string, unknown>): CalendarEvent {
   if (raw.recurrence != null) {
     throw new CalendarWriteError("recurrence is only for the cadence lane.");
   }
-  return {
+  const event: CalendarEvent = {
     id: calendarEventId({ id: asTrimmed(raw.id), lane: "fight", start, title }),
     kind: "fight",
     start,
     title,
     status,
     writer,
-    link: readLink(asTrimmed(raw.link)),
+    link: readEventLink(raw),
     note: readNote(raw),
     location: readLocation(raw),
   };
+  const eventSlug = readEventSlug(raw);
+  if (eventSlug) event.eventSlug = eventSlug;
+  return event;
 }
 
 export function parseCalendarEvent(body: unknown): CalendarEvent {

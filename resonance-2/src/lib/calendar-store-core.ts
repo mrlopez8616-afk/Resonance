@@ -155,6 +155,7 @@ export function calendarEventsMatch(left: CalendarEvent, right: CalendarEvent): 
     left.writer === right.writer &&
     optionalText(left.link) === optionalText(right.link) &&
     optionalText(left.sourceUrl) === optionalText(right.sourceUrl) &&
+    optionalText(left.eventSlug) === optionalText(right.eventSlug) &&
     optionalText(left.note) === optionalText(right.note) &&
     optionalText(left.location) === optionalText(right.location) &&
     (left.datePrecision ?? "") === (right.datePrecision ?? "") &&
@@ -183,6 +184,13 @@ function readStoredHttps(value: unknown): string | undefined {
 function readStoredCivil(value: unknown): string | undefined {
   if (typeof value !== "string" || !isCivilDay(value)) return undefined;
   return value;
+}
+
+function readStoredSlug(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const slug = value.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)) return undefined;
+  return slug;
 }
 
 function readStoredPrecision(value: unknown): DatePrecision | undefined {
@@ -230,6 +238,8 @@ function coerceFight(raw: Record<string, unknown>): CalendarEvent | null {
     writer: raw.writer as CalendarEvent["writer"],
   };
   if (typeof raw.link === "string" && raw.link.trim()) event.link = raw.link.trim();
+  const eventSlug = readStoredSlug(raw.eventSlug ?? raw.event_slug);
+  if (eventSlug) event.eventSlug = eventSlug;
   if (typeof raw.note === "string" && raw.note.trim()) event.note = raw.note.trim();
   if (typeof raw.location === "string" && raw.location.trim()) {
     event.location = raw.location.trim().slice(0, 80);
@@ -260,6 +270,8 @@ function coerceStoredEvent(raw: unknown): CalendarEvent | null {
     writer: raw.writer,
   };
   if (typeof raw.link === "string" && raw.link.trim()) event.link = raw.link.trim();
+  const eventSlug = readStoredSlug(raw.eventSlug ?? raw.event_slug);
+  if (eventSlug) event.eventSlug = eventSlug;
   if (typeof raw.note === "string" && raw.note.trim()) event.note = raw.note.trim();
   if (raw.lane === "cadence") {
     const recurrence = coerceRecurrence(raw.recurrence);

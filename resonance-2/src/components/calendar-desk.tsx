@@ -6,6 +6,7 @@ import {
   type CalendarEvent,
   type CatalystNode,
 } from "@/data/calendar";
+import { calendarOpenHref, fightPageHref } from "@/lib/fight-pages";
 import {
   adjacentWeekDay,
   calendarDayHref,
@@ -14,6 +15,7 @@ import {
   CALENDAR_LANE_FILTERS,
   chipsOnDay,
   eventWhenLabel,
+  isFightEvent,
   laneCountsOnDay,
   monthKeyForDay,
   monthLevelEvents,
@@ -81,7 +83,7 @@ function Field({
 }
 
 function rowMark(event: CalendarEvent): string {
-  if (event.kind === "fight") return "Fight";
+  if (isFightEvent(event)) return "Fight";
   if (event.node) return event.node;
   if (event.lane) return CALENDAR_LANE_LABELS[event.lane];
   return "";
@@ -95,7 +97,8 @@ function EventDetail({
   closeHref: string;
 }) {
   const { event } = item;
-  const link = event.link;
+  const link = calendarOpenHref(event);
+  const page = fightPageHref(event);
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
   const status = displayedCalendarStatus(event, item.start);
   const settled =
@@ -105,7 +108,7 @@ function EventDetail({
   const when = eventWhenLabel(event);
   const showWhen =
     event.kind === "catalyst" ||
-    event.kind === "fight" ||
+    isFightEvent(event) ||
     Boolean(event.end) ||
     event.datePrecision === "month";
 
@@ -116,7 +119,7 @@ function EventDetail({
         {showWhen ? <Field label="when" value={when} /> : null}
         {event.node ? <Field label="node" value={event.node} /> : null}
         {event.lane ? <Field label="lane" value={CALENDAR_LANE_LABELS[event.lane]} /> : null}
-        <Field label="title" value={event.title} />
+        <Field label="title" value={event.title} href={page} />
         <Field label="status" value={status} tone={statusTone} />
         <Field label="writer" value={event.writer} />
         {event.datePrecision && event.datePrecision !== "day" ? (
@@ -159,22 +162,33 @@ function ChipList({ chips, overflow }: { chips: CalendarChip[]; overflow: number
   if (chips.length === 0 && overflow === 0) return null;
   return (
     <span className="calendar-chips">
-      {chips.map((chip) => (
-        <span
-          key={chip.id}
-          className={[
-            "calendar-chip",
-            chip.tentative ? "is-tentative" : "",
-            chip.window ? "is-window" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          data-tone={chip.tone}
-          title={chip.title}
-        >
-          {chip.label}
-        </span>
-      ))}
+      {chips.map((chip) => {
+        const className = [
+          "calendar-chip",
+          chip.tentative ? "is-tentative" : "",
+          chip.window ? "is-window" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        if (!chip.href) {
+          return (
+            <span key={chip.id} className={className} data-tone={chip.tone} title={chip.title}>
+              {chip.label}
+            </span>
+          );
+        }
+        return (
+          <Link
+            key={chip.id}
+            href={chip.href}
+            className={className}
+            data-tone={chip.tone}
+            title={chip.title}
+          >
+            {chip.label}
+          </Link>
+        );
+      })}
       {overflow > 0 ? <span className="calendar-chip-more">+{overflow}</span> : null}
     </span>
   );
@@ -210,6 +224,7 @@ function Itinerary({
     <ol className="calendar-itinerary">
       {items.map((item) => {
         const current = query.event === item.event.id;
+        const eventHref = fightPageHref(item.event);
         const rowClass = [
           "calendar-row",
           current ? "is-current" : "",
@@ -240,6 +255,11 @@ function Itinerary({
                 {displayedCalendarStatus(item.event, item.start)}
               </span>
             </Link>
+            {eventHref ? (
+              <Link className="calendar-source" href={eventHref}>
+                Event
+              </Link>
+            ) : null}
             {current && showDetail ? (
               <EventDetail
                 item={item}
@@ -442,19 +462,6 @@ export function CalendarDesk({
             </Link>
           );
         })}
-        <Link
-          href={calendarHref({
-            day: query.day,
-            view: query.view,
-            lane: "fights",
-            today,
-          })}
-          className={query.lane === "fights" ? "is-current" : undefined}
-          aria-current={query.lane === "fights" ? "true" : undefined}
-          data-tone="fights"
-        >
-          Fights
-        </Link>
       </nav>
     </>
   );
@@ -710,29 +717,32 @@ export function CalendarDesk({
                     ]
                       .filter(Boolean)
                       .join(" ");
+                    const dayHref = calendarDayHref({
+                      day,
+                      anchor: query.day,
+                      lane: query.lane,
+                      node: query.node,
+                    });
                     return (
                       <td key={day} className={className || undefined}>
-                        <Link
-                          href={calendarDayHref({
-                            day,
-                            anchor: query.day,
-                            lane: query.lane,
-                            node: query.node,
-                          })}
-                          className="calendar-day-node"
-                          aria-label={`${formatCivilDate(day)}. ${laneLabelText}. ${count} ${count === 1 ? "event" : "events"}`}
-                        >
-                          <span className="calendar-month-date">{Number(day.slice(8))}</span>
+                        <div className="calendar-day-node">
+                          <Link
+                            href={dayHref}
+                            className="calendar-month-open"
+                            aria-label={`${formatCivilDate(day)}. ${laneLabelText}. ${count} ${count === 1 ? "event" : "events"}`}
+                          >
+                            <span className="calendar-month-date">{Number(day.slice(8))}</span>
+                          </Link>
                           <ChipList chips={packed.chips} overflow={packed.overflow} />
-                          <span className="calendar-lane-counts">
+                          <Link href={dayHref} className="calendar-lane-counts" tabIndex={-1} aria-hidden="true">
                             {CALENDAR_LANES.map((lane) => (
                               <span key={lane} data-tone={lane} data-count={counts[lane]}>
                                 <span className="sr-only">{CALENDAR_LANE_LABELS[lane]} </span>
                                 {counts[lane]}
                               </span>
                             ))}
-                          </span>
-                        </Link>
+                          </Link>
+                        </div>
                       </td>
                     );
                   })}

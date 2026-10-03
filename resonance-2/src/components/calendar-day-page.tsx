@@ -14,6 +14,7 @@ import {
   calendarMonthBackHref,
   CALENDAR_LANE_FILTERS,
   displayedCalendarStatus,
+  isFightEvent,
   eventWhenLabel,
   occurrenceClock,
   occurrencesOnDay,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/calendar-desk";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { fillsOnPrintedDay } from "@/lib/fill-desk";
+import { calendarOpenHref, fightPageHref } from "@/lib/fight-pages";
 
 type DaySearch = {
   anchor: string;
@@ -70,7 +72,8 @@ function Field({
 
 function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref: string }) {
   const { event } = item;
-  const link = event.link;
+  const link = calendarOpenHref(event);
+  const page = fightPageHref(event);
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
   const status = displayedCalendarStatus(event, item.start);
   const settled = status === "history" || status === "merged" || status === "sent";
@@ -83,7 +86,7 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
   const when = eventWhenLabel(event);
   const showWhen =
     event.kind === "catalyst" ||
-    event.kind === "fight" ||
+    isFightEvent(event) ||
     Boolean(event.end) ||
     event.datePrecision === "month";
 
@@ -94,7 +97,7 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
         {showWhen ? <Field label="when" value={when} /> : null}
         {event.node ? <Field label="node" value={event.node} /> : null}
         {event.lane ? <Field label="lane" value={CALENDAR_LANE_LABELS[event.lane]} /> : null}
-        <Field label="title" value={event.title} />
+        <Field label="title" value={event.title} href={page} />
         <Field label="status" value={status} tone={statusTone} />
         <Field label="writer" value={event.writer} />
         {event.location ? <Field label="where" value={event.location} /> : null}
@@ -118,7 +121,7 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
 }
 
 function rowMark(event: CalendarEvent): string {
-  if (event.kind === "fight") return "Fight";
+  if (isFightEvent(event)) return "Fight";
   if (event.node) return event.node;
   if (event.lane) return CALENDAR_LANE_LABELS[event.lane];
   return "";
@@ -148,6 +151,7 @@ function DayRows({
     <ol className="calendar-itinerary">
       {items.map((item) => {
         const current = search.event === item.event.id;
+        const eventHref = fightPageHref(item.event);
         const rowClass = [
           "calendar-row",
           current ? "is-current" : "",
@@ -175,6 +179,11 @@ function DayRows({
                 {displayedCalendarStatus(item.event, item.start)}
               </span>
             </Link>
+            {eventHref ? (
+              <Link className="calendar-source" href={eventHref}>
+                Event
+              </Link>
+            ) : null}
             {item.event.sourceUrl ? (
               <a className="calendar-source" href={item.event.sourceUrl} rel="noreferrer">
                 Source
@@ -214,11 +223,12 @@ export function CalendarDayView({
     capital: [],
     build: [],
     gates: [],
+    fights: [],
   };
   const catalysts: CalendarOccurrence[] = [];
   const fights: CalendarOccurrence[] = [];
   for (const item of visible) {
-    if (item.event.kind === "fight") fights.push(item);
+    if (isFightEvent(item.event)) fights.push(item);
     else if (item.event.lane) byLane[item.event.lane].push(item);
     else catalysts.push(item);
   }
@@ -227,7 +237,7 @@ export function CalendarDayView({
     ? []
     : search.lane
       ? [search.lane as CalendarLane]
-      : [...CALENDAR_LANES];
+      : CALENDAR_LANES.filter((lane) => lane !== "fights");
   const showFills = search.lane === "" || search.lane === "capital";
   const printed = showFills ? fillsOnPrintedDay(fills, day) : [];
   const dayFills = search.node
@@ -301,14 +311,6 @@ export function CalendarDayView({
             </Link>
           );
         })}
-          <Link
-            href={calendarDayHref({ day, anchor: search.anchor, lane: "fights" })}
-            className={search.lane === "fights" ? "is-current" : undefined}
-            aria-current={search.lane === "fights" ? "true" : undefined}
-            data-tone="fights"
-          >
-            Fights
-          </Link>
         </nav>
       </header>
 

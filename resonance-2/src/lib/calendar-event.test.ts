@@ -138,4 +138,62 @@ describe("calendar event parse", () => {
       (error: unknown) => error instanceof CalendarWriteError,
     );
   });
+
+  it("accepts a fights lane POST and still rejects an unknown lane", () => {
+    const event = parseCalendarEvent({
+      id: "ufc-325-main-card",
+      lane: "fights",
+      writer: "agent",
+      start: "2027-01-16T19:00:00-06:00",
+      title: "UFC 325 main card",
+      status: "scheduled",
+      eventSlug: "ufc-325",
+      href: "/fights/ufc-325",
+    });
+    assert.equal(event.lane, "fights");
+    assert.equal(event.kind, undefined);
+    assert.equal(event.writer, "agent");
+    assert.equal(event.eventSlug, "ufc-325");
+    assert.equal(event.link, "/fights/ufc-325");
+
+    const aliased = parseCalendarEvent({
+      id: "ufc-332-hub-prelims",
+      lane: "fights",
+      writer: "agent",
+      start: "2026-10-03T17:00:00-05:00",
+      title: "UFC 332 prelims",
+      status: "scheduled",
+      event_slug: "ufc-332",
+    });
+    assert.equal(aliased.eventSlug, "ufc-332");
+    assert.equal(aliased.link, undefined);
+
+    assert.throws(
+      () =>
+        parseCalendarEvent({
+          lane: "ufc",
+          writer: "agent",
+          start: "2026-10-03T19:00:00-05:00",
+          title: "Unknown lane",
+          status: "scheduled",
+        }),
+      (error: unknown) =>
+        error instanceof CalendarWriteError &&
+        error.status === 400 &&
+        error.message === "lane must be cadence, capital, build, gates, or fights.",
+    );
+
+    assert.throws(
+      () =>
+        parseCalendarEvent({
+          lane: "gates",
+          writer: "agent",
+          start: "2026-10-03T19:00:00-05:00",
+          title: "Agent gate",
+          status: "open",
+        }),
+      (error: unknown) =>
+        error instanceof CalendarWriteError && error.message.includes("human approvals"),
+    );
+  });
 });
