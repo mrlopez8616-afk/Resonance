@@ -8,7 +8,6 @@ import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
-import { XLM_SLEEVES } from "@/data/xlm-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import {
   assembleLiveFace,
@@ -53,7 +52,6 @@ describe("live face units", () => {
     assert.equal(faceUnitWord("XRP"), "tokens");
     assert.equal(faceUnitWord("SUI"), "tokens");
     assert.equal(faceUnitWord("HBAR"), "tokens");
-    assert.equal(faceUnitWord("XLM"), "tokens");
 
     const face = assembleLiveFace("PWR", PWR_SLEEVES, {
       usd: 636.5,
@@ -146,13 +144,12 @@ describe("live face units", () => {
     assert.equal(face.totalUnitsLabel, "33.700");
   });
 
-  it("paints HBAR and XLM Agentic token prints without rounding them away", () => {
-    const quote = {
+  it("paints the HBAR Agentic token print without rounding it away", () => {
+    const hbar = assembleLiveFace("HBAR", HBAR_SLEEVES, {
       usd: 0.12,
       source: "test",
       fetchedAt: "2026-09-29T00:00:00.000Z",
-    };
-    const hbar = assembleLiveFace("HBAR", HBAR_SLEEVES, quote);
+    });
     assert.equal(hbar.unitsWord, "tokens");
     assert.equal(hbar.sleeves.length, 1);
     assert.equal(hbar.sleeves[0]?.id, "rh-agentic");
@@ -162,30 +159,6 @@ describe("live face units", () => {
     assert.equal(hbar.totalUnitsLabel, "7,847.91");
     assert.equal(hbar.priceLabel, "$0.120");
     assert.equal(hbar.totalUnitsLabel.includes("NaN"), false);
-
-    const xlm = assembleLiveFace("XLM", XLM_SLEEVES, {
-      ...quote,
-      usd: 0.22,
-    });
-    assert.equal(xlm.unitsWord, "tokens");
-    assert.equal(xlm.sleeves.length, 1);
-    assert.equal(xlm.sleeves[0]?.id, "rh-agentic");
-    assert.equal(xlm.sleeves[0]?.quantity, "0");
-    assert.equal(xlm.sleeves[0]?.quantityLabel, "0");
-    assert.equal(xlm.totalUnits, 0);
-    assert.equal(xlm.totalUnitsLabel, "0");
-    assert.equal(xlm.totalUsd, 0);
-    assert.equal(xlm.totalUsdLabel, "~$0.00");
-    assert.equal(xlm.totalUnitsLabel.includes("NaN"), false);
-    assert.equal(xlm.totalUsdLabel.includes("NaN"), false);
-
-    const dark = assembleLiveFace("XLM", XLM_SLEEVES, null);
-    assert.equal(dark.totalUnitsLabel, "0");
-    assert.equal(dark.sleeves[0]?.quantityLabel, "0");
-    assert.equal(dark.priceLabel, "—");
-    assert.equal(dark.totalUsd, null);
-    assert.equal(dark.totalUsdLabel, "—");
-    assert.equal(dark.totalUsdLabel.includes("NaN"), false);
   });
 
   it("keeps the XRP vault integer and the Agentic lot after Main and Coinbase closed", () => {

@@ -65,6 +65,7 @@ describe("operator log desk", () => {
       ["sui-agentic", "sui-seed"],
     );
     assert.equal(parseFillDeskQuery({ ticker: "DOGE" }).ticker, "");
+    assert.equal(parseFillDeskQuery({ ticker: "xlm" }).ticker, "XLM");
     assert.equal(parseFillDeskQuery({ sleeve: "flare-vault" }).sleeve, "");
     assert.equal(parseFillDeskQuery({ source: "binance" }).source, "");
   });
@@ -118,6 +119,7 @@ describe("operator log desk", () => {
       "/log?ticker=XRP&source=robinhood",
     );
     assert.equal(fillDeskHref({ ticker: "NOPE" }), "/log");
+    assert.equal(fillDeskHref({ ticker: "XLM" }), "/log?ticker=XLM");
   });
 
   it("lists every node with a non-zero sleeve print or fill quantity", () => {
@@ -152,6 +154,31 @@ describe("operator log desk", () => {
     assert.deepEqual(
       nodes.map((node) => `${node.ticker}:${node.mark}`),
       ["BTC:fills", "XRP:sleeve", "SUI:fills"],
+    );
+
+    const xlmFill: Fill = {
+      ...btcFill,
+      symbol: "XLM",
+      quantity: "1910.31",
+      orderId: "6abed758-0215-4703-8d11-c412686df9be",
+    };
+    assert.equal(
+      nodesWithValue([xlmFill], LIVE_SLEEVE_SEEDS)
+        .map((node) => String(node.ticker))
+        .includes("XLM"),
+      false,
+    );
+    assert.deepEqual(
+      filterFills([xlmFill, rows[0]], parseFillDeskQuery({ ticker: "XLM" })).map(
+        (fill) => fill.orderId,
+      ),
+      [xlmFill.orderId],
+    );
+    assert.equal(
+      filterFills([xlmFill, rows[0]], parseFillDeskQuery({})).some(
+        (fill) => fill.symbol === "XLM",
+      ),
+      true,
     );
   });
 

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [cryptoQuotes, equityQuotes, sleeves] = await Promise.all([
-    loadSpotQuotes(["XRP", "SUI", "HBAR", "XLM"]),
+    loadSpotQuotes(["XRP", "SUI", "HBAR"]),
     loadEquityQuotes(EQUITY_FACE_TICKERS),
     loadLiveSleeveBooks(),
   ]);
@@ -23,7 +23,6 @@ export default async function Home() {
     CEG: assembleLiveFace("CEG", sleeves.CEG, equityQuotes.CEG),
     HUBB: assembleLiveFace("HUBB", sleeves.HUBB, equityQuotes.HUBB),
     HBAR: assembleLiveFace("HBAR", sleeves.HBAR, cryptoQuotes.HBAR),
-    XLM: assembleLiveFace("XLM", sleeves.XLM, cryptoQuotes.XLM),
   };
 
   return (

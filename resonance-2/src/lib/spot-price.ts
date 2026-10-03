@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SpotQuote } from "@/lib/live-face";
 
-export const SPOT_TICKERS = ["XRP", "SUI", "HBAR", "XLM"] as const;
+export const SPOT_TICKERS = ["XRP", "SUI", "HBAR"] as const;
 export type SpotTicker = (typeof SPOT_TICKERS)[number];
 
 const FEEDS: Record<
@@ -12,7 +12,6 @@ const FEEDS: Record<
   XRP: { geckoId: "ripple", binanceSymbol: "XRPUSDT" },
   SUI: { geckoId: "sui", binanceSymbol: "SUIUSDT" },
   HBAR: { geckoId: "hedera-hashgraph", binanceSymbol: "HBARUSDT" },
-  XLM: { geckoId: "stellar", binanceSymbol: "XLMUSDT" },
 };
 
 const TTL_MS = 30_000;

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Fill } from "@/data/fills";
 import { FillLog } from "@/components/fill-log";
-import { LOCKED_TICKERS } from "@/lib/fill-event";
+import { isLockedTicker, LOCKED_TICKERS } from "@/lib/fill-event";
 import {
   DESK_SLEEVES,
   DESK_SOURCES,
@@ -24,6 +24,10 @@ export function FillDesk({
   storeLabel: string;
 }) {
   const visible = filterFills(fills, query);
+  const tickerOptions =
+    query.ticker && !isLockedTicker(query.ticker)
+      ? [...LOCKED_TICKERS, query.ticker]
+      : LOCKED_TICKERS;
   const nodes = nodesWithValue(fills, sleeves);
   const active = fillDeskIsActive(query);
   const title = query.ticker ? `${query.ticker} fills` : "Agentic sleeve fills";
@@ -76,7 +80,7 @@ export function FillDesk({
           <span>ticker</span>
           <select name="ticker" defaultValue={query.ticker}>
             <option value="">all</option>
-            {LOCKED_TICKERS.map((ticker) => (
+            {tickerOptions.map((ticker) => (
               <option key={ticker} value={ticker}>
                 {ticker}
               </option>

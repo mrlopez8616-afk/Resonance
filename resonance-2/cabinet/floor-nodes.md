@@ -24,13 +24,12 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 - `src/data/ceg-sleeves.ts` / RH Agentic `0.009617` shares
 - `src/data/hubb-sleeves.ts` / RH Agentic `0.005566` shares
 - `src/data/hbar-sleeves.ts` / RH Agentic `7847.91` tokens
-- `src/data/xlm-sleeves.ts` / RH Agentic `0` tokens (sold; the square stays until the founder deletes it)
 - `src/data/fills.ts` / `/log` and the durable fill store (`POST /api/fills`)
 - Broker keys, env, gas wallet addresses
 
-Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, or XLM re-stands the live face from those files.
+Sleeve files stay on disk (soft-archive: hidden from the floor, not deleted). Restoring XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, or HBAR re-stands the live face from those files.
 
-BTC, ETH, and SOL stay in `FLOOR_NODES` with status `offline`. They are not painted on the homepage while offline, including after a `+` restore. When a row flips to `live`, it paints again unless that id is still hidden. FLR stays in the locked ingest roster and has no floor square. Do not invent a square for it. HBAR and XLM are live crypto faces ([`hbar-face.md`](./hbar-face.md), [`xlm-face.md`](./xlm-face.md)).
+BTC, ETH, and SOL stay in `FLOOR_NODES` with status `offline`. They are not painted on the homepage while offline, including after a `+` restore. When a row flips to `live`, it paints again unless that id is still hidden. FLR stays in the locked ingest roster and has no floor square. Do not invent a square for it. HBAR is a live crypto face ([`hbar-face.md`](./hbar-face.md)). XLM is not in the roster. Its historical fills stay on `/log` ([`xlm-face.md`](./xlm-face.md)).
 
 ## Confirm
 

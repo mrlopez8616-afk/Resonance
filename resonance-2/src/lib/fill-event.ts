@@ -1,4 +1,5 @@
 import type { Fill, FillSide, FillSleeveId, FillVenue } from "@/data/fills";
+import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
 import { isDecimalString } from "@/lib/decimal";
 
 /** Locked nodes. Never invent a ticker. Append only. */
@@ -16,10 +17,20 @@ export const LOCKED_TICKERS = [
   "CEG",
   "HUBB",
   "HBAR",
-  "XLM",
 ] as const;
 
 export type LockedTicker = (typeof LOCKED_TICKERS)[number];
+
+/**
+ * Symbols that remain on stored fills after the node left the floor.
+ * Not a floor node, sleeve seed, or spot ticker.
+ */
+export type HistoricalFillTicker = Exclude<
+  (typeof POSITION_LOG_FILLS)[number]["ticker"],
+  LockedTicker
+>;
+
+export type FillSymbol = LockedTicker | HistoricalFillTicker;
 
 export const FILL_VENUES = ["robinhood", "coinbase"] as const;
 export const WRITABLE_SLEEVE_IDS = ["rh-main", "rh-agentic", "coinbase"] as const;
@@ -44,7 +55,7 @@ export type NormalizedFillEvent = {
   venue: FillVenue;
   orderId: string;
   tradeId?: string;
-  ticker: LockedTicker;
+  ticker: FillSymbol;
   side: FillSide;
   qty: string;
   price: string;
@@ -65,6 +76,27 @@ function asTrimmed(value: unknown): string {
 
 export function isLockedTicker(value: string): value is LockedTicker {
   return (LOCKED_TICKERS as readonly string[]).includes(value);
+}
+
+export function isHistoricalFillTicker(value: string): value is HistoricalFillTicker {
+  if (isLockedTicker(value)) return false;
+  return POSITION_LOG_FILLS.some((row) => row.ticker === value);
+}
+
+export function isFillSymbol(value: string): value is FillSymbol {
+  return isLockedTicker(value) || isHistoricalFillTicker(value);
+}
+
+/** The known position-log rows whose ticker is no longer a floor node. */
+export function isRetainedLogFill(
+  orderId: string,
+  ticker: string,
+): ticker is HistoricalFillTicker {
+  if (!isHistoricalFillTicker(ticker)) return false;
+  const key = orderId.trim().toLowerCase();
+  return POSITION_LOG_FILLS.some(
+    (row) => row.orderId === key && row.ticker === ticker,
+  );
 }
 
 export function isFillVenue(value: string): value is FillVenue {
@@ -126,9 +158,14 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
   }
 
   const ticker = readTicker(raw);
-  if (!isLockedTicker(ticker)) {
+  let symbol: FillSymbol;
+  if (isLockedTicker(ticker)) {
+    symbol = ticker;
+  } else if (isRetainedLogFill(orderId || tradeKey, ticker)) {
+    symbol = ticker;
+  } else {
     throw new FillIngestError(
-      "ticker must be one of the locked nodes (BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR XLM).",
+      `ticker must be one of the locked nodes (${LOCKED_TICKERS.join(" ")}).`,
     );
   }
 
@@ -174,7 +211,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     venue: venueRaw,
     orderId: orderId || tradeKey,
     tradeId: tradeId || undefined,
-    ticker,
+    ticker: symbol,
     side: sideRaw,
     qty,
     price,

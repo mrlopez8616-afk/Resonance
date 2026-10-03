@@ -1,6 +1,6 @@
 # Resonance 2.0
 
-Operator floor for Resonance 2.0. **XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, and XLM are live.** The homepage paints those faces plus the one `+` slot. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. The Xaman gas wallet is never shown.
+Operator floor for Resonance 2.0. **XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, and HBAR are live.** The homepage paints those faces plus the one `+` slot. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. XLM is not a floor node; its three historical fills stay on `/log`. The Xaman gas wallet is never shown.
 
 This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
@@ -23,13 +23,12 @@ Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POS
 - CEG — [`src/data/ceg-sleeves.ts`](src/data/ceg-sleeves.ts) (RH Agentic `0.009617` **shares** only)
 - HUBB — [`src/data/hubb-sleeves.ts`](src/data/hubb-sleeves.ts) (RH Agentic `0.005566` **shares** only)
 - HBAR — [`src/data/hbar-sleeves.ts`](src/data/hbar-sleeves.ts) (RH Agentic `7847.91` **tokens** only)
-- XLM — [`src/data/xlm-sleeves.ts`](src/data/xlm-sleeves.ts) (RH Agentic `0` **tokens** only; the node stays on the floor)
 
 Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). PWR, ETN, VRT, GEV, CEG, and HUBB use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 
-Flare vault is a **manual** founder constant (`28281` XRP) on the XRP face only. Ingest cannot write it. SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR, and XLM have no vault line.
+Flare vault is a **manual** founder constant (`28281` XRP) on the XRP face only. Ingest cannot write it. SUI, PWR, ETN, VRT, GEV, CEG, HUBB, and HBAR have no vault line.
 
-Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), [`cabinet/pwr-face.md`](cabinet/pwr-face.md), [`cabinet/etn-face.md`](cabinet/etn-face.md), [`cabinet/vrt-face.md`](cabinet/vrt-face.md), [`cabinet/gev-face.md`](cabinet/gev-face.md), [`cabinet/ceg-face.md`](cabinet/ceg-face.md), [`cabinet/hubb-face.md`](cabinet/hubb-face.md), [`cabinet/hbar-face.md`](cabinet/hbar-face.md), [`cabinet/xlm-face.md`](cabinet/xlm-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
+Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), [`cabinet/pwr-face.md`](cabinet/pwr-face.md), [`cabinet/etn-face.md`](cabinet/etn-face.md), [`cabinet/vrt-face.md`](cabinet/vrt-face.md), [`cabinet/gev-face.md`](cabinet/gev-face.md), [`cabinet/ceg-face.md`](cabinet/ceg-face.md), [`cabinet/hubb-face.md`](cabinet/hubb-face.md), [`cabinet/hbar-face.md`](cabinet/hbar-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md). XLM left the floor; the kept fills are in [`cabinet/xlm-face.md`](cabinet/xlm-face.md).
 
 ## Run locally
 
