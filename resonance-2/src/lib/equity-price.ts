@@ -46,14 +46,22 @@ async function fetchWithTimeout(
   }
 }
 
-function asQuote(usd: number, source: string): SpotQuote {
+function asQuote(
+  usd: number,
+  source: string,
+  extra?: { change24hPct?: number | null; price24hAgoUsd?: number | null },
+): SpotQuote {
   if (!Number.isFinite(usd) || usd <= 0) {
     throw new Error("Equity feed returned no USD");
   }
+  const change = extra?.change24hPct;
+  const ago = extra?.price24hAgoUsd;
   return {
     usd,
     source,
     fetchedAt: new Date().toISOString(),
+    change24hPct: typeof change === "number" && Number.isFinite(change) ? change : null,
+    price24hAgoUsd: typeof ago === "number" && Number.isFinite(ago) && ago > 0 ? ago : null,
   };
 }
 
@@ -73,6 +81,8 @@ async function fetchYahooQuote(ticker: EquityFaceTicker): Promise<SpotQuote> {
       result?: Array<{
         symbol?: string;
         regularMarketPrice?: number;
+        regularMarketChangePercent?: number;
+        regularMarketPreviousClose?: number;
       }>;
     };
   };
@@ -83,7 +93,10 @@ async function fetchYahooQuote(ticker: EquityFaceTicker): Promise<SpotQuote> {
   if (typeof usd !== "number") {
     throw new Error("Yahoo quote returned no regularMarketPrice");
   }
-  return asQuote(usd, "Yahoo Finance (unofficial public quote)");
+  return asQuote(usd, "Yahoo Finance (unofficial public quote)", {
+    change24hPct: row?.regularMarketChangePercent,
+    price24hAgoUsd: row?.regularMarketPreviousClose,
+  });
 }
 
 async function fetchYahooChart(ticker: EquityFaceTicker): Promise<SpotQuote> {
@@ -100,7 +113,11 @@ async function fetchYahooChart(ticker: EquityFaceTicker): Promise<SpotQuote> {
   const data = (await response.json()) as {
     chart?: {
       result?: Array<{
-        meta?: { regularMarketPrice?: number };
+        meta?: {
+          regularMarketPrice?: number;
+          chartPreviousClose?: number;
+          previousClose?: number;
+        };
         indicators?: { quote?: Array<{ close?: Array<number | null> }> };
       }>;
     };
@@ -111,12 +128,26 @@ async function fetchYahooChart(ticker: EquityFaceTicker): Promise<SpotQuote> {
     (value): value is number => typeof value === "number",
   );
   const last = numeric.at(-1);
+  const prev = numeric.at(-2);
   const usd =
     typeof last === "number" ? last : result?.meta?.regularMarketPrice;
   if (typeof usd !== "number") {
     throw new Error("Yahoo chart returned no close");
   }
-  return asQuote(usd, "Yahoo Finance (unofficial chart)");
+  const metaAgo =
+    result?.meta?.chartPreviousClose ?? result?.meta?.previousClose;
+  const ago =
+    typeof prev === "number" && prev > 0
+      ? prev
+      : typeof metaAgo === "number" && metaAgo > 0
+        ? metaAgo
+        : null;
+  const change =
+    ago !== null && ago > 0 ? ((usd - ago) / ago) * 100 : null;
+  return asQuote(usd, "Yahoo Finance (unofficial chart)", {
+    change24hPct: change,
+    price24hAgoUsd: ago,
+  });
 }
 
 async function fetchStooq(ticker: EquityFaceTicker): Promise<SpotQuote> {
@@ -136,6 +167,8 @@ async function fetchStooq(ticker: EquityFaceTicker): Promise<SpotQuote> {
   if (!Number.isFinite(close) || close <= 0) {
     throw new Error("Stooq returned no close");
   }
+  // Stooq's daily row is open/high/low/close for one session. Open-to-close
+  // is not a 24h-ago price, so this fallback leaves the change unset.
   return asQuote(close, "Stooq");
 }
 

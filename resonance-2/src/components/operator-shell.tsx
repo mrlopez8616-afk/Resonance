@@ -1,10 +1,16 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { LockIcon } from "@/components/icons";
+import { MoodFloor, MoodLegend, MoodPreviewSync } from "@/components/mood-floor";
 import { OperatorToolbar } from "@/components/operator-toolbar";
+import { loadPortfolioMood } from "@/lib/portfolio-mood-load";
 
-export function OperatorShell({ children }: { children: ReactNode }) {
+export async function OperatorShell({ children }: { children: ReactNode }) {
+  const mood = await loadPortfolioMood();
   return (
-    <div className="operator-floor">
+    <MoodFloor initialMood={mood}>
+      <Suspense fallback={null}>
+        <MoodPreviewSync />
+      </Suspense>
       <OperatorToolbar />
       <div className="operator-canvas">
         <header className="operator-header">
@@ -13,6 +19,7 @@ export function OperatorShell({ children }: { children: ReactNode }) {
             <span className="live-dot" />
             LIVE
           </span>
+          <MoodLegend />
         </header>
         <div className="operator-main">{children}</div>
         <footer className="operator-status">
@@ -26,6 +33,6 @@ export function OperatorShell({ children }: { children: ReactNode }) {
           </p>
         </footer>
       </div>
-    </div>
+    </MoodFloor>
   );
 }

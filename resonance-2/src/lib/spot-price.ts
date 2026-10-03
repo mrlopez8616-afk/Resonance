@@ -47,7 +47,7 @@ async function fetchWithTimeout(
 
 async function fetchCoinGecko(ticker: SpotTicker): Promise<SpotQuote> {
   const { geckoId } = FEEDS[ticker];
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`;
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd&include_24hr_change=true`;
   const response = await fetchWithTimeout(url, {
     headers: {
       accept: "application/json",
@@ -59,37 +59,53 @@ async function fetchCoinGecko(ticker: SpotTicker): Promise<SpotQuote> {
   }
   const data = (await response.json()) as Record<
     string,
-    { usd?: number } | undefined
+    { usd?: number; usd_24h_change?: number } | undefined
   >;
-  const usd = data[geckoId]?.usd;
+  const row = data[geckoId];
+  const usd = row?.usd;
   if (typeof usd !== "number" || !Number.isFinite(usd) || usd <= 0) {
     throw new Error(`CoinGecko returned no ${ticker}-USD`);
   }
+  const change = row?.usd_24h_change;
   return {
     usd,
     source: "CoinGecko",
     fetchedAt: new Date().toISOString(),
+    change24hPct: typeof change === "number" && Number.isFinite(change) ? change : null,
+    price24hAgoUsd: null,
   };
 }
 
 async function fetchBinance(ticker: SpotTicker): Promise<SpotQuote> {
   const { binanceSymbol } = FEEDS[ticker];
-  const url = `https://api.binance.com/api/v3/ticker/price?symbol=${binanceSymbol}`;
+  // 24hr ticker carries last price and the rolling change. The price-only
+  // endpoint does not, so a fallback quote would otherwise drop 24h coverage.
+  const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSymbol}`;
   const response = await fetchWithTimeout(url, {
     headers: { accept: "application/json" },
   });
   if (!response.ok) {
     throw new Error(`Binance HTTP ${response.status}`);
   }
-  const data = (await response.json()) as { price?: string };
-  const usd = Number(data.price);
+  const data = (await response.json()) as {
+    lastPrice?: string;
+    priceChangePercent?: string;
+  };
+  const usd = Number(data.lastPrice);
   if (!Number.isFinite(usd) || usd <= 0) {
     throw new Error(`Binance returned no ${binanceSymbol}`);
   }
+  const rawChange = data.priceChangePercent;
+  const change =
+    typeof rawChange === "string" && rawChange.trim() !== ""
+      ? Number(rawChange)
+      : Number.NaN;
   return {
     usd,
     source: "Binance",
     fetchedAt: new Date().toISOString(),
+    change24hPct: Number.isFinite(change) ? change : null,
+    price24hAgoUsd: null,
   };
 }
 
