@@ -7,6 +7,17 @@ import {
   type CatalystNode,
 } from "@/data/calendar";
 import { isCalendarLane } from "@/lib/calendar-event";
+
+/** Desk filter only. Stored fight rows use `kind: "fight"` and have no lane. */
+export const FIGHT_DESK_LANE = "fights" as const;
+
+export type FightDeskLane = typeof FIGHT_DESK_LANE;
+
+export type DeskLane = CalendarLane | FightDeskLane | "";
+
+export function isDeskLane(value: string): value is CalendarLane | FightDeskLane {
+  return value === FIGHT_DESK_LANE || isCalendarLane(value);
+}
 import {
   addCivilDays,
   chicagoDay,
@@ -38,7 +49,7 @@ export type CalendarOccurrence = {
 export type CalendarDeskQuery = {
   day: string;
   view: CalendarView;
-  lane: CalendarLane | "";
+  lane: DeskLane;
   node: CatalystNode | "";
   event: string;
 };
@@ -107,7 +118,7 @@ export function parseCalendarDeskQuery(
   return {
     day: isCivilDay(dayRaw) ? dayRaw : today,
     view: viewRaw === "week" || viewRaw === "month" ? viewRaw : "day",
-    lane: isCalendarLane(laneRaw) ? laneRaw : "",
+    lane: isDeskLane(laneRaw) ? laneRaw : "",
     node: isCatalystNode(nodeRaw) ? nodeRaw : "",
     event: firstParam(raw.event),
   };
@@ -116,7 +127,7 @@ export function parseCalendarDeskQuery(
 export function calendarHref(input: {
   day?: string;
   view?: CalendarView | "";
-  lane?: CalendarLane | "";
+  lane?: DeskLane;
   node?: CatalystNode | "";
   event?: string;
   today?: string;
@@ -133,9 +144,12 @@ export function calendarHref(input: {
 
 export function eventVisible(
   event: CalendarEvent,
-  lane: CalendarLane | "" = "",
+  lane: DeskLane = "",
   node: CatalystNode | "" = "",
 ): boolean {
+  if (lane === FIGHT_DESK_LANE) {
+    return event.kind === "fight" && (!node || event.node === node);
+  }
   if (lane && event.lane !== lane) return false;
   if (node && event.node !== node) return false;
   return true;
@@ -184,7 +198,7 @@ export function occurrenceOnDay(
 export function occurrencesOnDay(
   events: readonly CalendarEvent[],
   day: string,
-  lane: CalendarLane | "" = "",
+  lane: DeskLane = "",
   node: CatalystNode | "" = "",
 ): CalendarOccurrence[] {
   return events
@@ -201,7 +215,7 @@ export function occurrencesOnDay(
 export function monthLevelEvents(
   events: readonly CalendarEvent[],
   monthKey: string,
-  lane: CalendarLane | "" = "",
+  lane: DeskLane = "",
   node: CatalystNode | "" = "",
 ): CalendarEvent[] {
   return events
@@ -229,7 +243,7 @@ function spanDays(event: CalendarEvent): number {
 export function chipsOnDay(
   events: readonly CalendarEvent[],
   day: string,
-  lane: CalendarLane | "" = "",
+  lane: DeskLane = "",
   node: CatalystNode | "" = "",
 ): { chips: CalendarChip[]; overflow: number } {
   const ranked = [...occurrencesOnDay(events, day, lane, node)].sort((left, right) => {
@@ -245,9 +259,15 @@ export function chipsOnDay(
   return {
     chips: visible.map((item) => ({
       id: item.event.id,
-      label: item.event.node ?? (item.event.lane ? CALENDAR_LANE_CHIP[item.event.lane] : "Cad"),
+      label:
+        item.event.kind === "fight"
+          ? "Fight"
+          : (item.event.node ?? (item.event.lane ? CALENDAR_LANE_CHIP[item.event.lane] : "Cad")),
       title: item.event.title,
-      tone: item.event.node ?? item.event.lane ?? "cadence",
+      tone:
+        item.event.kind === "fight"
+          ? "fight"
+          : (item.event.node ?? item.event.lane ?? "cadence"),
       tentative: item.event.status === "tentative",
       window: item.event.datePrecision === "window",
     })),
@@ -302,7 +322,7 @@ export type CalendarDaySearch = {
 
 export function parseCalendarDaySearch(raw: CalendarDaySearch = {}): {
   anchor: string;
-  lane: CalendarLane | "";
+  lane: DeskLane;
   node: CatalystNode | "";
   event: string;
 } {
@@ -311,7 +331,7 @@ export function parseCalendarDaySearch(raw: CalendarDaySearch = {}): {
   const nodeRaw = firstParam(raw.node).toUpperCase();
   return {
     anchor: isCivilDay(anchorRaw) ? anchorRaw : "",
-    lane: isCalendarLane(laneRaw) ? laneRaw : "",
+    lane: isDeskLane(laneRaw) ? laneRaw : "",
     node: isCatalystNode(nodeRaw) ? nodeRaw : "",
     event: firstParam(raw.event),
   };
@@ -321,7 +341,7 @@ export function parseCalendarDaySearch(raw: CalendarDaySearch = {}): {
 export function calendarDayHref(input: {
   day: string;
   anchor?: string;
-  lane?: CalendarLane | "";
+  lane?: DeskLane;
   node?: CatalystNode | "";
   event?: string;
 }): string {
@@ -338,7 +358,7 @@ export function calendarDayHref(input: {
 export function calendarMonthBackHref(input: {
   day: string;
   anchor?: string;
-  lane?: CalendarLane | "";
+  lane?: DeskLane;
   node?: CatalystNode | "";
   today?: string;
 }): string {
@@ -355,7 +375,7 @@ export function calendarMonthBackHref(input: {
 export function laneCountsOnDay(
   events: readonly CalendarEvent[],
   day: string,
-  lane: CalendarLane | "" = "",
+  lane: DeskLane = "",
   node: CatalystNode | "" = "",
 ): Record<CalendarLane, number> {
   const counts: Record<CalendarLane, number> = {

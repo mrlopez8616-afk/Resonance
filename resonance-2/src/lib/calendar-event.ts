@@ -59,7 +59,7 @@ function slug(value: string): string {
 
 export function calendarEventId(input: {
   id?: string;
-  lane: CalendarLane | "catalyst";
+  lane: CalendarLane | "catalyst" | "fight";
   start: string;
   title: string;
 }): string {
@@ -279,12 +279,42 @@ function parseLaneEvent(raw: Record<string, unknown>): CalendarEvent {
   return event;
 }
 
+function parseFight(raw: Record<string, unknown>): CalendarEvent {
+  if (asTrimmed(raw.lane) || asTrimmed(raw.node)) {
+    throw new CalendarWriteError("fights are a type alongside the lanes, not a lane or a node.");
+  }
+  const writer = readWriter(raw);
+  const start = readStart(raw);
+  const title = readTitle(raw);
+  const status = asTrimmed(raw.status).toLowerCase();
+  if (!isCalendarStatus(status)) {
+    throw new CalendarWriteError(
+      "status must be scheduled, sent, history, pending, awaiting, merged, or open.",
+    );
+  }
+  if (raw.recurrence != null) {
+    throw new CalendarWriteError("recurrence is only for the cadence lane.");
+  }
+  return {
+    id: calendarEventId({ id: asTrimmed(raw.id), lane: "fight", start, title }),
+    kind: "fight",
+    start,
+    title,
+    status,
+    writer,
+    link: readLink(asTrimmed(raw.link)),
+    note: readNote(raw),
+    location: readLocation(raw),
+  };
+}
+
 export function parseCalendarEvent(body: unknown): CalendarEvent {
   const raw = extractCalendarBody(body);
   const kind = asTrimmed(raw.kind).toLowerCase();
   if (kind === "catalyst") return parseCatalyst(raw);
+  if (kind === "fight") return parseFight(raw);
   if (kind) {
-    throw new CalendarWriteError('kind must be "catalyst" when set.');
+    throw new CalendarWriteError('kind must be "catalyst" or "fight" when set.');
   }
   return parseLaneEvent(raw);
 }

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
+import { FightDeskFace } from "@/components/fight-desk-face";
 import { FloorDialog } from "@/components/floor-dialog";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
+import type { FightDeskSummary } from "@/lib/bets";
 import type { FloorNode } from "@/data/floor-nodes";
 import { CEG_SLEEVES } from "@/data/ceg-sleeves";
 import { ETN_SLEEVES } from "@/data/etn-sleeves";
@@ -43,9 +45,11 @@ const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
 export function NodeGrid({
   faces,
   sleeves: sleeveBooks = SEED_SLEEVES,
+  fightDesk,
 }: {
   faces: Record<string, LiveFaceData>;
   sleeves?: Record<string, readonly NodeSleeve[]>;
+  fightDesk: FightDeskSummary;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -72,6 +76,11 @@ export function NodeGrid({
   return (
     <>
       <section className="node-grid" aria-label="Node floor">
+        <NodeSquare live label="Fight Desk">
+          <Link href="/fights" className="node-log-link" title="Open Fight Desk">
+            <FightDeskFace summary={fightDesk} />
+          </Link>
+        </NodeSquare>
         {nodes.map((node) => {
           if (node.status === "live") {
             const face = faces[node.ticker];

@@ -2,29 +2,67 @@ export type FillSide = "buy" | "sell";
 
 export type FillVenue = "robinhood" | "coinbase";
 
+/** Coinbase Predict bets. Not a sleeve venue and not an ingest venue. */
+export type BetVenue = "coinbase-predict";
+
 /** Writable sleeve prints. `flare-vault` is founder-typed and is not a FillSleeveId. */
 export type FillSleeveId = "rh-main" | "rh-agentic" | "coinbase";
 
-export type Fill = {
+export type BetFillStatus = "open" | "won" | "lost" | "void";
+
+type FillBase = {
   time: string;
   symbol: string;
+  orderId: string;
+  result: string;
+  tradeId?: string;
+  idempotencyKey?: string;
+  note?: string;
+};
+
+/** Sleeve fill. Buy and sell only. */
+export type TradeFill = FillBase & {
+  kind?: undefined;
   side: FillSide;
   quantity: string;
   price: string;
-  orderId: string;
-  result: string;
   /** Present on hub-ingested rows. Seed samples may omit venue / sleeve. */
   venue?: FillVenue;
-  tradeId?: string;
   sleeve?: FillSleeveId;
-  idempotencyKey?: string;
-  note?: string;
   /**
    * The row is on the operator log only. The typed position seed already
    * includes this fill, so sleeve math must not run again.
    */
   logOnly?: boolean;
 };
+
+/**
+ * Founder bet on the operator log. Venue is Coinbase Predict, ticker is UFC.
+ * Never applied to a crypto or equity sleeve.
+ */
+export type BetFill = FillBase & {
+  kind: "bet";
+  side?: undefined;
+  quantity?: undefined;
+  price?: undefined;
+  venue: BetVenue;
+  sleeve?: undefined;
+  event: string;
+  fight: string;
+  fightSlug: string;
+  pick: string;
+  stake: string;
+  oddsPct: number;
+  payout: string;
+  betStatus: BetFillStatus;
+  settledPayout?: string;
+  realizedPnl?: string;
+  settledAt?: string;
+  estimated?: boolean;
+  logOnly?: undefined;
+};
+
+export type Fill = TradeFill | BetFill;
 
 /**
  * Seed / local fallback for the operator log.

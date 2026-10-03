@@ -4,7 +4,6 @@ import {
   CALENDAR_LANES,
   CATALYST_NODES,
   type CalendarEvent,
-  type CalendarLane,
   type CatalystNode,
 } from "@/data/calendar";
 import {
@@ -82,6 +81,7 @@ function Field({
 }
 
 function rowMark(event: CalendarEvent): string {
+  if (event.kind === "fight") return "Fight";
   if (event.node) return event.node;
   if (event.lane) return CALENDAR_LANE_LABELS[event.lane];
   return "";
@@ -103,7 +103,11 @@ function EventDetail({
   const statusTone =
     status === "tentative" ? "tentative" : settled || status === "confirmed" ? "ok" : undefined;
   const when = eventWhenLabel(event);
-  const showWhen = event.kind === "catalyst" || Boolean(event.end) || event.datePrecision === "month";
+  const showWhen =
+    event.kind === "catalyst" ||
+    event.kind === "fight" ||
+    Boolean(event.end) ||
+    event.datePrecision === "month";
 
   return (
     <article className="calendar-detail">
@@ -146,7 +150,8 @@ function EventDetail({
   );
 }
 
-function laneLabel(lane: CalendarLane | ""): string {
+function laneLabel(lane: CalendarDeskQuery["lane"]): string {
+  if (lane === "fights") return "Fights";
   return lane ? CALENDAR_LANE_LABELS[lane] : "All";
 }
 
@@ -364,7 +369,7 @@ export function CalendarDesk({
         : civilWeekdayLong(query.day);
   const noun = visible.length === 1 ? "event" : "events";
   const when = query.day === today ? "Today" : formatCivilDate(query.day);
-  const emptyLane = query.lane ? CALENDAR_LANE_LABELS[query.lane] : "";
+  const emptyLane = query.lane ? laneLabel(query.lane) : "";
   const countIds = (days: readonly string[], notes: readonly CalendarEvent[]) => {
     const ids = new Set<string>(notes.map((event) => event.id));
     for (const day of days) {
@@ -437,6 +442,19 @@ export function CalendarDesk({
             </Link>
           );
         })}
+        <Link
+          href={calendarHref({
+            day: query.day,
+            view: query.view,
+            lane: "fights",
+            today,
+          })}
+          className={query.lane === "fights" ? "is-current" : undefined}
+          aria-current={query.lane === "fights" ? "true" : undefined}
+          data-tone="fights"
+        >
+          Fights
+        </Link>
       </nav>
     </>
   );

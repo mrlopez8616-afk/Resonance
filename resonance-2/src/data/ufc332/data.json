@@ -1,0 +1,1802 @@
+[
+ {
+  "n": 1,
+  "time": "3:00 PM",
+  "wc": "Welterweight",
+  "A": {
+   "name": "Eric Nolan",
+   "record": "8-5",
+   "record_ufcstats": "8-5-0",
+   "ufc_record": "0-2",
+   "streak": "2L",
+   "last5": [
+    "LOSS vs Farman Hasanov \u2014 Decision (Unanimous), R3 5:00 (Jun 2026)",
+    "LOSS vs Baisangur Susurkaev \u2014 Submission (Rear-Naked Choke), R2 2:01 (Aug 2025)",
+    "WIN vs Blayne Richards \u2014 KO (Punch), R1 3:06 (May 2025)",
+    "WIN vs Trevor Gudde \u2014 KO (Punch), R2 1:17 (Dec 2024)",
+    "WIN vs Aireon Tavarres \u2014 KO (Punch), R1 3:06 (Oct 2024)"
+   ],
+   "last_fight": "2026-06-27",
+   "days_since": 98,
+   "age": 29,
+   "height": "6' 0\"",
+   "reach": "73\"",
+   "stance": "Orthodox",
+   "slpm": "1.68",
+   "stracc": "34%",
+   "sapm": "2.59",
+   "strdef": "44%",
+   "tdavg": "0.00",
+   "tdacc": "0%",
+   "tddef": "44%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "4",
+   "wins_sub": "2",
+   "wins_dec": "2",
+   "loss_ko": "0",
+   "loss_sub": "2",
+   "loss_dec": "3",
+   "finish_rate": "75%",
+   "camp": "Lionheart Mixed Martial Arts",
+   "sherdog": "https://www.sherdog.com/fighter/Eric-Nolan-346419",
+   "ufcstats": "http://ufcstats.com/fighter-details/64b12fe31be7560c",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=ZHhpPSfSU-E",
+    "title": "Eric Nolan MMA Highlights- Signed to the UFC-American Prospect",
+    "channel": "MMA Falcons",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -240,
+    "Caesars": -225,
+    "BetRivers": -240,
+    "BetWay": -225,
+    "Unibet": -240
+   },
+   "kalshi": -229
+  },
+  "B": {
+   "name": "Court McGee",
+   "record": "22-14",
+   "record_ufcstats": "23-14-0",
+   "ufc_record": "11-13",
+   "streak": "1L",
+   "last5": [
+    "LOSS vs Michael Chiesa \u2014 Decision (Unanimous), R3 5:00 (Jun 2025)",
+    "WIN vs Tim Means \u2014 Submission (Neck Crank), R1 3:19 (Oct 2024)",
+    "LOSS vs Alex Morono \u2014 Decision (Unanimous), R3 5:00 (Apr 2024)",
+    "LOSS vs Matt Brown \u2014 KO (Punch), R1 4:09 (May 2023)",
+    "LOSS vs Jeremiah Wells \u2014 KO (Punch), R1 1:34 (Jun 2022)"
+   ],
+   "last_fight": "2025-06-14",
+   "days_since": 476,
+   "age": 41,
+   "height": "5' 11\"",
+   "reach": "75\"",
+   "stance": "Orthodox",
+   "slpm": "4.50",
+   "stracc": "36%",
+   "sapm": "3.65",
+   "strdef": "60%",
+   "tdavg": "1.78",
+   "tdacc": "24%",
+   "tddef": "70%",
+   "subavg": "0.5",
+   "no_ufc_stats": false,
+   "wins_ko": "5",
+   "wins_sub": "6",
+   "wins_dec": "11",
+   "loss_ko": "3",
+   "loss_sub": "0",
+   "loss_dec": "11",
+   "finish_rate": "50%",
+   "camp": "Factory X",
+   "sherdog": "https://www.sherdog.com/fighter/Court-McGee-34124",
+   "ufcstats": "http://ufcstats.com/fighter-details/523fa774700d7d3f",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=t5s9Gs6ok4c",
+    "title": "MICHAEL CHIESA VS COURT MCGEE FULL FIGHT highlight",
+    "channel": "mr lonely",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 198,
+    "Caesars": 185,
+    "BetRivers": 188,
+    "BetWay": 175,
+    "Unibet": 188
+   },
+   "kalshi": 189
+  },
+  "cb": [
+   68,
+   33
+  ],
+  "ml_med": [
+   -240,
+   188
+  ],
+  "raw_imp": [
+   70.0,
+   34.9
+  ],
+  "fair": [
+   66.8,
+   33.2
+  ]
+ },
+ {
+  "n": 2,
+  "time": "3:20 PM",
+  "wc": "Middleweight",
+  "A": {
+   "name": "Ismail Naurdiev",
+   "record": "25-8",
+   "record_ufcstats": "25-8-0",
+   "ufc_record": "4-3",
+   "streak": "1W",
+   "last5": [
+    "WIN vs Ryan Loder \u2014 KO (Punch), R1 1:26 (Nov 2025)",
+    "LOSS vs Jun Yong Park \u2014 Decision (Unanimous), R3 5:00 (Jun 2025)",
+    "WIN vs Bruno Silva \u2014 Decision (Unanimous), R3 5:00 (Oct 2024)",
+    "WIN vs Tahar Hadbi \u2014 Submission (Guillotine Choke), R1 1:10 (Dec 2023)",
+    "LOSS vs Vadym Kutsyi \u2014 TKO (Punches)), R1 3:23 (Dec 2022)"
+   ],
+   "last_fight": "2025-11-22",
+   "days_since": 315,
+   "age": 30,
+   "height": "5' 10\"",
+   "reach": "74\"",
+   "stance": "Orthodox",
+   "slpm": "3.66",
+   "stracc": "52%",
+   "sapm": "1.75",
+   "strdef": "64%",
+   "tdavg": "1.48",
+   "tdacc": "40%",
+   "tddef": "73%",
+   "subavg": "0.2",
+   "no_ufc_stats": false,
+   "wins_ko": "13",
+   "wins_sub": "6",
+   "wins_dec": "6",
+   "loss_ko": "2",
+   "loss_sub": "2",
+   "loss_dec": "4",
+   "finish_rate": "76%",
+   "camp": "Top Team Salzburg",
+   "sherdog": "https://www.sherdog.com/fighter/Ismail-Naurdiev-168833",
+   "ufcstats": "http://ufcstats.com/fighter-details/6a96ad1bc34fb113",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=I_BjJDB1rG8",
+    "title": "Ismail Naurdiev has returned to the UFC- Highlights of what he has done since.",
+    "channel": "MMA Falcons",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -134,
+    "Caesars": -140,
+    "BetRivers": -143,
+    "BetWay": -138,
+    "Unibet": -143
+   },
+   "kalshi": -137
+  },
+  "B": {
+   "name": "Marvin Vettori",
+   "record": "19-10-1",
+   "record_ufcstats": "19-10-1",
+   "ufc_record": "9-8-1",
+   "streak": "4L",
+   "last5": [
+    "LOSS vs Brunno Ferreira \u2014 Decision (Unanimous), R3 5:00 (Dec 2025)",
+    "LOSS vs Brendan Allen \u2014 Decision (Unanimous), R3 5:00 (Jul 2025)",
+    "LOSS vs Roman Dolidze \u2014 Decision (Unanimous), R5 5:00 (Mar 2025)",
+    "LOSS vs Jared Cannonier \u2014 Decision (Unanimous), R5 5:00 (Jun 2023)",
+    "WIN vs Roman Dolidze \u2014 Decision (Unanimous), R3 5:00 (Mar 2023)"
+   ],
+   "last_fight": "2025-12-06",
+   "days_since": 301,
+   "age": 33,
+   "height": "6' 0\"",
+   "reach": "74\"",
+   "stance": "Southpaw",
+   "slpm": "4.74",
+   "stracc": "45%",
+   "sapm": "4.55",
+   "strdef": "56%",
+   "tdavg": "1.41",
+   "tdacc": "43%",
+   "tddef": "68%",
+   "subavg": "0.4",
+   "no_ufc_stats": false,
+   "wins_ko": "2",
+   "wins_sub": "9",
+   "wins_dec": "8",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "10",
+   "finish_rate": "58%",
+   "camp": "American Top Team",
+   "sherdog": "https://www.sherdog.com/fighter/Marvin-Vettori-80421",
+   "ufcstats": "http://ufcstats.com/fighter-details/7acbb0972e75281a",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=GTv-c4eIeZs",
+    "title": "Marvin 'The Italian Dream' Vettori | HIGHLIGHTS 2020 (HD)",
+    "channel": "WarriorMMA",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 114,
+    "Caesars": 118,
+    "BetRivers": 116,
+    "BetWay": 110,
+    "Unibet": 116
+   },
+   "kalshi": 114
+  },
+  "cb": [
+   56,
+   45
+  ],
+  "ml_med": [
+   -140,
+   116
+  ],
+  "raw_imp": [
+   58.3,
+   46.6
+  ],
+  "fair": [
+   55.6,
+   44.4
+  ]
+ },
+ {
+  "n": 3,
+  "time": "3:40 PM",
+  "wc": "Lightweight",
+  "A": {
+   "name": "Alexander Hernandez",
+   "record": "18-9",
+   "record_ufcstats": "18-9-0",
+   "ufc_record": "10-8",
+   "streak": "1L",
+   "last5": [
+    "LOSS vs Rafa Garcia \u2014 Decision (Unanimous), R3 5:00 (Apr 2026)",
+    "WIN vs Diego Ferreira \u2014 TKO (Punches), R2 3:46 (Sep 2025)",
+    "WIN vs Chase Hooper \u2014 TKO (Punches), R1 4:58 (Aug 2025)",
+    "WIN vs Kurt Holobaugh \u2014 Decision (Unanimous), R3 5:00 (Mar 2025)",
+    "WIN vs Austin Hubbard \u2014 Decision (Split), R3 5:00 (Oct 2024)"
+   ],
+   "last_fight": "2026-04-25",
+   "days_since": 161,
+   "age": 34,
+   "height": "5' 9\"",
+   "reach": "72\"",
+   "stance": "Orthodox",
+   "slpm": "4.23",
+   "stracc": "40%",
+   "sapm": "4.45",
+   "strdef": "59%",
+   "tdavg": "1.05",
+   "tdacc": "35%",
+   "tddef": "68%",
+   "subavg": "0.1",
+   "no_ufc_stats": false,
+   "wins_ko": "8",
+   "wins_sub": "2",
+   "wins_dec": "8",
+   "loss_ko": "3",
+   "loss_sub": "1",
+   "loss_dec": "5",
+   "finish_rate": "56%",
+   "camp": "Factory X",
+   "sherdog": "https://www.sherdog.com/fighter/Alexander-Hernandez-97669",
+   "ufcstats": "http://ufcstats.com/fighter-details/262a7d06203657e6",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=r03IVxgWXuM",
+    "title": "UNANIMOUS DEC | Rafa Garcia vs. Alexander Hernandez | UFC Fight Night Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -260,
+    "Caesars": -270,
+    "BetRivers": -265,
+    "BetWay": -275,
+    "Unibet": -265
+   },
+   "kalshi": -277
+  },
+  "B": {
+   "name": "Rafael Dos Anjos",
+   "record": "32-17",
+   "record_ufcstats": "32-17-0",
+   "ufc_record": "21-15",
+   "streak": "3L",
+   "last5": [
+    "LOSS vs Geoff Neal \u2014 TKO (Knee Injury), R1 1:30 (Oct 2024)",
+    "LOSS vs Mateusz Gamrot \u2014 Decision (Unanimous), R3 5:00 (Mar 2024)",
+    "LOSS vs Vicente Luque \u2014 Decision (Unanimous), R5 5:00 (Aug 2023)",
+    "WIN vs Bryan Barberena \u2014 Submission (Neck Crank), R2 3:20 (Dec 2022)",
+    "LOSS vs Rafael Fiziev \u2014 KO (Punches), R5 0:18 (Jul 2022)"
+   ],
+   "last_fight": "2024-10-26",
+   "days_since": 707,
+   "age": 41,
+   "height": "5' 8\"",
+   "reach": "70\"",
+   "stance": "Southpaw",
+   "slpm": "3.48",
+   "stracc": "47%",
+   "sapm": "3.23",
+   "strdef": "60%",
+   "tdavg": "1.95",
+   "tdacc": "35%",
+   "tddef": "54%",
+   "subavg": "0.6",
+   "no_ufc_stats": false,
+   "wins_ko": "5",
+   "wins_sub": "11",
+   "wins_dec": "16",
+   "loss_ko": "5",
+   "loss_sub": "0",
+   "loss_dec": "12",
+   "finish_rate": "50%",
+   "camp": "RDA Academy / Nova Uniao",
+   "sherdog": "https://www.sherdog.com/fighter/Rafael-dos-Anjos-11675",
+   "ufcstats": "http://ufcstats.com/fighter-details/6a2f7c151031653d",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=KMGT5gH50Zk",
+    "title": "UFC&MMA.Rafael Dos Anjos - Highlights.BEST MOMENTS.",
+    "channel": "UFC&MMA",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 215,
+    "Caesars": 220,
+    "BetRivers": 200,
+    "BetWay": 210,
+    "Unibet": 200
+   },
+   "kalshi": 228
+  },
+  "cb": [
+   72,
+   29
+  ],
+  "ml_med": [
+   -265,
+   210
+  ],
+  "raw_imp": [
+   72.7,
+   32.4
+  ],
+  "fair": [
+   69.2,
+   30.8
+  ]
+ },
+ {
+  "n": 4,
+  "time": "4:00 PM",
+  "wc": "Welterweight",
+  "A": {
+   "name": "Jacobe Smith",
+   "record": "12-0",
+   "record_ufcstats": "12-0-0",
+   "ufc_record": "3-0",
+   "streak": "12W",
+   "last5": [
+    "WIN vs Josiah Harrell \u2014 KO (Punches), R1 3:01 (Feb 2026)",
+    "WIN vs Niko Price \u2014 Submission (Rear-Naked Choke), R2 4:03 (Jun 2025)",
+    "WIN vs Preston Parsons \u2014 KO (Punches), R1 1:13 (Jan 2025)",
+    "WIN vs Christien Savoie \u2014 TKO (Elbows), R2 2:55 (Oct 2024)",
+    "WIN vs Jared McLoughlin \u2014 KO (Punches), R1 0:21 (Feb 2024)"
+   ],
+   "last_fight": "2026-02-21",
+   "days_since": 224,
+   "age": 30,
+   "height": "5' 10\"",
+   "reach": "72\"",
+   "stance": "Southpaw",
+   "slpm": "6.89",
+   "stracc": "67%",
+   "sapm": "2.78",
+   "strdef": "47%",
+   "tdavg": "7.78",
+   "tdacc": "91%",
+   "tddef": "100%",
+   "subavg": "0.7",
+   "no_ufc_stats": false,
+   "wins_ko": "9",
+   "wins_sub": "1",
+   "wins_dec": "2",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "0",
+   "finish_rate": "83%",
+   "camp": "Ranger 47",
+   "sherdog": "https://www.sherdog.com/fighter/Jacobe-Smith-394506",
+   "ufcstats": "http://ufcstats.com/fighter-details/85497ffd934ecf7e",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=jIvOv4VNrkY",
+    "title": "BRUTAL TKO \ud83d\ude32 | Jacobe Smith vs. Josiah Harrell | UFC Fight Night Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -1200,
+    "Caesars": -1200,
+    "BetRivers": -1430,
+    "BetWay": -1000,
+    "Unibet": -1430
+   },
+   "kalshi": -872
+  },
+  "B": {
+   "name": "Bruce Whitehead",
+   "record": "8-2",
+   "record_ufcstats": "8-2-0",
+   "ufc_record": "0-0 (UFC debut)",
+   "streak": "2W",
+   "last5": [
+    "WIN vs Ali Abouzalam \u2014 TKO (Knee and Punches), R1 0:48 (Sep 2026)",
+    "WIN vs Jared McLoughlin \u2014 Decision (Unanimous), R3 5:00 (Nov 2025)",
+    "LOSS vs Victor Valenzuela \u2014 KO (Knee), R1 1:28 (Jun 2025)",
+    "WIN vs Kenan Jackson \u2014 Technical Submission (Kimura), R1 2:34 (Mar 2025)",
+    "WIN vs Rusty Turley \u2014 TKO (Head Kick and Punches), R1 0:32 (Jun 2024)"
+   ],
+   "last_fight": "2026-09-20",
+   "days_since": 13,
+   "age": 29,
+   "height": "5' 10\"",
+   "reach": "73\"",
+   "stance": "Switch",
+   "slpm": "not found (no UFC fights)",
+   "stracc": "not found (no UFC fights)",
+   "sapm": "not found (no UFC fights)",
+   "strdef": "not found (no UFC fights)",
+   "tdavg": "not found (no UFC fights)",
+   "tdacc": "not found (no UFC fights)",
+   "tddef": "not found (no UFC fights)",
+   "subavg": "not found (no UFC fights)",
+   "no_ufc_stats": true,
+   "wins_ko": "2",
+   "wins_sub": "3",
+   "wins_dec": "3",
+   "loss_ko": "1",
+   "loss_sub": "1",
+   "loss_dec": "0",
+   "finish_rate": "62%",
+   "camp": "W4R Training Center",
+   "sherdog": "https://www.sherdog.com/fighter/Bruce-Whitehead-176151",
+   "ufcstats": "http://ufcstats.com/fighter-details/6c39d016053601ee",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=JjTQp7XCfxw",
+    "title": "Bruce Whitehead MMA Highlights- American Welterweight Prospect Signed to the UFC",
+    "channel": "MMA Falcons",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 750,
+    "Caesars": 700,
+    "BetRivers": 800,
+    "BetWay": 600,
+    "Unibet": 800
+   },
+   "kalshi": 683
+  },
+  "cb": [
+   88,
+   12
+  ],
+  "ml_med": [
+   -1200,
+   750
+  ],
+  "raw_imp": [
+   92.5,
+   12.2
+  ],
+  "fair": [
+   88.4,
+   11.6
+  ]
+ },
+ {
+  "n": 5,
+  "time": "4:20 PM",
+  "wc": "Heavyweight",
+  "A": {
+   "name": "Johnny Walker",
+   "record": "22-10 (1 NC)",
+   "record_ufcstats": "22-10-0 (1 NC)",
+   "ufc_record": "8-7 (1 NC)",
+   "streak": "1L",
+   "last5": [
+    "LOSS vs Dominick Reyes \u2014 Decision (Split), R3 5:00 (Apr 2026)",
+    "WIN vs Mingyang Zhang \u2014 TKO (Leg Kicks and Punches), R2 2:37 (Aug 2025)",
+    "LOSS vs Volkan Oezdemir \u2014 KO (Punch), R1 2:28 (Jun 2024)",
+    "LOSS vs Magomed Ankalaev \u2014 KO (Punches), R2 2:42 (Jan 2024)",
+    "NC vs Magomed Ankalaev \u2014 No Contest (Illegal Knee), R1 3:13 (Oct 2023)"
+   ],
+   "last_fight": "2026-04-11",
+   "days_since": 175,
+   "age": 34,
+   "height": "6' 6\"",
+   "reach": "82\"",
+   "stance": "Orthodox",
+   "slpm": "3.90",
+   "stracc": "54%",
+   "sapm": "2.99",
+   "strdef": "46%",
+   "tdavg": "0.36",
+   "tdacc": "50%",
+   "tddef": "57%",
+   "subavg": "0.7",
+   "no_ufc_stats": false,
+   "wins_ko": "17",
+   "wins_sub": "3",
+   "wins_dec": "2",
+   "loss_ko": "6",
+   "loss_sub": "1",
+   "loss_dec": "3",
+   "finish_rate": "91%",
+   "camp": "Xtreme Couture",
+   "sherdog": "https://www.sherdog.com/fighter/Johnny-Walker-170203",
+   "ufcstats": "http://ufcstats.com/fighter-details/c21f26bbde777573",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=m6Z2fauC5gc",
+    "title": "Best of Johnny Walker",
+    "channel": "UFC",
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -108,
+    "Caesars": -115,
+    "BetRivers": -121,
+    "BetWay": -138,
+    "Unibet": -121
+   },
+   "kalshi": -117
+  },
+  "B": {
+   "name": "Michael (Mick) Parkin",
+   "record": "10-1",
+   "record_ufcstats": "10-1-0",
+   "ufc_record": "4-1",
+   "streak": "1L",
+   "last5": [
+    "LOSS vs Marcin Tybura \u2014 Decision (Unanimous), R3 5:00 (Mar 2025)",
+    "WIN vs Lukasz Brzeski \u2014 KO (Punches), R1 3:23 (Jul 2024)",
+    "WIN vs Mohammed Usman \u2014 Decision (Unanimous), R3 5:00 (Mar 2024)",
+    "WIN vs Caio Machado \u2014 Decision (Unanimous), R3 5:00 (Nov 2023)",
+    "WIN vs Jamal Pogues \u2014 Decision (Unanimous), R3 5:00 (Jul 2023)"
+   ],
+   "last_fight": "2025-03-22",
+   "days_since": 560,
+   "age": 31,
+   "height": "6' 4\"",
+   "reach": "79\"",
+   "stance": "Orthodox",
+   "slpm": "4.70",
+   "stracc": "50%",
+   "sapm": "4.13",
+   "strdef": "58%",
+   "tdavg": "1.38",
+   "tdacc": "46%",
+   "tddef": "50%",
+   "subavg": "0.2",
+   "no_ufc_stats": false,
+   "wins_ko": "6",
+   "wins_sub": "1",
+   "wins_dec": "3",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "1",
+   "finish_rate": "70%",
+   "camp": "TFT MMA",
+   "sherdog": "https://www.sherdog.com/fighter/Mick-Parkin-224411",
+   "ufcstats": "http://ufcstats.com/fighter-details/0d5cc0170c1a7e71",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=SsgM0sK8LEI",
+    "title": "UFC 304: Mick Parkin vs \u0141ukasz Brzeski Fight Highlights",
+    "channel": "MMAllstars",
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -108,
+    "Caesars": -105,
+    "BetRivers": -103,
+    "BetWay": 110,
+    "Unibet": -103
+   },
+   "kalshi": -108
+  },
+  "cb": [
+   52,
+   49
+  ],
+  "ml_med": [
+   -121,
+   -103
+  ],
+  "raw_imp": [
+   54.6,
+   50.4
+  ],
+  "fair": [
+   52.0,
+   48.0
+  ]
+ },
+ {
+  "n": 6,
+  "time": "5:00 PM",
+  "wc": "Heavyweight",
+  "A": {
+   "name": "Anthony Wint",
+   "record": "8-0",
+   "record_ufcstats": "8-0-0",
+   "ufc_record": "1-0",
+   "streak": "8W",
+   "last5": [
+    "WIN vs Terrance Chatman \u2014 Technical Submission (Arm-Triangle Choke), R1 4:29 (Aug 2026)",
+    "WIN vs Matthew Adams \u2014 TKO (Punches), R1 0:34 (Aug 2026)",
+    "WIN vs Jamahl Tatum \u2014 TKO (Punches), R1 0:37 (Mar 2026)",
+    "WIN vs Miles Banks \u2014 KO (Punches), R1 0:21 (Nov 2025)",
+    "WIN vs Emmanuel Verdier \u2014 TKO (Punches)), R3 4:02 (Jun 2025)"
+   ],
+   "last_fight": "2026-08-22",
+   "days_since": 42,
+   "age": 31,
+   "height": "5' 11\"",
+   "reach": "78\"",
+   "stance": "Orthodox",
+   "slpm": "3.56",
+   "stracc": "66%",
+   "sapm": "0.20",
+   "strdef": "83%",
+   "tdavg": "2.97",
+   "tdacc": "33%",
+   "tddef": "100%",
+   "subavg": "3.0",
+   "no_ufc_stats": false,
+   "wins_ko": "5",
+   "wins_sub": "2",
+   "wins_dec": "1",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "0",
+   "finish_rate": "88%",
+   "camp": "Kill Cliff FC",
+   "sherdog": "https://www.sherdog.com/fighter/Anthony-Wint-383061",
+   "ufcstats": "http://ufcstats.com/fighter-details/b34976c022b24568",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=P2kYc_jrLTs",
+    "title": "DEBUT WIN \ud83d\udcaa | Anthony Wint vs. Terrance Chatman | UFC Fight Night Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -550,
+    "Caesars": -550,
+    "BetRivers": -770,
+    "BetWay": -549,
+    "Unibet": -560
+   },
+   "kalshi": -491
+  },
+  "B": {
+   "name": "Lucas Armand",
+   "record": "6-0",
+   "record_ufcstats": "6-0-0",
+   "ufc_record": "0-0 (UFC debut)",
+   "streak": "6W",
+   "last5": [
+    "WIN vs Cameron Graham \u2014 TKO (Strikes), R4 0:16 (Mar 2026)",
+    "WIN vs Braxton Smith \u2014 TKO (Strikes), R1 1:54 (Nov 2025)",
+    "WIN vs Lawrence Phillips \u2014 TKO Vance Swerdan, R2 3:59 (Jun 2025)",
+    "WIN vs Marcus Maulding \u2014 TKO (Strikes), R1 1:38 (May 2025)",
+    "WIN vs Chris Cameron \u2014 TKO (Retirement), R2 5:00 (Feb 2025)"
+   ],
+   "last_fight": "2026-03-07",
+   "days_since": 210,
+   "age": 30,
+   "height": "6' 2\"",
+   "reach": "78\"",
+   "stance": "Orthodox",
+   "slpm": "not found (no UFC fights)",
+   "stracc": "not found (no UFC fights)",
+   "sapm": "not found (no UFC fights)",
+   "strdef": "not found (no UFC fights)",
+   "tdavg": "not found (no UFC fights)",
+   "tdacc": "not found (no UFC fights)",
+   "tddef": "not found (no UFC fights)",
+   "subavg": "not found (no UFC fights)",
+   "no_ufc_stats": true,
+   "wins_ko": "5",
+   "wins_sub": "0",
+   "wins_dec": "1",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "0",
+   "finish_rate": "83%",
+   "camp": "not found",
+   "sherdog": "https://www.sherdog.com/fighter/Lucas-Armand-420549",
+   "ufcstats": "http://ufcstats.com/fighter-details/20e04625a5395a06",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=X55-V6XMmcI",
+    "title": "Lucas Armand MMA Highlights- Undefeated American Heavyweight Signed to the UFC",
+    "channel": "MMA Falcons",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 410,
+    "Caesars": 400,
+    "BetRivers": 500,
+    "BetWay": 400,
+    "Unibet": 380
+   },
+   "kalshi": 397
+  },
+  "cb": [
+   82,
+   18
+  ],
+  "ml_med": [
+   -550,
+   400
+  ],
+  "raw_imp": [
+   85.4,
+   19.4
+  ],
+  "fair": [
+   81.5,
+   18.5
+  ]
+ },
+ {
+  "n": 7,
+  "time": "5:20 PM",
+  "wc": "Featherweight (short-notice catchweight move from 135)",
+  "A": {
+   "name": "Marcus McGhee",
+   "record": "11-2",
+   "record_ufcstats": "11-2-0",
+   "ufc_record": "5-1",
+   "streak": "1W",
+   "last5": [
+    "WIN vs John Yannis \u2014 Decision (Unanimous), R3 5:00 (Jun 2026)",
+    "LOSS vs Petr Yan \u2014 Decision (Unanimous), R3 5:00 (Jul 2025)",
+    "WIN vs Jonathan Martinez \u2014 Decision (Unanimous), R3 5:00 (Nov 2024)",
+    "WIN vs Gaston Bolanos \u2014 TKO (Spinning Wheel Kick and Punches), R3 3:29 (Jan 2024)",
+    "WIN vs J.P. Buys \u2014 KO (Punch), R1 2:19 (Aug 2023)"
+   ],
+   "last_fight": "2026-06-06",
+   "days_since": 119,
+   "age": 36,
+   "height": "5' 8\"",
+   "reach": "69\"",
+   "stance": "Orthodox",
+   "slpm": "5.44",
+   "stracc": "43%",
+   "sapm": "3.64",
+   "strdef": "56%",
+   "tdavg": "0.24",
+   "tdacc": "11%",
+   "tddef": "90%",
+   "subavg": "0.2",
+   "no_ufc_stats": false,
+   "wins_ko": "8",
+   "wins_sub": "1",
+   "wins_dec": "2",
+   "loss_ko": "0",
+   "loss_sub": "1",
+   "loss_dec": "1",
+   "finish_rate": "82%",
+   "camp": "MMA Lab",
+   "sherdog": "https://www.sherdog.com/fighter/Marcus-McGhee-122153",
+   "ufcstats": "http://ufcstats.com/fighter-details/c0ac37a4a1133da9",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=HJwiIx66NbM",
+    "title": "Marcus McGhee \"Maniac\" Fight Highlights | Updated in 2026",
+    "channel": "FightArtwork",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -560,
+    "Caesars": -550,
+    "BetRivers": -590,
+    "BetWay": -450,
+    "Unibet": -590
+   },
+   "kalshi": -459
+  },
+  "B": {
+   "name": "Anthony Romero",
+   "record": "7-2 (1 NC)",
+   "record_ufcstats": "7-2-0 (1 NC)",
+   "ufc_record": "0-0 (UFC debut)",
+   "streak": "2W",
+   "last5": [
+    "WIN vs Yuma Horiuchi \u2014 TKO (Punches), R1 0:25 (May 2026)",
+    "WIN vs Keenan Lewis \u2014 Submission (Rear-Naked Choke)), R3 4:55 (Aug 2025)",
+    "LOSS vs Johnny Robles \u2014 Decision (Unanimous), R3 5:00 (Mar 2025)",
+    "WIN vs Brandon Spencer \u2014 Submission (Armbar)), R2 4:37 (Sep 2024)",
+    "NC vs Ryan Lilley \u2014 No Contest (Accidental Groin Kick), R1 2:18 (Jul 2024)"
+   ],
+   "last_fight": "2026-05-09",
+   "days_since": 147,
+   "age": "not found",
+   "height": "5' 5\"",
+   "reach": "66\"",
+   "stance": "Southpaw",
+   "slpm": "not found (no UFC fights)",
+   "stracc": "not found (no UFC fights)",
+   "sapm": "not found (no UFC fights)",
+   "strdef": "not found (no UFC fights)",
+   "tdavg": "not found (no UFC fights)",
+   "tdacc": "not found (no UFC fights)",
+   "tddef": "not found (no UFC fights)",
+   "subavg": "not found (no UFC fights)",
+   "no_ufc_stats": true,
+   "wins_ko": "4",
+   "wins_sub": "2",
+   "wins_dec": "1",
+   "loss_ko": "1",
+   "loss_sub": "0",
+   "loss_dec": "1",
+   "finish_rate": "86%",
+   "camp": "Blackhouse MMA",
+   "sherdog": "https://www.sherdog.com/fighter/Anthony-Romero-211489",
+   "ufcstats": "http://ufcstats.com/fighter-details/4419acb81e6f0ea4",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=1tHHNNNMfmw",
+    "title": "Anthony Romero MMA Highlights- American Bantamweight Prospect Signed to the UFC.",
+    "channel": "MMA Falcons",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 420,
+    "Caesars": 400,
+    "BetRivers": 400,
+    "BetWay": 333,
+    "Unibet": 400
+   },
+   "kalshi": 372
+  },
+  "cb": [
+   81,
+   20
+  ],
+  "ml_med": [
+   -560,
+   400
+  ],
+  "raw_imp": [
+   84.5,
+   20.5
+  ],
+  "fair": [
+   80.5,
+   19.5
+  ]
+ },
+ {
+  "n": 8,
+  "time": "5:40 PM",
+  "wc": "Middleweight",
+  "A": {
+   "name": "Damian Pinas",
+   "record": "10-1",
+   "record_ufcstats": "10-1-0",
+   "ufc_record": "2-0",
+   "streak": "6W",
+   "last5": [
+    "WIN vs Cesar Almeida \u2014 KO (Punch), R1 4:44 (Jul 2026)",
+    "WIN vs Wesley Schultz \u2014 TKO (Punches), R1 2:30 (Feb 2026)",
+    "WIN vs Vitor Costa \u2014 TKO (Punches), R1 1:46 (Sep 2025)",
+    "WIN vs Wesley da Silva Marques \u2014 KO (Punch), R1 1:59 (Dec 2024)",
+    "WIN vs Jhony Gregory \u2014 TKO (Punches), R1 4:01 (Sep 2024)"
+   ],
+   "last_fight": "2026-07-11",
+   "days_since": 84,
+   "age": 24,
+   "height": "6' 1\"",
+   "reach": "79\"",
+   "stance": "Orthodox",
+   "slpm": "6.33",
+   "stracc": "63%",
+   "sapm": "5.89",
+   "strdef": "39%",
+   "tdavg": "0.00",
+   "tdacc": "0%",
+   "tddef": "85%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "9",
+   "wins_sub": "1",
+   "wins_dec": "0",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "0",
+   "finish_rate": "100%",
+   "camp": "Nova Uniao",
+   "sherdog": "https://www.sherdog.com/fighter/Damian-Pinas-426729",
+   "ufcstats": "http://ufcstats.com/fighter-details/fdd22e895a70e4a8",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=XsFzetqAdJs",
+    "title": "Damian Pinas MMA HIGHLIGHTS 2026 | Professional 8-1 Fighter UFC Prospect | Shooto Brasil | DWCS",
+    "channel": "The City Life Project",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -590,
+    "Caesars": -600,
+    "BetRivers": -1250,
+    "BetWay": -549,
+    "Unibet": -590
+   },
+   "kalshi": -491
+  },
+  "B": {
+   "name": "Andrey Pulyaev",
+   "record": "10-5",
+   "record_ufcstats": "10-5-0",
+   "ufc_record": "1-3",
+   "streak": "2L",
+   "last5": [
+    "LOSS vs Nursulton Ruziboev \u2014 Technical Submission (Neck Crank), R1 3:58 (Jun 2026)",
+    "LOSS vs Ateba Abega Gautier \u2014 Decision (Unanimous), R3 5:00 (Jan 2026)",
+    "WIN vs Nick Klein \u2014 TKO (Body Kick and Punches), R2 1:31 (Aug 2025)",
+    "LOSS vs Christian Leroy Duncan \u2014 Decision (Unanimous), R3 5:00 (Mar 2025)",
+    "WIN vs Liam Anderson \u2014 Decision (Unanimous), R3 5:00 (Aug 2024)"
+   ],
+   "last_fight": "2026-06-27",
+   "days_since": 98,
+   "age": 29,
+   "height": "6' 4\"",
+   "reach": "78\"",
+   "stance": "Southpaw",
+   "slpm": "3.60",
+   "stracc": "55%",
+   "sapm": "2.94",
+   "strdef": "55%",
+   "tdavg": "0.27",
+   "tdacc": "16%",
+   "tddef": "56%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "6",
+   "wins_sub": "2",
+   "wins_dec": "2",
+   "loss_ko": "1",
+   "loss_sub": "1",
+   "loss_dec": "3",
+   "finish_rate": "80%",
+   "camp": "Storm Shlemenko Fight Team",
+   "sherdog": "https://www.sherdog.com/fighter/Andrey-Pulyaev-398399",
+   "ufcstats": "http://ufcstats.com/fighter-details/22e07d3da1aa3475",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=3fdVxQCx0gs",
+    "title": "Andrey Pulyaev Fight Highlights | Updated in 2025",
+    "channel": "FightArtwork",
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 430,
+    "Caesars": 430,
+    "BetRivers": 700,
+    "BetWay": 400,
+    "Unibet": 410
+   },
+   "kalshi": 397
+  },
+  "cb": [
+   82,
+   19
+  ],
+  "ml_med": [
+   -590,
+   430
+  ],
+  "raw_imp": [
+   86.8,
+   18.0
+  ],
+  "fair": [
+   82.8,
+   17.2
+  ]
+ },
+ {
+  "n": 9,
+  "time": "6:00 PM",
+  "wc": "Flyweight",
+  "A": {
+   "name": "Imanol Rodriguez Pillado",
+   "record": "7-0",
+   "record_ufcstats": "7-0-0",
+   "ufc_record": "1-0",
+   "streak": "7W",
+   "last5": [
+    "WIN vs Kevin Borjas \u2014 TKO (Punches), R2 4:21 (Feb 2026)",
+    "WIN vs Roque Conceicao Moreira Junior \u2014 TKO (Punches), R1 2:12 (Oct 2025)",
+    "WIN vs Alberto Trujillo \u2014 TKO (Punches), R1 4:27 (Sep 2024)",
+    "WIN vs Tyrell Hill \u2014 TKO (Punches), R1 1:50 (Jul 2024)",
+    "WIN vs Emmanuel Berumen \u2014 Submission (Rear-Naked Choke), R1 1:30 (Feb 2024)"
+   ],
+   "last_fight": "2026-02-28",
+   "days_since": 217,
+   "age": 26,
+   "height": "5' 4\"",
+   "reach": "64\"",
+   "stance": "Orthodox",
+   "slpm": "5.71",
+   "stracc": "55%",
+   "sapm": "2.42",
+   "strdef": "58%",
+   "tdavg": "1.30",
+   "tdacc": "33%",
+   "tddef": "0%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "6",
+   "wins_sub": "1",
+   "wins_dec": "0",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "0",
+   "finish_rate": "100%",
+   "camp": "Team Blackxicans",
+   "sherdog": "https://www.sherdog.com/fighter/Imanol-Rodriguez-418935",
+   "ufcstats": "http://ufcstats.com/fighter-details/6e8349a0a0476d60",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=qpmEocyVEu0",
+    "title": "CRAZY TKO \ud83d\ude32 | Imanol Rodr\u00edguez vs. Kevin Borjas | UFC Fight Night Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -146,
+    "Caesars": -140,
+    "BetRivers": -157,
+    "BetWay": -163,
+    "Unibet": -157
+   },
+   "kalshi": -137
+  },
+  "B": {
+   "name": "Alden Coria",
+   "record": "13-3 (1 NC)",
+   "record_ufcstats": "13-3-0 (1 NC)",
+   "ufc_record": "3-0",
+   "streak": "6W",
+   "last5": [
+    "WIN vs Stewart Nicoll \u2014 Decision (Unanimous), R3 5:00 (Jul 2026)",
+    "WIN vs Luis Gurule \u2014 Decision (Unanimous), R3 5:00 (Feb 2026)",
+    "WIN vs Alessandro Costa \u2014 TKO (Punches), R3 0:47 (Sep 2025)",
+    "WIN vs German Orpineda Ponce \u2014 TKO (Elbows), R2 3:21 (May 2025)",
+    "NC vs Paris Moran \u2014 No Contest (Overturned), R1 3:12 (Jan 2025)"
+   ],
+   "last_fight": "2026-07-18",
+   "days_since": 77,
+   "age": 28,
+   "height": "5' 8\"",
+   "reach": "67\"",
+   "stance": "Orthodox",
+   "slpm": "4.05",
+   "stracc": "41%",
+   "sapm": "2.21",
+   "strdef": "69%",
+   "tdavg": "2.21",
+   "tdacc": "54%",
+   "tddef": "56%",
+   "subavg": "1.5",
+   "no_ufc_stats": false,
+   "wins_ko": "5",
+   "wins_sub": "4",
+   "wins_dec": "4",
+   "loss_ko": "0",
+   "loss_sub": "1",
+   "loss_dec": "2",
+   "finish_rate": "69%",
+   "camp": "4oz. Fight Club",
+   "sherdog": "https://www.sherdog.com/fighter/Alden-Coria-203015",
+   "ufcstats": "http://ufcstats.com/fighter-details/5e9ca8dd7d783a75",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=IPgR7esFfW0",
+    "title": "Alden Coria MMA HIGHLIGHTS 2026 | Professional 11-3 Fighter & UFC Prospect | DWCS | LFA | Fury FC",
+    "channel": "The City Life Project",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 124,
+    "Caesars": 118,
+    "BetRivers": 125,
+    "BetWay": 130,
+    "Unibet": 125
+   },
+   "kalshi": 114
+  },
+  "cb": [
+   56,
+   45
+  ],
+  "ml_med": [
+   -157,
+   125
+  ],
+  "raw_imp": [
+   60.4,
+   44.6
+  ],
+  "fair": [
+   57.5,
+   42.5
+  ]
+ },
+ {
+  "n": 10,
+  "time": "7:00 PM",
+  "wc": "Middleweight",
+  "A": {
+   "name": "Ateba Gautier",
+   "record": "11-1",
+   "record_ufcstats": "11-1-0",
+   "ufc_record": "5-0",
+   "streak": "10W",
+   "last5": [
+    "WIN vs Osman Diaz \u2014 TKO (Punches), R2 1:10 (May 2026)",
+    "WIN vs Andrey Pulyaev \u2014 Decision (Unanimous), R3 5:00 (Jan 2026)",
+    "WIN vs Treston Vines \u2014 KO (Elbows and Punches), R1 1:41 (Oct 2025)",
+    "WIN vs Robert Valentin \u2014 TKO (Punches), R1 1:10 (Jul 2025)",
+    "WIN vs Jose Medina \u2014 KO (Punches and Knee), R1 3:32 (Mar 2025)"
+   ],
+   "last_fight": "2026-05-09",
+   "days_since": 147,
+   "age": 24,
+   "height": "6' 4\"",
+   "reach": "81\"",
+   "stance": "Switch",
+   "slpm": "4.32",
+   "stracc": "43%",
+   "sapm": "2.60",
+   "strdef": "54%",
+   "tdavg": "0.41",
+   "tdacc": "100%",
+   "tddef": "93%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "9",
+   "wins_sub": "0",
+   "wins_dec": "2",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "1",
+   "finish_rate": "82%",
+   "camp": "Manchester Top Team",
+   "sherdog": "https://www.sherdog.com/fighter/Ateba-Abega-Gautier-386979",
+   "ufcstats": "http://ufcstats.com/fighter-details/2f815ed5f8278ba6",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=ekM759bqpPo",
+    "title": "The Storm goes the distance \ud83d\udc40 | Ateba Gautier vs. Andrey Pulyaev | UFC 324 Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -240,
+    "Caesars": -240,
+    "BetRivers": -240,
+    "BetWay": -225,
+    "Unibet": -240
+   },
+   "kalshi": -240
+  },
+  "B": {
+   "name": "Roman Kopylov",
+   "record": "15-5",
+   "record_ufcstats": "15-5-0",
+   "ufc_record": "7-5",
+   "streak": "1W",
+   "last5": [
+    "WIN vs Marco Tulio \u2014 Decision (Unanimous), R3 5:00 (May 2026)",
+    "LOSS vs Gregory Rodrigues \u2014 Decision (Unanimous), R3 5:00 (Nov 2025)",
+    "LOSS vs Paulo Costa \u2014 Decision (Unanimous), R3 5:00 (Jul 2025)",
+    "WIN vs Chris Curtis \u2014 TKO (Head Kick), R3 4:59 (Jan 2025)",
+    "WIN vs Cesar Almeida \u2014 Decision (Split), R3 5:00 (Jun 2024)"
+   ],
+   "last_fight": "2026-05-09",
+   "days_since": 147,
+   "age": 34,
+   "height": "6' 0\"",
+   "reach": "75\"",
+   "stance": "Southpaw",
+   "slpm": "4.54",
+   "stracc": "50%",
+   "sapm": "5.08",
+   "strdef": "53%",
+   "tdavg": "1.12",
+   "tdacc": "50%",
+   "tddef": "88%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "12",
+   "wins_sub": "0",
+   "wins_dec": "3",
+   "loss_ko": "0",
+   "loss_sub": "2",
+   "loss_dec": "3",
+   "finish_rate": "80%",
+   "camp": "Raty Team",
+   "sherdog": "https://www.sherdog.com/fighter/Roman-Kopylov-232601",
+   "ufcstats": "http://ufcstats.com/fighter-details/9d83f6da776ff7d6",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=6iKCadPrxJ4",
+    "title": "Roman Kopylov vs Gregory \u201cRobocop\u201d Rodrigues | FULL FIGHT HIGHLIGHTS | UFC 322",
+    "channel": "UFCVanta",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 198,
+    "Caesars": 195,
+    "BetRivers": 188,
+    "BetWay": 175,
+    "Unibet": 188
+   },
+   "kalshi": 207
+  },
+  "cb": [
+   69,
+   31
+  ],
+  "ml_med": [
+   -240,
+   188
+  ],
+  "raw_imp": [
+   70.3,
+   34.7
+  ],
+  "fair": [
+   67.0,
+   33.0
+  ]
+ },
+ {
+  "n": 11,
+  "time": "7:20 PM",
+  "wc": "Welterweight",
+  "A": {
+   "name": "Roberto Soldic",
+   "record": "21-4 (1 NC)",
+   "record_ufcstats": "21-4-0 (1 NC)",
+   "ufc_record": "0-0 (UFC debut)",
+   "streak": "1W",
+   "last5": [
+    "WIN vs Saygid Guseyn Arslanaliev \u2014 KO (Punch), R1 1:55 (Feb 2025)",
+    "LOSS vs Zebaztian Kadestam \u2014 TKO (Punches), R2 0:45 (May 2023)",
+    "NC vs Murad Ramazanov \u2014 No Contest (Accidental Knee to Groin), R1 2:01 (Dec 2022)",
+    "WIN vs Mamed Khalidov \u2014 KO (Punch), R2 3:40 (Dec 2021)",
+    "WIN vs Patrik Kincl \u2014 TKO (Punches), R3 2:55 (Sep 2021)"
+   ],
+   "last_fight": "2025-02-20",
+   "days_since": 590,
+   "age": 31,
+   "height": "5' 10\"",
+   "reach": "73\"",
+   "stance": "Southpaw",
+   "slpm": "not found (no UFC fights)",
+   "stracc": "not found (no UFC fights)",
+   "sapm": "not found (no UFC fights)",
+   "strdef": "not found (no UFC fights)",
+   "tdavg": "not found (no UFC fights)",
+   "tdacc": "not found (no UFC fights)",
+   "tddef": "not found (no UFC fights)",
+   "subavg": "not found (no UFC fights)",
+   "no_ufc_stats": true,
+   "wins_ko": "18",
+   "wins_sub": "1",
+   "wins_dec": "2",
+   "loss_ko": "2",
+   "loss_sub": "0",
+   "loss_dec": "2",
+   "finish_rate": "90%",
+   "camp": "UFD Gym",
+   "sherdog": "https://www.sherdog.com/fighter/Roberto-Soldic-180781",
+   "ufcstats": "http://ufcstats.com/fighter-details/5a229cbd9cdd28ca",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=gA_s6zmapJU",
+    "title": "Roberto Soldic MMA Highlights- (Robocop)- Powerful Knockout Artist- UFC Should Sign",
+    "channel": "MMA Falcons",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -225,
+    "Caesars": -210,
+    "BetRivers": -230,
+    "BetWay": -275,
+    "Unibet": -230
+   },
+   "kalshi": -209
+  },
+  "B": {
+   "name": "Khaos Williams",
+   "record": "16-5",
+   "record_ufcstats": "16-5-0",
+   "ufc_record": "7-4",
+   "streak": "1W",
+   "last5": [
+    "WIN vs Nikolay Veretennikov \u2014 TKO (Punches), R1 3:31 (May 2026)",
+    "LOSS vs Andreas Gustafsson \u2014 Decision (Unanimous), R3 5:00 (Jun 2025)",
+    "LOSS vs Gabriel Bonfim \u2014 Technical Submission (Brabo Choke), R2 4:58 (Feb 2025)",
+    "WIN vs Carlston Harris \u2014 KO (Punch), R1 1:30 (May 2024)",
+    "WIN vs Rolando Bedoya \u2014 Decision (Split), R3 5:00 (May 2023)"
+   ],
+   "last_fight": "2026-05-16",
+   "days_since": 140,
+   "age": 32,
+   "height": "6' 0\"",
+   "reach": "77\"",
+   "stance": "Orthodox",
+   "slpm": "4.97",
+   "stracc": "39%",
+   "sapm": "5.34",
+   "strdef": "41%",
+   "tdavg": "0.00",
+   "tdacc": "0%",
+   "tddef": "51%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "9",
+   "wins_sub": "1",
+   "wins_dec": "6",
+   "loss_ko": "0",
+   "loss_sub": "1",
+   "loss_dec": "4",
+   "finish_rate": "62%",
+   "camp": "Murcielago MMA",
+   "sherdog": "https://www.sherdog.com/fighter/Kalinn-Williams-198129",
+   "ufcstats": "http://ufcstats.com/fighter-details/2558ae2e5671e318",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=bDlqpuKrrKo",
+    "title": "Khaos Williams FINISHES his opponents with his EXPLOSIVE STRIKING",
+    "channel": "INSIDE THE FIGHT",
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 188,
+    "Caesars": 175,
+    "BetRivers": 180,
+    "BetWay": 210,
+    "Unibet": 180
+   },
+   "kalshi": 173
+  },
+  "cb": [
+   66,
+   35
+  ],
+  "ml_med": [
+   -230,
+   180
+  ],
+  "raw_imp": [
+   69.9,
+   35.0
+  ],
+  "fair": [
+   66.7,
+   33.3
+  ]
+ },
+ {
+  "n": 12,
+  "time": "7:40 PM",
+  "wc": "Lightweight (catchweight 156.5 \u2014 Ribovics missed by 0.5 lb)",
+  "A": {
+   "name": "Esteban Ribovics",
+   "record": "16-3",
+   "record_ufcstats": "16-3-0",
+   "ufc_record": "5-3",
+   "streak": "1W",
+   "last5": [
+    "WIN vs Edson Barboza \u2014 TKO (Punches), R2 1:32 (Aug 2026)",
+    "LOSS vs Mateusz Gamrot \u2014 Submission (Arm-Triangle Choke), R2 4:19 (Apr 2026)",
+    "WIN vs Elves Brener \u2014 Decision (Unanimous), R3 5:00 (Aug 2025)",
+    "LOSS vs Nasrat Haqparast \u2014 Decision (Split), R3 5:00 (Mar 2025)",
+    "WIN vs Daniel Zellhuber \u2014 Decision (Split), R3 5:00 (Sep 2024)"
+   ],
+   "last_fight": "2026-08-15",
+   "days_since": 49,
+   "age": 30,
+   "height": "5' 10\"",
+   "reach": "69\"",
+   "stance": "Orthodox",
+   "slpm": "7.43",
+   "stracc": "43%",
+   "sapm": "5.74",
+   "strdef": "54%",
+   "tdavg": "0.32",
+   "tdacc": "66%",
+   "tddef": "66%",
+   "subavg": "0.2",
+   "no_ufc_stats": false,
+   "wins_ko": "8",
+   "wins_sub": "5",
+   "wins_dec": "3",
+   "loss_ko": "0",
+   "loss_sub": "1",
+   "loss_dec": "2",
+   "finish_rate": "81%",
+   "camp": "Kill Cliff FC",
+   "sherdog": "https://www.sherdog.com/fighter/Esteban-Ribovics-214867",
+   "ufcstats": "http://ufcstats.com/fighter-details/323d4ca260dfa0ba",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=-bPcKaV6R3w",
+    "title": "ROUND 2 TKO \ud83d\ude2e | Edson Barboza vs. Esteban Ribovics | UFC 330 Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -198,
+    "Caesars": -210,
+    "BetRivers": -220,
+    "BetWay": -225,
+    "Unibet": -220
+   },
+   "kalshi": -200
+  },
+  "B": {
+   "name": "King Green",
+   "record": "36-17-1 (1 NC)",
+   "record_ufcstats": "36-17-1 (1 NC)",
+   "ufc_record": "21-14-1 (1 NC)",
+   "streak": "4W",
+   "last5": [
+    "WIN vs Terrance McKinney \u2014 TKO (Punches), R1 4:59 (Jul 2026)",
+    "WIN vs Jeremy Stephens \u2014 Submission (Rear-Naked Choke), R1 4:20 (May 2026)",
+    "WIN vs Daniel Zellhuber \u2014 TKO (Punches), R2 4:55 (Feb 2026)",
+    "WIN vs Lance Gibson Jr. \u2014 Decision (Split), R3 5:00 (Dec 2025)",
+    "LOSS vs Mauricio Ruffy \u2014 KO (Spinning Wheel Kick), R1 2:07 (Mar 2025)"
+   ],
+   "last_fight": "2026-07-11",
+   "days_since": 84,
+   "age": 40,
+   "height": "5' 10\"",
+   "reach": "71\"",
+   "stance": "Orthodox",
+   "slpm": "6.49",
+   "stracc": "53%",
+   "sapm": "3.63",
+   "strdef": "62%",
+   "tdavg": "1.32",
+   "tdacc": "43%",
+   "tddef": "71%",
+   "subavg": "0.3",
+   "no_ufc_stats": false,
+   "wins_ko": "13",
+   "wins_sub": "10",
+   "wins_dec": "13",
+   "loss_ko": "6",
+   "loss_sub": "3",
+   "loss_dec": "8",
+   "finish_rate": "64%",
+   "camp": "Pinnacle MMA",
+   "sherdog": "https://www.sherdog.com/fighter/King-Green-27953",
+   "ufcstats": "http://ufcstats.com/fighter-details/887961364be5ceb3",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=itWLwss_DP4",
+    "title": "ROUND 1 TKO \ud83d\udc51 | King Green vs. Terrance McKinney | UFC 329 Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 166,
+    "Caesars": 175,
+    "BetRivers": 170,
+    "BetWay": 175,
+    "Unibet": 170
+   },
+   "kalshi": 165
+  },
+  "cb": [
+   65,
+   36
+  ],
+  "ml_med": [
+   -220,
+   170
+  ],
+  "raw_imp": [
+   68.2,
+   36.9
+  ],
+  "fair": [
+   64.9,
+   35.1
+  ]
+ },
+ {
+  "n": 13,
+  "time": "8:00 PM",
+  "wc": "Bantamweight",
+  "A": {
+   "name": "Payton Talbott",
+   "record": "11-1",
+   "record_ufcstats": "11-1-0",
+   "ufc_record": "5-1",
+   "streak": "2W",
+   "last5": [
+    "WIN vs Henry Cejudo \u2014 Decision (Unanimous), R3 5:00 (Dec 2025)",
+    "WIN vs Felipe Lima \u2014 Decision (Unanimous), R3 5:00 (Jun 2025)",
+    "LOSS vs Raoni Barcelos \u2014 Decision (Unanimous), R3 5:00 (Jan 2025)",
+    "WIN vs Yanis Ghemmouri \u2014 KO (Punches), R1 0:19 (Jun 2024)",
+    "WIN vs Cameron Saaiman \u2014 TKO (Punches), R2 0:21 (Mar 2024)"
+   ],
+   "last_fight": "2025-12-06",
+   "days_since": 301,
+   "age": 28,
+   "height": "5' 10\"",
+   "reach": "70\"",
+   "stance": "Switch",
+   "slpm": "6.62",
+   "stracc": "56%",
+   "sapm": "3.41",
+   "strdef": "46%",
+   "tdavg": "0.78",
+   "tdacc": "44%",
+   "tddef": "77%",
+   "subavg": "0.2",
+   "no_ufc_stats": false,
+   "wins_ko": "7",
+   "wins_sub": "1",
+   "wins_dec": "3",
+   "loss_ko": "0",
+   "loss_sub": "0",
+   "loss_dec": "1",
+   "finish_rate": "73%",
+   "camp": "Reno Academy of Combat",
+   "sherdog": "https://www.sherdog.com/fighter/Payton-Talbott-296553",
+   "ufcstats": "http://ufcstats.com/fighter-details/6e743a33d56bdaa4",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=a4Q81kbvOXk",
+    "title": "Payton Talbott vs Henry Cejudo | FULL FIGHT | UFC 332",
+    "channel": "UFC",
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -750,
+    "Caesars": -800,
+    "BetRivers": -910,
+    "BetWay": -649,
+    "Unibet": -715
+   },
+   "kalshi": -611
+  },
+  "B": {
+   "name": "Deiveson Figueiredo",
+   "record": "25-7-1",
+   "record_ufcstats": "25-7-1",
+   "ufc_record": "14-7-1",
+   "streak": "2L",
+   "last5": [
+    "LOSS vs Yadong Song \u2014 Submission (Guillotine Choke), R2 4:42 (May 2026)",
+    "LOSS vs Umar Nurmagomedov \u2014 Decision (Unanimous), R3 5:00 (Jan 2026)",
+    "WIN vs Montel Jackson \u2014 Decision (Split), R3 5:00 (Oct 2025)",
+    "LOSS vs Cory Sandhagen \u2014 TKO (Knee Injury), R2 4:08 (May 2025)",
+    "LOSS vs Petr Yan \u2014 Decision (Unanimous), R5 5:00 (Nov 2024)"
+   ],
+   "last_fight": "2026-05-30",
+   "days_since": 126,
+   "age": 38,
+   "height": "5' 5\"",
+   "reach": "68\"",
+   "stance": "Orthodox",
+   "slpm": "2.57",
+   "stracc": "53%",
+   "sapm": "3.43",
+   "strdef": "49%",
+   "tdavg": "1.61",
+   "tdacc": "34%",
+   "tddef": "57%",
+   "subavg": "1.2",
+   "no_ufc_stats": false,
+   "wins_ko": "9",
+   "wins_sub": "9",
+   "wins_dec": "7",
+   "loss_ko": "2",
+   "loss_sub": "2",
+   "loss_dec": "3",
+   "finish_rate": "72%",
+   "camp": "Team Figueiredo",
+   "sherdog": "https://www.sherdog.com/fighter/Deiveson-Figueiredo-110485",
+   "ufcstats": "http://ufcstats.com/fighter-details/aa72b0f831d0bfe5",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=vI-ZFiUt_1E",
+    "title": "Top Finishes: Deiveson Figueiredo",
+    "channel": "UFC",
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 530,
+    "Caesars": 550,
+    "BetRivers": 575,
+    "BetWay": 450,
+    "Unibet": 460
+   },
+   "kalshi": 489
+  },
+  "cb": [
+   85,
+   16
+  ],
+  "ml_med": [
+   -750,
+   530
+  ],
+  "raw_imp": [
+   88.3,
+   16.4
+  ],
+  "fair": [
+   84.3,
+   15.7
+  ]
+ },
+ {
+  "n": 14,
+  "time": "8:20 PM",
+  "wc": "Women's Flyweight \u2014 vacant title, 5 rds",
+  "A": {
+   "name": "Natalia Silva",
+   "record": "20-5-1",
+   "record_ufcstats": "20-5-1",
+   "ufc_record": "8-0",
+   "streak": "14W",
+   "last5": [
+    "WIN vs Rose Namajunas \u2014 Decision (Unanimous), R3 5:00 (Jan 2026)",
+    "WIN vs Alexa Grasso \u2014 Decision (Unanimous), R3 5:00 (May 2025)",
+    "WIN vs Jessica Andrade \u2014 Decision (Unanimous), R3 5:00 (Sep 2024)",
+    "WIN vs Viviane Araujo \u2014 Decision (Unanimous), R3 5:00 (Feb 2024)",
+    "WIN vs Andrea Lee \u2014 Decision (Unanimous), R3 5:00 (Aug 2023)"
+   ],
+   "last_fight": "2026-01-24",
+   "days_since": 252,
+   "age": 29,
+   "height": "5' 4\"",
+   "reach": "65\"",
+   "stance": "Southpaw",
+   "slpm": "4.81",
+   "stracc": "45%",
+   "sapm": "2.36",
+   "strdef": "66%",
+   "tdavg": "0.43",
+   "tdacc": "30%",
+   "tddef": "90%",
+   "subavg": "0.0",
+   "no_ufc_stats": false,
+   "wins_ko": "5",
+   "wins_sub": "7",
+   "wins_dec": "7",
+   "loss_ko": "1",
+   "loss_sub": "2",
+   "loss_dec": "2",
+   "finish_rate": "60%",
+   "camp": "Team Borracha",
+   "sherdog": "https://www.sherdog.com/fighter/Natalia-Silva-193033",
+   "ufcstats": "http://ufcstats.com/fighter-details/262d32ebda89efc4",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=JeKKyf0hcBc",
+    "title": "SUPER CLOSE DECISION \ud83d\ude33 | Nat\u00e1lia Silva vs. Rose Namajunas | UFC 324 Mini Fight Highlights",
+    "channel": "UFC on Paramount+",
+    "score": 5,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": -210,
+    "Caesars": -220,
+    "BetRivers": -205,
+    "BetWay": -225,
+    "Unibet": -205
+   },
+   "kalshi": -200
+  },
+  "B": {
+   "name": "Wang Cong",
+   "record": "10-1",
+   "record_ufcstats": "10-1-0",
+   "ufc_record": "5-1",
+   "streak": "4W",
+   "last5": [
+    "WIN vs Tracy Cortez \u2014 Decision (Unanimous), R3 5:00 (Jul 2026)",
+    "WIN vs Eduarda Moura \u2014 Decision (Unanimous), R3 5:00 (Feb 2026)",
+    "WIN vs Ariane Lipski da Silva \u2014 Decision (Unanimous), R3 5:00 (Jun 2025)",
+    "WIN vs Bruna Brasil \u2014 Decision (Unanimous), R3 5:00 (Feb 2025)",
+    "LOSS vs Gabriella Fernandes \u2014 Technical Submission (Rear-Naked Choke), R2 3:49 (Nov 2024)"
+   ],
+   "last_fight": "2026-07-11",
+   "days_since": 84,
+   "age": 34,
+   "height": "5' 6\"",
+   "reach": "65\"",
+   "stance": "Southpaw",
+   "slpm": "6.82",
+   "stracc": "58%",
+   "sapm": "2.73",
+   "strdef": "60%",
+   "tdavg": "0.62",
+   "tdacc": "75%",
+   "tddef": "85%",
+   "subavg": "0.6",
+   "no_ufc_stats": false,
+   "wins_ko": "2",
+   "wins_sub": "2",
+   "wins_dec": "6",
+   "loss_ko": "0",
+   "loss_sub": "1",
+   "loss_dec": "0",
+   "finish_rate": "40%",
+   "camp": "not found",
+   "sherdog": "https://www.sherdog.com/fighter/Cong-Wang-413126",
+   "ufcstats": "http://ufcstats.com/fighter-details/2997e7fe3c9d3d4a",
+   "yt": {
+    "url": "https://www.youtube.com/watch?v=4u_ZBzHtT5Q",
+    "title": "Wang Cong Career Fight Highlights (2026) | UFC Knockouts & Best Moments",
+    "channel": "FightArtwork",
+    "score": 4,
+    "verified": true
+   },
+   "ml_books": {
+    "FanDuel": 176,
+    "Caesars": 180,
+    "BetRivers": 163,
+    "BetWay": 175,
+    "Unibet": 163
+   },
+   "kalshi": 165
+  },
+  "cb": [
+   65,
+   36
+  ],
+  "ml_med": [
+   -210,
+   175
+  ],
+  "raw_imp": [
+   68.0,
+   36.9
+  ],
+  "fair": [
+   64.9,
+   35.1
+  ]
+ }
+]

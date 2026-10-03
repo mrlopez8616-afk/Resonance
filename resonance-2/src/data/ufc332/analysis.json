@@ -1,0 +1,178 @@
+{
+ "1": {
+  "edges": [
+   "**Age/durability:** McGee is 41 and has lost 4 of his last 5, including two first-round KO losses (Wells 2022, Brown 2023). Nolan is 29.",
+   "**Layoff:** McGee hasn't fought in ~16 months (476 days); Nolan fought 98 days ago.",
+   "**Wrestling path for McGee:** McGee averages 1.78 TD/15 min and Nolan's UFCStats TD defense is just 44% \u2014 but that's from only 2 UFC fights (small sample).",
+   "**Striking:** Nolan's UFC output is very low (1.68 SLpM, 34% accuracy), though his regional record shows 4 KO wins and 3 straight KOs before the UFC.",
+   "**Reach:** McGee +2\" (75\" vs 73\")."
+  ],
+  "x": "McGee's retirement fight, at home in Utah (altitude-acclimated, crowd behind him). Nolan is 0-2 in the UFC and is likely fighting to keep his job.",
+  "lean": "Eric Nolan",
+  "conf": "Low",
+  "why": "Age, the layoff, and McGee's recent KO losses favor Nolan, but Nolan's UFC numbers are thin and poor. McGee's grinding/takedown path is real."
+ },
+ "2": {
+  "edges": [
+   "**Defense:** Naurdiev absorbs 1.75 sig strikes/min (64% defense) vs Vettori's 4.55 absorbed.",
+   "**Volume/wrestling:** Vettori out-lands him (4.74 vs 3.66 SLpM). Takedown rates are even (Naurdiev 1.48 vs Vettori 1.41 per 15), but Naurdiev's TD defense is better (73% vs 68%).",
+   "**Durability:** All 10 of Vettori's losses are decisions per Sherdog; he has never been finished. That points to a decision.",
+   "**Momentum:** Vettori is on a 4-fight losing streak (all decisions vs ranked-level opponents). Naurdiev KO'd Ryan Loder in his last fight (Nov 2025).",
+   "**Activity:** Vettori ~10 months out, and his June booking against Naurdiev was scrapped when he broke a rib; Naurdiev ~10.5 months out."
+  ],
+  "x": "Vettori is back at Kings MMA (per UFC.com). Is the skid about decline or about the level of opposition (Allen, Dolidze, Cannonier, Ferreira)? He's still the more proven fighter at the elite level.",
+  "lean": "Ismail Naurdiev",
+  "conf": "Low",
+  "why": "The cleaner defense and momentum favor Naurdiev, but Vettori's durability and pressure make this close to a coin flip, likely decided on points."
+ },
+ "3": {
+  "edges": [
+   "**Age/layoff:** Dos Anjos is 41 (42 later this month) and ~23 months out (707 days); his last fight ended in a knee-injury TKO. Hernandez is 34 and fought in April.",
+   "**Form:** RDA has lost 3 straight and hasn't won at lightweight since Nov 2020. Hernandez is 4-1 in his last 5 with KOs of Hooper and Ferreira.",
+   "**Grappling:** RDA averages 1.95 TD/15 (35% accuracy) and 0.6 sub attempts. Hernandez's TD defense is 68%, so RDA's top game is his clearest path.",
+   "**Striking defense:** Hernandez absorbs 4.45/min, which leaves openings for a technical veteran. RDA absorbs 3.23."
+  ],
+  "x": "RDA's 50th pro fight and his return to 155. The weight cut at 41, plus altitude in SLC, could sap his cardio.",
+  "lean": "Alexander Hernandez",
+  "conf": "Medium",
+  "why": "Age, the layoff, the injury and his form all point against RDA. Hernandez's main risk is getting out-grappled."
+ },
+ "4": {
+  "edges": [
+   "**Wrestling:** Smith averages 7.78 TD/15 at 91% accuracy, with 100% TD defense and 67% striking accuracy (3 UFC fights plus DWCS, so a small sample).",
+   "**Record/finishing:** Smith is 12-0 with 10 finishes (9 KO, 1 sub).",
+   "**Whitehead:** He took the fight on short notice and fought 13 days ago (48-second TKO, Sep 20). He's 8-2, with one KO loss (Jun 2025). He has no UFC data.",
+   "**Reach:** Roughly even (72\" vs 73\")."
+  ],
+  "x": "Whitehead's short turnaround cuts both ways: he's already in shape, but he hasn't had a full camp for an elite wrestler.",
+  "lean": "Jacobe Smith",
+  "conf": "High",
+  "why": "Smith has a big wrestling and finishing edge over a short-notice debutant. At 88\u00a2 the payout is small."
+ },
+ "5": {
+  "edges": [
+   "**Size/reach:** Walker is 6'6\" with an 82\" reach vs Parkin's 6'4\"/79\". Walker is making his heavyweight debut after 16 UFC fights at 205.",
+   "**Power:** Walker has 17 KO wins (91% finish rate).",
+   "**Chin risk:** Walker has 6 KO losses, 2 of them in his last 5 fights (Ankalaev, Oezdemir), and his striking defense is 46%. Heavyweight punches hit harder.",
+   "**Parkin:** He lands 4.70/min but absorbs 4.13/min (58% defense) and averages 1.38 TD/15. He's been out ~18 months (560 days, last fight Mar 2025).",
+   "**Wrestling:** Walker's TD defense is 57%, Parkin's 50%. Parkin's wrestling could be the tiebreaker."
+  ],
+  "x": "Walker no longer has to cut to 205, which could help his cardio and durability, or could leave him undersized. Parkin's ring rust.",
+  "lean": "Johnny Walker",
+  "conf": "Low",
+  "why": "A true coin flip (books 52/48). Walker's power and reach are the slight edge, offset by his chin. Passing on this one is reasonable."
+ },
+ "6": {
+  "edges": [
+   "**Record:** Wint is 8-0 (5 KO, 2 sub) and a former NFL player. Armand is 6-0, all on the regional scene (2 Piece Promotions, WXC).",
+   "**UFC data:** Wint's UFCStats sample is just 2 fights (DWCS plus his debut). Ignore his 0.20 absorbed/min and 3.0 sub/15 as small-sample noise.",
+   "**Reach:** Roughly even (78\" vs 78\").",
+   "**Activity:** Wint's last fight was 42 days ago (Aug 22) and Armand's 210 days ago."
+  ],
+  "x": "Heavyweight variance: one punch changes everything. Armand's level of opposition is unproven.",
+  "lean": "Anthony Wint",
+  "conf": "Medium",
+  "why": "Wint has the better athleticism, the better grappling and has already beaten UFC-level opposition. Heavyweight variance caps the confidence."
+ },
+ "7": {
+  "edges": [
+   "**Short notice:** Romero took the fight on 3 days' notice (replacing Bernardo Sopaj), and it moved up to featherweight.",
+   "**Experience:** McGhee is 5-1 in the UFC, with his only loss a decision to Petr Yan. Romero is making his UFC debut out of Up Next Fighting, where he's the bantamweight champion.",
+   "**McGhee's profile:** 5.44 SLpM, 90% TD defense, 8 KO wins.",
+   "**Age:** McGhee is 36. UFC.com lists Romero as 29 (no DOB found on UFCStats or Sherdog)."
+  ],
+  "x": "Neither man is at his usual weight (both normally fight at 135). McGhee absorbs 3.64/min and his striking defense is 56%, so a short-notice southpaw with KO power can land.",
+  "lean": "Marcus McGhee",
+  "conf": "Medium",
+  "why": "Experience plus a full camp vs a 3-day notice debut. Only a big early punch from Romero changes it."
+ },
+ "8": {
+  "edges": [
+   "**Power:** Pinas has finished all 10 of his wins (9 KO) and lands 6.33/min at 63% accuracy (3-fight UFC sample).",
+   "**Defensive holes:** Pinas absorbs 5.89/min with just 39% striking defense, so he gets hit a lot.",
+   "**Pulyaev:** 2-fight skid (decision loss to Gautier, then a neck-crank tech sub loss to Ruziboev in June). His striking defense is 55% and he lands 3.60/min.",
+   "**Reach:** Pinas +1\" (79\" vs 78\"). Pinas is 24, Pulyaev 29."
+  ],
+  "x": "Pulyaev took Gautier, a similar power prospect, the full 15 minutes. If he survives early, Pinas's cardio past round 1 is untested: all his UFC wins came in R1.",
+  "lean": "Damian Pinas",
+  "conf": "Medium",
+  "why": "Power and form favor Pinas, but his porous defense keeps this off 'high'."
+ },
+ "9": {
+  "edges": [
+   "**Striking vs wrestling:** Rodriguez lands 5.71/min at 55% accuracy with 6 TKO wins. Coria averages 2.21 TD/15 at 54% accuracy and 1.5 sub attempts/15.",
+   "**Rodriguez's TD defense:** UFCStats shows 0%, which means he was taken down on every attempt in his small UFC/DWCS sample. That's a red flag against a grappler.",
+   "**Defense:** Coria's striking defense is 69% (2.21 absorbed/min) vs Rodriguez's 58% (2.42 absorbed).",
+   "**Reach:** Coria +3\" (67\" vs 64\").",
+   "**Records:** Rodriguez is 7-0. Coria is 3-0 in the UFC and unbeaten in 7 (one NC)."
+  ],
+  "x": "Rodriguez also lost a split decision on TUF 33 (exhibition, not on his pro record). Coria's KO of Costa came on short notice.",
+  "lean": "Alden Coria",
+  "conf": "Low",
+  "why": "The data (reach, grappling volume, defense) favors Coria against the market. The books still make Rodriguez the favorite, so this is a contrarian, small-sample lean."
+ },
+ "10": {
+  "edges": [
+   "**Reach/size:** Gautier has a +6\" reach edge (81\" vs 75\") and is 6'4\".",
+   "**Power:** Gautier has 9 KO wins and is 5-0 in the UFC (10-fight win streak). He absorbs 2.60/min, has 93% TD defense, and is 24.",
+   "**Kopylov's durability:** He has never been KO'd (0 KO/TKO losses per Sherdog) and has 12 KO wins of his own.",
+   "**Volume/defense:** Kopylov absorbs 5.08/min, which is exploitable for Gautier.",
+   "**Experience:** Kopylov (34) is a 12-fight UFC veteran. Gautier was taken the distance by Pulyaev in January."
+  ],
+  "x": "This is Gautier's biggest step up. If he can't put Kopylov away early, can he win rounds 2 and 3 against a seasoned counter-striker?",
+  "lean": "Ateba Gautier",
+  "conf": "Medium",
+  "why": "Reach, power and youth favor Gautier. Kopylov's durability makes a decision live."
+ },
+ "11": {
+  "edges": [
+   "**Power:** Soldic has 18 KO wins out of 21 (former two-division KSW champ). Williams has 9 KOs.",
+   "**Layoff/debut:** Soldic hasn't fought in ~19 months (590 days, last fight Feb 2025 in ONE) and is making his UFC debut. He has 2 KO/TKO losses (Kadestam 2023).",
+   "**Williams's defense:** He absorbs 5.34/min with 41% defense, but he's never been KO'd (0 KO losses per Sherdog).",
+   "**Wrestling:** Williams averages 0.00 TD/15. Soldic says he has good wrestling (UFC.com interview), so takedowns could be an edge for him.",
+   "**Reach:** Williams +4\" (77\" vs 73\")."
+  ],
+  "x": "Soldic's ring rust plus Octagon jitters against a reach disadvantage. Williams is a 'big 170'.",
+  "lean": "Roberto Soldic",
+  "conf": "Low-Medium",
+  "why": "Soldic is the better and more complete fighter on paper, but the long layoff, the debut and Williams's reach and durability add risk."
+ },
+ "12": {
+  "edges": [
+   "**Weight miss:** Ribovics missed by 0.5 lb (156.5) and forfeits 20% of his purse. It's minor, but it could signal a hard cut.",
+   "**Volume:** Ribovics lands 7.43/min vs Green's 6.49, but absorbs 5.74/min (54% defense). Green's striking defense is 62%.",
+   "**Age:** Ribovics is 30, Green 40. Green has 6 KO losses, including the Ruffy spinning wheel kick KO in Mar 2025. Ribovics has 0 KO losses.",
+   "**Form/activity:** Green is on a 4-fight win streak with 3 finishes in 2026 (3 fights this year). Ribovics finished Barboza 49 days ago.",
+   "**Grappling:** Ribovics was subbed by Gamrot in April. Green has 10 sub wins and averages 1.32 TD/15, so his grappling is a live path."
+  ],
+  "x": "A likely Fight of the Night. Green's age vs Ribovics's pressure at altitude; the catchweight is only a half-pound difference.",
+  "lean": "Esteban Ribovics",
+  "conf": "Medium",
+  "why": "Youth, durability and volume favor Ribovics. Green's grappling, experience and current form make him a live dog."
+ },
+ "13": {
+  "edges": [
+   "**Form:** Figueiredo (38) is 1-4 in his last 5 and was subbed by Song Yadong in May. Talbott (28) has won 2 straight, including a decision over Cejudo.",
+   "**Striking:** Talbott lands 6.62/min at 56% accuracy vs Figueiredo's 2.57/min. Talbott's striking defense is only 46%.",
+   "**Grappling:** Figueiredo's path is TDs (1.61/15, 34% accuracy) and subs (1.2/15, 9 sub wins). Talbott's TD defense is 77%.",
+   "**Reach:** Talbott +2\" (70\" vs 68\")."
+  ],
+  "x": "Talbott returns from a ~10-month layoff. Figueiredo's experience in 5-round title fights and his chokes from scrambles.",
+  "lean": "Payton Talbott",
+  "conf": "High",
+  "why": "Youth, volume and form favor Talbott heavily, though at 85\u00a2 the return is thin."
+ },
+ "14": {
+  "edges": [
+   "**Striking efficiency:** Wang lands 6.82/min at 58% accuracy, the best in division history per UFC.com. Silva lands 4.81/min at 45%, but has the better defense (66% vs 60%, 2.36 vs 2.73 absorbed/min).",
+   "**Grappling:** Silva's TD defense is 90%, Wang's 85%. Wang lands 0.62 TD/15 (75% accuracy) and 0.6 sub attempts. Silva has 7 sub wins on her record.",
+   "**Physicals:** Both are southpaws with a 65\" reach. Wang is 5'6\", Silva 5'4\". Silva is 29, Wang 34.",
+   "**Form:** Silva has won 14 straight, including the last 3 over former champs Andrade, Grasso and Namajunas, all by decision. Wang has won 4 straight, all by decision; her only loss was a RNC sub.",
+   "**5 rounds at altitude:** It's the first UFC main event for both."
+  ],
+  "x": "The championship rounds at SLC altitude. Wang's high-output style could fade, or Silva could fall behind early: she arguably dropped round 1 vs Namajunas.",
+  "lean": "Natalia Silva",
+  "conf": "Medium",
+  "why": "The deeper r\u00e9sum\u00e9, better defense and lower damage absorbed favor Silva. Wang's efficiency numbers make her a dangerous live dog."
+ }
+}

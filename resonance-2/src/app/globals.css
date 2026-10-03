@@ -400,6 +400,12 @@ body {
   min-width: 0;
 }
 
+.fight-desk .node-ticker {
+  font-size: clamp(1.02rem, 1.7vw, 1.28rem);
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
 .live-face .node-ticker,
 .live-price {
   min-width: 0;
@@ -915,6 +921,8 @@ body {
 [data-tone="capital"] { --chip: #c4a574; }
 [data-tone="build"] { --chip: #8aa4c8; }
 [data-tone="gates"] { --chip: #e10600; }
+[data-tone="fight"],
+[data-tone="fights"] { --chip: #e10600; }
 
 .calendar-row.is-tentative {
   border-style: dashed;
@@ -1430,5 +1438,105 @@ body {
 
   .live-dot {
     box-shadow: none;
+  }
+}
+
+.fight-card {
+  display: block;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fight-card:hover,
+.fight-card:focus-visible {
+  border-color: color-mix(in srgb, var(--live) 55%, var(--border));
+}
+
+.fight-card h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.fight-card p,
+.fight-card li {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.fight-stakes {
+  margin-top: 0.45rem;
+}
+
+.fight-stakes li {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.fight-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.fight-links {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.fight-links a,
+.fight-last5 a {
+  color: var(--live);
+  text-decoration: none;
+}
+
+.fight-last5 {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.fight-table-wrap {
+  overflow-x: auto;
+}
+
+.fight-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.fight-table th,
+.fight-table td {
+  border-top: 1px solid var(--border);
+  padding: 0.42rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.fight-table thead th {
+  border-top: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fight-table tbody th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .fight-split {
+    grid-template-columns: 1fr;
   }
 }

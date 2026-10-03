@@ -18,13 +18,14 @@ import {
   occurrenceClock,
   occurrencesOnDay,
   type CalendarOccurrence,
+  type DeskLane,
 } from "@/lib/calendar-desk";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { fillsOnPrintedDay } from "@/lib/fill-desk";
 
 type DaySearch = {
   anchor: string;
-  lane: CalendarLane | "";
+  lane: DeskLane;
   node: CatalystNode | "";
   event: string;
 };
@@ -80,7 +81,11 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
         ? "ok"
         : undefined;
   const when = eventWhenLabel(event);
-  const showWhen = event.kind === "catalyst" || Boolean(event.end) || event.datePrecision === "month";
+  const showWhen =
+    event.kind === "catalyst" ||
+    event.kind === "fight" ||
+    Boolean(event.end) ||
+    event.datePrecision === "month";
 
   return (
     <article className="calendar-detail">
@@ -113,6 +118,7 @@ function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref:
 }
 
 function rowMark(event: CalendarEvent): string {
+  if (event.kind === "fight") return "Fight";
   if (event.node) return event.node;
   if (event.lane) return CALENDAR_LANE_LABELS[event.lane];
   return "";
@@ -182,7 +188,8 @@ function DayRows({
   );
 }
 
-function laneLabel(lane: CalendarLane | ""): string {
+function laneLabel(lane: DeskLane): string {
+  if (lane === "fights") return "Fights";
   return lane ? CALENDAR_LANE_LABELS[lane] : "All";
 }
 
@@ -209,11 +216,18 @@ export function CalendarDayView({
     gates: [],
   };
   const catalysts: CalendarOccurrence[] = [];
+  const fights: CalendarOccurrence[] = [];
   for (const item of visible) {
-    if (item.event.lane) byLane[item.event.lane].push(item);
+    if (item.event.kind === "fight") fights.push(item);
+    else if (item.event.lane) byLane[item.event.lane].push(item);
     else catalysts.push(item);
   }
-  const lanes = search.lane ? [search.lane] : [...CALENDAR_LANES];
+  const fightFilter = search.lane === "fights";
+  const lanes: CalendarLane[] = fightFilter
+    ? []
+    : search.lane
+      ? [search.lane as CalendarLane]
+      : [...CALENDAR_LANES];
   const showFills = search.lane === "" || search.lane === "capital";
   const printed = showFills ? fillsOnPrintedDay(fills, day) : [];
   const dayFills = search.node
@@ -283,10 +297,18 @@ export function CalendarDayView({
                 aria-current={current ? "true" : undefined}
                 data-tone={lane || undefined}
               >
-                {laneLabel(lane)}
-              </Link>
-            );
-          })}
+              {laneLabel(lane)}
+            </Link>
+          );
+        })}
+          <Link
+            href={calendarDayHref({ day, anchor: search.anchor, lane: "fights" })}
+            className={search.lane === "fights" ? "is-current" : undefined}
+            aria-current={search.lane === "fights" ? "true" : undefined}
+            data-tone="fights"
+          >
+            Fights
+          </Link>
         </nav>
       </header>
 
@@ -303,6 +325,13 @@ export function CalendarDayView({
           <DayRows items={catalysts} day={day} search={search} empty="Clear" />
         </section>
       )}
+
+      {fightFilter || search.lane === "" ? (
+        <section className="calendar-day-section" aria-label="Fights">
+          <h3>Fights</h3>
+          <DayRows items={fights} day={day} search={search} empty="Clear" />
+        </section>
+      ) : null}
 
       {showFills ? (
         <section className="calendar-day-section" aria-label="Fills">

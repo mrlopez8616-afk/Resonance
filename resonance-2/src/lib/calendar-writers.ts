@@ -35,6 +35,9 @@ export function zonedTimestamp(value: string): string {
 
 /** Capital row for one RH or Coinbase fill. Id is stable for the fill key. */
 export function capitalCalendarBody(fill: Fill): Record<string, unknown> {
+  if (fill.kind === "bet") {
+    throw new Error("bets do not write capital calendar rows.");
+  }
   const key = fill.idempotencyKey?.trim() || `${fill.venue ?? "fill"}:${fill.orderId}`;
   const day = fillCalendarDate(fill.time);
   const ticker = fill.symbol.trim().toUpperCase();

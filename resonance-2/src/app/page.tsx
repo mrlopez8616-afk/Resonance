@@ -1,5 +1,7 @@
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
+import { betSeed, summarizeBets } from "@/lib/bets";
+import { loadBetsStore } from "@/lib/bets-store";
 import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { assembleLiveFace } from "@/lib/live-face";
 import { loadLiveSleeveBooks } from "@/lib/sleeve-prints";
@@ -8,10 +10,13 @@ import { loadSpotQuotes } from "@/lib/spot-price";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [cryptoQuotes, equityQuotes, sleeves] = await Promise.all([
+  const [cryptoQuotes, equityQuotes, sleeves, fightDesk] = await Promise.all([
     loadSpotQuotes(["XRP", "SUI", "HBAR"]),
     loadEquityQuotes(EQUITY_FACE_TICKERS),
     loadLiveSleeveBooks(),
+    loadBetsStore()
+      .then((loaded) => summarizeBets(loaded.envelope.bets))
+      .catch(() => summarizeBets(betSeed())),
   ]);
   const faces = {
     XRP: assembleLiveFace("XRP", sleeves.XRP, cryptoQuotes.XRP),
@@ -27,7 +32,7 @@ export default async function Home() {
 
   return (
     <OperatorShell>
-      <NodeGrid faces={faces} sleeves={sleeves} />
+      <NodeGrid faces={faces} sleeves={sleeves} fightDesk={fightDesk} />
     </OperatorShell>
   );
 }

@@ -56,12 +56,13 @@ export type CalendarRecurrence = {
  * One Resonance-owned calendar row.
  * Lane rows keep Cadence, Capital, Build, and Gates.
  * Catalysts are a separate type (`kind: "catalyst"`), tagged with a node.
+ * Fights are a separate type (`kind: "fight"`). They are not a lane and not a node.
  * Agents write cadence, capital, and build. The founder writes gates.
  */
 export type CalendarEvent = {
   id: string;
-  /** Set on catalysts. Lane rows omit it. */
-  kind?: "catalyst";
+  /** Set on catalysts and fights. Lane rows omit it. */
+  kind?: "catalyst" | "fight";
   /** Required on lane rows. Omitted on catalysts. */
   lane?: CalendarLane;
   /** Required on catalysts. One of the ten catalyst nodes. */

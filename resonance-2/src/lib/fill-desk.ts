@@ -35,8 +35,17 @@ export const DESK_SOURCES = [
 export type DeskSleeve = FillSleeveId | "unset";
 export type DeskSource = FillVenue | "unset";
 
+/** Log filter only. UFC is not a locked node and not a sleeve ticker. */
+export const BET_DESK_TICKER = "UFC";
+
+export type DeskTicker = FillSymbol | typeof BET_DESK_TICKER;
+
+export function isDeskTicker(value: string): value is DeskTicker {
+  return isFillSymbol(value) || value === BET_DESK_TICKER;
+}
+
 export type FillDeskQuery = {
-  ticker: FillSymbol | "";
+  ticker: DeskTicker | "";
   from: string;
   to: string;
   sleeve: DeskSleeve | "";
@@ -110,7 +119,7 @@ export function parseFillDeskQuery(raw: FillDeskSearch = {}): FillDeskQuery {
   }
 
   return {
-    ticker: isFillSymbol(tickerRaw) ? tickerRaw : "",
+    ticker: isDeskTicker(tickerRaw) ? tickerRaw : "",
     from,
     to,
     sleeve: readSleeve(firstParam(raw.sleeve)),
@@ -126,6 +135,14 @@ export function fillDeskIsActive(query: FillDeskQuery): boolean {
 export function filterFills(rows: readonly Fill[], query: FillDeskQuery): Fill[] {
   return rows.filter((fill) => {
     if (query.ticker && fill.symbol.toUpperCase() !== query.ticker) return false;
+
+    if (fill.kind === "bet") {
+      if (query.sleeve || query.source) return false;
+      const day = fillCalendarDate(fill.time);
+      if (query.from && (!day || day < query.from)) return false;
+      if (query.to && (!day || day > query.to)) return false;
+      return true;
+    }
 
     if (query.sleeve === "unset") {
       if (fill.sleeve) return false;
@@ -174,6 +191,7 @@ export function nodesWithValue(
 
   const fillTickers = new Set<string>();
   for (const fill of fills) {
+    if (fill.kind === "bet") continue;
     const ticker = fill.symbol.trim().toUpperCase();
     if (!isLockedTicker(ticker)) continue;
     if (quantityHasValue(fill.quantity)) fillTickers.add(ticker);

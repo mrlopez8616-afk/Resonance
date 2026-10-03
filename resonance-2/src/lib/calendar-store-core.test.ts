@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
 import { calendarSeed } from "@/data/calendar";
+import { fightCalendar } from "@/data/fight-calendar";
 import { DAILY_BRIEF_BACKFILL_DAYS } from "@/lib/calendar-writers";
 import { CalendarWriteError, parseCalendarEvent } from "./calendar-event";
 import {
@@ -20,7 +21,10 @@ describe("calendar store core", () => {
     assert.equal(seeded.seeded, true);
     assert.equal(
       seeded.envelope.events.length,
-      calendarSeed.length + catalystSeed.length + DAILY_BRIEF_BACKFILL_DAYS.length,
+      calendarSeed.length +
+        catalystSeed.length +
+        fightCalendar.length +
+        DAILY_BRIEF_BACKFILL_DAYS.length,
     );
     assert.equal(seeded.envelope.events[0]?.id, "cadence-daily-brief");
     assert.equal(seeded.envelope.events[1]?.id, "capital-monday-agentic-sui-6ai");
@@ -61,7 +65,10 @@ describe("calendar store core", () => {
     );
     assert.equal(
       merged.envelope.events.length,
-      calendarSeed.length + catalystSeed.length + DAILY_BRIEF_BACKFILL_DAYS.length,
+      calendarSeed.length +
+        catalystSeed.length +
+        fightCalendar.length +
+        DAILY_BRIEF_BACKFILL_DAYS.length,
     );
 
     const changed = {

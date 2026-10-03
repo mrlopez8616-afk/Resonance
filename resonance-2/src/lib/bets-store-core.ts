@@ -1,0 +1,133 @@
+import { BET_TICKER, BET_VENUE, betSeed, type Bet, type BetStatus } from "@/lib/bets";
+
+export const BETS_STORE_VERSION = 1;
+export const BETS_BLOB_PATH = "resonance-2/bets.json";
+export const DEFAULT_BETS_FILE = ".data/bets.json";
+
+export type BetsStoreBackend = "blob" | "file" | "none";
+export type EnvLike = Record<string, string | undefined>;
+
+export interface BetsStoreEnvelope {
+  version: typeof BETS_STORE_VERSION;
+  updatedAt: string;
+  seededAt: string | null;
+  bets: Bet[];
+}
+
+const BET_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
+const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void"]);
+
+export function detectBetsBackend(env: EnvLike = process.env): BetsStoreBackend {
+  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
+  if (env.RESONANCE_BETS_FILE?.trim()) return "file";
+  if (env.VERCEL) return "none";
+  return "file";
+}
+
+export function isBetsStoreConfigured(env: EnvLike = process.env): boolean {
+  return detectBetsBackend(env) !== "none";
+}
+
+export function createEmptyBetsEnvelope(now = new Date().toISOString()): BetsStoreEnvelope {
+  return {
+    version: BETS_STORE_VERSION,
+    updatedAt: now,
+    seededAt: null,
+    bets: [],
+  };
+}
+
+/**
+ * Insert seed ids that are missing.
+ * A settled row with the same id is left alone. A second pass is a no-op.
+ */
+export function ensureSeededBetsEnvelope(
+  current: BetsStoreEnvelope | null,
+  now = new Date().toISOString(),
+): { envelope: BetsStoreEnvelope; seeded: boolean } {
+  const envelope = current ?? createEmptyBetsEnvelope(now);
+  const present = new Set(envelope.bets.map((bet) => bet.id));
+  const missing = betSeed().filter((bet) => !present.has(bet.id));
+  if (missing.length === 0) {
+    return { envelope, seeded: false };
+  }
+  return {
+    envelope: {
+      ...envelope,
+      updatedAt: now,
+      seededAt: envelope.seededAt ?? now,
+      bets: [...envelope.bets, ...missing],
+    },
+    seeded: true,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function coerceBet(raw: unknown): Bet | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw.id !== "string" || !BET_ID.test(raw.id)) return null;
+  if (typeof raw.event !== "string" || !raw.event.trim()) return null;
+  if (typeof raw.fight !== "string" || !raw.fight.trim()) return null;
+  if (typeof raw.fightSlug !== "string" || !raw.fightSlug.trim()) return null;
+  if (typeof raw.pick !== "string" || !raw.pick.trim()) return null;
+  if (typeof raw.stake !== "string" || !raw.stake.trim()) return null;
+  if (typeof raw.payout !== "string" || !raw.payout.trim()) return null;
+  if (typeof raw.oddsPct !== "number" || !Number.isFinite(raw.oddsPct)) return null;
+  if (typeof raw.status !== "string" || !STATUSES.has(raw.status as BetStatus)) return null;
+  if (raw.venue !== BET_VENUE || raw.ticker !== BET_TICKER) return null;
+  if (typeof raw.time !== "string" || Number.isNaN(Date.parse(raw.time))) return null;
+  const bet: Bet = {
+    id: raw.id,
+    event: raw.event.trim(),
+    fight: raw.fight.trim(),
+    fightSlug: raw.fightSlug.trim(),
+    pick: raw.pick.trim(),
+    stake: raw.stake.trim(),
+    oddsPct: raw.oddsPct,
+    payout: raw.payout.trim(),
+    status: raw.status as BetStatus,
+    venue: BET_VENUE,
+    ticker: BET_TICKER,
+    time: raw.time,
+  };
+  if (raw.estimated === true) bet.estimated = true;
+  if (typeof raw.settledPayout === "string" && raw.settledPayout.trim()) {
+    bet.settledPayout = raw.settledPayout.trim();
+  }
+  if (typeof raw.realizedPnl === "string" && raw.realizedPnl.trim()) {
+    bet.realizedPnl = raw.realizedPnl.trim();
+  }
+  if (typeof raw.settledAt === "string" && raw.settledAt.trim()) {
+    bet.settledAt = raw.settledAt.trim();
+  }
+  return bet;
+}
+
+export function parseBetsEnvelope(raw: unknown): BetsStoreEnvelope | null {
+  if (!isRecord(raw) || !Array.isArray(raw.bets)) return null;
+  const bets = raw.bets.map((item) => coerceBet(item)).filter((item): item is Bet => item !== null);
+  return {
+    version: BETS_STORE_VERSION,
+    updatedAt:
+      typeof raw.updatedAt === "string" && raw.updatedAt
+        ? raw.updatedAt
+        : new Date().toISOString(),
+    seededAt: typeof raw.seededAt === "string" ? raw.seededAt : null,
+    bets,
+  };
+}
+
+export function replaceBet(
+  envelope: BetsStoreEnvelope,
+  bet: Bet,
+  now: string,
+): BetsStoreEnvelope {
+  const index = envelope.bets.findIndex((row) => row.id === bet.id);
+  if (index === -1) return envelope;
+  const bets = envelope.bets.slice();
+  bets[index] = bet;
+  return { ...envelope, updatedAt: now, bets };
+}
