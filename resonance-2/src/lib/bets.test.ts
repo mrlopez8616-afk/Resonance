@@ -2,16 +2,22 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { filterFills, nodesWithValue, parseFillDeskQuery } from "@/lib/fill-desk";
 import {
+  applyOptionalLean,
   betSeed,
   betToFill,
+  formatSignedUsd,
   formatUsd,
   parseSettleBody,
   realizedPnl,
+  scoreBets,
   settleBet,
   summarizeBets,
+  summarizeUfcBook,
 } from "@/lib/bets";
 import {
+  backfillBetLeans,
   ensureSeededBetsEnvelope,
+  parseBetsEnvelope,
   replaceBet,
 } from "@/lib/bets-store-core";
 import { fightBySlug, fightersMissingHighlights, unmatchedOddsNames, ufc332Fights } from "@/lib/ufc332";
@@ -88,6 +94,8 @@ describe("UFC 332 bets", () => {
     assert.equal(won.bet.status, "won");
     assert.equal(won.bet.realizedPnl, "2.28");
     assert.equal(won.bet.stake, nolan.stake);
+    assert.equal(won.bet.hubLean, "Eric Nolan");
+    assert.equal(won.bet.agreesWithLean, true);
     const again = settleBet(won.bet, { id: nolan.id, status: "won" }, "2026-10-04T02:00:00.000Z");
     assert.equal(again.deduped, true);
     assert.equal(again.bet.realizedPnl, "2.28");
@@ -156,5 +164,155 @@ describe("UFC 332 bets", () => {
       ["XRP"],
     );
     assert.equal(parseFillDeskQuery({ ticker: "ufc" }).ticker, "UFC");
+  });
+
+  it("stores the hub lean and marks only Wang Cong as a disagree", () => {
+    const bets = betSeed();
+    const agreed = bets.filter((bet) => bet.id !== "ufc-332-wang-cong");
+    assert.equal(agreed.length, 13);
+    for (const bet of agreed) {
+      assert.equal(bet.hubLean, bet.pick, bet.id);
+      assert.equal(bet.agreesWithLean, true, bet.id);
+    }
+    const wang = bets.find((bet) => bet.id === "ufc-332-wang-cong");
+    assert.ok(wang);
+    assert.equal(wang.hubLean, "Natalia Silva");
+    assert.equal(wang.pick, "Wang Cong");
+    assert.equal(wang.agreesWithLean, false);
+    assert.equal(betToFill(wang).hubLean, "Natalia Silva");
+    assert.equal(betToFill(wang).agreesWithLean, false);
+  });
+
+  it("backfills lean onto a settled row without touching status or P&L", () => {
+    const seeded = ensureSeededBetsEnvelope(null, "2026-10-03T12:00:00.000Z");
+    const nolan = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-nolan");
+    assert.ok(nolan);
+    const won = settleBet(nolan, { id: nolan.id, status: "won" }, "2026-10-04T01:00:00.000Z");
+    const stripped = { ...won.bet };
+    delete stripped.hubLean;
+    delete stripped.agreesWithLean;
+    const stored = replaceBet(seeded.envelope, stripped, "2026-10-04T01:00:00.000Z");
+    const parsed = parseBetsEnvelope(JSON.parse(JSON.stringify(stored)));
+    assert.ok(parsed);
+    const rawNolan = parsed.bets.find((bet) => bet.id === "ufc-332-nolan");
+    assert.ok(rawNolan);
+    assert.equal(rawNolan.hubLean, undefined);
+    assert.equal(rawNolan.agreesWithLean, undefined);
+    assert.equal(rawNolan.status, "won");
+    assert.equal(rawNolan.realizedPnl, "2.28");
+
+    const filled = backfillBetLeans(parsed, "2026-10-04T02:00:00.000Z");
+    assert.equal(filled.changed, true);
+    const restored = filled.envelope.bets.find((bet) => bet.id === "ufc-332-nolan");
+    assert.ok(restored);
+    assert.equal(restored.hubLean, "Eric Nolan");
+    assert.equal(restored.agreesWithLean, true);
+    assert.equal(restored.status, "won");
+    assert.equal(restored.realizedPnl, "2.28");
+    assert.equal(restored.stake, nolan.stake);
+
+    const again = backfillBetLeans(filled.envelope, "2026-10-04T03:00:00.000Z");
+    assert.equal(again.changed, false);
+    assert.equal(again.envelope, filled.envelope);
+    assert.equal(again.envelope.updatedAt, "2026-10-04T02:00:00.000Z");
+  });
+
+  it("keeps a stored lean override and accepts optional write fields", () => {
+    const seeded = ensureSeededBetsEnvelope(null, "2026-10-03T12:00:00.000Z");
+    const wang = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-wang-cong");
+    assert.ok(wang);
+    const overridden = replaceBet(
+      seeded.envelope,
+      { ...wang, hubLean: "Wang Cong", agreesWithLean: true },
+      "2026-10-04T01:00:00.000Z",
+    );
+    const kept = backfillBetLeans(overridden, "2026-10-04T02:00:00.000Z");
+    assert.equal(kept.changed, false);
+    const row = kept.envelope.bets.find((bet) => bet.id === "ufc-332-wang-cong");
+    assert.equal(row?.hubLean, "Wang Cong");
+    assert.equal(row?.agreesWithLean, true);
+
+    const open = betSeed().find((bet) => bet.id === "ufc-332-wang-cong");
+    assert.ok(open);
+    const written = applyOptionalLean(
+      { ...open, hubLean: undefined, agreesWithLean: undefined },
+      { hubLean: " Natalia Silva ", agreesWithLean: false },
+    );
+    assert.equal(written.hubLean, "Natalia Silva");
+    assert.equal(written.agreesWithLean, false);
+    assert.equal(written.status, "open");
+
+    const omitted = applyOptionalLean(
+      { ...open, hubLean: undefined, agreesWithLean: undefined },
+      {},
+    );
+    assert.equal(omitted.hubLean, "Natalia Silva");
+    assert.equal(omitted.agreesWithLean, false);
+
+    const envelope = parseBetsEnvelope({
+      bets: [
+        {
+          ...open,
+          hubLean: 12,
+          agreesWithLean: "false",
+        },
+      ],
+    });
+    assert.equal(envelope?.bets.length, 1);
+    assert.equal(envelope?.bets[0]?.hubLean, undefined);
+    assert.equal(envelope?.bets[0]?.agreesWithLean, undefined);
+    assert.equal(envelope?.bets[0]?.stake, open.stake);
+  });
+
+  it("scores settled bets and sums the UFC book", () => {
+    const bets = betSeed();
+    const byId = (id: string) => {
+      const bet = bets.find((row) => row.id === id);
+      assert.ok(bet);
+      return bet;
+    };
+    const nolan = settleBet(byId("ufc-332-nolan"), { id: "ufc-332-nolan", status: "won" }, "t").bet;
+    const smith = settleBet(byId("ufc-332-smith"), { id: "ufc-332-smith", status: "lost" }, "t").bet;
+    const walker = settleBet(byId("ufc-332-walker"), { id: "ufc-332-walker", status: "void" }, "t").bet;
+    const wang = settleBet(
+      byId("ufc-332-wang-cong"),
+      { id: "ufc-332-wang-cong", status: "won" },
+      "t",
+    ).bet;
+    const bookBets = bets.map((bet) => {
+      if (bet.id === nolan.id) return nolan;
+      if (bet.id === smith.id) return smith;
+      if (bet.id === walker.id) return walker;
+      if (bet.id === wang.id) return wang;
+      return bet;
+    });
+
+    const card = scoreBets(bookBets);
+    assert.equal(card.founder.record, "2-1");
+    assert.equal(card.hub.record, "1-2");
+    assert.equal(card.withLean.record, "1-1");
+    assert.equal(card.againstLean.record, "1-0");
+    assert.equal(card.voids, 1);
+    assert.equal(card.open, 10);
+
+    const book = summarizeUfcBook(bookBets);
+    assert.equal(book.record, "2-1");
+    assert.equal(book.voids, 1);
+    assert.equal(book.count, 14);
+    assert.equal(book.totalStaked, "163.90");
+    assert.equal(book.open, 10);
+    assert.equal(book.openStake, "106.63");
+    assert.equal(book.realizedPnl, "73.41");
+    assert.equal(book.realizedPnlLabel, "+$73.41");
+    assert.equal(book.tileLabel, "2-1 · +$73.41");
+    assert.equal(formatSignedUsd("-4.88"), "-$4.88");
+    assert.equal(formatSignedUsd("0.00"), "$0.00");
+
+    const openBook = summarizeUfcBook(bets);
+    assert.equal(openBook.record, "0-0");
+    assert.equal(openBook.realizedPnl, "0.00");
+    assert.equal(openBook.tileLabel, "0-0 · $0.00");
+    assert.equal(openBook.openStake, "163.90");
+    assert.equal(openBook.openPotential, "302.58");
   });
 });

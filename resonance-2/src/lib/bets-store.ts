@@ -7,6 +7,7 @@ import {
   BETS_BLOB_PATH,
   createEmptyBetsEnvelope,
   DEFAULT_BETS_FILE,
+  backfillBetLeans,
   detectBetsBackend,
   ensureSeededBetsEnvelope,
   isBetsStoreConfigured,
@@ -114,17 +115,19 @@ export async function loadBetsStore(): Promise<{
 }> {
   const backend = detectBetsBackend();
   if (backend === "none") {
+    const seeded = ensureSeededBetsEnvelope(null);
     return {
       configured: false,
       backend,
-      envelope: ensureSeededBetsEnvelope(null).envelope,
+      envelope: backfillBetLeans(seeded.envelope).envelope,
       seeded: true,
     };
   }
   const raw = await readRawEnvelope();
-  const { envelope, seeded } = ensureSeededBetsEnvelope(raw);
-  if (seeded) await persistEnvelope(envelope);
-  return { configured: true, backend, envelope, seeded };
+  const seeded = ensureSeededBetsEnvelope(raw);
+  const leaned = backfillBetLeans(seeded.envelope);
+  if (seeded.seeded || leaned.changed) await persistEnvelope(leaned.envelope);
+  return { configured: true, backend, envelope: leaned.envelope, seeded: seeded.seeded };
 }
 
 export async function settleStoredBets(requests: readonly SettleRequest[]): Promise<{

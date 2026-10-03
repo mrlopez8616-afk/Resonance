@@ -111,6 +111,9 @@ export type FounderBetSeed = {
   payout: string;
   oddsPct: number;
   estimated?: boolean;
+  /** Optional stored override. Omitted seeds use the hub analysis lean. */
+  hubLean?: string;
+  agreesWithLean?: boolean;
 };
 
 export type FighterSide = {

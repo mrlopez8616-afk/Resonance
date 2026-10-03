@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Fill } from "@/data/fills";
+import { BetScorecard, UfcBookPanel } from "@/components/bet-scorecard";
 import { FillLog } from "@/components/fill-log";
+import { summarizeUfcBook, type Bet } from "@/lib/bets";
 import { LOCKED_TICKERS } from "@/lib/fill-event";
 import {
   BET_DESK_TICKER,
@@ -18,13 +20,19 @@ export function FillDesk({
   sleeves,
   query,
   storeLabel,
+  bets = [],
 }: {
   fills: Fill[];
   sleeves: Readonly<Record<string, readonly { quantity: string }[] | undefined>>;
   query: FillDeskQuery;
   storeLabel: string;
+  bets?: readonly Bet[];
 }) {
   const visible = filterFills(fills, query);
+  const ufcBook = summarizeUfcBook(bets);
+  const deskHref = fillDeskHref(query);
+  const ufcHref = fillDeskHref({ ticker: BET_DESK_TICKER });
+  const ufcCurrent = ufcHref === deskHref;
   const tickerOptions: string[] = [...LOCKED_TICKERS, BET_DESK_TICKER];
   if (query.ticker && !tickerOptions.includes(query.ticker)) {
     tickerOptions.push(query.ticker);
@@ -59,17 +67,26 @@ export function FillDesk({
         <p className="log-kicker">Search desk</p>
         <h2 className="log-title">{title}</h2>
         <p className="log-meta">
-          {count} {noun} · {storeLabel} · one store · hub POST
+          {query.ticker === BET_DESK_TICKER
+            ? `${count} ${noun} · ${storeLabel} · bets store`
+            : `${count} ${noun} · ${storeLabel} · one store · hub POST`}
         </p>
       </header>
 
-      {nodes.length > 0 ? (
+      {query.ticker === BET_DESK_TICKER ? (
+        <>
+          <UfcBookPanel bets={bets} />
+          <BetScorecard bets={bets} />
+        </>
+      ) : null}
+
+      {nodes.length > 0 || bets.length > 0 ? (
         <section className="log-nodes" aria-label="Nodes">
           <p className="log-kicker">Nodes</p>
           <ol>
             {nodes.map((node) => {
               const href = fillDeskHref({ ticker: node.ticker });
-              const current = href === fillDeskHref(query);
+              const current = href === deskHref;
               return (
                 <li key={node.ticker}>
                   <Link
@@ -83,12 +100,24 @@ export function FillDesk({
                 </li>
               );
             })}
+            {bets.length > 0 ? (
+              <li>
+                <Link
+                  href={ufcHref}
+                  className={ufcCurrent ? "is-current is-bet" : "is-bet"}
+                  aria-current={ufcCurrent ? "true" : undefined}
+                >
+                  <span className="log-nodes-ticker">UFC</span>
+                  <span className="log-nodes-mark">{ufcBook.tileLabel}</span>
+                </Link>
+              </li>
+            ) : null}
           </ol>
         </section>
       ) : null}
 
       <form
-        key={fillDeskHref(query)}
+        key={deskHref}
         className="log-desk"
         method="get"
         action="/log"

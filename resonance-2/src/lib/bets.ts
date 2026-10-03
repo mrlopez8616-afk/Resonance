@@ -1,5 +1,5 @@
-import type { Fill } from "@/data/fills";
-import { fightByNumber, founderBetSeeds, UFC_332_EVENT } from "@/lib/ufc332";
+import type { BetFill } from "@/data/fills";
+import { fightByNumber, fightBySlug, founderBetSeeds, UFC_332_EVENT } from "@/lib/ufc332";
 import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 
 export const BET_VENUE = "coinbase-predict" as const;
@@ -15,6 +15,10 @@ export type Bet = {
   fight: string;
   fightSlug: string;
   pick: string;
+  /** Full name of the fighter the hub analysis leaned to. */
+  hubLean?: string;
+  /** True when the founder pick is that lean. */
+  agreesWithLean?: boolean;
   stake: string;
   oddsPct: number;
   /** Ticket payout if the bet hits. Coria's is estimated. */
@@ -69,6 +73,14 @@ export function formatUsd(value: string): string {
   return printed.startsWith("-") ? `-$${printed.slice(1)}` : `$${printed}`;
 }
 
+/** Realized P&L. Zero stays unsigned. A gain gets a plus. */
+export function formatSignedUsd(value: string): string {
+  const printed = money(value);
+  if (printed.startsWith("-")) return `-$${printed.slice(1)}`;
+  if (printed === "0.00") return "$0.00";
+  return `+$${printed}`;
+}
+
 export function sumMoney(values: readonly string[]): string {
   return values.reduce((total, value) => addDecimal(total, money(value)), "0.00");
 }
@@ -103,6 +115,192 @@ export function summarizeBets(bets: readonly Bet[]): FightDeskSummary {
   };
 }
 
+export type WinLoss = {
+  wins: number;
+  losses: number;
+  record: string;
+};
+
+function winLoss(wins: number, losses: number): WinLoss {
+  return { wins, losses, record: `${wins}-${losses}` };
+}
+
+export type LeanScorecard = {
+  founder: WinLoss;
+  hub: WinLoss;
+  withLean: WinLoss;
+  againstLean: WinLoss;
+  voids: number;
+  open: number;
+};
+
+/**
+ * Settled tickets only. A void is neither a win nor a loss.
+ * Hub lean won when the lean fighter won: the bet result when the pick
+ * agreed, and the inverse when the founder went against the lean.
+ */
+export function scoreBets(bets: readonly Bet[]): LeanScorecard {
+  let founderWins = 0;
+  let founderLosses = 0;
+  let hubWins = 0;
+  let hubLosses = 0;
+  let withWins = 0;
+  let withLosses = 0;
+  let againstWins = 0;
+  let againstLosses = 0;
+  let voids = 0;
+  let open = 0;
+
+  for (const bet of bets) {
+    if (bet.status === "open") {
+      open += 1;
+      continue;
+    }
+    if (bet.status === "void") {
+      voids += 1;
+      continue;
+    }
+    const won = bet.status === "won";
+    if (won) founderWins += 1;
+    else founderLosses += 1;
+    if (typeof bet.agreesWithLean !== "boolean") continue;
+    const hubWon = bet.agreesWithLean ? won : !won;
+    if (hubWon) hubWins += 1;
+    else hubLosses += 1;
+    if (bet.agreesWithLean) {
+      if (won) withWins += 1;
+      else withLosses += 1;
+    } else if (won) againstWins += 1;
+    else againstLosses += 1;
+  }
+
+  return {
+    founder: winLoss(founderWins, founderLosses),
+    hub: winLoss(hubWins, hubLosses),
+    withLean: winLoss(withWins, withLosses),
+    againstLean: winLoss(againstWins, againstLosses),
+    voids,
+    open,
+  };
+}
+
+export type UfcBookSummary = {
+  count: number;
+  wins: number;
+  losses: number;
+  voids: number;
+  record: string;
+  totalStaked: string;
+  totalStakedLabel: string;
+  realizedPnl: string;
+  realizedPnlLabel: string;
+  open: number;
+  openStake: string;
+  openStakeLabel: string;
+  openPotential: string;
+  openPotentialLabel: string;
+  estimated: boolean;
+  tileLabel: string;
+};
+
+function settledPnlAmount(bet: Bet): string | null {
+  if (bet.status === "open") return null;
+  if (bet.realizedPnl && isDecimalString(bet.realizedPnl)) return money(bet.realizedPnl);
+  return realizedPnl(bet.stake, bet.status, bet.settledPayout ?? bet.payout);
+}
+
+/** Whole UFC book from the bets store. Realized P&L is the sum of settled rows. */
+export function summarizeUfcBook(bets: readonly Bet[]): UfcBookSummary {
+  const wins = bets.filter((bet) => bet.status === "won").length;
+  const losses = bets.filter((bet) => bet.status === "lost").length;
+  const voids = bets.filter((bet) => bet.status === "void").length;
+  const openBets = bets.filter((bet) => bet.status === "open");
+  const totalStaked = money(sumMoney(bets.map((bet) => bet.stake)));
+  const openStake = money(sumMoney(openBets.map((bet) => bet.stake)));
+  const openPotential = money(sumMoney(openBets.map((bet) => bet.payout)));
+  const realized = money(
+    sumMoney(
+      bets.flatMap((bet) => {
+        const pnl = settledPnlAmount(bet);
+        return pnl ? [pnl] : [];
+      }),
+    ),
+  );
+  const record = `${wins}-${losses}`;
+  const realizedPnlLabel = formatSignedUsd(realized);
+  return {
+    count: bets.length,
+    wins,
+    losses,
+    voids,
+    record,
+    totalStaked,
+    totalStakedLabel: formatUsd(totalStaked),
+    realizedPnl: realized,
+    realizedPnlLabel,
+    open: openBets.length,
+    openStake,
+    openStakeLabel: formatUsd(openStake),
+    openPotential,
+    openPotentialLabel: formatUsd(openPotential),
+    estimated: openBets.some((bet) => bet.estimated),
+    tileLabel: `${record} · ${realizedPnlLabel}`,
+  };
+}
+
+export type OptionalLean = {
+  hubLean?: string;
+  agreesWithLean?: boolean;
+};
+
+export function readOptionalLean(raw: Record<string, unknown>): OptionalLean {
+  const lean: OptionalLean = {};
+  if (typeof raw.hubLean === "string" && raw.hubLean.trim()) {
+    lean.hubLean = raw.hubLean.trim();
+  }
+  if (typeof raw.agreesWithLean === "boolean") lean.agreesWithLean = raw.agreesWithLean;
+  return lean;
+}
+
+/** Hub analysis lean for a catalog fight. Null when this card has no lean. */
+export function catalogLean(
+  bet: Pick<Bet, "fightSlug" | "pick">,
+): { hubLean: string; agreesWithLean: boolean } | null {
+  const hubLean = fightBySlug(bet.fightSlug)?.lean?.trim();
+  if (!hubLean) return null;
+  return { hubLean, agreesWithLean: bet.pick === hubLean };
+}
+
+/**
+ * Keep a stored lean. Fill only missing fields from the catalog.
+ * An explicit hubLean or agreesWithLean is left as written.
+ */
+export function withStoredLean(bet: Bet, override?: OptionalLean): Bet {
+  const writtenHub =
+    typeof override?.hubLean === "string" && override.hubLean.trim()
+      ? override.hubLean.trim()
+      : bet.hubLean?.trim();
+  const writtenAgrees =
+    typeof override?.agreesWithLean === "boolean" ? override.agreesWithLean : bet.agreesWithLean;
+
+  let hubLean = writtenHub || undefined;
+  let agreesWithLean = typeof writtenAgrees === "boolean" ? writtenAgrees : undefined;
+  if (!hubLean || typeof agreesWithLean !== "boolean") {
+    const derived = catalogLean(bet);
+    if (!hubLean && derived) hubLean = derived.hubLean;
+    if (typeof agreesWithLean !== "boolean" && hubLean) agreesWithLean = bet.pick === hubLean;
+  }
+  if (!hubLean || typeof agreesWithLean !== "boolean") return bet;
+  if (bet.hubLean === hubLean && bet.agreesWithLean === agreesWithLean) return bet;
+  return { ...bet, hubLean, agreesWithLean };
+}
+
+/** Optional lean on a future bet write. Omitted fields are filled from the catalog. */
+export function applyOptionalLean(bet: Bet, raw: unknown): Bet {
+  if (!isRecord(raw)) return withStoredLean(bet);
+  return withStoredLean(bet, readOptionalLean(raw));
+}
+
 export function betSeed(): Bet[] {
   return founderBetSeeds().map((row) => {
     const fight = fightByNumber(row.fight);
@@ -129,12 +327,15 @@ export function betSeed(): Bet[] {
       time: fight.iso,
     };
     if (row.estimated) bet.estimated = true;
-    return bet;
+    return withStoredLean(bet, {
+      hubLean: row.hubLean,
+      agreesWithLean: row.agreesWithLean,
+    });
   });
 }
 
-export function betToFill(bet: Bet): Fill {
-  const fill: Fill = {
+export function betToFill(bet: Bet): BetFill {
+  const fill: BetFill = {
     kind: "bet",
     time: bet.time,
     symbol: bet.ticker,
@@ -151,6 +352,8 @@ export function betToFill(bet: Bet): Fill {
     payout: bet.payout,
     betStatus: bet.status,
   };
+  if (bet.hubLean) fill.hubLean = bet.hubLean;
+  if (typeof bet.agreesWithLean === "boolean") fill.agreesWithLean = bet.agreesWithLean;
   if (bet.estimated) {
     fill.estimated = true;
     fill.note = "Payout estimated.";

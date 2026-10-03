@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BetScorecard } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
 import { betsOnFight, formatUsd } from "@/lib/bets";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
@@ -47,6 +48,7 @@ export function FightIndex({ bets }: { bets: readonly Bet[] }) {
           {open} open {open === 1 ? "bet" : "bets"} · Coinbase Predict · founder places the bets
         </p>
       </header>
+      <BetScorecard bets={bets} />
       <ol className="flex flex-col gap-3">
         <li>
           <Link href={`/fights/${UFC_332_EVENT.id}`} className="fight-card">
@@ -302,6 +304,10 @@ export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readon
               <li key={bet.id} className="fight-card">
                 <dl>
                   <Field label="Pick" value={bet.pick} />
+                  {bet.hubLean ? <Field label="Hub lean" value={bet.hubLean} /> : null}
+                  {typeof bet.agreesWithLean === "boolean" ? (
+                    <Field label="Agrees" value={bet.agreesWithLean ? "yes" : "no"} />
+                  ) : null}
                   <Field label="Stake" value={formatUsd(bet.stake)} />
                   <Field label="Odds" value={ticketOdds(bet)} />
                   <Field

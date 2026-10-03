@@ -33,6 +33,10 @@ describe("homepage floor paint", () => {
       FLOOR_NODES.some((node) => node.ticker === "XLM"),
       false,
     );
+    assert.equal(
+      FLOOR_NODES.some((node) => node.ticker === "UFC"),
+      false,
+    );
 
     const visible = visibleNodes(["xrp", "btc"]);
     assert.deepEqual(
