@@ -59,7 +59,49 @@ body {
   display: grid;
   grid-template-columns: 4.25rem minmax(0, 1fr);
   height: 100dvh;
-  background: var(--bg);
+  background: transparent;
+}
+
+/* Soft wash behind the floor. Peak mixes stay under the contrast budget:
+   #16C784 at 16% and #e10600 at 14% over white keep muted #5b616e above 4.5:1.
+   Node cards stay on --surface. */
+.mood-wash {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mood-wash-up,
+.mood-wash-down {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+
+.mood-wash-up {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #16c784 16%, #ffffff) 0%,
+    color-mix(in srgb, #16c784 9%, #ffffff) 48%,
+    #ffffff 100%
+  );
+}
+
+.mood-wash-down {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #e10600 14%, #ffffff) 0%,
+    color-mix(in srgb, #e10600 7%, #ffffff) 48%,
+    #ffffff 100%
+  );
+}
+
+.mood-wash[data-mood="up"] .mood-wash-up,
+.mood-wash[data-mood="down"] .mood-wash-down {
+  opacity: 1;
 }
 
 .operator-toolbar {
@@ -165,6 +207,8 @@ body {
 }
 
 .operator-canvas {
+  position: relative;
+  z-index: 1;
   display: flex;
   min-width: 0;
   min-height: 0;
@@ -174,10 +218,54 @@ body {
 
 .operator-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.85rem;
   min-height: 1.7rem;
   margin-bottom: 1.35rem;
+}
+
+.mood-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.mood-swatch {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.mood-legend[data-mood="up"] .mood-swatch {
+  background: #16c784;
+}
+
+.mood-legend[data-mood="down"] .mood-swatch {
+  background: var(--live);
+}
+
+.mood-pct {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.mood-partial {
+  color: var(--muted);
+  letter-spacing: 0.06em;
 }
 
 .operator-title {
@@ -1480,6 +1568,11 @@ body {
 
   .live-dot {
     box-shadow: none;
+  }
+
+  .mood-wash-up,
+  .mood-wash-down {
+    transition: none;
   }
 }
 

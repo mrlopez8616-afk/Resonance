@@ -5,6 +5,17 @@ export type SpotQuote = {
   usd: number;
   source: string;
   fetchedAt: string;
+  /**
+   * Feed-reported percent change versus the prior price (CoinGecko / Binance
+   * rolling 24h, or Yahoo's change vs the previous close). Null when that
+   * payload did not include it. Never invented.
+   */
+  change24hPct?: number | null;
+  /**
+   * Prior USD price when the feed reported one directly (Yahoo previous
+   * close, or the previous daily close on the chart). Null when absent.
+   */
+  price24hAgoUsd?: number | null;
 };
 
 export type SleeveFace = {
