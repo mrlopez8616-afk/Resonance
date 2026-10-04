@@ -111,13 +111,20 @@ export type FounderBetSeed = {
   payout: string;
   oddsPct: number;
   estimated?: boolean;
+  /**
+   * Broker order id. POST /api/bets dedupes on this.
+   * Null means the Coinbase id is not in yet; the log prints pending.
+   */
+  orderId?: string | null;
+  /** Placed instant. Omitted seeds use the fight start. */
+  time?: string;
+  /** Ticket note. Fees and contract count live here when recorded. */
+  note?: string;
   /** Optional stored override. Omitted seeds use the hub analysis lean. */
   hubLean?: string;
   agreesWithLean?: boolean;
   /** Omitted seeds are open. A settled seed is inserted as written and is not a correction. */
   status?: "open" | "won" | "lost" | "void" | "sold";
-  /** Null means the Coinbase order id is not in yet. The log prints pending. */
-  orderId?: string | null;
 };
 
 export type FighterSide = {

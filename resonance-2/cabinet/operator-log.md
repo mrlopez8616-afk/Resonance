@@ -28,6 +28,8 @@ Nodes strip: every locked ticker with a non-zero live sleeve quantity, or a fill
 
 UFC is a separate tile on that strip when the bets store has rows. The tile shows the settled record and realized P&L and opens `/log?ticker=UFC`. That pane reads the live bets store (record, voids, total staked, realized P&L, open stake and potential return, plus the lean scorecard). Bet rows do not enter sleeve totals and do not add UFC to the floor roster.
 
+`POST /api/bets` appends tickets with the same Bearer as settle. Re-posting an `orderId` is a no-op: the stored row is not rewritten. `override: true` is the exception: it corrects an already-settled row's status, payout, and stake on both `POST /api/bets` and `POST /api/bets/settle`. On read, seed ids missing from `resonance-2/bets.json` are inserted. A row already stored under that id or orderId, including a settled row and any non-seed ticket, is left alone.
+
 A live node click is `GET /log?ticker=<symbol>`. Offline roster tickers are not painted on the homepage, so they have no square to open. The desk can still search a locked ticker that is offline, because ingest may already have logged that transfer.
 
 ## Forbidden

@@ -73,6 +73,19 @@
     "estimated": true
   },
   {
+    "id": "ufc-332-coria-2",
+    "fight": 9,
+    "pick": "Alden Coria",
+    "stake": "79.99",
+    "payout": "177.77",
+    "oddsPct": 43,
+    "orderId": "e4f0c363-fefd-4cb5-8e7c-bb695def7711",
+    "time": "2026-10-03T18:34:00-05:00",
+    "hubLean": "Alden Coria",
+    "agreesWithLean": true,
+    "note": "177.77 Yes contracts @ avg $0.43. Subtotal $76.44 + $3.55 fees (Coinbase fee $1.77 + exchange fee $1.78). Stake includes fees."
+  },
+  {
     "id": "ufc-332-gautier",
     "fight": 10,
     "pick": "Ateba Gautier",

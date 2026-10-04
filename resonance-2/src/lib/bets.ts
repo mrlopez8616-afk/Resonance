@@ -19,21 +19,24 @@ export type Bet = {
   hubLean?: string;
   /** True when the founder pick is that lean. */
   agreesWithLean?: boolean;
+  /**
+   * Broker order id. POST /api/bets is idempotent on this key.
+   * Null means it is not in yet; the log prints pending.
+   * Rows seeded before order ids existed use `id` as the key.
+   */
+  orderId?: string | null;
+  /** Ticket note. Fees and contract count live here when recorded. */
+  note?: string;
   stake: string;
   oddsPct: number;
   /** Ticket payout if the bet hits. Coria's is estimated. */
   payout: string;
   estimated?: boolean;
   status: BetStatus;
-  /** Set on won when the settle call sends an actual payout. */
+  /** Set on won or sold when the settle call sends an actual payout. */
   settledPayout?: string;
   realizedPnl?: string;
   settledAt?: string;
-  /**
-   * Coinbase order id. Null means it is not in yet; the log prints pending.
-   * Omitted rows use the bet id.
-   */
-  orderId?: string | null;
   /** Highest seed-correction version already applied. A later edit is left alone. */
   correctionVersion?: number;
   venue: typeof BET_VENUE;
@@ -341,6 +344,10 @@ export function betSeed(): Bet[] {
         `bet ${row.id} pick ${row.pick} is not on fight ${row.fight}.`,
       );
     }
+    const placed = row.time?.trim() ?? "";
+    if (placed && (!ISO_ZONED.test(placed) || Number.isNaN(Date.parse(placed)))) {
+      throw new BetWriteError(`bet ${row.id} time must be an ISO-8601 timestamp with an offset or Z.`);
+    }
     const status = row.status ?? "open";
     if (!BET_STATUSES.includes(status)) {
       throw new BetWriteError(`bet ${row.id} status ${status} is not a bet status.`);
@@ -357,11 +364,14 @@ export function betSeed(): Bet[] {
       status,
       venue: BET_VENUE,
       ticker: BET_TICKER,
-      time: fight.iso,
+      time: placed || fight.iso,
     };
-    if (row.estimated) bet.estimated = true;
     if (row.orderId === null) bet.orderId = null;
-    else if (typeof row.orderId === "string" && row.orderId.trim()) bet.orderId = row.orderId.trim();
+    else if (typeof row.orderId === "string" && row.orderId.trim()) {
+      bet.orderId = row.orderId.trim().toLowerCase();
+    }
+    if (row.note?.trim()) bet.note = row.note.trim();
+    if (row.estimated) bet.estimated = true;
     if (status !== "open") {
       bet.realizedPnl = realizedPnl(bet.stake, status, bet.payout);
     }
@@ -392,9 +402,10 @@ export function betToFill(bet: Bet): BetFill {
   };
   if (bet.hubLean) fill.hubLean = bet.hubLean;
   if (typeof bet.agreesWithLean === "boolean") fill.agreesWithLean = bet.agreesWithLean;
+  if (bet.note) fill.note = bet.note;
   if (bet.estimated) {
     fill.estimated = true;
-    fill.note = "Payout estimated.";
+    fill.note = bet.note ? `${bet.note} Payout estimated.` : "Payout estimated.";
   }
   if (bet.settledPayout) fill.settledPayout = bet.settledPayout;
   if (bet.realizedPnl) fill.realizedPnl = bet.realizedPnl;
@@ -535,4 +546,264 @@ export function parseSettleBody(body: unknown): SettleRequest[] {
     return body.bets.map((item) => parseSettleRequest(item));
   }
   return [parseSettleRequest(body)];
+}
+
+function settleOverrideRows(body: unknown): unknown[] | null {
+  if (Array.isArray(body)) return body;
+  if (!isRecord(body)) return null;
+  if (Array.isArray(body.bets)) return body.bets;
+  return [body];
+}
+
+/**
+ * True when the body is a settlement correction, not a new ticket.
+ * A full bet post carries orderId or fight and stays on the append path.
+ */
+export function isBetSettleOverride(body: unknown): boolean {
+  const rows = settleOverrideRows(body);
+  if (!rows || rows.length === 0) return false;
+  return rows.every((row) => {
+    if (!isRecord(row) || row.override !== true) return false;
+    if (row.orderId != null || row.fight != null || row.fightSlug != null) return false;
+    return typeof row.id === "string" && typeof row.status === "string";
+  });
+}
+
+export type BetPost = {
+  orderId: string;
+  id: string;
+  event: string;
+  fight: string;
+  fightSlug: string;
+  pick: string;
+  stake: string;
+  oddsPct: number;
+  payout: string;
+  time: string;
+  status: BetStatus;
+  hubLean?: string;
+  agreesWithLean?: boolean;
+  estimated?: boolean;
+  note?: string;
+  settledAt?: string;
+  /** When true, a matching stored row is corrected instead of returned unchanged. */
+  override?: boolean;
+};
+
+/** Idempotency key. A row without a broker id uses its slug. */
+export function betOrderKey(bet: Pick<Bet, "id" | "orderId">): string {
+  return (bet.orderId ?? bet.id).trim().toLowerCase();
+}
+
+function requireText(raw: Record<string, unknown>, key: string, label: string): string {
+  const value = asTrimmed(raw[key]);
+  if (!value) throw new BetWriteError(`${label} is required.`);
+  if (value.length > 200) throw new BetWriteError(`${label} is too long.`);
+  return value;
+}
+
+function requireMoney(raw: Record<string, unknown>, key: string): string {
+  const value = asTrimmed(raw[key]);
+  if (!value) throw new BetWriteError(`${key} is required.`);
+  if (!isDecimalString(value) || value.startsWith("-")) {
+    throw new BetWriteError(`${key} must be a non-negative decimal string.`);
+  }
+  return money(value);
+}
+
+export function parseBetPost(raw: unknown): BetPost {
+  if (!isRecord(raw)) throw new BetWriteError("Each bet must be an object.");
+  const orderId = asTrimmed(raw.orderId).toLowerCase();
+  if (!BET_ID.test(orderId)) {
+    throw new BetWriteError("orderId must be a lowercase slug or uuid.");
+  }
+  const explicitId = asTrimmed(raw.id).toLowerCase();
+  const id = explicitId || orderId;
+  if (!BET_ID.test(id)) throw new BetWriteError("id must be a lowercase slug.");
+
+  const event = requireText(raw, "event", "event");
+  const fight = requireText(raw, "fight", "fight");
+  const fightSlug = requireText(raw, "fightSlug", "fightSlug").toLowerCase();
+  const pick = requireText(raw, "pick", "pick");
+  const catalog = fightBySlug(fightSlug);
+  if (catalog && catalog.A.name !== pick && catalog.B.name !== pick) {
+    throw new BetWriteError(`pick ${pick} is not on ${fightSlug}.`);
+  }
+
+  const stake = requireMoney(raw, "stake");
+  const payout = requireMoney(raw, "payout");
+  if (typeof raw.oddsPct !== "number" || !Number.isFinite(raw.oddsPct) || raw.oddsPct < 0 || raw.oddsPct > 100) {
+    throw new BetWriteError("oddsPct must be a number from 0 to 100.");
+  }
+
+  const time = asTrimmed(raw.time);
+  if (!ISO_ZONED.test(time) || Number.isNaN(Date.parse(time))) {
+    throw new BetWriteError("time must be an ISO-8601 timestamp with an offset or Z.");
+  }
+
+  const statusRaw = asTrimmed(raw.status).toLowerCase() || "open";
+  if (!BET_STATUSES.includes(statusRaw as BetStatus)) {
+    throw new BetWriteError("status must be open, won, lost, void, or sold.");
+  }
+  const status = statusRaw as BetStatus;
+  if (raw.override !== undefined && raw.override !== true && raw.override !== false) {
+    throw new BetWriteError("override must be true or false.");
+  }
+
+  if ("venue" in raw && raw.venue != null && raw.venue !== BET_VENUE) {
+    throw new BetWriteError("venue must be coinbase-predict.");
+  }
+  if ("ticker" in raw && raw.ticker != null && raw.ticker !== BET_TICKER) {
+    throw new BetWriteError("ticker must be UFC.");
+  }
+  if ("estimated" in raw && raw.estimated != null && typeof raw.estimated !== "boolean") {
+    throw new BetWriteError("estimated must be a boolean.");
+  }
+  if ("hubLean" in raw && raw.hubLean != null && typeof raw.hubLean !== "string") {
+    throw new BetWriteError("hubLean must be a string.");
+  }
+  if ("agreesWithLean" in raw && raw.agreesWithLean != null && typeof raw.agreesWithLean !== "boolean") {
+    throw new BetWriteError("agreesWithLean must be a boolean.");
+  }
+
+  const settledAt = asTrimmed(raw.settledAt);
+  if (settledAt) {
+    if (status === "open") {
+      throw new BetWriteError("settledAt is only used when status is won, lost, void, or sold.");
+    }
+    if (!ISO_ZONED.test(settledAt) || Number.isNaN(Date.parse(settledAt))) {
+      throw new BetWriteError("settledAt must be an ISO-8601 timestamp with an offset or Z.");
+    }
+  }
+
+  const note = asTrimmed(raw.note);
+  if (note.length > 500) throw new BetWriteError("note is too long.");
+  const hubLean = typeof raw.hubLean === "string" ? raw.hubLean.trim() : "";
+
+  const post: BetPost = {
+    orderId,
+    id,
+    event,
+    fight,
+    fightSlug,
+    pick,
+    stake,
+    oddsPct: raw.oddsPct,
+    payout,
+    time,
+    status,
+  };
+  if (hubLean) post.hubLean = hubLean;
+  if (typeof raw.agreesWithLean === "boolean") post.agreesWithLean = raw.agreesWithLean;
+  if (raw.estimated === true) post.estimated = true;
+  if (note) post.note = note;
+  if (settledAt) post.settledAt = settledAt;
+  if (raw.override === true) post.override = true;
+  return post;
+}
+
+/** One bet, `{ bets: [...] }`, or a bare array. */
+export function parseBetPostBody(body: unknown): BetPost[] {
+  if (Array.isArray(body)) {
+    if (body.length === 0) throw new BetWriteError("At least one bet is required.");
+    return body.map((item) => parseBetPost(item));
+  }
+  if (!isRecord(body)) throw new BetWriteError("JSON object is required.");
+  if (Array.isArray(body.bets)) {
+    if (body.bets.length === 0) throw new BetWriteError("At least one bet is required.");
+    return body.bets.map((item) => parseBetPost(item));
+  }
+  return [parseBetPost(body)];
+}
+
+function postedBet(post: BetPost, now: string): Bet {
+  const bet: Bet = {
+    id: post.id,
+    orderId: post.orderId,
+    event: post.event,
+    fight: post.fight,
+    fightSlug: post.fightSlug,
+    pick: post.pick,
+    stake: post.stake,
+    oddsPct: post.oddsPct,
+    payout: post.payout,
+    status: "open",
+    venue: BET_VENUE,
+    ticker: BET_TICKER,
+    time: post.time,
+  };
+  if (post.estimated) bet.estimated = true;
+  if (post.note) bet.note = post.note;
+  const leaned = applyOptionalLean(bet, {
+    hubLean: post.hubLean,
+    agreesWithLean: post.agreesWithLean,
+  });
+  const status = post.status;
+  if (status === "open") return leaned;
+  return settleBet(
+    leaned,
+    {
+      id: leaned.id,
+      status,
+      ...(status === "won" || status === "sold" ? { payout: leaned.payout } : {}),
+      ...(post.settledAt ? { settledAt: post.settledAt } : {}),
+    },
+    now,
+  ).bet;
+}
+
+function correctPlacedBet(
+  bets: readonly Bet[],
+  existing: Bet,
+  post: BetPost,
+  now: string,
+): { bets: Bet[]; bet: Bet; deduped: boolean } {
+  const status = post.status;
+  if (status === "open") {
+    throw new BetWriteError("override status must be won, lost, void, or sold.");
+  }
+  const written = settleBet(
+    existing,
+    {
+      id: existing.id,
+      status,
+      stake: post.stake,
+      override: true,
+      ...(status === "won" || status === "sold" ? { payout: post.payout } : {}),
+      ...(post.settledAt ? { settledAt: post.settledAt } : {}),
+    },
+    now,
+  );
+  if (written.deduped) return { bets: [...bets], bet: existing, deduped: true };
+  return {
+    bets: bets.map((bet) => (bet.id === existing.id ? written.bet : bet)),
+    bet: written.bet,
+    deduped: false,
+  };
+}
+
+/**
+ * Insert one bet. Re-posting the same orderId is a no-op: the stored row is
+ * returned unchanged and is not rewritten, so a later settlement stays put.
+ * override: true corrects that row's status, payout, and stake instead.
+ */
+export function placeBet(
+  bets: readonly Bet[],
+  post: BetPost,
+  now: string,
+): { bets: Bet[]; bet: Bet; deduped: boolean } {
+  const existing = bets.find((bet) => betOrderKey(bet) === post.orderId);
+  if (existing) {
+    if (!post.override) return { bets: [...bets], bet: existing, deduped: true };
+    return correctPlacedBet(bets, existing, post, now);
+  }
+  const idClash = bets.find((bet) => bet.id === post.id);
+  if (idClash) {
+    if (post.override) return correctPlacedBet(bets, idClash, post, now);
+    throw new BetWriteError(
+      `id ${post.id} is already stored for order ${betOrderKey(idClash)}.`,
+    );
+  }
+  const bet = postedBet(post, now);
+  return { bets: [...bets, bet], bet, deduped: false };
 }
