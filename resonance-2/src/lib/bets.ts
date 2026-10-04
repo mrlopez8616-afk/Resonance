@@ -4,7 +4,7 @@ import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 
 export const BET_VENUE = "coinbase-predict" as const;
 export const BET_TICKER = "UFC" as const;
-export const BET_STATUSES = ["open", "won", "lost", "void"] as const;
+export const BET_STATUSES = ["open", "won", "lost", "void", "sold"] as const;
 
 export type BetStatus = (typeof BET_STATUSES)[number];
 export type SettleStatus = Exclude<BetStatus, "open">;
@@ -21,9 +21,10 @@ export type Bet = {
   agreesWithLean?: boolean;
   /**
    * Broker order id. POST /api/bets is idempotent on this key.
+   * Null means it is not in yet; the log prints pending.
    * Rows seeded before order ids existed use `id` as the key.
    */
-  orderId?: string;
+  orderId?: string | null;
   /** Ticket note. Fees and contract count live here when recorded. */
   note?: string;
   stake: string;
@@ -32,10 +33,12 @@ export type Bet = {
   payout: string;
   estimated?: boolean;
   status: BetStatus;
-  /** Set on won when the settle call sends an actual payout. */
+  /** Set on won or sold when the settle call sends an actual payout. */
   settledPayout?: string;
   realizedPnl?: string;
   settledAt?: string;
+  /** Highest seed-correction version already applied. A later edit is left alone. */
+  correctionVersion?: number;
   venue: typeof BET_VENUE;
   ticker: typeof BET_TICKER;
   time: string;
@@ -99,7 +102,13 @@ export function realizedPnl(
 ): string {
   if (status === "lost") return money(`-${money(stake).replace(/^-/, "")}`);
   if (status === "void") return "0.00";
+  // won and sold: proceeds minus stake. Sold proceeds live in payout.
   return money(subtractDecimal(money(payout), money(stake)));
+}
+
+/** Log and fight pages say sold early. The stored status stays sold. */
+export function betStatusLabel(status: BetStatus): string {
+  return status === "sold" ? "sold early" : status;
 }
 
 /** Open ticket book. Settled rows stay in the record and leave this sum. */
@@ -138,6 +147,8 @@ export type LeanScorecard = {
   withLean: WinLoss;
   againstLean: WinLoss;
   voids: number;
+  /** Closed early. Not a win or a loss. */
+  sold: number;
   open: number;
 };
 
@@ -156,6 +167,7 @@ export function scoreBets(bets: readonly Bet[]): LeanScorecard {
   let againstWins = 0;
   let againstLosses = 0;
   let voids = 0;
+  let sold = 0;
   let open = 0;
 
   for (const bet of bets) {
@@ -165,6 +177,10 @@ export function scoreBets(bets: readonly Bet[]): LeanScorecard {
     }
     if (bet.status === "void") {
       voids += 1;
+      continue;
+    }
+    if (bet.status === "sold") {
+      sold += 1;
       continue;
     }
     const won = bet.status === "won";
@@ -187,6 +203,7 @@ export function scoreBets(bets: readonly Bet[]): LeanScorecard {
     withLean: winLoss(withWins, withLosses),
     againstLean: winLoss(againstWins, againstLosses),
     voids,
+    sold,
     open,
   };
 }
@@ -196,6 +213,7 @@ export type UfcBookSummary = {
   wins: number;
   losses: number;
   voids: number;
+  sold: number;
   record: string;
   totalStaked: string;
   totalStakedLabel: string;
@@ -221,6 +239,7 @@ export function summarizeUfcBook(bets: readonly Bet[]): UfcBookSummary {
   const wins = bets.filter((bet) => bet.status === "won").length;
   const losses = bets.filter((bet) => bet.status === "lost").length;
   const voids = bets.filter((bet) => bet.status === "void").length;
+  const sold = bets.filter((bet) => bet.status === "sold").length;
   const openBets = bets.filter((bet) => bet.status === "open");
   const totalStaked = money(sumMoney(bets.map((bet) => bet.stake)));
   const openStake = money(sumMoney(openBets.map((bet) => bet.stake)));
@@ -240,6 +259,7 @@ export function summarizeUfcBook(bets: readonly Bet[]): UfcBookSummary {
     wins,
     losses,
     voids,
+    sold,
     record,
     totalStaked,
     totalStakedLabel: formatUsd(totalStaked),
@@ -314,7 +334,12 @@ export function betSeed(): Bet[] {
     if (!fight) {
       throw new BetWriteError(`bet ${row.id} points at missing fight ${row.fight}.`);
     }
-    if (fight.A.name !== row.pick && fight.B.name !== row.pick) {
+    const onCard =
+      fight.A.name === row.pick ||
+      fight.B.name === row.pick ||
+      row.pick.includes(fight.A.name) ||
+      row.pick.includes(fight.B.name);
+    if (!onCard) {
       throw new BetWriteError(
         `bet ${row.id} pick ${row.pick} is not on fight ${row.fight}.`,
       );
@@ -322,6 +347,10 @@ export function betSeed(): Bet[] {
     const placed = row.time?.trim() ?? "";
     if (placed && (!ISO_ZONED.test(placed) || Number.isNaN(Date.parse(placed)))) {
       throw new BetWriteError(`bet ${row.id} time must be an ISO-8601 timestamp with an offset or Z.`);
+    }
+    const status = row.status ?? "open";
+    if (!BET_STATUSES.includes(status)) {
+      throw new BetWriteError(`bet ${row.id} status ${status} is not a bet status.`);
     }
     const bet: Bet = {
       id: row.id,
@@ -332,14 +361,20 @@ export function betSeed(): Bet[] {
       stake: money(row.stake),
       oddsPct: row.oddsPct,
       payout: money(row.payout),
-      status: "open",
+      status,
       venue: BET_VENUE,
       ticker: BET_TICKER,
       time: placed || fight.iso,
     };
-    if (row.orderId?.trim()) bet.orderId = row.orderId.trim().toLowerCase();
+    if (row.orderId === null) bet.orderId = null;
+    else if (typeof row.orderId === "string" && row.orderId.trim()) {
+      bet.orderId = row.orderId.trim().toLowerCase();
+    }
     if (row.note?.trim()) bet.note = row.note.trim();
     if (row.estimated) bet.estimated = true;
+    if (status !== "open") {
+      bet.realizedPnl = realizedPnl(bet.stake, status, bet.payout);
+    }
     return withStoredLean(bet, {
       hubLean: row.hubLean,
       agreesWithLean: row.agreesWithLean,
@@ -352,7 +387,7 @@ export function betToFill(bet: Bet): BetFill {
     kind: "bet",
     time: bet.time,
     symbol: bet.ticker,
-    orderId: bet.orderId ?? bet.id,
+    orderId: bet.orderId === null ? "pending" : bet.orderId?.trim() || bet.id,
     result: bet.status,
     venue: bet.venue,
     idempotencyKey: bet.id,
@@ -383,10 +418,15 @@ export type SettleRequest = {
   status: SettleStatus;
   settledAt?: string;
   payout?: string;
+  /** Present only when the caller sent override: true. */
+  stake?: string;
+  override?: boolean;
 };
 
 function sameSettlement(current: Bet, next: Bet, request: SettleRequest): boolean {
   if (current.status !== next.status) return false;
+  if (current.stake !== next.stake) return false;
+  if (current.payout !== next.payout) return false;
   if (current.realizedPnl !== next.realizedPnl) return false;
   if ((current.settledPayout ?? "") !== (next.settledPayout ?? "")) return false;
   if (request.settledAt && current.settledAt !== request.settledAt) return false;
@@ -396,22 +436,34 @@ function sameSettlement(current: Bet, next: Bet, request: SettleRequest): boolea
 /**
  * One settlement. The same id + outcome is a no-op.
  * A different status replaces the row. P&L is recomputed, not added.
+ * Stake changes require override. Without it, status and payout behave as before.
  */
 export function settleBet(
   bet: Bet,
   request: SettleRequest,
   now: string,
 ): { bet: Bet; deduped: boolean } {
-  const wonPayout =
-    request.status === "won" ? money(request.payout ?? bet.payout) : undefined;
+  if (request.stake && !request.override) {
+    throw new BetWriteError("Changing stake requires override: true.");
+  }
+  const stake = request.stake ? money(request.stake) : bet.stake;
+  const usesPayout = request.status === "won" || request.status === "sold";
+  const proceeds = usesPayout ? money(request.payout ?? bet.payout) : undefined;
   const next: Bet = {
     ...bet,
+    stake,
     status: request.status,
-    realizedPnl: realizedPnl(bet.stake, request.status, wonPayout ?? bet.payout),
+    realizedPnl: realizedPnl(stake, request.status, proceeds ?? bet.payout),
     settledAt: request.settledAt ?? bet.settledAt ?? now,
   };
-  if (wonPayout) next.settledPayout = wonPayout;
-  else delete next.settledPayout;
+  if (request.status === "sold" && proceeds) {
+    next.payout = proceeds;
+    next.settledPayout = proceeds;
+  } else if (proceeds) {
+    next.settledPayout = proceeds;
+  } else {
+    delete next.settledPayout;
+  }
   if (sameSettlement(bet, next, request)) {
     return { bet, deduped: true };
   }
@@ -441,10 +493,14 @@ export function parseSettleRequest(raw: unknown): SettleRequest {
     throw new BetWriteError("id must be a lowercase slug.");
   }
   const status = asTrimmed(raw.status).toLowerCase();
-  if (status !== "won" && status !== "lost" && status !== "void") {
-    throw new BetWriteError("status must be won, lost, or void.");
+  if (status !== "won" && status !== "lost" && status !== "void" && status !== "sold") {
+    throw new BetWriteError("status must be won, lost, void, or sold.");
   }
   const request: SettleRequest = { id, status };
+  if (raw.override !== undefined && raw.override !== true && raw.override !== false) {
+    throw new BetWriteError("override must be true or false.");
+  }
+  if (raw.override === true) request.override = true;
   const settledAt = asTrimmed(raw.settledAt);
   if (settledAt) {
     if (!ISO_ZONED.test(settledAt) || Number.isNaN(Date.parse(settledAt))) {
@@ -453,14 +509,27 @@ export function parseSettleRequest(raw: unknown): SettleRequest {
     request.settledAt = settledAt;
   }
   const payout = asTrimmed(raw.payout);
+  if (status === "sold" && !payout) {
+    throw new BetWriteError("payout is required when status is sold.");
+  }
   if (payout) {
-    if (status !== "won") {
-      throw new BetWriteError("payout is only used when status is won.");
+    if (status !== "won" && status !== "sold") {
+      throw new BetWriteError("payout is only used when status is won or sold.");
     }
     if (!isDecimalString(payout) || payout.startsWith("-")) {
       throw new BetWriteError("payout must be a non-negative decimal string.");
     }
     request.payout = money(payout);
+  }
+  if (raw.stake !== undefined && raw.stake !== null && asTrimmed(raw.stake) !== "") {
+    if (request.override !== true) {
+      throw new BetWriteError("Changing stake requires override: true.");
+    }
+    const stake = asTrimmed(raw.stake);
+    if (!isDecimalString(stake) || stake.startsWith("-")) {
+      throw new BetWriteError("stake must be a non-negative decimal string.");
+    }
+    request.stake = money(stake);
   }
   return request;
 }
@@ -477,6 +546,27 @@ export function parseSettleBody(body: unknown): SettleRequest[] {
     return body.bets.map((item) => parseSettleRequest(item));
   }
   return [parseSettleRequest(body)];
+}
+
+function settleOverrideRows(body: unknown): unknown[] | null {
+  if (Array.isArray(body)) return body;
+  if (!isRecord(body)) return null;
+  if (Array.isArray(body.bets)) return body.bets;
+  return [body];
+}
+
+/**
+ * True when the body is a settlement correction, not a new ticket.
+ * A full bet post carries orderId or fight and stays on the append path.
+ */
+export function isBetSettleOverride(body: unknown): boolean {
+  const rows = settleOverrideRows(body);
+  if (!rows || rows.length === 0) return false;
+  return rows.every((row) => {
+    if (!isRecord(row) || row.override !== true) return false;
+    if (row.orderId != null || row.fight != null || row.fightSlug != null) return false;
+    return typeof row.id === "string" && typeof row.status === "string";
+  });
 }
 
 export type BetPost = {
@@ -496,6 +586,8 @@ export type BetPost = {
   estimated?: boolean;
   note?: string;
   settledAt?: string;
+  /** When true, a matching stored row is corrected instead of returned unchanged. */
+  override?: boolean;
 };
 
 /** Idempotency key. A row without a broker id uses its slug. */
@@ -551,9 +643,12 @@ export function parseBetPost(raw: unknown): BetPost {
 
   const statusRaw = asTrimmed(raw.status).toLowerCase() || "open";
   if (!BET_STATUSES.includes(statusRaw as BetStatus)) {
-    throw new BetWriteError("status must be open, won, lost, or void.");
+    throw new BetWriteError("status must be open, won, lost, void, or sold.");
   }
   const status = statusRaw as BetStatus;
+  if (raw.override !== undefined && raw.override !== true && raw.override !== false) {
+    throw new BetWriteError("override must be true or false.");
+  }
 
   if ("venue" in raw && raw.venue != null && raw.venue !== BET_VENUE) {
     throw new BetWriteError("venue must be coinbase-predict.");
@@ -573,7 +668,9 @@ export function parseBetPost(raw: unknown): BetPost {
 
   const settledAt = asTrimmed(raw.settledAt);
   if (settledAt) {
-    if (status === "open") throw new BetWriteError("settledAt is only used when status is won, lost, or void.");
+    if (status === "open") {
+      throw new BetWriteError("settledAt is only used when status is won, lost, void, or sold.");
+    }
     if (!ISO_ZONED.test(settledAt) || Number.isNaN(Date.parse(settledAt))) {
       throw new BetWriteError("settledAt must be an ISO-8601 timestamp with an offset or Z.");
     }
@@ -601,6 +698,7 @@ export function parseBetPost(raw: unknown): BetPost {
   if (raw.estimated === true) post.estimated = true;
   if (note) post.note = note;
   if (settledAt) post.settledAt = settledAt;
+  if (raw.override === true) post.override = true;
   return post;
 }
 
@@ -640,23 +738,54 @@ function postedBet(post: BetPost, now: string): Bet {
     hubLean: post.hubLean,
     agreesWithLean: post.agreesWithLean,
   });
-  if (post.status === "open") return leaned;
+  const status = post.status;
+  if (status === "open") return leaned;
   return settleBet(
     leaned,
     {
       id: leaned.id,
-      status: post.status,
-      ...(post.status === "won" ? { payout: leaned.payout } : {}),
+      status,
+      ...(status === "won" || status === "sold" ? { payout: leaned.payout } : {}),
       ...(post.settledAt ? { settledAt: post.settledAt } : {}),
     },
     now,
   ).bet;
 }
 
+function correctPlacedBet(
+  bets: readonly Bet[],
+  existing: Bet,
+  post: BetPost,
+  now: string,
+): { bets: Bet[]; bet: Bet; deduped: boolean } {
+  const status = post.status;
+  if (status === "open") {
+    throw new BetWriteError("override status must be won, lost, void, or sold.");
+  }
+  const written = settleBet(
+    existing,
+    {
+      id: existing.id,
+      status,
+      stake: post.stake,
+      override: true,
+      ...(status === "won" || status === "sold" ? { payout: post.payout } : {}),
+      ...(post.settledAt ? { settledAt: post.settledAt } : {}),
+    },
+    now,
+  );
+  if (written.deduped) return { bets: [...bets], bet: existing, deduped: true };
+  return {
+    bets: bets.map((bet) => (bet.id === existing.id ? written.bet : bet)),
+    bet: written.bet,
+    deduped: false,
+  };
+}
+
 /**
  * Insert one bet. Re-posting the same orderId is a no-op: the stored row is
  * returned unchanged and is not rewritten, so a later settlement stays put.
- * This is not a field upsert.
+ * override: true corrects that row's status, payout, and stake instead.
  */
 export function placeBet(
   bets: readonly Bet[],
@@ -664,9 +793,13 @@ export function placeBet(
   now: string,
 ): { bets: Bet[]; bet: Bet; deduped: boolean } {
   const existing = bets.find((bet) => betOrderKey(bet) === post.orderId);
-  if (existing) return { bets: [...bets], bet: existing, deduped: true };
+  if (existing) {
+    if (!post.override) return { bets: [...bets], bet: existing, deduped: true };
+    return correctPlacedBet(bets, existing, post, now);
+  }
   const idClash = bets.find((bet) => bet.id === post.id);
   if (idClash) {
+    if (post.override) return correctPlacedBet(bets, idClash, post, now);
     throw new BetWriteError(
       `id ${post.id} is already stored for order ${betOrderKey(idClash)}.`,
     );

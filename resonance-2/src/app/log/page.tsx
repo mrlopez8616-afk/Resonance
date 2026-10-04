@@ -1,6 +1,7 @@
 import { FillDesk } from "@/components/fill-desk";
 import { OperatorShell } from "@/components/operator-shell";
-import { betSeed, betToFill } from "@/lib/bets";
+import { betToFill } from "@/lib/bets";
+import { fallbackBetBook } from "@/lib/bets-store-core";
 import { loadBetsStore } from "@/lib/bets-store";
 import { parseFillDeskQuery, type FillDeskSearch } from "@/lib/fill-desk";
 import { listFills } from "@/lib/fills";
@@ -19,7 +20,7 @@ export default async function OperatorLogPage({
     loadLiveSleeveBooks(),
     loadBetsStore()
       .then((loaded) => loaded.envelope.bets)
-      .catch(() => betSeed()),
+      .catch(() => fallbackBetBook()),
   ]);
   const rows = listFills([...fills, ...bets.map(betToFill)]);
   const storeLabel =

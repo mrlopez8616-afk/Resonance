@@ -14,6 +14,17 @@ function voidLabel(count: number): string {
   return count === 1 ? "1 void" : `${count} voids`;
 }
 
+function soldLabel(count: number): string {
+  return count === 1 ? "1 sold early" : `${count} sold early`;
+}
+
+function recordLabel(record: string, voids: number, sold: number): string {
+  const parts = [record];
+  if (voids > 0) parts.push(voidLabel(voids));
+  if (sold > 0) parts.push(soldLabel(sold));
+  return parts.join(" · ");
+}
+
 /** Settled founder and hub-lean records. Open tickets are a separate count. */
 export function BetScorecard({ bets }: { bets: readonly Bet[] }) {
   const card = scoreBets(bets);
@@ -26,6 +37,7 @@ export function BetScorecard({ bets }: { bets: readonly Bet[] }) {
         <Stat label="With lean" value={card.withLean.record} />
         <Stat label="Against lean" value={card.againstLean.record} />
         {card.voids > 0 ? <Stat label="Void" value={voidLabel(card.voids)} /> : null}
+        {card.sold > 0 ? <Stat label="Sold" value={soldLabel(card.sold)} /> : null}
         <Stat label="Open" value={String(card.open)} />
       </dl>
     </section>
@@ -35,7 +47,7 @@ export function BetScorecard({ bets }: { bets: readonly Bet[] }) {
 /** Live bets-store book for the UFC log. */
 export function UfcBookPanel({ bets }: { bets: readonly Bet[] }) {
   const book = summarizeUfcBook(bets);
-  const record = book.voids > 0 ? `${book.record} · ${voidLabel(book.voids)}` : book.record;
+  const record = recordLabel(book.record, book.voids, book.sold);
   const potential = book.estimated
     ? `${book.openPotentialLabel} return est.`
     : `${book.openPotentialLabel} return`;

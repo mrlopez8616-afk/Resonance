@@ -4,6 +4,7 @@
  *
  *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- ufc-332-nolan won
  *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- ufc-332-coria won --payout 42.51
+ *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- ufc-332-ribovics sold --payout 13.64 --stake 14.54 --override
  */
 import { parseSettleRequest } from "../src/lib/bets";
 
@@ -22,10 +23,12 @@ async function main(): Promise<void> {
   const id = argv[0]?.trim() ?? "";
   const status = argv[1]?.trim() ?? "";
   const payout = readFlag(argv, "--payout");
+  const stake = readFlag(argv, "--stake");
   const settledAt = readFlag(argv, "--settledAt");
+  const override = argv.includes("--override");
   if (!id || !status) {
     console.error(
-      "Usage: npm run bets:settle -- <id> <won|lost|void> [--payout 12.34] [--settledAt 2026-10-03T23:00:00-05:00]",
+      "Usage: npm run bets:settle -- <id> <won|lost|void|sold> [--payout 12.34] [--stake 19.99 --override] [--settledAt 2026-10-03T23:00:00-05:00]",
     );
     process.exit(1);
   }
@@ -36,7 +39,9 @@ async function main(): Promise<void> {
       id,
       status,
       ...(payout ? { payout } : {}),
+      ...(stake ? { stake } : {}),
       ...(settledAt ? { settledAt } : {}),
+      ...(override ? { override: true } : {}),
     });
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
