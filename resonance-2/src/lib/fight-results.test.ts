@@ -20,14 +20,14 @@ function seedFor(fight: number) {
 }
 
 describe("UFC 332 fight results", () => {
-  it("seeds twelve finals and leaves Talbott and Silva pending", () => {
+  it("seeds a final for every UFC 332 bout", () => {
     const results = fightResultSeed();
-    assert.equal(results.length, 12);
-    assert.equal(ufc332ResultLine(results), "12 finals · 2 pending");
+    assert.equal(results.length, 14);
+    assert.equal(ufc332ResultLine(results), "14 finals");
     assert.equal(formatFightResult(null), "Pending");
     assert.equal(formatEventResultLine(ufc332Fights, []), "Pending");
-    assert.equal(results.some((row) => row.fightSlug === fightByNumber(13)?.slug), false);
-    assert.equal(results.some((row) => row.fightSlug === fightByNumber(14)?.slug), false);
+    assert.equal(results.some((row) => row.fightSlug === fightByNumber(13)?.slug), true);
+    assert.equal(results.some((row) => row.fightSlug === fightByNumber(14)?.slug), true);
 
     const nolan = seedFor(1);
     assert.equal(nolan.winner, "Eric Nolan");
@@ -56,26 +56,55 @@ describe("UFC 332 fight results", () => {
     assert.equal(smith.round, 1);
     assert.equal(smith.time, "1:32");
 
-    assert.equal(seedFor(5).method, "KO (knee)");
+    assert.equal(seedFor(5).method, "KO/TKO (Knee)");
     assert.equal(seedFor(5).time, "3:35");
-    assert.equal(seedFor(6).method, "KO/TKO");
-    assert.equal(seedFor(6).time, "4:36");
+    assert.equal(seedFor(6).method, "KO/TKO (Punches)");
+    assert.equal(seedFor(6).time, "0:23");
+    assert.equal(seedFor(7).method, "KO/TKO (Punches)");
+    assert.equal(seedFor(7).time, "4:58");
+    assert.equal(seedFor(8).method, "KO/TKO (Punch)");
+    assert.equal(seedFor(8).time, "1:15");
     assert.equal(seedFor(9).winner, "Imanol Rodriguez Pillado");
-    assert.equal(seedFor(9).time, "1:46");
+    assert.equal(seedFor(9).method, "KO/TKO (Kick)");
+    assert.equal(seedFor(9).time, "3:11");
+    assert.match(seedFor(9).source ?? "", /401912276/);
     assert.equal(seedFor(10).winner, "Roman Kopylov");
     assert.equal(seedFor(10).opponent, "Ateba Gautier");
+    assert.equal(seedFor(10).method, "KO/TKO (Punches)");
+    assert.equal(seedFor(10).time, "3:12");
     assert.equal(seedFor(11).method, "UD (29-28, 29-27, 29-27)");
     assert.equal(seedFor(11).round, 3);
     assert.equal(seedFor(11).time, "5:00");
     const ribovics = seedFor(12);
     assert.equal(ribovics.winner, "Esteban Ribovics");
     assert.equal(ribovics.opponent, "King Green");
-    assert.equal(ribovics.method, "KO/TKO");
+    assert.equal(ribovics.method, "KO/TKO (Punch)");
     assert.equal(ribovics.round, 1);
-    assert.equal(ribovics.time, "1:01");
+    assert.equal(ribovics.time, "4:08");
+    assert.match(ribovics.source ?? "", /401917347/);
     assert.equal(
       formatFightResult(ribovics),
-      "Esteban Ribovics def. King Green · KO/TKO · R1 1:01",
+      "Esteban Ribovics def. King Green · KO/TKO (Punch) · R1 4:08",
+    );
+
+    const talbott = seedFor(13);
+    assert.equal(talbott.winner, "Payton Talbott");
+    assert.equal(talbott.opponent, "Deiveson Figueiredo");
+    assert.equal(talbott.method, "KO/TKO (Punches)");
+    assert.equal(talbott.round, 1);
+    assert.equal(talbott.time, "2:09");
+    assert.match(talbott.source ?? "", /401907087/);
+
+    const silva = seedFor(14);
+    assert.equal(silva.winner, "Natalia Silva");
+    assert.equal(silva.opponent, "Wang Cong");
+    assert.equal(silva.method, "UD (48-47, 48-47, 49-46)");
+    assert.equal(silva.round, 5);
+    assert.equal(silva.time, "5:00");
+    assert.match(silva.source ?? "", /401912278/);
+    assert.equal(
+      formatFightResult(silva),
+      "Natalia Silva def. Wang Cong · UD (48-47, 48-47, 49-46) · R5 5:00",
     );
   });
 
@@ -142,7 +171,7 @@ describe("UFC 332 fight results", () => {
   it("merges seeds without clobbering a stored row and treats the same payload as a no-op", () => {
     const seeded = ensureSeededFightResults(null, "2026-10-04T01:00:00.000Z");
     assert.equal(seeded.seeded, true);
-    assert.equal(seeded.envelope.results.length, 12);
+    assert.equal(seeded.envelope.results.length, 14);
     const nolan = seeded.envelope.results.find((row) => row.winner === "Eric Nolan");
     assert.ok(nolan);
     const custom = { ...nolan, method: "KO (punches)", source: "desk correction" };
@@ -152,7 +181,7 @@ describe("UFC 332 fight results", () => {
     };
     const merged = ensureSeededFightResults(stored, "2026-10-04T02:00:00.000Z");
     assert.equal(merged.seeded, true);
-    assert.equal(merged.envelope.results.length, 12);
+    assert.equal(merged.envelope.results.length, 14);
     assert.equal(
       merged.envelope.results.find((row) => row.fightSlug === nolan.fightSlug)?.method,
       "KO (punches)",
@@ -187,5 +216,32 @@ describe("UFC 332 fight results", () => {
     assert.equal(corrected.result.method, "TKO (strikes)");
     assert.equal(corrected.result.source, "desk correction");
     assert.equal(corrected.result.winner, "Eric Nolan");
+
+    const wintSlug = fightByNumber(6)?.slug;
+    assert.ok(wintSlug);
+    const staleWint = {
+      ...seedFor(6),
+      method: "KO/TKO",
+      time: "4:36",
+      source: "Hub confirmed final.",
+    };
+    const staleBook = {
+      ...merged.envelope,
+      results: merged.envelope.results.map((row) =>
+        row.fightSlug === wintSlug ? staleWint : row,
+      ),
+    };
+    const refreshed = ensureSeededFightResults(staleBook, "2026-10-04T06:00:00.000Z");
+    assert.equal(refreshed.seeded, true);
+    const wint = refreshed.envelope.results.find((row) => row.fightSlug === wintSlug);
+    assert.equal(wint?.time, "0:23");
+    assert.equal(wint?.method, "KO/TKO (Punches)");
+    assert.match(wint?.source ?? "", /401922306/);
+    assert.equal(
+      refreshed.envelope.results.find((row) => row.fightSlug === nolan.fightSlug)?.method,
+      "KO (punches)",
+    );
+    const held = ensureSeededFightResults(refreshed.envelope, "2026-10-04T07:00:00.000Z");
+    assert.equal(held.seeded, false);
   });
 });

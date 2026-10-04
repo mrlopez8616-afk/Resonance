@@ -31,6 +31,8 @@ const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void", "sold"]);
 /**
  * One-shot book fixes. Applied on read when the row's correctionVersion
  * is below this version. A later settle or override is not put back.
+ * Card results settle open rows. A win uses the ticket payout already stored.
+ * Ribovics stays sold early. Coria and Wang Cong keep their stake corrections.
  */
 export type BetCorrection = {
   id: string;
@@ -42,8 +44,21 @@ export type BetCorrection = {
 
 export const BET_CORRECTIONS: readonly BetCorrection[] = [
   { id: "ufc-332-ribovics", version: 1, status: "sold", payout: "13.64" },
-  { id: "ufc-332-coria", version: 1, stake: "19.99" },
-  { id: "ufc-332-wang-cong", version: 1, stake: "45.13" },
+  { id: "ufc-332-green", version: 1, status: "lost" },
+  { id: "ufc-332-coria", version: 2, status: "lost", stake: "19.99" },
+  { id: "ufc-332-coria-2", version: 1, status: "lost" },
+  { id: "ufc-332-gautier", version: 1, status: "lost" },
+  { id: "ufc-332-wang-cong", version: 2, status: "lost", stake: "45.13" },
+  { id: "ufc-332-nolan", version: 1, status: "won" },
+  { id: "ufc-332-naurdiev", version: 1, status: "won" },
+  { id: "ufc-332-hernandez", version: 1, status: "won" },
+  { id: "ufc-332-smith", version: 1, status: "won" },
+  { id: "ufc-332-walker", version: 1, status: "won" },
+  { id: "ufc-332-wint", version: 1, status: "won" },
+  { id: "ufc-332-mcghee", version: 1, status: "won" },
+  { id: "ufc-332-pinas", version: 1, status: "won" },
+  { id: "ufc-332-soldic", version: 1, status: "won" },
+  { id: "ufc-332-talbott", version: 1, status: "won" },
 ];
 
 function applyBetCorrection(bet: Bet, correction: BetCorrection): Bet {
@@ -60,6 +75,8 @@ function applyBetCorrection(bet: Bet, correction: BetCorrection): Bet {
     } else {
       next.payout = payout;
     }
+  } else if (status === "won" && !next.settledPayout) {
+    next.settledPayout = next.payout;
   }
   if (status === "open") {
     delete next.realizedPnl;

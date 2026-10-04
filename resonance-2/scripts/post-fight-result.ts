@@ -3,7 +3,7 @@
  * Live host requires RESONANCE_SYNC_SECRET. The secret stays off the client.
  *
  *   RESONANCE_SYNC_SECRET=... npm run fights:result -- \
- *     esteban-ribovics-vs-king-green "Esteban Ribovics" "KO/TKO" 1 1:01
+ *     esteban-ribovics-vs-king-green "Esteban Ribovics" "KO/TKO (Punch)" 1 4:08
  */
 import { parseFightResult } from "../src/lib/fight-results";
 

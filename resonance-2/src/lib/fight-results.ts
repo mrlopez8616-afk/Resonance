@@ -61,7 +61,7 @@ function readRound(value: unknown): number {
   return value;
 }
 
-/** Card facts for UFC 332. Talbott and Silva vs Wang Cong are omitted on purpose. */
+/** Official UFC 332 finals. Every bout on the card has a winner, method, round, and time. */
 export function fightResultSeed(): FightResult[] {
   return (resultFile as FightResultSeed[]).map((row) => {
     const fight = fightByNumber(row.fight);
