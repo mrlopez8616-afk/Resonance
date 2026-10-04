@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Fill } from "@/data/fills";
-import { BetScorecard, UfcBookPanel } from "@/components/bet-scorecard";
+import { BetScorecard, UfcBookPanel, type BookAvailability } from "@/components/bet-scorecard";
 import { FillLog } from "@/components/fill-log";
 import { summarizeUfcBook, type Bet } from "@/lib/bets";
 import { LOCKED_TICKERS } from "@/lib/fill-event";
@@ -21,12 +21,14 @@ export function FillDesk({
   query,
   storeLabel,
   bets = [],
+  betsAvailability = "live",
 }: {
   fills: Fill[];
   sleeves: Readonly<Record<string, readonly { quantity: string }[] | undefined>>;
   query: FillDeskQuery;
   storeLabel: string;
   bets?: readonly Bet[];
+  betsAvailability?: BookAvailability;
 }) {
   const visible = filterFills(fills, query);
   const ufcBook = summarizeUfcBook(bets);
@@ -75,8 +77,8 @@ export function FillDesk({
 
       {query.ticker === BET_DESK_TICKER ? (
         <>
-          <UfcBookPanel bets={bets} />
-          <BetScorecard bets={bets} />
+          <UfcBookPanel bets={bets} availability={betsAvailability} />
+          <BetScorecard bets={bets} availability={betsAvailability} />
         </>
       ) : null}
 

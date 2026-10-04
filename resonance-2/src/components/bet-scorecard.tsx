@@ -14,12 +14,31 @@ function voidLabel(count: number): string {
   return count === 1 ? "1 void" : `${count} voids`;
 }
 
+export type BookAvailability = "live" | "seed-only" | "unavailable";
+
+function UnavailableScore({ label }: { label: string }) {
+  return (
+    <section className="bet-score" aria-label={label}>
+      <p className="log-kicker">{label}</p>
+      <p className="storage-inline">unavailable</p>
+    </section>
+  );
+}
+
 /** Settled founder and hub-lean records. Open tickets are a separate count. */
-export function BetScorecard({ bets }: { bets: readonly Bet[] }) {
+export function BetScorecard({
+  bets,
+  availability = "live",
+}: {
+  bets: readonly Bet[];
+  availability?: BookAvailability;
+}) {
+  if (availability === "unavailable") return <UnavailableScore label="Scorecard" />;
   const card = scoreBets(bets);
   return (
     <section className="bet-score" aria-label="Scorecard">
       <p className="log-kicker">Scorecard</p>
+      {availability === "seed-only" ? <p className="storage-inline">seed-only</p> : null}
       <dl>
         <Stat label="Founder" value={card.founder.record} />
         <Stat label="Hub lean" value={card.hub.record} />
@@ -33,7 +52,14 @@ export function BetScorecard({ bets }: { bets: readonly Bet[] }) {
 }
 
 /** Live bets-store book for the UFC log. */
-export function UfcBookPanel({ bets }: { bets: readonly Bet[] }) {
+export function UfcBookPanel({
+  bets,
+  availability = "live",
+}: {
+  bets: readonly Bet[];
+  availability?: BookAvailability;
+}) {
+  if (availability === "unavailable") return <UnavailableScore label="Book" />;
   const book = summarizeUfcBook(bets);
   const record = book.voids > 0 ? `${book.record} · ${voidLabel(book.voids)}` : book.record;
   const potential = book.estimated
@@ -42,6 +68,7 @@ export function UfcBookPanel({ bets }: { bets: readonly Bet[] }) {
   return (
     <section className="bet-score" aria-label="UFC book">
       <p className="log-kicker">Book</p>
+      {availability === "seed-only" ? <p className="storage-inline">seed-only</p> : null}
       <dl>
         <Stat label="Record" value={record} />
         <Stat label="Staked" value={book.totalStakedLabel} />

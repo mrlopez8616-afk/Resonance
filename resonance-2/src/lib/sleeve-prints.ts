@@ -11,9 +11,10 @@ import { SUI_SLEEVES } from "@/data/sui-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { listFills } from "./fills";
-import { loadFillsStore, liveSleevesFromEnvelope } from "./fills-store";
+import { loadFillsStore, liveSleevesFromEnvelope, type FillsStoreBackend } from "./fills-store";
+import { isStorageUnavailable, type StoreAvailability } from "@/lib/storage-unavailable";
 
-export async function loadLiveSleeveBooks(): Promise<{
+export type SleeveBooks = {
   XRP: readonly NodeSleeve[];
   SUI: readonly NodeSleeve[];
   PWR: readonly NodeSleeve[];
@@ -23,48 +24,79 @@ export async function loadLiveSleeveBooks(): Promise<{
   CEG: readonly NodeSleeve[];
   HUBB: readonly NodeSleeve[];
   HBAR: readonly NodeSleeve[];
+};
+
+const SEED_BOOKS: SleeveBooks = {
+  XRP: XRP_SLEEVES,
+  SUI: SUI_SLEEVES,
+  PWR: PWR_SLEEVES,
+  ETN: ETN_SLEEVES,
+  VRT: VRT_SLEEVES,
+  GEV: GEV_SLEEVES,
+  CEG: CEG_SLEEVES,
+  HUBB: HUBB_SLEEVES,
+  HBAR: HBAR_SLEEVES,
+};
+
+function booksFromEnvelope(envelope: Parameters<typeof liveSleevesFromEnvelope>[0]): SleeveBooks {
+  return {
+    XRP: liveSleevesFromEnvelope(envelope, "XRP") ?? XRP_SLEEVES,
+    SUI: liveSleevesFromEnvelope(envelope, "SUI") ?? SUI_SLEEVES,
+    PWR: liveSleevesFromEnvelope(envelope, "PWR") ?? PWR_SLEEVES,
+    ETN: liveSleevesFromEnvelope(envelope, "ETN") ?? ETN_SLEEVES,
+    VRT: liveSleevesFromEnvelope(envelope, "VRT") ?? VRT_SLEEVES,
+    GEV: liveSleevesFromEnvelope(envelope, "GEV") ?? GEV_SLEEVES,
+    CEG: liveSleevesFromEnvelope(envelope, "CEG") ?? CEG_SLEEVES,
+    HUBB: liveSleevesFromEnvelope(envelope, "HUBB") ?? HUBB_SLEEVES,
+    HBAR: liveSleevesFromEnvelope(envelope, "HBAR") ?? HBAR_SLEEVES,
+  };
+}
+
+export async function loadLiveSleeveBooks(): Promise<{
+  books: SleeveBooks;
+  status: "live" | "seed-only" | "unconfigured";
 }> {
   try {
     const loaded = await loadFillsStore();
-    return {
-      XRP: liveSleevesFromEnvelope(loaded.envelope, "XRP") ?? XRP_SLEEVES,
-      SUI: liveSleevesFromEnvelope(loaded.envelope, "SUI") ?? SUI_SLEEVES,
-      PWR: liveSleevesFromEnvelope(loaded.envelope, "PWR") ?? PWR_SLEEVES,
-      ETN: liveSleevesFromEnvelope(loaded.envelope, "ETN") ?? ETN_SLEEVES,
-      VRT: liveSleevesFromEnvelope(loaded.envelope, "VRT") ?? VRT_SLEEVES,
-      GEV: liveSleevesFromEnvelope(loaded.envelope, "GEV") ?? GEV_SLEEVES,
-      CEG: liveSleevesFromEnvelope(loaded.envelope, "CEG") ?? CEG_SLEEVES,
-      HUBB: liveSleevesFromEnvelope(loaded.envelope, "HUBB") ?? HUBB_SLEEVES,
-      HBAR: liveSleevesFromEnvelope(loaded.envelope, "HBAR") ?? HBAR_SLEEVES,
-    };
-  } catch {
-    return {
-      XRP: XRP_SLEEVES,
-      SUI: SUI_SLEEVES,
-      PWR: PWR_SLEEVES,
-      ETN: ETN_SLEEVES,
-      VRT: VRT_SLEEVES,
-      GEV: GEV_SLEEVES,
-      CEG: CEG_SLEEVES,
-      HUBB: HUBB_SLEEVES,
-      HBAR: HBAR_SLEEVES,
-    };
+    if (!loaded.configured) {
+      return { books: SEED_BOOKS, status: "unconfigured" };
+    }
+    return { books: booksFromEnvelope(loaded.envelope), status: "live" };
+  } catch (error) {
+    if (!isStorageUnavailable(error)) throw error;
+    return { books: SEED_BOOKS, status: "seed-only" };
   }
 }
 
-export async function loadOperatorFills() {
+export async function loadOperatorFills(): Promise<{
+  fills: ReturnType<typeof listFills>;
+  backend: FillsStoreBackend | "none";
+  configured: boolean;
+  status: Extract<StoreAvailability, "live" | "seed-only" | "unconfigured">;
+}> {
   try {
     const loaded = await loadFillsStore();
+    if (!loaded.configured) {
+      return {
+        fills: listFills(loaded.envelope.fills),
+        backend: loaded.backend,
+        configured: false,
+        status: "unconfigured",
+      };
+    }
     return {
       fills: listFills(loaded.envelope.fills),
       backend: loaded.backend,
-      configured: loaded.configured,
+      configured: true,
+      status: "live",
     };
-  } catch {
+  } catch (error) {
+    if (!isStorageUnavailable(error)) throw error;
     return {
       fills: listFills(),
-      backend: "none" as const,
+      backend: "none",
       configured: false,
+      status: "seed-only",
     };
   }
 }

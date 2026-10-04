@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseSettleBody } from "@/lib/bets";
 import { asBetWriteError, isBetsStoreConfigured, settleStoredBets } from "@/lib/bets-store";
+import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const mapped = asBetWriteError(error);
     console.error("bet settle failed", mapped.message);
-    return NextResponse.json({ ok: false, error: mapped.message }, { status: mapped.status });
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }

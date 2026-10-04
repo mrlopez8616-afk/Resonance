@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { FightDetail } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { betSeed } from "@/lib/bets";
-import { loadBetsStore } from "@/lib/bets-store";
+import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { loadBetsForPage } from "@/lib/store-page";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -27,12 +27,16 @@ export default async function FightPage({
   if (event !== UFC_332_EVENT.id) notFound();
   const fight = fightBySlug(slug);
   if (!fight) notFound();
-  const bets = await loadBetsStore()
-    .then((loaded) => loaded.envelope.bets)
-    .catch(() => betSeed());
+  const book = await loadBetsForPage();
+  const bets = book.status === "unavailable" ? [] : book.bets;
+  const availability =
+    book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   return (
-    <OperatorShell>
-      <FightDetail fight={fight} bets={bets} />
+    <OperatorShell
+      storageMessage={book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
+      storageDetail={book.status === "unavailable" ? "Bet book is unavailable." : null}
+    >
+      <FightDetail fight={fight} bets={bets} availability={availability} />
     </OperatorShell>
   );
 }

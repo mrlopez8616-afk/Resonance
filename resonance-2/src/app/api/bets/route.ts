@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseBetPostBody } from "@/lib/bets";
 import { asBetWriteError, isBetsStoreConfigured, postStoredBets } from "@/lib/bets-store";
+import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const mapped = asBetWriteError(error);
     console.error("bet post failed", mapped.message);
-    return NextResponse.json({ ok: false, error: mapped.message }, { status: mapped.status });
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }

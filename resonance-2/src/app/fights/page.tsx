@@ -1,7 +1,7 @@
 import { FightIndex } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { betSeed } from "@/lib/bets";
-import { loadBetsStore } from "@/lib/bets-store";
+import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { loadBetsForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +10,22 @@ export const metadata = {
 };
 
 export default async function FightsPage() {
-  const bets = await loadBetsStore()
-    .then((loaded) => loaded.envelope.bets)
-    .catch(() => betSeed());
+  const book = await loadBetsForPage();
+  const bets = book.status === "unavailable" ? [] : book.bets;
+  const availability =
+    book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   return (
-    <OperatorShell>
-      <FightIndex bets={bets} />
+    <OperatorShell
+      storageMessage={book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
+      storageDetail={
+        book.status === "unavailable"
+          ? "Bet book is unavailable."
+          : book.status === "unconfigured"
+            ? "Bet book is seed-only."
+            : null
+      }
+    >
+      <FightIndex bets={bets} availability={availability} />
     </OperatorShell>
   );
 }

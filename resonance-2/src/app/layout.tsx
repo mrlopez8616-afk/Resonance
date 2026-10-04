@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "Resonance 2.0",
   description:
     "Operator floor. Live XRP node. Vault locked. Gas wallet hidden.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const viewport: Viewport = {
