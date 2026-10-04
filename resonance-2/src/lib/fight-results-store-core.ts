@@ -39,26 +39,58 @@ export function createEmptyFightResultsEnvelope(now = new Date().toISOString()):
   };
 }
 
+function hubConfirmed(result: FightResult): boolean {
+  return (result.source ?? "").startsWith("Hub confirmed");
+}
+
+function sameCardResult(current: FightResult, seed: FightResult): boolean {
+  return (
+    current.winner === seed.winner &&
+    current.method === seed.method &&
+    current.round === seed.round &&
+    current.time === seed.time &&
+    current.status === seed.status
+  );
+}
+
 /**
  * Insert seed slugs that are missing.
- * A stored row with the same slug is left alone, even when the seed differs.
+ * A stored row with another source is left alone, even when the seed differs.
+ * A Hub confirmed row is replaced when its winner, method, round, or time disagrees with the seed.
  */
 export function ensureSeededFightResults(
   current: FightResultsEnvelope | null,
   now = new Date().toISOString(),
 ): { envelope: FightResultsEnvelope; seeded: boolean } {
   const envelope = current ?? createEmptyFightResultsEnvelope(now);
-  const present = new Set(envelope.results.map((row) => row.fightSlug));
-  const missing = fightResultSeed().filter((row) => !present.has(row.fightSlug));
-  if (missing.length === 0) {
-    return { envelope, seeded: false };
+  const bySlug = new Map(envelope.results.map((row) => [row.fightSlug, row]));
+  const results = envelope.results.slice();
+  let changed = false;
+
+  for (const seed of fightResultSeed()) {
+    const existing = bySlug.get(seed.fightSlug);
+    if (!existing) {
+      results.push(seed);
+      bySlug.set(seed.fightSlug, seed);
+      changed = true;
+      continue;
+    }
+    if (hubConfirmed(existing) && !sameCardResult(existing, seed)) {
+      const index = results.findIndex((row) => row.fightSlug === seed.fightSlug);
+      if (index !== -1) {
+        results[index] = seed;
+        changed = true;
+      }
+    }
   }
+
+  if (!changed) return { envelope, seeded: false };
   return {
     envelope: {
       ...envelope,
       updatedAt: now,
       seededAt: envelope.seededAt ?? now,
-      results: [...envelope.results, ...missing],
+      results,
     },
     seeded: true,
   };
