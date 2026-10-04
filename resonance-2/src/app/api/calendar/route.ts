@@ -10,6 +10,7 @@ import { occurrencesOnDay } from "@/lib/calendar-desk";
 import { listCalendarEvents } from "@/lib/calendar-store-core";
 import { isCivilDay } from "@/lib/calendar-time";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { storageErrorJson } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
 
@@ -53,10 +54,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const mapped = asCalendarWriteError(error);
-    return NextResponse.json(
-      { ok: false, error: mapped.message },
-      { status: mapped.status },
-    );
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }
 
@@ -90,9 +88,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const mapped = asCalendarWriteError(error);
     console.error("calendar write failed", mapped.message);
-    return NextResponse.json(
-      { ok: false, error: mapped.message },
-      { status: mapped.status },
-    );
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }

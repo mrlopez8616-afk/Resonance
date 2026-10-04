@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -10,6 +11,18 @@ import {
   type BetPost,
   type SettleRequest,
 } from "@/lib/bets";
+import {
+  BLOB_TAGS,
+  cachedBlobRead,
+  putPrivateBlob,
+  readPrivateBlob,
+  revalidateBlobTag,
+} from "@/lib/blob-read";
+import {
+  StorageUnavailableError,
+  isStorageUnavailable,
+  throwIfStorageForced,
+} from "@/lib/storage-unavailable";
 import {
   BETS_BLOB_PATH,
   createEmptyBetsEnvelope,
@@ -44,20 +57,27 @@ function filePath(env: Record<string, string | undefined> = process.env): string
   return path.resolve(configured || DEFAULT_BETS_FILE);
 }
 
-async function streamToString(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const response = new Response(stream);
-  return response.text();
+/**
+ * Seed missing ids, backfill leans, then apply versioned corrections.
+ * Corrections run before the dirty flag so a one-shot patch is persisted once.
+ * Rows that are not in the seed or the correction list are left as stored.
+ */
+function finalizeBets(raw: BetsStoreEnvelope | null): {
+  envelope: BetsStoreEnvelope;
+  seeded: boolean;
+  dirty: boolean;
+} {
+  const seeded = ensureSeededBetsEnvelope(raw);
+  const leaned = backfillBetLeans(seeded.envelope);
+  const corrected = applyBetCorrections(leaned.envelope);
+  return {
+    envelope: corrected.envelope,
+    seeded: seeded.seeded,
+    dirty: seeded.seeded || leaned.changed || corrected.changed,
+  };
 }
 
-async function readBlobEnvelope(): Promise<BetsStoreEnvelope | null> {
-  const { get } = await import("@vercel/blob");
-  const result = await get(BETS_BLOB_PATH, {
-    access: "private",
-    useCache: false,
-  });
-  if (!result || result.statusCode !== 200 || !result.stream) return null;
-  const text = await streamToString(result.stream);
-  if (!text.trim()) return null;
+function parseBlobText(text: string): BetsStoreEnvelope | null {
   try {
     return parseBetsEnvelope(JSON.parse(text));
   } catch {
@@ -65,15 +85,22 @@ async function readBlobEnvelope(): Promise<BetsStoreEnvelope | null> {
   }
 }
 
-async function writeBlobEnvelope(envelope: BetsStoreEnvelope): Promise<void> {
-  const { put } = await import("@vercel/blob");
-  await put(BETS_BLOB_PATH, JSON.stringify(envelope, null, 2), {
-    access: "private",
-    allowOverwrite: true,
-    addRandomSuffix: false,
-    contentType: "application/json",
-    cacheControlMaxAge: 60,
-  });
+async function persistEnvelope(envelope: BetsStoreEnvelope, revalidate: boolean): Promise<void> {
+  const backend = detectBetsBackend();
+  if (backend === "blob") {
+    await putPrivateBlob(BETS_BLOB_PATH, JSON.stringify(envelope, null, 2));
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.bets);
+    return;
+  }
+  if (backend === "file") {
+    const target = filePath();
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
+    return;
+  }
+  throw new BetsStoreError(
+    "Bet store is not configured. Create a Vercel Blob store and redeploy.",
+  );
 }
 
 async function readFileEnvelope(): Promise<BetsStoreEnvelope | null> {
@@ -83,61 +110,100 @@ async function readFileEnvelope(): Promise<BetsStoreEnvelope | null> {
     return parseBetsEnvelope(JSON.parse(text));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw new StorageUnavailableError(
+      "bets",
+      error instanceof Error ? error.message : "Bet file could not be read.",
+    );
+  }
+}
+
+async function materializeBlobText(text: string | null, revalidate: boolean): Promise<{
+  envelope: BetsStoreEnvelope;
+  seeded: boolean;
+}> {
+  const finalized = finalizeBets(text === null ? null : parseBlobText(text));
+  if (finalized.dirty) await persistEnvelope(finalized.envelope, revalidate);
+  return { envelope: finalized.envelope, seeded: finalized.seeded };
+}
+
+type CachedBets =
+  | { status: "ok"; envelope: BetsStoreEnvelope; seeded: boolean }
+  | { status: "unavailable"; reason: string };
+
+async function readBetsBlob(revalidateWrites: boolean): Promise<CachedBets> {
+  const body = await readPrivateBlob(BETS_BLOB_PATH);
+  if (body.status === "unavailable") return body;
+  try {
+    const made = await materializeBlobText(
+      body.status === "missing" ? null : body.text,
+      revalidateWrites,
+    );
+    return { status: "ok", ...made };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
     throw error;
   }
 }
 
-async function writeFileEnvelope(envelope: BetsStoreEnvelope): Promise<void> {
-  const target = filePath();
-  await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
-}
-
-async function readRawEnvelope(): Promise<BetsStoreEnvelope | null> {
-  const backend = detectBetsBackend();
-  if (backend === "blob") return readBlobEnvelope();
-  if (backend === "file") return readFileEnvelope();
-  return null;
-}
-
-async function persistEnvelope(envelope: BetsStoreEnvelope): Promise<void> {
-  const backend = detectBetsBackend();
-  if (backend === "blob") {
-    await writeBlobEnvelope(envelope);
-    return;
+function unwrapBets(result: CachedBets): { envelope: BetsStoreEnvelope; seeded: boolean } {
+  if (result.status === "unavailable") {
+    throw new StorageUnavailableError("bets", result.reason);
   }
-  if (backend === "file") {
-    await writeFileEnvelope(envelope);
-    return;
-  }
-  throw new BetsStoreError(
-    "Bet store is not configured. Create a Vercel Blob store and redeploy.",
-  );
+  return result;
 }
 
-export async function loadBetsStore(): Promise<{
+async function loadBetsFromFile(): Promise<{
+  envelope: BetsStoreEnvelope;
+  seeded: boolean;
+}> {
+  const finalized = finalizeBets(await readFileEnvelope());
+  if (finalized.dirty) await persistEnvelope(finalized.envelope, false);
+  return { envelope: finalized.envelope, seeded: finalized.seeded };
+}
+
+async function loadBetsStoreInner(fresh: boolean): Promise<{
   configured: boolean;
   backend: BetsStoreBackend;
   envelope: BetsStoreEnvelope;
   seeded: boolean;
 }> {
+  throwIfStorageForced("bets");
   const backend = detectBetsBackend();
   if (backend === "none") {
-    const seeded = ensureSeededBetsEnvelope(null);
-    const leaned = backfillBetLeans(seeded.envelope);
+    const finalized = finalizeBets(null);
     return {
       configured: false,
       backend,
-      envelope: applyBetCorrections(leaned.envelope).envelope,
+      envelope: finalized.envelope,
       seeded: true,
     };
   }
-  const raw = await readRawEnvelope();
-  const seeded = ensureSeededBetsEnvelope(raw);
-  const leaned = backfillBetLeans(seeded.envelope);
-  const corrected = applyBetCorrections(leaned.envelope);
-  if (seeded.seeded || leaned.changed || corrected.changed) await persistEnvelope(corrected.envelope);
-  return { configured: true, backend, envelope: corrected.envelope, seeded: seeded.seeded };
+  if (backend === "file") {
+    const loaded = await loadBetsFromFile();
+    return { configured: true, backend, ...loaded };
+  }
+  const loaded = fresh
+    ? unwrapBets(await readBetsBlob(true))
+    : unwrapBets(await cachedBlobRead(BLOB_TAGS.bets, () => readBetsBlob(false)));
+  return { configured: true, backend, ...loaded };
+}
+
+/** Display read. Deduped within a request and cached for 45s across requests. */
+export const loadBetsStore = cache(() => loadBetsStoreInner(false));
+
+/**
+ * Read-modify-write. Bypasses the 45s cache so a settle cannot apply onto a
+ * stale book. The tag is dropped only after a successful blob put.
+ */
+export function loadBetsStoreFresh(): Promise<{
+  configured: boolean;
+  backend: BetsStoreBackend;
+  envelope: BetsStoreEnvelope;
+  seeded: boolean;
+}> {
+  return loadBetsStoreInner(true);
 }
 
 export async function settleStoredBets(requests: readonly SettleRequest[]): Promise<{
@@ -150,7 +216,7 @@ export async function settleStoredBets(requests: readonly SettleRequest[]): Prom
       "Bet store is not configured. Create a Vercel Blob store and redeploy.",
     );
   }
-  const loaded = await loadBetsStore();
+  const loaded = await loadBetsStoreFresh();
   const now = new Date().toISOString();
   let envelope = loaded.envelope;
   const results: { id: string; deduped: boolean; bet: Bet }[] = [];
@@ -167,7 +233,7 @@ export async function settleStoredBets(requests: readonly SettleRequest[]): Prom
       changed = true;
     }
   }
-  if (changed) await persistEnvelope(envelope);
+  if (changed) await persistEnvelope(envelope, true);
   return { envelope, backend: loaded.backend, results };
 }
 
@@ -181,7 +247,7 @@ export async function postStoredBets(requests: readonly BetPost[]): Promise<{
       "Bet store is not configured. Create a Vercel Blob store and redeploy.",
     );
   }
-  const loaded = await loadBetsStore();
+  const loaded = await loadBetsStoreFresh();
   const now = new Date().toISOString();
   let envelope = loaded.envelope;
   const results: { orderId: string; id: string; deduped: boolean; bet: Bet }[] = [];
@@ -199,11 +265,18 @@ export async function postStoredBets(requests: readonly BetPost[]): Promise<{
       changed = true;
     }
   }
-  if (changed) await persistEnvelope(envelope);
+  if (changed) await persistEnvelope(envelope, true);
   return { envelope, backend: loaded.backend, results };
 }
 
-export function asBetWriteError(error: unknown): { status: number; message: string } {
+export function asBetWriteError(error: unknown): {
+  status: number;
+  message: string;
+  reason?: string;
+} {
+  if (isStorageUnavailable(error)) {
+    return { status: 503, message: error.message, reason: error.reason };
+  }
   if (error instanceof BetWriteError) {
     return { status: error.status, message: error.message };
   }

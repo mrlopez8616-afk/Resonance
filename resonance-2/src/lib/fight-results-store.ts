@@ -1,7 +1,15 @@
 import "server-only";
 
+import { cache } from "react";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  BLOB_TAGS,
+  cachedBlobRead,
+  putPrivateBlob,
+  readPrivateBlob,
+  revalidateBlobTag,
+} from "@/lib/blob-read";
 import { FightResultWriteError, type FightResult } from "@/lib/fight-results";
 import {
   createEmptyFightResultsEnvelope,
@@ -15,6 +23,11 @@ import {
   type FightResultsBackend,
   type FightResultsEnvelope,
 } from "@/lib/fight-results-store-core";
+import {
+  isStorageUnavailable,
+  StorageUnavailableError,
+  throwIfStorageForced,
+} from "@/lib/storage-unavailable";
 
 export {
   detectFightResultsBackend,
@@ -35,20 +48,14 @@ function filePath(env: Record<string, string | undefined> = process.env): string
   return path.resolve(configured || DEFAULT_FIGHT_RESULTS_FILE);
 }
 
-async function streamToString(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const response = new Response(stream);
-  return response.text();
+function finalizeResults(raw: FightResultsEnvelope | null): {
+  envelope: FightResultsEnvelope;
+  seeded: boolean;
+} {
+  return ensureSeededFightResults(raw);
 }
 
-async function readBlobEnvelope(): Promise<FightResultsEnvelope | null> {
-  const { get } = await import("@vercel/blob");
-  const result = await get(FIGHT_RESULTS_BLOB_PATH, {
-    access: "private",
-    useCache: false,
-  });
-  if (!result || result.statusCode !== 200 || !result.stream) return null;
-  const text = await streamToString(result.stream);
-  if (!text.trim()) return null;
+function parseBlobText(text: string): FightResultsEnvelope | null {
   try {
     return parseFightResultsEnvelope(JSON.parse(text));
   } catch {
@@ -56,15 +63,22 @@ async function readBlobEnvelope(): Promise<FightResultsEnvelope | null> {
   }
 }
 
-async function writeBlobEnvelope(envelope: FightResultsEnvelope): Promise<void> {
-  const { put } = await import("@vercel/blob");
-  await put(FIGHT_RESULTS_BLOB_PATH, JSON.stringify(envelope, null, 2), {
-    access: "private",
-    allowOverwrite: true,
-    addRandomSuffix: false,
-    contentType: "application/json",
-    cacheControlMaxAge: 60,
-  });
+async function persistEnvelope(envelope: FightResultsEnvelope, revalidate: boolean): Promise<void> {
+  const backend = detectFightResultsBackend();
+  if (backend === "blob") {
+    await putPrivateBlob(FIGHT_RESULTS_BLOB_PATH, JSON.stringify(envelope, null, 2));
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.fightResults);
+    return;
+  }
+  if (backend === "file") {
+    const target = filePath();
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
+    return;
+  }
+  throw new FightResultsStoreError(
+    "Fight result store is not configured. Create a Vercel Blob store and redeploy.",
+  );
 }
 
 async function readFileEnvelope(): Promise<FightResultsEnvelope | null> {
@@ -74,53 +88,98 @@ async function readFileEnvelope(): Promise<FightResultsEnvelope | null> {
     return parseFightResultsEnvelope(JSON.parse(text));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw new StorageUnavailableError(
+      "fight-results",
+      error instanceof Error ? error.message : "Fight result file could not be read.",
+    );
+  }
+}
+
+async function materializeBlobText(text: string | null, revalidate: boolean): Promise<{
+  envelope: FightResultsEnvelope;
+  seeded: boolean;
+}> {
+  const finalized = finalizeResults(text === null ? null : parseBlobText(text));
+  if (finalized.seeded) await persistEnvelope(finalized.envelope, revalidate);
+  return finalized;
+}
+
+type CachedResults =
+  | { status: "ok"; envelope: FightResultsEnvelope; seeded: boolean }
+  | { status: "unavailable"; reason: string };
+
+async function readResultsBlob(revalidateWrites: boolean): Promise<CachedResults> {
+  const body = await readPrivateBlob(FIGHT_RESULTS_BLOB_PATH);
+  if (body.status === "unavailable") return body;
+  try {
+    const made = await materializeBlobText(
+      body.status === "missing" ? null : body.text,
+      revalidateWrites,
+    );
+    return { status: "ok", ...made };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
     throw error;
   }
 }
 
-async function writeFileEnvelope(envelope: FightResultsEnvelope): Promise<void> {
-  const target = filePath();
-  await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
-}
-
-async function readRawEnvelope(): Promise<FightResultsEnvelope | null> {
-  const backend = detectFightResultsBackend();
-  if (backend === "blob") return readBlobEnvelope();
-  if (backend === "file") return readFileEnvelope();
-  return null;
-}
-
-async function persistEnvelope(envelope: FightResultsEnvelope): Promise<void> {
-  const backend = detectFightResultsBackend();
-  if (backend === "blob") {
-    await writeBlobEnvelope(envelope);
-    return;
+function unwrapResults(result: CachedResults): {
+  envelope: FightResultsEnvelope;
+  seeded: boolean;
+} {
+  if (result.status === "unavailable") {
+    throw new StorageUnavailableError("fight-results", result.reason);
   }
-  if (backend === "file") {
-    await writeFileEnvelope(envelope);
-    return;
-  }
-  throw new FightResultsStoreError(
-    "Fight result store is not configured. Create a Vercel Blob store and redeploy.",
-  );
+  return result;
 }
 
-export async function loadFightResultsStore(): Promise<{
+async function loadResultsFromFile(): Promise<{
+  envelope: FightResultsEnvelope;
+  seeded: boolean;
+}> {
+  const finalized = finalizeResults(await readFileEnvelope());
+  if (finalized.seeded) await persistEnvelope(finalized.envelope, false);
+  return finalized;
+}
+
+async function loadFightResultsStoreInner(fresh: boolean): Promise<{
   configured: boolean;
   backend: FightResultsBackend;
   envelope: FightResultsEnvelope;
   seeded: boolean;
 }> {
+  throwIfStorageForced("fight-results");
   const backend = detectFightResultsBackend();
   if (backend === "none") {
     const seeded = ensureSeededFightResults(null);
     return { configured: false, backend, envelope: seeded.envelope, seeded: true };
   }
-  const raw = await readRawEnvelope();
-  const seeded = ensureSeededFightResults(raw);
-  if (seeded.seeded) await persistEnvelope(seeded.envelope);
-  return { configured: true, backend, envelope: seeded.envelope, seeded: seeded.seeded };
+  if (backend === "file") {
+    const loaded = await loadResultsFromFile();
+    return { configured: true, backend, ...loaded };
+  }
+  const loaded = fresh
+    ? unwrapResults(await readResultsBlob(true))
+    : unwrapResults(await cachedBlobRead(BLOB_TAGS.fightResults, () => readResultsBlob(false)));
+  return { configured: true, backend, ...loaded };
+}
+
+/** Display read. Deduped within a request and cached for 45s across requests. */
+export const loadFightResultsStore = cache(() => loadFightResultsStoreInner(false));
+
+/**
+ * Read-modify-write. Bypasses the 45s cache so a result post cannot apply
+ * onto a stale card. The tag is dropped only after a successful blob put.
+ */
+export function loadFightResultsStoreFresh(): Promise<{
+  configured: boolean;
+  backend: FightResultsBackend;
+  envelope: FightResultsEnvelope;
+  seeded: boolean;
+}> {
+  return loadFightResultsStoreInner(true);
 }
 
 /** Writes fight results only. The hub settles bets on its own endpoint. */
@@ -134,7 +193,7 @@ export async function recordFightResults(incoming: readonly FightResult[]): Prom
       "Fight result store is not configured. Create a Vercel Blob store and redeploy.",
     );
   }
-  const loaded = await loadFightResultsStore();
+  const loaded = await loadFightResultsStoreFresh();
   const now = new Date().toISOString();
   let envelope = loaded.envelope;
   const results: { fightSlug: string; deduped: boolean; result: FightResult }[] = [];
@@ -147,11 +206,18 @@ export async function recordFightResults(incoming: readonly FightResult[]): Prom
       changed = true;
     }
   }
-  if (changed) await persistEnvelope(envelope);
+  if (changed) await persistEnvelope(envelope, true);
   return { envelope, backend: loaded.backend, results };
 }
 
-export function asFightResultWriteError(error: unknown): { status: number; message: string } {
+export function asFightResultWriteError(error: unknown): {
+  status: number;
+  message: string;
+  reason?: string;
+} {
+  if (isStorageUnavailable(error)) {
+    return { status: 503, message: error.message, reason: error.reason };
+  }
   if (error instanceof FightResultWriteError) {
     return { status: error.status, message: error.message };
   }

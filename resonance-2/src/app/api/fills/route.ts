@@ -10,6 +10,7 @@ import {
   loadFillsStore,
 } from "@/lib/fills-store";
 import { authorizeFillRequest } from "@/lib/sync-auth";
+import { storageErrorJson } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +43,7 @@ export async function GET() {
     });
   } catch (error) {
     const mapped = asFillWriteError(error);
-    return NextResponse.json(
-      { ok: false, error: mapped.message },
-      { status: mapped.status },
-    );
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }
 
@@ -95,9 +93,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const mapped = asFillWriteError(error);
     console.error("fill ingest failed", mapped.message);
-    return NextResponse.json(
-      { ok: false, error: mapped.message },
-      { status: mapped.status },
-    );
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }

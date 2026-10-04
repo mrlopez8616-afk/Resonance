@@ -5,6 +5,7 @@ import {
   isFightResultsStoreConfigured,
   recordFightResults,
 } from "@/lib/fight-results-store";
+import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const mapped = asFightResultWriteError(error);
     console.error("fight result failed", mapped.message);
-    return NextResponse.json({ ok: false, error: mapped.message }, { status: mapped.status });
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
   }
 }

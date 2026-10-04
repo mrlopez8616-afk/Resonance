@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BetScorecard } from "@/components/bet-scorecard";
+import { BetScorecard, type BookAvailability } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
 import { betStatusLabel, betsOnFight, formatSignedUsd, formatUsd, summarizeBets } from "@/lib/bets";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
@@ -46,9 +46,13 @@ function Field({ label, value }: { label: string; value: string }) {
 export function FightIndex({
   bets,
   results,
+  availability = "live",
+  resultsAvailability = "live",
 }: {
   bets: readonly Bet[];
   results: readonly FightResult[];
+  availability?: BookAvailability;
+  resultsAvailability?: BookAvailability;
 }) {
   const open = bets.filter((bet) => bet.status === "open").length;
   return (
@@ -57,10 +61,13 @@ export function FightIndex({
         <p className="log-kicker">Fight Desk</p>
         <h2 className="log-title">Fights</h2>
         <p className="log-meta">
-          {open} open {open === 1 ? "bet" : "bets"} · Coinbase Predict · founder places the bets
+          {availability === "unavailable"
+            ? "unavailable · Coinbase Predict · founder places the bets"
+            : `${open} open ${open === 1 ? "bet" : "bets"} · Coinbase Predict · founder places the bets`}
+          {availability === "seed-only" ? " · seed-only" : ""}
         </p>
       </header>
-      <BetScorecard bets={bets} />
+      <BetScorecard bets={bets} availability={availability} />
       <ol className="flex flex-col gap-3">
         <li>
           <Link href={`/fights/${UFC_332_EVENT.id}`} className="fight-card">
@@ -72,7 +79,9 @@ export function FightIndex({
             <p>
               {civilWeekdayLong(UFC_332_EVENT.date)} {formatCivilDate(UFC_332_EVENT.date)}
             </p>
-            <p className="fight-result">{ufc332ResultLine(results)}</p>
+            <p className="fight-result">
+              {resultsAvailability === "unavailable" ? "unavailable" : ufc332ResultLine(results)}
+            </p>
             <ul>
               {UFC_332_EVENT.segments.map((segment) => (
                 <li key={segment.id}>
@@ -90,9 +99,13 @@ export function FightIndex({
 export function FightEvent({
   bets,
   results,
+  availability = "live",
+  resultsAvailability = "live",
 }: {
   bets: readonly Bet[];
   results: readonly FightResult[];
+  availability?: BookAvailability;
+  resultsAvailability?: BookAvailability;
 }) {
   const summary = summarizeBets(bets);
   return (
@@ -108,8 +121,11 @@ export function FightEvent({
           {formatCivilDate(UFC_332_EVENT.date)} · America/Chicago
         </p>
         <p className="log-meta">
-          {summary.stakedLabel} staked · {summary.potentialLabel}{" "}
-          {summary.estimated ? "return est." : "return"}
+          {availability === "unavailable"
+            ? "unavailable"
+            : `${summary.stakedLabel} staked · ${summary.potentialLabel} ${
+                summary.estimated ? "return est." : "return"
+              }${availability === "seed-only" ? " · seed-only" : ""}`}
         </p>
       </header>
       {UFC_332_EVENT.segments.map((segment) => {
@@ -137,7 +153,9 @@ export function FightEvent({
                         </p>
                       ) : null}
                       <p className="fight-result">
-                        {formatFightResult(results.find((row) => row.fightSlug === fight.slug))}
+                        {resultsAvailability === "unavailable"
+                          ? "unavailable"
+                          : formatFightResult(results.find((row) => row.fightSlug === fight.slug))}
                       </p>
                       {stake.length > 0 ? (
                         <ul className="fight-stakes">
@@ -204,10 +222,14 @@ export function FightDetail({
   fight,
   bets,
   result,
+  availability = "live",
+  resultsAvailability = "live",
 }: {
   fight: CatalogFight;
   bets: readonly Bet[];
   result?: FightResult | null;
+  availability?: BookAvailability;
+  resultsAvailability?: BookAvailability;
 }) {
   const stakes = betsOnFight(bets, fight.slug);
   const ticketsFor = (name: string) =>
@@ -225,12 +247,21 @@ export function FightDetail({
         <h2 className="log-title">
           {fight.A.name} vs {fight.B.name}
         </h2>
-        <p className="log-meta">{formatFightResult(result)}</p>
+        <p className="log-meta">
+          {resultsAvailability === "unavailable" ? "Result unavailable" : formatFightResult(result)}
+        </p>
+        {availability === "unavailable" ? (
+          <p className="log-meta">Tickets unavailable</p>
+        ) : availability === "seed-only" ? (
+          <p className="log-meta">Tickets are seed-only</p>
+        ) : null}
       </header>
 
       <section className="calendar-day-section" aria-label="Result">
         <h3>Result</h3>
-        {result && result.status === "final" ? (
+        {resultsAvailability === "unavailable" ? (
+          <p>unavailable</p>
+        ) : result && result.status === "final" ? (
           <dl>
             <Field label="Winner" value={result.winner} />
             <Field label="Method" value={result.method} />
