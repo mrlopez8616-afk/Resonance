@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BetScorecard } from "@/components/bet-scorecard";
+import { BetScorecard, type BookAvailability } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
 import { betsOnFight, formatUsd, summarizeBets } from "@/lib/bets";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
@@ -37,7 +37,13 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function FightIndex({ bets }: { bets: readonly Bet[] }) {
+export function FightIndex({
+  bets,
+  availability = "live",
+}: {
+  bets: readonly Bet[];
+  availability?: BookAvailability;
+}) {
   const open = bets.filter((bet) => bet.status === "open").length;
   return (
     <div className="log-canvas">
@@ -45,10 +51,13 @@ export function FightIndex({ bets }: { bets: readonly Bet[] }) {
         <p className="log-kicker">Fight Desk</p>
         <h2 className="log-title">Fights</h2>
         <p className="log-meta">
-          {open} open {open === 1 ? "bet" : "bets"} · Coinbase Predict · founder places the bets
+          {availability === "unavailable"
+            ? "unavailable · Coinbase Predict · founder places the bets"
+            : `${open} open ${open === 1 ? "bet" : "bets"} · Coinbase Predict · founder places the bets`}
+          {availability === "seed-only" ? " · seed-only" : ""}
         </p>
       </header>
-      <BetScorecard bets={bets} />
+      <BetScorecard bets={bets} availability={availability} />
       <ol className="flex flex-col gap-3">
         <li>
           <Link href={`/fights/${UFC_332_EVENT.id}`} className="fight-card">
@@ -74,7 +83,13 @@ export function FightIndex({ bets }: { bets: readonly Bet[] }) {
   );
 }
 
-export function FightEvent({ bets }: { bets: readonly Bet[] }) {
+export function FightEvent({
+  bets,
+  availability = "live",
+}: {
+  bets: readonly Bet[];
+  availability?: BookAvailability;
+}) {
   const summary = summarizeBets(bets);
   return (
     <div className="log-canvas">
@@ -89,8 +104,11 @@ export function FightEvent({ bets }: { bets: readonly Bet[] }) {
           {formatCivilDate(UFC_332_EVENT.date)} · America/Chicago
         </p>
         <p className="log-meta">
-          {summary.stakedLabel} staked · {summary.potentialLabel}{" "}
-          {summary.estimated ? "return est." : "return"}
+          {availability === "unavailable"
+            ? "unavailable"
+            : `${summary.stakedLabel} staked · ${summary.potentialLabel} ${
+                summary.estimated ? "return est." : "return"
+              }${availability === "seed-only" ? " · seed-only" : ""}`}
         </p>
       </header>
       {UFC_332_EVENT.segments.map((segment) => {
@@ -185,7 +203,15 @@ function OddsColumn({ side, bets }: { side: FighterSide; bets: readonly Bet[] })
   );
 }
 
-export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readonly Bet[] }) {
+export function FightDetail({
+  fight,
+  bets,
+  availability = "live",
+}: {
+  fight: CatalogFight;
+  bets: readonly Bet[];
+  availability?: BookAvailability;
+}) {
   const stakes = betsOnFight(bets, fight.slug);
   const ticketsFor = (name: string) => stakes.filter((bet) => bet.pick === name);
   const labels = fight.A.stats.map((row) => row.label);
@@ -201,6 +227,11 @@ export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readon
         <h2 className="log-title">
           {fight.A.name} vs {fight.B.name}
         </h2>
+        {availability === "unavailable" ? (
+          <p className="log-meta">Tickets unavailable</p>
+        ) : availability === "seed-only" ? (
+          <p className="log-meta">Tickets are seed-only</p>
+        ) : null}
       </header>
 
       <section className="calendar-day-section" aria-label="Matchup">

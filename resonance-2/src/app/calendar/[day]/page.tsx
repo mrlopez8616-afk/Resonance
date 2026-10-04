@@ -5,9 +5,10 @@ import {
   parseCalendarDaySearch,
   type CalendarDaySearch,
 } from "@/lib/calendar-desk";
-import { loadCalendarStore } from "@/lib/calendar-store";
 import { chicagoToday, formatCivilDate, isCivilDay } from "@/lib/calendar-time";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
+import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
+import { loadCalendarForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -31,29 +32,37 @@ export default async function CalendarDayRoute({
   const [{ day }, rawSearch, store, fillsLoaded] = await Promise.all([
     params,
     searchParams,
-    loadCalendarStore(),
+    loadCalendarForPage(),
     loadOperatorFills(),
   ]);
   if (!isCivilDay(day)) notFound();
 
   const today = chicagoToday();
   const search = parseCalendarDaySearch(rawSearch);
-  const storeLabel =
-    store.configured && store.backend === "blob"
-      ? "durable store"
-      : store.configured
-        ? "local store"
-        : "seed fallback";
+  const storageMessage = storageBanner([
+    store.status === "unconfigured" ? "live" : store.status,
+    fillsLoaded.status,
+  ]);
 
   return (
-    <OperatorShell>
+    <OperatorShell
+      storageMessage={storageMessage ? STORAGE_UNAVAILABLE_BANNER : null}
+      storageDetail={
+        [
+          store.status === "seed-only" ? "Calendar events are seed-only." : null,
+          fillsLoaded.status === "seed-only" ? "Fills are seed-only." : null,
+        ]
+          .filter((line): line is string => line !== null)
+          .join(" ") || null
+      }
+    >
       <CalendarDayView
         day={day}
-        events={store.envelope.events}
+        events={store.events}
         fills={fillsLoaded.fills}
         search={search}
         today={today}
-        storeLabel={storeLabel}
+        storeLabel={store.storeLabel}
       />
     </OperatorShell>
   );

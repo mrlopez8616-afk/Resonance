@@ -21,8 +21,9 @@ export async function loadPortfolioMood(): Promise<PortfolioMood> {
       loadEquityQuotes(EQUITY_FACE_TICKERS),
       loadLiveSleeveBooks(),
     ]);
+    if (sleeves.status !== "live") return unknownPortfolioMood();
     return portfolioMood(
-      moodHoldingsFromBooks(sleeves, { ...crypto, ...equity }),
+      moodHoldingsFromBooks(sleeves.books, { ...crypto, ...equity }),
     );
   } catch {
     return unknownPortfolioMood();

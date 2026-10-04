@@ -4,8 +4,9 @@ import {
   parseCalendarDeskQuery,
   type CalendarDeskSearch,
 } from "@/lib/calendar-desk";
-import { loadCalendarStore } from "@/lib/calendar-store";
 import { chicagoToday } from "@/lib/calendar-time";
+import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { loadCalendarForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -19,22 +20,19 @@ export default async function CalendarPage({
   searchParams: Promise<CalendarDeskSearch>;
 }) {
   const today = chicagoToday();
-  const [params, store] = await Promise.all([searchParams, loadCalendarStore()]);
+  const [params, store] = await Promise.all([searchParams, loadCalendarForPage()]);
   const query = parseCalendarDeskQuery(params, today);
-  const storeLabel =
-    store.configured && store.backend === "blob"
-      ? "durable store"
-      : store.configured
-        ? "local store"
-        : "seed fallback";
 
   return (
-    <OperatorShell>
+    <OperatorShell
+      storageMessage={store.status === "seed-only" ? STORAGE_UNAVAILABLE_BANNER : null}
+      storageDetail={store.status === "seed-only" ? "Calendar events are seed-only." : null}
+    >
       <CalendarDesk
-        events={store.envelope.events}
+        events={store.events}
         query={query}
         today={today}
-        storeLabel={storeLabel}
+        storeLabel={store.storeLabel}
       />
     </OperatorShell>
   );

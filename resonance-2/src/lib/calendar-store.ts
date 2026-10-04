@@ -1,8 +1,21 @@
 import "server-only";
 
+import { cache } from "react";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { CalendarWriteError, parseCalendarEvent } from "@/lib/calendar-event";
+import {
+  BLOB_TAGS,
+  cachedBlobRead,
+  putPrivateBlob,
+  readPrivateBlob,
+  revalidateBlobTag,
+} from "@/lib/blob-read";
+import {
+  StorageUnavailableError,
+  isStorageUnavailable,
+  throwIfStorageForced,
+} from "@/lib/storage-unavailable";
 import {
   CALENDAR_BLOB_PATH,
   DEFAULT_CALENDAR_FILE,
@@ -34,22 +47,7 @@ function filePath(env: Record<string, string | undefined> = process.env): string
   return path.resolve(configured || DEFAULT_CALENDAR_FILE);
 }
 
-async function streamToString(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const response = new Response(stream);
-  return response.text();
-}
-
-async function readBlobEnvelope(): Promise<CalendarStoreEnvelope | null> {
-  const { get } = await import("@vercel/blob");
-  const result = await get(CALENDAR_BLOB_PATH, {
-    access: "private",
-    useCache: false,
-  });
-  if (!result || result.statusCode !== 200 || !result.stream) {
-    return null;
-  }
-  const text = await streamToString(result.stream);
-  if (!text.trim()) return null;
+function parseBlobText(text: string): CalendarStoreEnvelope | null {
   try {
     return parseCalendarEnvelope(JSON.parse(text));
   } catch {
@@ -57,15 +55,25 @@ async function readBlobEnvelope(): Promise<CalendarStoreEnvelope | null> {
   }
 }
 
-async function writeBlobEnvelope(envelope: CalendarStoreEnvelope): Promise<void> {
-  const { put } = await import("@vercel/blob");
-  await put(CALENDAR_BLOB_PATH, JSON.stringify(envelope, null, 2), {
-    access: "private",
-    allowOverwrite: true,
-    addRandomSuffix: false,
-    contentType: "application/json",
-    cacheControlMaxAge: 60,
-  });
+async function persistEnvelope(
+  envelope: CalendarStoreEnvelope,
+  revalidate: boolean,
+): Promise<void> {
+  const backend = detectCalendarBackend();
+  if (backend === "blob") {
+    await putPrivateBlob(CALENDAR_BLOB_PATH, JSON.stringify(envelope, null, 2));
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.calendar);
+    return;
+  }
+  if (backend === "file") {
+    const target = filePath();
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
+    return;
+  }
+  throw new CalendarStoreError(
+    "Calendar store is not configured. Create a Vercel Blob store and redeploy.",
+  );
 }
 
 async function readFileEnvelope(): Promise<CalendarStoreEnvelope | null> {
@@ -75,44 +83,60 @@ async function readFileEnvelope(): Promise<CalendarStoreEnvelope | null> {
     return parseCalendarEnvelope(JSON.parse(text));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw new StorageUnavailableError(
+      "calendar",
+      error instanceof Error ? error.message : "Calendar file could not be read.",
+    );
+  }
+}
+
+async function materializeBlobText(text: string | null, revalidate: boolean): Promise<{
+  envelope: CalendarStoreEnvelope;
+  seeded: boolean;
+}> {
+  const finalized = ensureSeededCalendarEnvelope(text === null ? null : parseBlobText(text));
+  if (finalized.seeded) await persistEnvelope(finalized.envelope, revalidate);
+  return finalized;
+}
+
+type CachedCalendar =
+  | { status: "ok"; envelope: CalendarStoreEnvelope; seeded: boolean }
+  | { status: "unavailable"; reason: string };
+
+async function readCalendarBlob(revalidateWrites: boolean): Promise<CachedCalendar> {
+  const body = await readPrivateBlob(CALENDAR_BLOB_PATH);
+  if (body.status === "unavailable") return body;
+  try {
+    const made = await materializeBlobText(
+      body.status === "missing" ? null : body.text,
+      revalidateWrites,
+    );
+    return { status: "ok", ...made };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
     throw error;
   }
 }
 
-async function writeFileEnvelope(envelope: CalendarStoreEnvelope): Promise<void> {
-  const target = filePath();
-  await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
-}
-
-async function readRawEnvelope(): Promise<CalendarStoreEnvelope | null> {
-  const backend = detectCalendarBackend();
-  if (backend === "blob") return readBlobEnvelope();
-  if (backend === "file") return readFileEnvelope();
-  return null;
-}
-
-async function persistEnvelope(envelope: CalendarStoreEnvelope): Promise<void> {
-  const backend = detectCalendarBackend();
-  if (backend === "blob") {
-    await writeBlobEnvelope(envelope);
-    return;
+function unwrapCalendar(result: CachedCalendar): {
+  envelope: CalendarStoreEnvelope;
+  seeded: boolean;
+} {
+  if (result.status === "unavailable") {
+    throw new StorageUnavailableError("calendar", result.reason);
   }
-  if (backend === "file") {
-    await writeFileEnvelope(envelope);
-    return;
-  }
-  throw new CalendarStoreError(
-    "Calendar store is not configured. Create a Vercel Blob store and redeploy.",
-  );
+  return result;
 }
 
-export async function loadCalendarStore(): Promise<{
+async function loadCalendarStoreInner(fresh: boolean): Promise<{
   configured: boolean;
   backend: CalendarStoreBackend;
   envelope: CalendarStoreEnvelope;
   seeded: boolean;
 }> {
+  throwIfStorageForced("calendar");
   const backend = detectCalendarBackend();
   if (backend === "none") {
     return {
@@ -122,12 +146,28 @@ export async function loadCalendarStore(): Promise<{
       seeded: true,
     };
   }
-  const raw = await readRawEnvelope();
-  const { envelope, seeded } = ensureSeededCalendarEnvelope(raw);
-  if (seeded) {
-    await persistEnvelope(envelope);
+  if (backend === "file") {
+    const finalized = ensureSeededCalendarEnvelope(await readFileEnvelope());
+    if (finalized.seeded) await persistEnvelope(finalized.envelope, false);
+    return { configured: true, backend, envelope: finalized.envelope, seeded: finalized.seeded };
   }
-  return { configured: true, backend, envelope, seeded };
+  const loaded = fresh
+    ? unwrapCalendar(await readCalendarBlob(true))
+    : unwrapCalendar(
+        await cachedBlobRead(BLOB_TAGS.calendar, () => readCalendarBlob(false)),
+      );
+  return { configured: true, backend, ...loaded };
+}
+
+export const loadCalendarStore = cache(() => loadCalendarStoreInner(false));
+
+export function loadCalendarStoreFresh(): Promise<{
+  configured: boolean;
+  backend: CalendarStoreBackend;
+  envelope: CalendarStoreEnvelope;
+  seeded: boolean;
+}> {
+  return loadCalendarStoreInner(true);
 }
 
 export async function writeStoredCalendarEvent(body: unknown): Promise<{
@@ -144,10 +184,10 @@ export async function writeStoredCalendarEvent(body: unknown): Promise<{
     );
   }
   const event = parseCalendarEvent(body);
-  const loaded = await loadCalendarStore();
+  const loaded = await loadCalendarStoreFresh();
   const written = writeCalendarEventIntoEnvelope(loaded.envelope, event);
   if (!written.deduped) {
-    await persistEnvelope(written.envelope);
+    await persistEnvelope(written.envelope, true);
   }
   return {
     envelope: written.envelope,
@@ -162,7 +202,11 @@ export async function writeStoredCalendarEvent(body: unknown): Promise<{
 export function asCalendarWriteError(error: unknown): {
   status: number;
   message: string;
+  reason?: string;
 } {
+  if (isStorageUnavailable(error)) {
+    return { status: 503, message: error.message, reason: error.reason };
+  }
   if (error instanceof CalendarWriteError) {
     return { status: error.status, message: error.message };
   }

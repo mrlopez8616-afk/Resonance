@@ -4,7 +4,15 @@ import { MoodFloor, MoodLegend, MoodPreviewSync } from "@/components/mood-floor"
 import { OperatorToolbar } from "@/components/operator-toolbar";
 import { loadPortfolioMood } from "@/lib/portfolio-mood-load";
 
-export async function OperatorShell({ children }: { children: ReactNode }) {
+export async function OperatorShell({
+  children,
+  storageMessage = null,
+  storageDetail = null,
+}: {
+  children: ReactNode;
+  storageMessage?: string | null;
+  storageDetail?: string | null;
+}) {
   const mood = await loadPortfolioMood();
   return (
     <MoodFloor initialMood={mood}>
@@ -21,7 +29,15 @@ export async function OperatorShell({ children }: { children: ReactNode }) {
           </span>
           <MoodLegend />
         </header>
-        <div className="operator-main">{children}</div>
+        <div className="operator-main">
+          {storageMessage ? (
+            <p className="storage-banner" role="status" data-storage-banner="unavailable">
+              {storageMessage}
+              {storageDetail ? <span className="storage-banner-detail">{storageDetail}</span> : null}
+            </p>
+          ) : null}
+          {children}
+        </div>
         <footer className="operator-status">
           <p>
             Operator floor ·{" "}

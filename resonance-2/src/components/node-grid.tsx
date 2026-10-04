@@ -6,6 +6,7 @@ import { FightDeskFace } from "@/components/fight-desk-face";
 import { FloorDialog } from "@/components/floor-dialog";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
+import type { BookAvailability } from "@/components/bet-scorecard";
 import type { FightDeskSummary } from "@/lib/bets";
 import type { FloorNode } from "@/data/floor-nodes";
 import { CEG_SLEEVES } from "@/data/ceg-sleeves";
@@ -46,10 +47,12 @@ export function NodeGrid({
   faces,
   sleeves: sleeveBooks = SEED_SLEEVES,
   fightDesk,
+  fightDeskAvailability = "live",
 }: {
   faces: Record<string, LiveFaceData>;
   sleeves?: Record<string, readonly NodeSleeve[]>;
-  fightDesk: FightDeskSummary;
+  fightDesk: FightDeskSummary | null;
+  fightDeskAvailability?: BookAvailability;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -78,7 +81,7 @@ export function NodeGrid({
       <section className="node-grid" aria-label="Node floor">
         <NodeSquare live label="Fight Desk">
           <Link href="/fights" className="node-log-link" title="Open Fight Desk">
-            <FightDeskFace summary={fightDesk} />
+            <FightDeskFace summary={fightDesk} availability={fightDeskAvailability} />
           </Link>
         </NodeSquare>
         {nodes.map((node) => {
