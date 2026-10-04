@@ -49,6 +49,23 @@ npm run build
 npm start
 ```
 
+## How to append a bet
+
+`POST /api/bets` uses the same Bearer as `POST /api/bets/settle` and `POST /api/calendar`: `Authorization: Bearer $RESONANCE_SYNC_SECRET`. The secret stays server-side. Send one bet, `{ "bets": [ ... ] }`, or a bare array.
+
+`orderId` is the idempotency key. Re-posting the same orderId is a **no-op**: the stored row is returned and is not rewritten, so a later settlement stays put. It is not a field upsert. `status` defaults to `open`. `won`, `lost`, and `void` are accepted on the way in, with P&L computed the same way settle does (won = payout − stake, lost = −stake, void = 0). `payout` is the ticket payout. `hubLean` and `agreesWithLean` are optional; omitted leans are filled from the fight catalog when the fight is known.
+
+The live blob (`resonance-2/bets.json`) inserts seed ids that are missing on the next read. A row already stored under that id or orderId is left alone, including a settled row. The second Coria ticket (`ufc-332-coria-2`, order `e4f0c363-fefd-4cb5-8e7c-bb695def7711`) rides that path.
+
+```bash
+curl -sS -X POST https://resonance3.vercel.app/api/bets \
+  -H "Authorization: Bearer $RESONANCE_SYNC_SECRET" \
+  -H "content-type: application/json" \
+  -d @ticket.json
+
+RESONANCE_SYNC_SECRET=... npm run bets:post -- ticket.json
+```
+
 ## How to append a later fill
 
 Production path: Hub / RH Ops `POST /api/fills` with Bearer `RESONANCE_SYNC_SECRET`. Schema, idempotency, and the Monday Agentic SUI→6 AI fixture are in [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).

@@ -2,7 +2,14 @@ import "server-only";
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { BetWriteError, settleBet, type Bet, type SettleRequest } from "@/lib/bets";
+import {
+  BetWriteError,
+  placeBet,
+  settleBet,
+  type Bet,
+  type BetPost,
+  type SettleRequest,
+} from "@/lib/bets";
 import {
   BETS_BLOB_PATH,
   createEmptyBetsEnvelope,
@@ -154,6 +161,38 @@ export async function settleStoredBets(requests: readonly SettleRequest[]): Prom
     results.push({ id: request.id, deduped: written.deduped, bet: written.bet });
     if (!written.deduped) {
       envelope = replaceBet(envelope, written.bet, now);
+      changed = true;
+    }
+  }
+  if (changed) await persistEnvelope(envelope);
+  return { envelope, backend: loaded.backend, results };
+}
+
+export async function postStoredBets(requests: readonly BetPost[]): Promise<{
+  envelope: BetsStoreEnvelope;
+  backend: BetsStoreBackend;
+  results: { orderId: string; id: string; deduped: boolean; bet: Bet }[];
+}> {
+  if (!isBetsStoreConfigured()) {
+    throw new BetsStoreError(
+      "Bet store is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadBetsStore();
+  const now = new Date().toISOString();
+  let envelope = loaded.envelope;
+  const results: { orderId: string; id: string; deduped: boolean; bet: Bet }[] = [];
+  let changed = false;
+  for (const request of requests) {
+    const written = placeBet(envelope.bets, request, now);
+    results.push({
+      orderId: request.orderId,
+      id: written.bet.id,
+      deduped: written.deduped,
+      bet: written.bet,
+    });
+    if (!written.deduped) {
+      envelope = { ...envelope, updatedAt: now, bets: written.bets };
       changed = true;
     }
   }

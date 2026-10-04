@@ -111,6 +111,12 @@ export type FounderBetSeed = {
   payout: string;
   oddsPct: number;
   estimated?: boolean;
+  /** Broker order id. POST /api/bets dedupes on this. */
+  orderId?: string;
+  /** Placed instant. Omitted seeds use the fight start. */
+  time?: string;
+  /** Ticket note. Fees and contract count live here when recorded. */
+  note?: string;
   /** Optional stored override. Omitted seeds use the hub analysis lean. */
   hubLean?: string;
   agreesWithLean?: boolean;
