@@ -1603,6 +1603,11 @@ body {
   font-size: 0.88rem;
 }
 
+.fight-card p.fight-result {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .fight-stakes {
   margin-top: 0.45rem;
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { fillRowKey, formatFillTime } from "@/lib/fills";
 import type { BetFill, Fill } from "@/data/fills";
-import { formatUsd } from "@/lib/bets";
+import { betStatusLabel, formatUsd } from "@/lib/bets";
 
 function Field({
   label,
@@ -71,7 +71,11 @@ export function BetFillCard({ fill }: { fill: BetFill }) {
         <Field label="stake" value={formatUsd(fill.stake)} />
         <Field label="odds" value={oddsLabel(fill)} />
         <Field label="payout" value={payout} />
-        <Field label="status" value={fill.betStatus} tone={fill.betStatus === "lost" ? "sell" : "ok"} />
+        <Field
+          label="status"
+          value={betStatusLabel(fill.betStatus)}
+          tone={fill.betStatus === "lost" ? "sell" : fill.betStatus === "sold" ? undefined : "ok"}
+        />
         {fill.realizedPnl ? (
           <Field label="P&L" value={formatUsd(fill.realizedPnl)} />
         ) : null}

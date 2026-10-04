@@ -114,6 +114,10 @@ export type FounderBetSeed = {
   /** Optional stored override. Omitted seeds use the hub analysis lean. */
   hubLean?: string;
   agreesWithLean?: boolean;
+  /** Omitted seeds are open. A settled seed is inserted as written and is not a correction. */
+  status?: "open" | "won" | "lost" | "void" | "sold";
+  /** Null means the Coinbase order id is not in yet. The log prints pending. */
+  orderId?: string | null;
 };
 
 export type FighterSide = {

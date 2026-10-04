@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { BetScorecard } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
-import { betsOnFight, formatUsd } from "@/lib/bets";
+import { betStatusLabel, betsOnFight, formatSignedUsd, formatUsd } from "@/lib/bets";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
+import { formatFightResult, ufc332ResultLine, type FightResult } from "@/lib/fight-results";
 import {
   UFC_332_EVENT,
   fightsInSegment,
@@ -26,6 +27,11 @@ function ticketOdds(bet: Bet): string {
   return bet.estimated ? `~${pct}` : pct;
 }
 
+function ticketLine(bet: Bet): string {
+  const pnl = bet.realizedPnl ? ` · ${formatSignedUsd(bet.realizedPnl)}` : "";
+  return `${bet.pick} ${formatUsd(bet.stake)} → ${formatUsd(bet.payout)}${bet.estimated ? " est." : ""} @ ${ticketOdds(bet)} · ${betStatusLabel(bet.status)}${pnl}`;
+}
+
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-t border-[color:var(--border)] py-2.5 first:border-t-0 first:pt-0">
@@ -37,7 +43,13 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function FightIndex({ bets }: { bets: readonly Bet[] }) {
+export function FightIndex({
+  bets,
+  results,
+}: {
+  bets: readonly Bet[];
+  results: readonly FightResult[];
+}) {
   const open = bets.filter((bet) => bet.status === "open").length;
   return (
     <div className="log-canvas">
@@ -60,6 +72,7 @@ export function FightIndex({ bets }: { bets: readonly Bet[] }) {
             <p>
               {civilWeekdayLong(UFC_332_EVENT.date)} {formatCivilDate(UFC_332_EVENT.date)}
             </p>
+            <p className="fight-result">{ufc332ResultLine(results)}</p>
             <ul>
               {UFC_332_EVENT.segments.map((segment) => (
                 <li key={segment.id}>
@@ -74,7 +87,13 @@ export function FightIndex({ bets }: { bets: readonly Bet[] }) {
   );
 }
 
-export function FightEvent({ bets }: { bets: readonly Bet[] }) {
+export function FightEvent({
+  bets,
+  results,
+}: {
+  bets: readonly Bet[];
+  results: readonly FightResult[];
+}) {
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -112,13 +131,13 @@ export function FightEvent({ bets }: { bets: readonly Bet[] }) {
                           {fight.confidence ? ` · ${fight.confidence}` : ""}
                         </p>
                       ) : null}
+                      <p className="fight-result">
+                        {formatFightResult(results.find((row) => row.fightSlug === fight.slug))}
+                      </p>
                       {stake.length > 0 ? (
                         <ul className="fight-stakes">
                           {stake.map((bet) => (
-                            <li key={bet.id}>
-                              {bet.pick} {formatUsd(bet.stake)} → {formatUsd(bet.payout)}
-                              {bet.estimated ? " est." : ""} @ {ticketOdds(bet)} · {bet.status}
-                            </li>
+                            <li key={bet.id}>{ticketLine(bet)}</li>
                           ))}
                         </ul>
                       ) : null}
@@ -168,18 +187,21 @@ function OddsColumn({ side, bet }: { side: FighterSide; bet?: Bet }) {
         {side.books.map((row) => (
           <Field key={row.book} label={row.book} value={moneyline(row.moneyline)} />
         ))}
-        {bet ? (
-          <Field
-            label="Your ticket"
-            value={`${ticketOdds(bet)} · ${formatUsd(bet.stake)} → ${formatUsd(bet.payout)}${bet.estimated ? " est." : ""} · ${bet.status}`}
-          />
-        ) : null}
+        {bet ? <Field label="Your ticket" value={ticketLine(bet)} /> : null}
       </dl>
     </div>
   );
 }
 
-export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readonly Bet[] }) {
+export function FightDetail({
+  fight,
+  bets,
+  result,
+}: {
+  fight: CatalogFight;
+  bets: readonly Bet[];
+  result?: FightResult | null;
+}) {
   const stakes = betsOnFight(bets, fight.slug);
   const betFor = (name: string) => stakes.find((bet) => bet.pick === name);
   const labels = fight.A.stats.map((row) => row.label);
@@ -195,7 +217,23 @@ export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readon
         <h2 className="log-title">
           {fight.A.name} vs {fight.B.name}
         </h2>
+        <p className="log-meta">{formatFightResult(result)}</p>
       </header>
+
+      <section className="calendar-day-section" aria-label="Result">
+        <h3>Result</h3>
+        {result && result.status === "final" ? (
+          <dl>
+            <Field label="Winner" value={result.winner} />
+            <Field label="Method" value={result.method} />
+            <Field label="Round" value={String(result.round)} />
+            <Field label="Time" value={result.time} />
+            {result.opponent ? <Field label="Opponent" value={result.opponent} /> : null}
+          </dl>
+        ) : (
+          <p>Pending</p>
+        )}
+      </section>
 
       <section className="calendar-day-section" aria-label="Matchup">
         <h3>Matchup</h3>
@@ -314,7 +352,7 @@ export function FightDetail({ fight, bets }: { fight: CatalogFight; bets: readon
                     label="Payout"
                     value={`${formatUsd(bet.payout)}${bet.estimated ? " est." : ""}`}
                   />
-                  <Field label="Status" value={bet.status} />
+                  <Field label="Status" value={betStatusLabel(bet.status)} />
                   {bet.realizedPnl ? <Field label="P&L" value={formatUsd(bet.realizedPnl)} /> : null}
                   <Field label="Venue" value="Coinbase Predict" />
                 </dl>

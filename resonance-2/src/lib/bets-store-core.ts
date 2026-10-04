@@ -2,7 +2,9 @@ import {
   BET_TICKER,
   BET_VENUE,
   betSeed,
+  money,
   readOptionalLean,
+  realizedPnl,
   withStoredLean,
   type Bet,
   type BetStatus,
@@ -23,7 +25,74 @@ export interface BetsStoreEnvelope {
 }
 
 const BET_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
-const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void"]);
+const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void", "sold"]);
+
+/**
+ * One-shot book fixes. Applied on read when the row's correctionVersion
+ * is below this version. A later settle or override is not put back.
+ */
+export type BetCorrection = {
+  id: string;
+  version: number;
+  status?: BetStatus;
+  payout?: string;
+  stake?: string;
+};
+
+export const BET_CORRECTIONS: readonly BetCorrection[] = [
+  { id: "ufc-332-ribovics", version: 1, status: "sold", payout: "13.64" },
+  { id: "ufc-332-coria", version: 1, stake: "19.99" },
+  { id: "ufc-332-wang-cong", version: 1, stake: "45.13" },
+];
+
+function applyBetCorrection(bet: Bet, correction: BetCorrection): Bet {
+  const status = correction.status ?? bet.status;
+  const stake = correction.stake ? money(correction.stake) : bet.stake;
+  const next: Bet = { ...bet, status, stake, correctionVersion: correction.version };
+  if (correction.payout) {
+    const payout = money(correction.payout);
+    if (status === "sold") {
+      next.payout = payout;
+      next.settledPayout = payout;
+    } else if (status === "won") {
+      next.settledPayout = payout;
+    } else {
+      next.payout = payout;
+    }
+  }
+  if (status === "open") {
+    delete next.realizedPnl;
+    delete next.settledPayout;
+    delete next.settledAt;
+  } else {
+    next.realizedPnl = realizedPnl(stake, status, next.settledPayout ?? next.payout);
+  }
+  return next;
+}
+
+/** Patch listed ids once. Other rows, including settled ones, stay as stored. */
+export function applyBetCorrections(
+  envelope: BetsStoreEnvelope,
+  now = new Date().toISOString(),
+): { envelope: BetsStoreEnvelope; changed: boolean } {
+  let changed = false;
+  const bets = envelope.bets.map((bet) => {
+    const correction = BET_CORRECTIONS.find((row) => row.id === bet.id);
+    if (!correction) return bet;
+    if ((bet.correctionVersion ?? 0) >= correction.version) return bet;
+    changed = true;
+    return applyBetCorrection(bet, correction);
+  });
+  if (!changed) return { envelope, changed: false };
+  return { envelope: { ...envelope, updatedAt: now, bets }, changed: true };
+}
+
+/** Seed plus lean backfill plus the versioned corrections. Used when the store read fails. */
+export function fallbackBetBook(): Bet[] {
+  const seeded = ensureSeededBetsEnvelope(null);
+  const leaned = backfillBetLeans(seeded.envelope);
+  return applyBetCorrections(leaned.envelope).envelope.bets;
+}
 
 export function detectBetsBackend(env: EnvLike = process.env): BetsStoreBackend {
   if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
@@ -127,6 +196,15 @@ function coerceBet(raw: unknown): Bet | null {
   }
   if (typeof raw.settledAt === "string" && raw.settledAt.trim()) {
     bet.settledAt = raw.settledAt.trim();
+  }
+  if (raw.orderId === null) bet.orderId = null;
+  else if (typeof raw.orderId === "string" && raw.orderId.trim()) bet.orderId = raw.orderId.trim();
+  if (
+    typeof raw.correctionVersion === "number" &&
+    Number.isInteger(raw.correctionVersion) &&
+    raw.correctionVersion >= 0
+  ) {
+    bet.correctionVersion = raw.correctionVersion;
   }
   const lean = readOptionalLean(raw);
   if (lean.hubLean) bet.hubLean = lean.hubLean;

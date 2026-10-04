@@ -1,0 +1,98 @@
+[
+  {
+    "fight": 1,
+    "winner": "Eric Nolan",
+    "method": "KO/TKO (Punch)",
+    "round": 3,
+    "time": "3:26",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401907089: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punch, period 3, displayClock 3:26. live_state.json listed nolan under reported and had no results.nolan fields."
+  },
+  {
+    "fight": 2,
+    "winner": "Ismail Naurdiev",
+    "method": "Decision - Unanimous",
+    "round": 3,
+    "time": "5:00",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401912275: STATUS_FINAL, result.displayName Decision - Unanimous, period 3, displayClock 5:00. No judge scores on that status object. live_state.json had no results.naurdiev fields."
+  },
+  {
+    "fight": 3,
+    "winner": "Alexander Hernandez",
+    "method": "KO/TKO (Punch)",
+    "round": 2,
+    "time": "3:12",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401917346: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punch, period 2, displayClock 3:12. live_state.json had no results.hernandez fields."
+  },
+  {
+    "fight": 4,
+    "winner": "Jacobe Smith",
+    "method": "KO/TKO (Punches)",
+    "round": 1,
+    "time": "1:32",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401926808: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punches, period 1, displayClock 1:32. live_state.json had no results.smith fields."
+  },
+  {
+    "fight": 5,
+    "winner": "Johnny Walker",
+    "method": "KO (knee)",
+    "round": 1,
+    "time": "3:35",
+    "source": "Hub confirmed final."
+  },
+  {
+    "fight": 6,
+    "winner": "Anthony Wint",
+    "method": "KO/TKO",
+    "round": 1,
+    "time": "4:36",
+    "source": "Hub confirmed final."
+  },
+  {
+    "fight": 7,
+    "winner": "Marcus McGhee",
+    "method": "TKO (punches)",
+    "round": 1,
+    "time": "4:57",
+    "source": "Hub confirmed final."
+  },
+  {
+    "fight": 8,
+    "winner": "Damian Pinas",
+    "method": "KO (uppercut)",
+    "round": 1,
+    "time": "1:15",
+    "source": "Hub confirmed final."
+  },
+  {
+    "fight": 9,
+    "winner": "Imanol Rodriguez Pillado",
+    "method": "KO/TKO",
+    "round": 1,
+    "time": "1:46",
+    "source": "Hub confirmed final. Winner is the data.json name."
+  },
+  {
+    "fight": 10,
+    "winner": "Roman Kopylov",
+    "method": "TKO (punches)",
+    "round": 1,
+    "time": "3:12",
+    "source": "Hub confirmed final. Winner is the data.json name."
+  },
+  {
+    "fight": 11,
+    "winner": "Roberto Soldic",
+    "method": "UD (29-28, 29-27, 29-27)",
+    "round": 3,
+    "time": "5:00",
+    "source": "Hub confirmed method UD (29-28, 29-27, 29-27). Round 3 time 5:00 matches ESPN status competition 401917345 displayClock 5:00 and live_state.json results.soldic. Winner spelling is data.json."
+  },
+  {
+    "fight": 12,
+    "winner": "Esteban Ribovics",
+    "method": "KO/TKO",
+    "round": 1,
+    "time": "1:01",
+    "source": "Hub confirmed final."
+  }
+]

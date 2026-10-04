@@ -1,6 +1,7 @@
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
-import { betSeed, summarizeBets } from "@/lib/bets";
+import { summarizeBets } from "@/lib/bets";
+import { fallbackBetBook } from "@/lib/bets-store-core";
 import { loadBetsStore } from "@/lib/bets-store";
 import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { assembleLiveFace } from "@/lib/live-face";
@@ -16,7 +17,7 @@ export default async function Home() {
     loadLiveSleeveBooks(),
     loadBetsStore()
       .then((loaded) => summarizeBets(loaded.envelope.bets))
-      .catch(() => summarizeBets(betSeed())),
+      .catch(() => summarizeBets(fallbackBetBook())),
   ]);
   const faces = {
     XRP: assembleLiveFace("XRP", sleeves.XRP, cryptoQuotes.XRP),

@@ -4,6 +4,7 @@ import { filterFills, nodesWithValue, parseFillDeskQuery } from "@/lib/fill-desk
 import {
   applyOptionalLean,
   betSeed,
+  betStatusLabel,
   betToFill,
   formatSignedUsd,
   formatUsd,
@@ -15,8 +16,10 @@ import {
   summarizeUfcBook,
 } from "@/lib/bets";
 import {
+  applyBetCorrections,
   backfillBetLeans,
   ensureSeededBetsEnvelope,
+  fallbackBetBook,
   parseBetsEnvelope,
   replaceBet,
 } from "@/lib/bets-store-core";
@@ -25,13 +28,13 @@ import { fightBySlug, fightersMissingHighlights, unmatchedOddsNames, ufc332Fight
 describe("UFC 332 bets", () => {
   it("stakes 163.90 and returns 302.58 across 14 open tickets", () => {
     const bets = betSeed();
-    assert.equal(bets.length, 14);
+    assert.equal(bets.length, 15);
     assert.equal(ufc332Fights.length, 14);
     const summary = summarizeBets(bets);
     assert.equal(summary.open, 14);
     assert.equal(summary.staked, "163.90");
     assert.equal(summary.potential, "302.58");
-    assert.equal(summary.record, "0-0");
+    assert.equal(summary.record, "0-1");
     assert.equal(summary.estimated, true);
     assert.equal(formatUsd(summary.staked), "$163.90");
     assert.equal(formatUsd(summary.potential), "$302.58");
@@ -50,6 +53,7 @@ describe("UFC 332 bets", () => {
         "ufc-332-gautier",
         "ufc-332-soldic",
         "ufc-332-ribovics",
+        "ufc-332-green",
         "ufc-332-talbott",
         "ufc-332-wang-cong",
       ],
@@ -58,10 +62,16 @@ describe("UFC 332 bets", () => {
     for (const bet of bets) {
       const fight = fightBySlug(bet.fightSlug);
       assert.ok(fight, bet.id);
-      assert.equal(fight.A.name === bet.pick || fight.B.name === bet.pick, true);
+      assert.equal(
+        fight.A.name === bet.pick ||
+          fight.B.name === bet.pick ||
+          bet.pick.includes(fight.A.name) ||
+          bet.pick.includes(fight.B.name),
+        true,
+      );
       assert.equal(bet.venue, "coinbase-predict");
       assert.equal(bet.ticker, "UFC");
-      assert.equal(bet.status, "open");
+      assert.equal(bet.status, bet.id === "ufc-332-green" ? "lost" : "open");
     }
   });
 
@@ -117,18 +127,18 @@ describe("UFC 332 bets", () => {
   it("seeds by id and does not reopen a settled bet", () => {
     const seeded = ensureSeededBetsEnvelope(null, "2026-10-03T12:00:00.000Z");
     assert.equal(seeded.seeded, true);
-    assert.equal(seeded.envelope.bets.length, 14);
+    assert.equal(seeded.envelope.bets.length, 15);
     const nolan = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-nolan");
     assert.ok(nolan);
     const won = settleBet(nolan, { id: nolan.id, status: "won" }, "2026-10-04T01:00:00.000Z");
     const stored = replaceBet(seeded.envelope, won.bet, "2026-10-04T01:00:00.000Z");
     const again = ensureSeededBetsEnvelope(stored, "2026-10-04T02:00:00.000Z");
     assert.equal(again.seeded, false);
-    assert.equal(again.envelope.bets.length, 14);
+    assert.equal(again.envelope.bets.length, 15);
     assert.equal(again.envelope.bets.find((bet) => bet.id === "ufc-332-nolan")?.status, "won");
     const summary = summarizeBets(again.envelope.bets);
     assert.equal(summary.open, 13);
-    assert.equal(summary.record, "1-0");
+    assert.equal(summary.record, "1-1");
     assert.equal(summary.staked, "159.06");
   });
 
@@ -153,8 +163,8 @@ describe("UFC 332 bets", () => {
       result: "filled",
     };
     const rows = [...bets, trade];
-    assert.equal(filterFills(rows, parseFillDeskQuery({ ticker: "UFC" })).length, 14);
-    assert.equal(filterFills(rows, parseFillDeskQuery({})).length, 15);
+    assert.equal(filterFills(rows, parseFillDeskQuery({ ticker: "UFC" })).length, 15);
+    assert.equal(filterFills(rows, parseFillDeskQuery({})).length, 16);
     assert.equal(
       filterFills(rows, parseFillDeskQuery({ ticker: "UFC", sleeve: "coinbase" })).length,
       0,
@@ -166,9 +176,9 @@ describe("UFC 332 bets", () => {
     assert.equal(parseFillDeskQuery({ ticker: "ufc" }).ticker, "UFC");
   });
 
-  it("stores the hub lean and marks only Wang Cong as a disagree", () => {
+  it("stores the hub lean and marks only Wang Cong and King Green as disagrees", () => {
     const bets = betSeed();
-    const agreed = bets.filter((bet) => bet.id !== "ufc-332-wang-cong");
+    const agreed = bets.filter((bet) => bet.id !== "ufc-332-wang-cong" && bet.id !== "ufc-332-green");
     assert.equal(agreed.length, 13);
     for (const bet of agreed) {
       assert.equal(bet.hubLean, bet.pick, bet.id);
@@ -181,6 +191,18 @@ describe("UFC 332 bets", () => {
     assert.equal(wang.agreesWithLean, false);
     assert.equal(betToFill(wang).hubLean, "Natalia Silva");
     assert.equal(betToFill(wang).agreesWithLean, false);
+    const green = bets.find((bet) => bet.id === "ufc-332-green");
+    assert.ok(green);
+    assert.equal(green.pick, "Yes King Green");
+    assert.equal(green.hubLean, "Esteban Ribovics");
+    assert.equal(green.agreesWithLean, false);
+    assert.equal(green.stake, "21.31");
+    assert.equal(green.status, "lost");
+    assert.equal(green.realizedPnl, "-21.31");
+    assert.equal(green.orderId, null);
+    assert.equal(betToFill(green).orderId, "pending");
+    assert.equal(betToFill(green).idempotencyKey, "ufc-332-green");
+    assert.equal(betStatusLabel(green.status), "lost");
   });
 
   it("backfills lean onto a settled row without touching status or P&L", () => {
@@ -288,31 +310,175 @@ describe("UFC 332 bets", () => {
     });
 
     const card = scoreBets(bookBets);
-    assert.equal(card.founder.record, "2-1");
-    assert.equal(card.hub.record, "1-2");
+    assert.equal(card.founder.record, "2-2");
+    assert.equal(card.hub.record, "2-2");
     assert.equal(card.withLean.record, "1-1");
-    assert.equal(card.againstLean.record, "1-0");
+    assert.equal(card.againstLean.record, "1-1");
     assert.equal(card.voids, 1);
+    assert.equal(card.sold, 0);
     assert.equal(card.open, 10);
 
     const book = summarizeUfcBook(bookBets);
-    assert.equal(book.record, "2-1");
+    assert.equal(book.record, "2-2");
     assert.equal(book.voids, 1);
-    assert.equal(book.count, 14);
-    assert.equal(book.totalStaked, "163.90");
+    assert.equal(book.sold, 0);
+    assert.equal(book.count, 15);
+    assert.equal(book.totalStaked, "185.21");
     assert.equal(book.open, 10);
     assert.equal(book.openStake, "106.63");
-    assert.equal(book.realizedPnl, "73.41");
-    assert.equal(book.realizedPnlLabel, "+$73.41");
-    assert.equal(book.tileLabel, "2-1 · +$73.41");
+    assert.equal(book.realizedPnl, "52.10");
+    assert.equal(book.realizedPnlLabel, "+$52.10");
+    assert.equal(book.tileLabel, "2-2 · +$52.10");
     assert.equal(formatSignedUsd("-4.88"), "-$4.88");
     assert.equal(formatSignedUsd("0.00"), "$0.00");
 
     const openBook = summarizeUfcBook(bets);
-    assert.equal(openBook.record, "0-0");
-    assert.equal(openBook.realizedPnl, "0.00");
-    assert.equal(openBook.tileLabel, "0-0 · $0.00");
+    assert.equal(openBook.record, "0-1");
+    assert.equal(openBook.realizedPnl, "-21.31");
+    assert.equal(openBook.tileLabel, "0-1 · -$21.31");
     assert.equal(openBook.openStake, "163.90");
     assert.equal(openBook.openPotential, "302.58");
+  });
+
+  it("applies versioned stake and sold corrections once", () => {
+    const seeded = ensureSeededBetsEnvelope(null, "2026-10-03T12:00:00.000Z");
+    const ribovics = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-ribovics");
+    const nolan = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-nolan");
+    assert.ok(ribovics && nolan);
+    const wonRibovics = settleBet(
+      ribovics,
+      { id: ribovics.id, status: "won", payout: "22.37" },
+      "2026-10-04T01:00:00.000Z",
+    ).bet;
+    assert.equal(wonRibovics.realizedPnl, "7.83");
+    const wonNolan = settleBet(nolan, { id: nolan.id, status: "won" }, "2026-10-04T01:00:00.000Z").bet;
+    let envelope = replaceBet(seeded.envelope, wonRibovics, "2026-10-04T01:00:00.000Z");
+    envelope = replaceBet(envelope, wonNolan, "2026-10-04T01:00:00.000Z");
+
+    const corrected = applyBetCorrections(envelope, "2026-10-04T02:00:00.000Z");
+    assert.equal(corrected.changed, true);
+    const sold = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-ribovics");
+    assert.ok(sold);
+    assert.equal(sold.status, "sold");
+    assert.equal(sold.payout, "13.64");
+    assert.equal(sold.stake, "14.54");
+    assert.equal(sold.realizedPnl, "-0.90");
+    assert.equal(sold.correctionVersion, 1);
+    assert.equal(betStatusLabel(sold.status), "sold early");
+    const keptNolan = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-nolan");
+    assert.equal(keptNolan?.status, "won");
+    assert.equal(keptNolan?.stake, "4.84");
+    assert.equal(keptNolan?.correctionVersion, undefined);
+
+    const coria = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-coria");
+    const wang = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-wang-cong");
+    assert.equal(coria?.stake, "19.99");
+    assert.equal(coria?.status, "open");
+    assert.equal(coria?.payout, "42.51");
+    assert.equal(wang?.stake, "45.13");
+    assert.equal(wang?.status, "open");
+    assert.equal(wang?.payout, "118.76");
+
+    const again = applyBetCorrections(corrected.envelope, "2026-10-04T03:00:00.000Z");
+    assert.equal(again.changed, false);
+    assert.equal(again.envelope.updatedAt, corrected.envelope.updatedAt);
+
+    const edited = replaceBet(
+      corrected.envelope,
+      { ...sold, payout: "10.00", realizedPnl: "-4.54" },
+      "2026-10-04T04:00:00.000Z",
+    );
+    const held = applyBetCorrections(edited, "2026-10-04T05:00:00.000Z");
+    assert.equal(held.changed, false);
+    assert.equal(held.envelope.bets.find((bet) => bet.id === "ufc-332-ribovics")?.payout, "10.00");
+
+    const lostCoria = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-coria");
+    assert.ok(lostCoria);
+    const settledCoria = settleBet(
+      lostCoria,
+      { id: lostCoria.id, status: "lost" },
+      "2026-10-04T01:00:00.000Z",
+    ).bet;
+    assert.equal(settledCoria.realizedPnl, "-19.13");
+    const coriaBook = applyBetCorrections(
+      replaceBet(seeded.envelope, settledCoria, "2026-10-04T01:00:00.000Z"),
+      "2026-10-04T02:00:00.000Z",
+    );
+    const coriaRow = coriaBook.envelope.bets.find((bet) => bet.id === "ufc-332-coria");
+    assert.equal(coriaRow?.status, "lost");
+    assert.equal(coriaRow?.stake, "19.99");
+    assert.equal(coriaRow?.payout, "42.51");
+    assert.equal(coriaRow?.realizedPnl, "-19.99");
+  });
+
+  it("reads the corrected book without moving the other stakes", () => {
+    const bets = fallbackBetBook();
+    const stakeOf = (id: string) => bets.find((bet) => bet.id === id)?.stake;
+    assert.equal(stakeOf("ufc-332-nolan"), "4.84");
+    assert.equal(stakeOf("ufc-332-naurdiev"), "4.82");
+    assert.equal(stakeOf("ufc-332-hernandez"), "14.58");
+    assert.equal(stakeOf("ufc-332-smith"), "4.88");
+    assert.equal(stakeOf("ufc-332-walker"), "4.80");
+    assert.equal(stakeOf("ufc-332-wint"), "14.64");
+    assert.equal(stakeOf("ufc-332-mcghee"), "4.87");
+    assert.equal(stakeOf("ufc-332-pinas"), "4.87");
+    assert.equal(stakeOf("ufc-332-gautier"), "9.69");
+    assert.equal(stakeOf("ufc-332-soldic"), "4.84");
+    assert.equal(stakeOf("ufc-332-ribovics"), "14.54");
+    assert.equal(stakeOf("ufc-332-talbott"), "14.65");
+    assert.equal(stakeOf("ufc-332-green"), "21.31");
+    assert.equal(stakeOf("ufc-332-coria"), "19.99");
+    assert.equal(stakeOf("ufc-332-wang-cong"), "45.13");
+
+    const book = summarizeUfcBook(bets);
+    assert.equal(book.totalStaked, "188.45");
+    assert.equal(book.realizedPnl, "-22.21");
+    assert.equal(book.realizedPnlLabel, "-$22.21");
+    assert.equal(book.record, "0-1");
+    assert.equal(book.sold, 1);
+    assert.equal(book.wins, 0);
+    assert.equal(book.losses, 1);
+    assert.equal(book.open, 13);
+    assert.equal(book.openStake, "152.60");
+    assert.equal(book.openPotential, "280.21");
+
+    const card = scoreBets(bets);
+    assert.equal(card.founder.record, "0-1");
+    assert.equal(card.hub.record, "1-0");
+    assert.equal(card.withLean.record, "0-0");
+    assert.equal(card.againstLean.record, "0-1");
+    assert.equal(card.sold, 1);
+    assert.equal(card.voids, 0);
+  });
+
+  it("lets override correct a settled stake and rejects stake without it", () => {
+    const ribovics = betSeed().find((bet) => bet.id === "ufc-332-ribovics");
+    assert.ok(ribovics);
+    const won = settleBet(
+      ribovics,
+      { id: ribovics.id, status: "won", payout: "22.37" },
+      "2026-10-04T01:00:00.000Z",
+    ).bet;
+    assert.throws(() =>
+      settleBet(won, { id: won.id, status: "won", stake: "10.00" }, "2026-10-04T02:00:00.000Z"),
+    );
+    assert.throws(() => parseSettleBody({ id: won.id, status: "sold", payout: "13.64", stake: "14.54" }));
+    const sold = settleBet(
+      won,
+      { id: won.id, status: "sold", payout: "13.64", stake: "14.54", override: true },
+      "2026-10-04T02:00:00.000Z",
+    );
+    assert.equal(sold.deduped, false);
+    assert.equal(sold.bet.status, "sold");
+    assert.equal(sold.bet.payout, "13.64");
+    assert.equal(sold.bet.stake, "14.54");
+    assert.equal(sold.bet.realizedPnl, "-0.90");
+    const same = settleBet(
+      sold.bet,
+      { id: won.id, status: "sold", payout: "13.64", stake: "14.54", override: true },
+      "2026-10-04T03:00:00.000Z",
+    );
+    assert.equal(same.deduped, true);
+    assert.deepEqual(parseSettleBody({ id: won.id, status: "lost" }), [{ id: won.id, status: "lost" }]);
   });
 });
