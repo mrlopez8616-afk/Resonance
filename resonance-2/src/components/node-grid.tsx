@@ -2,57 +2,36 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { FightDeskFace } from "@/components/fight-desk-face";
 import { FloorDialog } from "@/components/floor-dialog";
-import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
-import type { BookAvailability } from "@/components/bet-scorecard";
-import type { FightDeskSummary } from "@/lib/bets";
+import { ValueCard } from "@/components/value-card";
 import type { FloorNode } from "@/data/floor-nodes";
-import { CEG_SLEEVES } from "@/data/ceg-sleeves";
-import { ETN_SLEEVES } from "@/data/etn-sleeves";
-import { GEV_SLEEVES } from "@/data/gev-sleeves";
-import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
-import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
-import { PWR_SLEEVES } from "@/data/pwr-sleeves";
-import { SUI_SLEEVES } from "@/data/sui-sleeves";
-import { VRT_SLEEVES } from "@/data/vrt-sleeves";
-import { XRP_SLEEVES } from "@/data/xrp-sleeves";
-import type { NodeSleeve } from "@/data/sleeves";
-import { fillDeskHref } from "@/lib/fill-desk";
-import type { LiveFaceData } from "@/lib/live-face";
 import {
   hiddenIdsServerSnapshot,
   hiddenIdsSnapshot,
   parseHiddenIds,
-  removedNodes,
   subscribeHiddenIds,
-  visibleNodes,
   writeHiddenIds,
 } from "@/lib/floor-registry";
+import { nodesOnParent, removedOnParent } from "@/lib/node-parents";
+import type { ValueCardModel } from "@/lib/value-card";
+import type { ParentId } from "@/data/node-parents";
 
-const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
-  XRP: XRP_SLEEVES,
-  SUI: SUI_SLEEVES,
-  PWR: PWR_SLEEVES,
-  ETN: ETN_SLEEVES,
-  VRT: VRT_SLEEVES,
-  GEV: GEV_SLEEVES,
-  CEG: CEG_SLEEVES,
-  HUBB: HUBB_SLEEVES,
-  HBAR: HBAR_SLEEVES,
+const NOT_CONNECTED: ValueCardModel = {
+  headline: null,
+  priceLine: null,
+  label: "not connected",
 };
 
 export function NodeGrid({
-  faces,
-  sleeves: sleeveBooks = SEED_SLEEVES,
-  fightDesk,
-  fightDeskAvailability = "live",
+  parentId,
+  parentLabel,
+  cards,
 }: {
-  faces: Record<string, LiveFaceData>;
-  sleeves?: Record<string, readonly NodeSleeve[]>;
-  fightDesk: FightDeskSummary | null;
-  fightDeskAvailability?: BookAvailability;
+  parentId: ParentId;
+  parentLabel: string;
+  /** One shared value-card model per ticker. Missing tickers are not connected. */
+  cards: Readonly<Record<string, ValueCardModel>>;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -73,52 +52,39 @@ export function NodeGrid({
     setAdding(false);
   }
 
-  const nodes = visibleNodes(hiddenIds);
-  const removed = removedNodes(hiddenIds);
+  const nodes = nodesOnParent(hiddenIds, parentId);
+  const removed = removedOnParent(hiddenIds, parentId);
+
+  if (nodes.length === 0) {
+    return (
+      <p className="parent-empty" role="status">
+        not connected yet
+      </p>
+    );
+  }
 
   return (
     <>
-      <section className="node-grid" aria-label="Node floor">
-        <NodeSquare live label="Fight Desk">
-          <Link href="/fights" className="node-log-link" title="Open Fight Desk">
-            <FightDeskFace summary={fightDesk} availability={fightDeskAvailability} />
-          </Link>
-        </NodeSquare>
+      <section className="node-grid" aria-label={`${parentLabel} nodes`}>
         {nodes.map((node) => {
           if (node.status === "live") {
-            const face = faces[node.ticker];
-            const sleeves = sleeveBooks[node.ticker] ?? SEED_SLEEVES[node.ticker];
-            if (!face || !sleeves) {
-              return (
-                <NodeSquare
-                  key={node.id}
-                  dashed
-                  label={`${node.ticker} offline`}
-                  onDelete={() => setPending(node)}
-                >
-                  <h2 className="node-ticker">{node.ticker}</h2>
-                  <p className="node-note">offline</p>
-                </NodeSquare>
-              );
-            }
+            const card = cards[node.ticker] ?? NOT_CONNECTED;
+            const shown = card.headline !== null || card.priceLine !== null;
             return (
               <NodeSquare
                 key={node.id}
-                live
-                label={`${node.ticker} live node`}
+                parent
+                live={shown}
+                dashed={!shown}
+                label={`${node.ticker} node`}
                 onDelete={() => setPending(node)}
               >
                 <Link
-                  href={fillDeskHref({ ticker: node.ticker })}
+                  href={`/n/${parentId}/${node.id}`}
                   className="node-log-link"
-                  title={`Open ${node.ticker} log`}
+                  title={`Open ${node.ticker}`}
                 >
-                  <span className="sr-only">Open {node.ticker} operator log</span>
-                  <LiveNodeFace
-                    ticker={node.ticker}
-                    sleeves={sleeves}
-                    initial={face}
-                  />
+                  <ValueCard ticker={node.ticker} model={card} compact />
                 </Link>
               </NodeSquare>
             );

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { LockIcon } from "@/components/icons";
+import { ValueCard } from "@/components/value-card";
 import type { NodeSleeve } from "@/data/sleeves";
 import {
   assembleLiveFace,
   type LiveFaceData,
   type SpotQuote,
 } from "@/lib/live-face";
+import { valueCardFromFace } from "@/lib/value-card";
 
 const POLL_MS = 45_000;
 
@@ -103,20 +105,14 @@ export function LiveNodeFace({
     : `Waiting for ${ticker}-USD`;
 
   return (
-    <div className="live-face">
-      <header className="live-head">
-        <h2 className="node-ticker">{ticker}</h2>
-        <p className="live-price" title={priceTitle}>
-          {face.priceLabel}
-        </p>
-      </header>
+    <ValueCard
+      ticker={ticker}
+      model={valueCardFromFace(face)}
+      priceTitle={priceTitle}
+    >
       <p className="live-units">
         {face.totalUnitsLabel}
         <span> {face.unitsWord}</span>
-      </p>
-      <p className="live-value">
-        {face.totalUsdLabel}
-        <span> live</span>
       </p>
       <ul className="live-sleeves">
         {face.sleeves.map((sleeve) => (
@@ -135,6 +131,6 @@ export function LiveNodeFace({
           </li>
         ))}
       </ul>
-    </div>
+    </ValueCard>
   );
 }

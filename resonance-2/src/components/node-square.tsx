@@ -4,6 +4,7 @@ export function NodeSquare({
   live = false,
   dashed = false,
   empty = false,
+  parent = false,
   label,
   onDelete,
   children,
@@ -11,6 +12,7 @@ export function NodeSquare({
   live?: boolean;
   dashed?: boolean;
   empty?: boolean;
+  parent?: boolean;
   label: string;
   onDelete?: () => void;
   children: ReactNode;
@@ -18,7 +20,7 @@ export function NodeSquare({
   const state = live ? "is-live" : dashed ? "is-offline" : "";
   return (
     <article
-      className={`node-square ${state} ${empty ? "is-empty" : ""}`}
+      className={`node-square ${state} ${empty ? "is-empty" : ""} ${parent ? "is-parent" : ""}`}
       aria-label={label}
     >
       {onDelete ? (

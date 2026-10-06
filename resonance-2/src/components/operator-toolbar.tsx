@@ -78,9 +78,10 @@ export function OperatorToolbar() {
       </div>
       <nav className="operator-nav" aria-label="Operator toolbar">
         {PRIMARY.map((item) => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active =
+            item.href === "/"
+              ? pathname === "/" || pathname.startsWith("/n/")
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <RailButton

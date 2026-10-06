@@ -494,6 +494,17 @@ body {
   white-space: nowrap;
 }
 
+.live-face.parent-face .node-ticker {
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  letter-spacing: -0.03em;
+}
+
+.parent-empty {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
 .live-face .node-ticker,
 .live-price {
   min-width: 0;
@@ -527,6 +538,50 @@ body {
 
 .live-units {
   margin-top: 0.32rem;
+}
+
+.live-units.is-coverage {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.value-headline {
+  margin: 0.28rem 0 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.18rem, 2.05vw, 1.52rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.value-card.parent-face .value-headline {
+  font-size: clamp(1.02rem, 1.8vw, 1.28rem);
+}
+
+.value-price {
+  margin: 0.16rem 0 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(0.72rem, 1.05vw, 0.84rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.value-status {
+  margin-top: 0.35rem;
 }
 
 .live-value {
@@ -1475,6 +1530,13 @@ body {
     grid-column: 1 / -1;
   }
 
+  .node-square.is-parent,
+  .node-square.is-parent.is-live {
+    aspect-ratio: 1;
+    min-height: 0;
+    grid-column: auto;
+  }
+
   .calendar-row {
     grid-template-columns: 6.5rem minmax(0, 1fr);
   }
@@ -1538,8 +1600,13 @@ body {
 
 @media (max-height: 760px) {
   .live-face .node-ticker,
-  .live-price {
+  .live-price,
+  .value-headline {
     font-size: clamp(1.05rem, 1.8vw, 1.28rem);
+  }
+
+  .value-price {
+    font-size: clamp(0.68rem, 1vw, 0.78rem);
   }
 
   .live-units,
