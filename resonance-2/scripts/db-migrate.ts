@@ -3,6 +3,7 @@
  *
  *   DATABASE_URL=postgres://... npm run db:migrate
  */
+import { redactConnectionDetails } from "../src/lib/pg/client";
 import { migrate } from "../src/lib/pg/migrate";
 import { isStorageUnavailable } from "../src/lib/storage-unavailable";
 
@@ -15,7 +16,13 @@ async function main(): Promise<void> {
     const result = await migrate();
     console.log(JSON.stringify(result));
   } catch (error) {
-    const reason = isStorageUnavailable(error) ? error.reason : error instanceof Error ? error.message : "migrate failed";
+    const reason = redactConnectionDetails(
+      isStorageUnavailable(error)
+        ? error.reason
+        : error instanceof Error
+          ? error.message
+          : "migrate failed",
+    );
     console.error(reason);
     process.exit(1);
   }

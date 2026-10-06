@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
-import { newDb } from "pg-mem";
+import { DataType, newDb } from "pg-mem";
 import { betSeed, parseBetPostBody } from "@/lib/bets";
 import {
   loadBetsStore,
@@ -36,11 +36,19 @@ const mondayFill = {
 
 function createMemorySql(): SqlClient {
   const db = newDb();
+  db.public.registerFunction({
+    name: "pg_advisory_xact_lock",
+    args: [DataType.bigint],
+    returns: DataType.bigint,
+    implementation: () => null,
+  });
   const { Pool } = db.adapters.createPg();
   const pool = new Pool();
+  const clientPromise = pool.connect();
   return {
     async query<T extends Record<string, unknown>>(text: string, params: readonly unknown[] = []) {
-      const result = await pool.query(text, [...params]);
+      const client = await clientPromise;
+      const result = await client.query(text, [...params]);
       return (result.rows ?? []) as T[];
     },
   };

@@ -16,7 +16,20 @@ npm run db:replay -- --file outage.json --dry-run
 npm run db:replay -- --file outage.json
 ```
 
-`db:migrate` applies `db/migrations` in order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips files already listed in `schema_migrations`.
+`db:migrate` applies `db/migrations` in order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips files already listed in `schema_migrations`. The run holds `pg_advisory_xact_lock` for one transaction so two callers cannot apply the same file at once.
+
+Production builds run that same step before `next build`, and only then: `VERCEL_ENV` must be `production` and `DATABASE_URL` must be set. Preview and local builds skip it. Preview deployments share the production database, so a branch build must not migrate it. If the production migration fails, the build fails and the previous deployment stays live. The log lists applied and skipped file names and does not print the connection string.
+
+When a build did not migrate, apply the schema with the same Bearer as `POST /api/bets`:
+
+```bash
+curl -sS -X POST https://resonance3.vercel.app/api/storage/migrate \
+  -H "Authorization: Bearer $RESONANCE_SYNC_SECRET"
+```
+
+The response is `{ "applied": [], "skipped": [] }`. A second call is a no-op (`applied` empty, the file names in `skipped`). Missing the bearer is 401. An unset `DATABASE_URL` is 503 `Postgres is not configured`.
+
+`GET /api/storage/status` is public and takes no secret. It returns `{ backend, schema: { migrated, applied, pending }, reachable }` with `Cache-Control: no-store`. `backend` is `postgres`, `blob`, or `file`. The body never includes a connection string or hostname. Use it to confirm production is on Postgres after a deploy.
 
 `db:import-blob` reads `resonance-2/bets.json`, `resonance-2/fills.json`, and `resonance-2/calendar.json` from the private Blob and upserts them. A missing object is an empty domain. A 403 or a suspended store fails the whole run and writes nothing. `--dry-run` prints counts and does not write rows. Re-running is safe. Import does not delete rows that exist only in Postgres. Run it before replay: a later import copies the blob again and will overwrite a row the replay has already changed.
 
