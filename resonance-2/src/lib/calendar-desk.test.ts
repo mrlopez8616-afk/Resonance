@@ -296,7 +296,7 @@ describe("calendar desk", () => {
     assert.equal(month.includes("2026-10-03"), true);
   });
 
-  it("shows a posted fights lane in day, week, and month, and skips a missing card", () => {
+  it("shows a posted fights lane in day, week, and month, and links a resolved event slug", () => {
     const published = parseCalendarEvent({
       id: "ufc-332-hub-main",
       lane: "fights",
@@ -318,8 +318,8 @@ describe("calendar desk", () => {
     });
     const events = [published, missing];
     assert.equal(fightPageHref(published), "/fights/ufc-332");
-    assert.equal(fightPageHref(missing), undefined);
-    assert.equal(calendarOpenHref(missing), undefined);
+    assert.equal(fightPageHref(missing), "/fights/ufc-325");
+    assert.equal(calendarOpenHref(missing), "/fights/ufc-325");
     assert.equal(calendarOpenHref(published), "/fights/ufc-332");
 
     const day = occurrencesOnDay(events, "2026-10-03");
@@ -335,7 +335,7 @@ describe("calendar desk", () => {
     assert.equal(octoberChips.chips[0]?.href, "/fights/ufc-332");
     const januaryChips = chipsOnDay(events, "2027-01-16");
     assert.equal(januaryChips.chips[0]?.label, "Fight");
-    assert.equal(januaryChips.chips[0]?.href, undefined);
+    assert.equal(januaryChips.chips[0]?.href, "/fights/ufc-325");
     assert.equal(laneCountsOnDay(events, "2027-01-16").fights, 1);
     assert.equal(parseCalendarDeskQuery({ lane: "fights" }, "2026-10-03").lane, "fights");
     assert.equal(parseCalendarDeskQuery({ lane: "ufc" }, "2026-10-03").lane, "");

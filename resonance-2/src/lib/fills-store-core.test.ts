@@ -325,6 +325,13 @@ describe("fills store core", () => {
 
   it("picks blob, local file, or none on Vercel the same way Phase Zero does", () => {
     assert.equal(
+      detectFillsBackend({
+        DATABASE_URL: "postgres://local/db",
+        BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_x",
+      }),
+      "postgres",
+    );
+    assert.equal(
       detectFillsBackend({ BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_x" }),
       "blob",
     );

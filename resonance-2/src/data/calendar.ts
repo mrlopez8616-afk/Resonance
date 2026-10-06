@@ -78,7 +78,7 @@ export type CalendarEvent = {
   link?: string;
   /** Required on catalysts. https URL shown in the detail. */
   sourceUrl?: string;
-  /** Fight card slug. The desk links `/fights/<slug>` only when that page exists. */
+  /** Fight card slug. The desk links `/fights/<slug>` when the slug resolves. */
   eventSlug?: string;
   note?: string;
   location?: string;

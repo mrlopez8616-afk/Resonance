@@ -2,8 +2,10 @@ import Link from "next/link";
 import { BetScorecard, type BookAvailability } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
 import { betStatusLabel, betsOnFight, formatSignedUsd, formatUsd, summarizeBets } from "@/lib/bets";
+import type { CalendarEvent } from "@/data/calendar";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
-import { formatFightResult, ufc332ResultLine, type FightResult } from "@/lib/fight-results";
+import { fightDeskNodes, type DeskFight } from "@/lib/fight-desk";
+import { formatFightResult, resultForFight, ufc332ResultLine, type FightResult } from "@/lib/fight-results";
 import {
   UFC_332_EVENT,
   fightsInSegment,
@@ -43,17 +45,55 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
+function FightStakeList({ bets }: { bets: readonly Bet[] }) {
+  if (bets.length === 0) return null;
+  return (
+    <ul className="fight-stakes">
+      {bets.map((bet) => (
+        <li key={bet.id}>{ticketLine(bet)}</li>
+      ))}
+    </ul>
+  );
+}
+
+function DeskFightCard({
+  fight,
+  resultLine,
+}: {
+  fight: DeskFight;
+  resultLine: string;
+}) {
+  const body = (
+    <>
+      {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
+      <h3>{fight.title}</h3>
+      {fight.detail ? <p>{fight.detail}</p> : null}
+      <p className="fight-result">{resultLine}</p>
+      <FightStakeList bets={fight.bets} />
+    </>
+  );
+  if (!fight.href) return <div className="fight-card">{body}</div>;
+  return (
+    <Link href={fight.href} className="fight-card">
+      {body}
+    </Link>
+  );
+}
+
 export function FightIndex({
   bets,
   results,
+  events = [],
   availability = "live",
   resultsAvailability = "live",
 }: {
   bets: readonly Bet[];
   results: readonly FightResult[];
+  events?: readonly CalendarEvent[];
   availability?: BookAvailability;
   resultsAvailability?: BookAvailability;
 }) {
+  const nodes = fightDeskNodes({ bets, events });
   const open = bets.filter((bet) => bet.status === "open").length;
   return (
     <div className="log-canvas">
@@ -68,30 +108,103 @@ export function FightIndex({
         </p>
       </header>
       <BetScorecard bets={bets} availability={availability} />
-      <ol className="flex flex-col gap-3">
-        <li>
-          <Link href={`/fights/${UFC_332_EVENT.id}`} className="fight-card">
-            <p className="log-kicker">Event</p>
-            <h3>{UFC_332_EVENT.name}</h3>
-            <p>
-              {UFC_332_EVENT.venue}, {UFC_332_EVENT.city}
-            </p>
-            <p>
-              {civilWeekdayLong(UFC_332_EVENT.date)} {formatCivilDate(UFC_332_EVENT.date)}
-            </p>
-            <p className="fight-result">
-              {resultsAvailability === "unavailable" ? "unavailable" : ufc332ResultLine(results)}
-            </p>
-            <ul>
-              {UFC_332_EVENT.segments.map((segment) => (
-                <li key={segment.id}>
-                  {segment.label} {segment.start}
-                </li>
-              ))}
-            </ul>
-          </Link>
-        </li>
-      </ol>
+      {nodes.map((node) => (
+        <section key={node.id} id={node.id} className="calendar-day-section" aria-label={node.label}>
+          <h3>{node.label}</h3>
+          {node.events.length === 0 ? (
+            <p className="calendar-quiet">—</p>
+          ) : (
+            node.events.map((event) => (
+              <div key={event.slug} className="flex flex-col gap-3">
+                <p>
+                  <Link href={event.href}>{event.title}</Link>
+                  {node.id === "main-card" || node.id === "prelims" ? (
+                    <span>
+                      {" "}
+                      · {resultsAvailability === "unavailable" ? "unavailable" : ufc332ResultLine(results)}
+                    </span>
+                  ) : null}
+                </p>
+                {event.fights.length === 0 ? (
+                  <p className="calendar-quiet">—</p>
+                ) : (
+                  <ol className="flex flex-col gap-3">
+                    {event.fights.map((fight) => (
+                      <li key={fight.slug}>
+                        <DeskFightCard
+                          fight={fight}
+                          resultLine={
+                            resultsAvailability === "unavailable"
+                              ? "unavailable"
+                              : formatFightResult(resultForFight(results, fight.slug))
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            ))
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export function ListedFightEvent({
+  title,
+  meta,
+  fights,
+  bets,
+  results,
+  availability = "live",
+  resultsAvailability = "live",
+}: {
+  title: string;
+  meta: string;
+  fights: readonly DeskFight[];
+  bets: readonly Bet[];
+  results: readonly FightResult[];
+  availability?: BookAvailability;
+  resultsAvailability?: BookAvailability;
+}) {
+  const summary = summarizeBets(bets);
+  return (
+    <div className="log-canvas">
+      <header className="log-header">
+        <Link href="/fights" className="calendar-back">
+          Fights
+        </Link>
+        <p className="log-kicker">Contender Series</p>
+        <h2 className="log-title">{title}</h2>
+        {meta ? <p className="log-meta">{meta}</p> : null}
+        <p className="log-meta">
+          {availability === "unavailable"
+            ? "unavailable"
+            : `${summary.stakedLabel} staked · ${summary.potentialLabel} ${
+                summary.estimated ? "return est." : "return"
+              }${availability === "seed-only" ? " · seed-only" : ""}`}
+        </p>
+      </header>
+      {fights.length === 0 ? (
+        <p className="calendar-quiet">—</p>
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {fights.map((fight) => (
+            <li key={fight.slug}>
+              <DeskFightCard
+                fight={fight}
+                resultLine={
+                  resultsAvailability === "unavailable"
+                    ? "unavailable"
+                    : formatFightResult(resultForFight(results, fight.slug))
+                }
+              />
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

@@ -10,13 +10,14 @@ import {
   type Bet,
   type BetStatus,
 } from "@/lib/bets";
+import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
 export const BETS_STORE_VERSION = 1;
 export const BETS_BLOB_PATH = "resonance-2/bets.json";
 export const DEFAULT_BETS_FILE = ".data/bets.json";
 
-export type BetsStoreBackend = "blob" | "file" | "none";
-export type EnvLike = Record<string, string | undefined>;
+export type BetsStoreBackend = StoreBackendName;
+export type { EnvLike };
 
 export interface BetsStoreEnvelope {
   version: typeof BETS_STORE_VERSION;
@@ -31,8 +32,8 @@ const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void", "sold"]);
 /**
  * One-shot book fixes. Applied on read when the row's correctionVersion
  * is below this version. A later settle or override is not put back.
- * Card results settle open rows. A win uses the ticket payout already stored.
- * Ribovics stays sold early. Coria and Wang Cong keep their stake corrections.
+ * Ribovics is the only status rewrite. Coria and Wang Cong change stake only.
+ * Other fee corrections stay pending. Settled rows outside this list stay stored.
  */
 export type BetCorrection = {
   id: string;
@@ -44,21 +45,8 @@ export type BetCorrection = {
 
 export const BET_CORRECTIONS: readonly BetCorrection[] = [
   { id: "ufc-332-ribovics", version: 1, status: "sold", payout: "13.64" },
-  { id: "ufc-332-green", version: 1, status: "lost" },
-  { id: "ufc-332-coria", version: 2, status: "lost", stake: "19.99" },
-  { id: "ufc-332-coria-2", version: 1, status: "lost" },
-  { id: "ufc-332-gautier", version: 1, status: "lost" },
-  { id: "ufc-332-wang-cong", version: 2, status: "lost", stake: "45.13" },
-  { id: "ufc-332-nolan", version: 1, status: "won" },
-  { id: "ufc-332-naurdiev", version: 1, status: "won" },
-  { id: "ufc-332-hernandez", version: 1, status: "won" },
-  { id: "ufc-332-smith", version: 1, status: "won" },
-  { id: "ufc-332-walker", version: 1, status: "won" },
-  { id: "ufc-332-wint", version: 1, status: "won" },
-  { id: "ufc-332-mcghee", version: 1, status: "won" },
-  { id: "ufc-332-pinas", version: 1, status: "won" },
-  { id: "ufc-332-soldic", version: 1, status: "won" },
-  { id: "ufc-332-talbott", version: 1, status: "won" },
+  { id: "ufc-332-coria", version: 1, stake: "19.99" },
+  { id: "ufc-332-wang-cong", version: 1, stake: "45.13" },
 ];
 
 function applyBetCorrection(bet: Bet, correction: BetCorrection): Bet {
@@ -88,8 +76,22 @@ function applyBetCorrection(bet: Bet, correction: BetCorrection): Bet {
   return next;
 }
 
-/** Patch listed ids once. Other rows, including settled ones, stay as stored. */
-export function applyBetCorrections(
+/** Seed plus lean backfill plus the versioned corrections. Used when the store read fails. */
+export function fallbackBetBook(): Bet[] {
+  const seeded = ensureSeededBetsEnvelope(null);
+  const leaned = backfillBetLeans(seeded.envelope);
+  return applyStoredBetCorrections(leaned.envelope).envelope.bets;
+}
+
+export function detectBetsBackend(env: EnvLike = process.env): BetsStoreBackend {
+  return detectStoreBackend(env, "RESONANCE_BETS_FILE");
+}
+
+/**
+ * Versioned bet corrections. Runs after the lean backfill and before the dirty flag.
+ * A row already at that correctionVersion stays put. Other rows stay stored.
+ */
+export function applyStoredBetCorrections(
   envelope: BetsStoreEnvelope,
   now = new Date().toISOString(),
 ): { envelope: BetsStoreEnvelope; changed: boolean } {
@@ -103,20 +105,6 @@ export function applyBetCorrections(
   });
   if (!changed) return { envelope, changed: false };
   return { envelope: { ...envelope, updatedAt: now, bets }, changed: true };
-}
-
-/** Seed plus lean backfill plus the versioned corrections. Used when the store read fails. */
-export function fallbackBetBook(): Bet[] {
-  const seeded = ensureSeededBetsEnvelope(null);
-  const leaned = backfillBetLeans(seeded.envelope);
-  return applyBetCorrections(leaned.envelope).envelope.bets;
-}
-
-export function detectBetsBackend(env: EnvLike = process.env): BetsStoreBackend {
-  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
-  if (env.RESONANCE_BETS_FILE?.trim()) return "file";
-  if (env.VERCEL) return "none";
-  return "file";
 }
 
 export function isBetsStoreConfigured(env: EnvLike = process.env): boolean {

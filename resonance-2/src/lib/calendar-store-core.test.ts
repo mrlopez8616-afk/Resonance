@@ -254,6 +254,13 @@ describe("calendar store core", () => {
 
   it("picks blob, file, or none the same way fills does", () => {
     assert.equal(
+      detectCalendarBackend({
+        DATABASE_URL: "postgres://local/db",
+        BLOB_READ_WRITE_TOKEN: "token",
+      }),
+      "postgres",
+    );
+    assert.equal(
       detectCalendarBackend({ BLOB_READ_WRITE_TOKEN: "token" }),
       "blob",
     );

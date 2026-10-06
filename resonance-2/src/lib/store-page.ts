@@ -13,15 +13,22 @@ import {
   type StoreAvailability,
 } from "@/lib/storage-unavailable";
 
+export type DurableBackend = "postgres" | "blob" | "file";
+
 export type BetsPage =
-  | { status: "live"; bets: Bet[]; backend: "blob" | "file" }
+  | { status: "live"; bets: Bet[]; backend: DurableBackend }
   | { status: "unconfigured"; bets: Bet[] }
   | { status: "unavailable"; reason: string };
 
 export type FightResultsPage =
-  | { status: "live"; results: FightResult[]; backend: "blob" | "file" }
+  | { status: "live"; results: FightResult[]; backend: DurableBackend }
   | { status: "unconfigured"; results: FightResult[] }
   | { status: "unavailable"; reason: string };
+
+function liveBackend(backend: string): DurableBackend {
+  if (backend === "postgres" || backend === "blob") return backend;
+  return "file";
+}
 
 export const loadFightResultsForPage = cache(async (): Promise<FightResultsPage> => {
   try {
@@ -32,7 +39,7 @@ export const loadFightResultsForPage = cache(async (): Promise<FightResultsPage>
     return {
       status: "live",
       results: loaded.envelope.results,
-      backend: loaded.backend === "blob" ? "blob" : "file",
+      backend: liveBackend(loaded.backend),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
@@ -49,7 +56,7 @@ export const loadBetsForPage = cache(async (): Promise<BetsPage> => {
     return {
       status: "live",
       bets: loaded.envelope.bets,
-      backend: loaded.backend === "blob" ? "blob" : "file",
+      backend: liveBackend(loaded.backend),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
@@ -75,12 +82,12 @@ export async function loadFightDeskSummary(): Promise<FightDeskPage> {
 
 export function storeLabel(
   status: StoreAvailability,
-  backend?: "blob" | "file" | CalendarStoreBackend,
+  backend?: DurableBackend | CalendarStoreBackend,
 ): string {
   if (status === "seed-only") return "seed-only";
   if (status === "unavailable") return "unavailable";
   if (status === "unconfigured") return "seed fallback";
-  return backend === "blob" ? "durable store" : "local store";
+  return backend === "postgres" || backend === "blob" ? "durable store" : "local store";
 }
 
 export type CalendarPage = {

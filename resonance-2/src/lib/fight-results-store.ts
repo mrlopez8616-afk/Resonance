@@ -23,6 +23,7 @@ import {
   type FightResultsBackend,
   type FightResultsEnvelope,
 } from "@/lib/fight-results-store-core";
+import { loadFightResults, saveFightResults } from "@/lib/pg/envelopes";
 import {
   isStorageUnavailable,
   StorageUnavailableError,
@@ -65,6 +66,11 @@ function parseBlobText(text: string): FightResultsEnvelope | null {
 
 async function persistEnvelope(envelope: FightResultsEnvelope, revalidate: boolean): Promise<void> {
   const backend = detectFightResultsBackend();
+  if (backend === "postgres") {
+    await saveFightResults(envelope.results);
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.fightResults);
+    return;
+  }
   if (backend === "blob") {
     await putPrivateBlob(FIGHT_RESULTS_BLOB_PATH, JSON.stringify(envelope, null, 2));
     if (revalidate) revalidateBlobTag(BLOB_TAGS.fightResults);
@@ -107,6 +113,32 @@ async function materializeBlobText(text: string | null, revalidate: boolean): Pr
 type CachedResults =
   | { status: "ok"; envelope: FightResultsEnvelope; seeded: boolean }
   | { status: "unavailable"; reason: string };
+
+async function readResultsPostgres(revalidateWrites: boolean): Promise<CachedResults> {
+  try {
+    const rows = await loadFightResults();
+    const raw =
+      rows.length === 0
+        ? null
+        : parseFightResultsEnvelope({
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            seededAt: null,
+            results: rows,
+          });
+    const finalized = finalizeResults(raw);
+    if (finalized.seeded) await persistEnvelope(finalized.envelope, revalidateWrites);
+    return { status: "ok", ...finalized };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
+    return {
+      status: "unavailable",
+      reason: error instanceof Error ? error.message : "Fight result database could not be read.",
+    };
+  }
+}
 
 async function readResultsBlob(revalidateWrites: boolean): Promise<CachedResults> {
   const body = await readPrivateBlob(FIGHT_RESULTS_BLOB_PATH);
@@ -158,6 +190,14 @@ async function loadFightResultsStoreInner(fresh: boolean): Promise<{
   }
   if (backend === "file") {
     const loaded = await loadResultsFromFile();
+    return { configured: true, backend, ...loaded };
+  }
+  if (backend === "postgres") {
+    const loaded = fresh
+      ? unwrapResults(await readResultsPostgres(true))
+      : unwrapResults(
+          await cachedBlobRead(BLOB_TAGS.fightResults, () => readResultsPostgres(false)),
+        );
     return { configured: true, backend, ...loaded };
   }
   const loaded = fresh

@@ -20,7 +20,7 @@ import {
   summarizeUfcBook,
 } from "@/lib/bets";
 import {
-  applyBetCorrections,
+  applyStoredBetCorrections,
   backfillBetLeans,
   ensureSeededBetsEnvelope,
   fallbackBetBook,
@@ -515,7 +515,7 @@ describe("UFC 332 bets", () => {
     let envelope = replaceBet(seeded.envelope, wonRibovics, "2026-10-04T01:00:00.000Z");
     envelope = replaceBet(envelope, wonNolan, "2026-10-04T01:00:00.000Z");
 
-    const corrected = applyBetCorrections(envelope, "2026-10-04T02:00:00.000Z");
+    const corrected = applyStoredBetCorrections(envelope, "2026-10-04T02:00:00.000Z");
     assert.equal(corrected.changed, true);
     const sold = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-ribovics");
     assert.ok(sold);
@@ -530,42 +530,42 @@ describe("UFC 332 bets", () => {
     assert.equal(keptNolan?.stake, "4.84");
     assert.equal(keptNolan?.settledPayout, "7.12");
     assert.equal(keptNolan?.realizedPnl, "2.28");
-    assert.equal(keptNolan?.correctionVersion, 1);
+    assert.equal(keptNolan?.correctionVersion, undefined);
 
     const coria = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-coria");
     const wang = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-wang-cong");
     assert.equal(coria?.stake, "19.99");
-    assert.equal(coria?.status, "lost");
+    assert.equal(coria?.status, "open");
     assert.equal(coria?.payout, "42.51");
     assert.equal(coria?.settledPayout, undefined);
-    assert.equal(coria?.realizedPnl, "-19.99");
-    assert.equal(coria?.correctionVersion, 2);
+    assert.equal(coria?.realizedPnl, undefined);
+    assert.equal(coria?.correctionVersion, 1);
     assert.equal(wang?.stake, "45.13");
-    assert.equal(wang?.status, "lost");
+    assert.equal(wang?.status, "open");
     assert.equal(wang?.payout, "118.76");
     assert.equal(wang?.settledPayout, undefined);
-    assert.equal(wang?.realizedPnl, "-45.13");
-    assert.equal(wang?.correctionVersion, 2);
+    assert.equal(wang?.realizedPnl, undefined);
+    assert.equal(wang?.correctionVersion, 1);
     const second = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-coria-2");
-    assert.equal(second?.status, "lost");
+    assert.equal(second?.status, "open");
     assert.equal(second?.stake, "79.99");
     assert.equal(second?.payout, "177.77");
-    assert.equal(second?.realizedPnl, "-79.99");
+    assert.equal(second?.realizedPnl, undefined);
     const gautier = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-gautier");
-    assert.equal(gautier?.status, "lost");
+    assert.equal(gautier?.status, "open");
     assert.equal(gautier?.stake, "9.69");
-    assert.equal(gautier?.realizedPnl, "-9.69");
+    assert.equal(gautier?.realizedPnl, undefined);
     const talbott = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-talbott");
-    assert.equal(talbott?.status, "won");
-    assert.equal(talbott?.settledPayout, "17.23");
-    assert.equal(talbott?.realizedPnl, "2.58");
+    assert.equal(talbott?.status, "open");
+    assert.equal(talbott?.correctionVersion, undefined);
     const green = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-green");
     assert.equal(green?.status, "lost");
     assert.equal(green?.stake, "21.31");
     assert.equal(green?.payout, "0.00");
     assert.equal(green?.realizedPnl, "-21.31");
+    assert.equal(green?.correctionVersion, undefined);
 
-    const again = applyBetCorrections(corrected.envelope, "2026-10-04T03:00:00.000Z");
+    const again = applyStoredBetCorrections(corrected.envelope, "2026-10-04T03:00:00.000Z");
     assert.equal(again.changed, false);
     assert.equal(again.envelope.updatedAt, corrected.envelope.updatedAt);
 
@@ -574,7 +574,7 @@ describe("UFC 332 bets", () => {
       { ...sold, payout: "10.00", realizedPnl: "-4.54" },
       "2026-10-04T04:00:00.000Z",
     );
-    const held = applyBetCorrections(edited, "2026-10-04T05:00:00.000Z");
+    const held = applyStoredBetCorrections(edited, "2026-10-04T05:00:00.000Z");
     assert.equal(held.changed, false);
     assert.equal(held.envelope.bets.find((bet) => bet.id === "ufc-332-ribovics")?.payout, "10.00");
 
@@ -586,7 +586,7 @@ describe("UFC 332 bets", () => {
       "2026-10-04T01:00:00.000Z",
     ).bet;
     assert.equal(settledCoria.realizedPnl, "-19.13");
-    const coriaBook = applyBetCorrections(
+    const coriaBook = applyStoredBetCorrections(
       replaceBet(seeded.envelope, settledCoria, "2026-10-04T01:00:00.000Z"),
       "2026-10-04T02:00:00.000Z",
     );
@@ -598,7 +598,7 @@ describe("UFC 332 bets", () => {
 
     const openAfterStake = seeded.envelope.bets.find((bet) => bet.id === "ufc-332-coria");
     assert.ok(openAfterStake);
-    const stakeOnly = applyBetCorrections(
+    const stakeOnly = applyStoredBetCorrections(
       replaceBet(
         seeded.envelope,
         { ...openAfterStake, stake: "19.99", correctionVersion: 1 },
@@ -607,10 +607,10 @@ describe("UFC 332 bets", () => {
       "2026-10-04T02:00:00.000Z",
     );
     const closed = stakeOnly.envelope.bets.find((bet) => bet.id === "ufc-332-coria");
-    assert.equal(closed?.status, "lost");
+    assert.equal(closed?.status, "open");
     assert.equal(closed?.stake, "19.99");
-    assert.equal(closed?.correctionVersion, 2);
-    assert.equal(closed?.realizedPnl, "-19.99");
+    assert.equal(closed?.correctionVersion, 1);
+    assert.equal(closed?.realizedPnl, undefined);
     assert.equal(closed?.payout, "42.51");
   });
 
@@ -635,35 +635,35 @@ describe("UFC 332 bets", () => {
     assert.equal(stakeOf("ufc-332-wang-cong"), "45.13");
     assert.equal(bets.some((bet) => bet.id === "ufc-332-wang-cong-2"), false);
     const second = bets.find((bet) => bet.id === "ufc-332-coria-2");
-    assert.equal(second?.status, "lost");
+    assert.equal(second?.status, "open");
     assert.equal(second?.payout, "177.77");
     assert.equal(bets.find((bet) => bet.id === "ufc-332-ribovics")?.status, "sold");
     assert.equal(bets.find((bet) => bet.id === "ufc-332-green")?.status, "lost");
-    assert.equal(bets.find((bet) => bet.id === "ufc-332-talbott")?.status, "won");
-    assert.equal(bets.find((bet) => bet.id === "ufc-332-wang-cong")?.status, "lost");
-    assert.equal(bets.find((bet) => bet.id === "ufc-332-gautier")?.status, "lost");
-    assert.equal(bets.filter((bet) => bet.status === "open").length, 0);
+    assert.equal(bets.find((bet) => bet.id === "ufc-332-talbott")?.status, "open");
+    assert.equal(bets.find((bet) => bet.id === "ufc-332-wang-cong")?.status, "open");
+    assert.equal(bets.find((bet) => bet.id === "ufc-332-gautier")?.status, "open");
+    assert.equal(bets.filter((bet) => bet.status === "open").length, 14);
 
     const book = summarizeUfcBook(bets);
     assert.equal(book.count, 16);
     assert.equal(book.totalStaked, "268.44");
-    assert.equal(book.realizedPnl, "-149.90");
-    assert.equal(book.realizedPnlLabel, "-$149.90");
-    assert.equal(book.record, "10-5");
+    assert.equal(book.realizedPnl, "-22.21");
+    assert.equal(book.realizedPnlLabel, "-$22.21");
+    assert.equal(book.record, "0-1");
     assert.equal(book.sold, 1);
-    assert.equal(book.wins, 10);
-    assert.equal(book.losses, 5);
-    assert.equal(book.open, 0);
-    assert.equal(book.openStake, "0.00");
-    assert.equal(book.openPotential, "0.00");
+    assert.equal(book.wins, 0);
+    assert.equal(book.losses, 1);
+    assert.equal(book.open, 14);
+    assert.equal(book.openStake, "232.59");
+    assert.equal(book.openPotential, "457.98");
 
     const card = scoreBets(bets);
-    assert.equal(card.founder.record, "10-5");
-    assert.equal(card.hub.record, "12-3");
-    assert.equal(card.withLean.record, "10-3");
-    assert.equal(card.againstLean.record, "0-2");
+    assert.equal(card.founder.record, "0-1");
+    assert.equal(card.hub.record, "1-0");
+    assert.equal(card.withLean.record, "0-0");
+    assert.equal(card.againstLean.record, "0-1");
     assert.equal(card.sold, 1);
-    assert.equal(card.open, 0);
+    assert.equal(card.open, 14);
     assert.equal(card.voids, 0);
   });
 
@@ -767,7 +767,7 @@ describe("UFC 332 bets", () => {
     assert.equal(row?.stake, "17.23");
     assert.equal(row?.payout, "44.17");
     assert.equal(row?.status, "open");
-    const corrected = applyBetCorrections(merged.envelope, "2026-10-04T03:00:00.000Z");
+    const corrected = applyStoredBetCorrections(merged.envelope, "2026-10-04T03:00:00.000Z");
     const kept = corrected.envelope.bets.find((bet) => bet.id === "ufc-332-wang-cong-2");
     assert.equal(kept?.stake, "17.23");
     assert.equal(kept?.status, "open");

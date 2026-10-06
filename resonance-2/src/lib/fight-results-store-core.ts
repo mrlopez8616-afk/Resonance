@@ -4,13 +4,14 @@ import {
   sameFightResult,
   type FightResult,
 } from "@/lib/fight-results";
+import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
 export const FIGHT_RESULTS_STORE_VERSION = 1;
 export const FIGHT_RESULTS_BLOB_PATH = "resonance-2/fight-results.json";
 export const DEFAULT_FIGHT_RESULTS_FILE = ".data/fight-results.json";
 
-export type FightResultsBackend = "blob" | "file" | "none";
-export type EnvLike = Record<string, string | undefined>;
+export type FightResultsBackend = StoreBackendName;
+export type { EnvLike };
 
 export interface FightResultsEnvelope {
   version: typeof FIGHT_RESULTS_STORE_VERSION;
@@ -20,10 +21,7 @@ export interface FightResultsEnvelope {
 }
 
 export function detectFightResultsBackend(env: EnvLike = process.env): FightResultsBackend {
-  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
-  if (env.RESONANCE_FIGHT_RESULTS_FILE?.trim()) return "file";
-  if (env.VERCEL) return "none";
-  return "file";
+  return detectStoreBackend(env, "RESONANCE_FIGHT_RESULTS_FILE");
 }
 
 export function isFightResultsStoreConfigured(env: EnvLike = process.env): boolean {

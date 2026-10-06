@@ -1,7 +1,7 @@
 import { FightIndex } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { loadBetsForPage, loadFightResultsForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,11 @@ export const metadata = {
 };
 
 export default async function FightsPage() {
-  const [book, card] = await Promise.all([loadBetsForPage(), loadFightResultsForPage()]);
+  const [book, card, calendar] = await Promise.all([
+    loadBetsForPage(),
+    loadFightResultsForPage(),
+    loadCalendarForPage(),
+  ]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const results = card.status === "unavailable" ? [] : card.results;
   const availability =
@@ -39,6 +43,7 @@ export default async function FightsPage() {
       <FightIndex
         bets={bets}
         results={results}
+        events={calendar.events}
         availability={availability}
         resultsAvailability={resultsAvailability}
       />
