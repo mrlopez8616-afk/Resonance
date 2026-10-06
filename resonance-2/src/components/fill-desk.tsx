@@ -22,6 +22,8 @@ export function FillDesk({
   storeLabel,
   bets = [],
   betsAvailability = "live",
+  backHref = null,
+  backLabel = null,
 }: {
   fills: Fill[];
   sleeves: Readonly<Record<string, readonly { quantity: string }[] | undefined>>;
@@ -29,6 +31,8 @@ export function FillDesk({
   storeLabel: string;
   bets?: readonly Bet[];
   betsAvailability?: BookAvailability;
+  backHref?: string | null;
+  backLabel?: string | null;
 }) {
   const visible = filterFills(fills, query);
   const ufcBook = summarizeUfcBook(bets);
@@ -66,6 +70,11 @@ export function FillDesk({
   return (
     <div className="log-canvas">
       <header className="log-header">
+        {backHref && backLabel ? (
+          <Link href={backHref} className="calendar-back">
+            {backLabel}
+          </Link>
+        ) : null}
         <p className="log-kicker">Search desk</p>
         <h2 className="log-title">{title}</h2>
         <p className="log-meta">

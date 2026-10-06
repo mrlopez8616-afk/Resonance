@@ -4,9 +4,12 @@ import { FLOOR_NODES } from "@/data/floor-nodes";
 import { FIGHT_DESK_ID, NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { formatCompactUsd } from "@/lib/live-face";
 import {
+  nodePageHref,
   nodesOnParent,
   parentAggregate,
   parentById,
+  parentCardHref,
+  parentSummaryLine,
   removedOnParent,
   sumLiveUsd,
 } from "./node-parents";
@@ -149,5 +152,46 @@ describe("node parent map", () => {
     assert.equal(empty.childCount, 0);
     assert.equal(empty.liveUsd, null);
     assert.equal(empty.openBets, null);
+  });
+
+  it("keeps a parent card to one real line and one hop", () => {
+    const summed = parentAggregate(
+      "crypto",
+      [],
+      { XRP: 10, SUI: 2.5, HBAR: 0 },
+      null,
+      "live",
+    );
+    assert.deepEqual(parentSummaryLine(summed), {
+      value: formatCompactUsd(12.5),
+      unit: "sum",
+    });
+
+    const fights = parentAggregate(
+      "fights",
+      [],
+      {},
+      {
+        open: 15,
+        staked: "1.00",
+        stakedLabel: "$1.00",
+        potential: "2.00",
+        potentialLabel: "$2.00",
+        wins: 0,
+        losses: 0,
+        record: "0-0",
+        estimated: true,
+      },
+      "live",
+    );
+    assert.deepEqual(parentSummaryLine(fights), { value: "15", unit: "open" });
+    assert.equal(parentSummaryLine(parentAggregate("stocks", [], {}, null, "live")), null);
+
+    assert.equal(parentCardHref("fights"), "/fights");
+    assert.equal(parentCardHref("crypto"), "/n/crypto");
+    assert.equal(nodePageHref("XRP"), "/n/crypto/xrp");
+    assert.equal(nodePageHref("PWR"), "/n/ai/pwr");
+    assert.equal(nodePageHref("FLR"), null);
+    assert.equal(nodePageHref("UFC"), null);
   });
 });

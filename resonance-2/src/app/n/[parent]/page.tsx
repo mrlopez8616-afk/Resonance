@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { loadOperatorFloor } from "@/lib/operator-floor";
@@ -27,23 +27,29 @@ export default async function ParentNodePage({
   const { parent: id } = await params;
   const parent = parentById(id);
   if (!parent) notFound();
+  if (parent.id === "fights") redirect("/fights");
 
   const floor = await loadOperatorFloor();
+  const faceLines = Object.fromEntries(
+    Object.entries(floor.faces).map(([ticker, face]) => [
+      ticker,
+      typeof face.totalUsd === "number" && Number.isFinite(face.totalUsd)
+        ? face.totalUsdLabel
+        : null,
+    ]),
+  );
   return (
     <OperatorShell
       storageMessage={floor.storageMessage}
       storageDetail={floor.storageDetail}
     >
-      <Link href="/" className="parent-back">
+      <Link href="/" className="calendar-back">
         Floor
       </Link>
       <NodeGrid
         parentId={parent.id}
         parentLabel={parent.label}
-        faces={floor.faces}
-        sleeves={floor.sleeves}
-        fightDesk={floor.fightDesk}
-        fightDeskAvailability={floor.fightDeskAvailability}
+        faceLines={faceLines}
       />
     </OperatorShell>
   );

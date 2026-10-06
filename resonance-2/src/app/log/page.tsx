@@ -5,6 +5,7 @@ import { parseFillDeskQuery, type FillDeskSearch } from "@/lib/fill-desk";
 import { listFills } from "@/lib/fills";
 import { loadLiveSleeveBooks, loadOperatorFills } from "@/lib/sleeve-prints";
 import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
+import { nodePageHref } from "@/lib/node-parents";
 import { loadBetsForPage, storeLabel } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,8 @@ export default async function OperatorLogPage({
         storeLabel={storeLabelText}
         bets={bets}
         betsAvailability={betsAvailability}
+        backHref={query.ticker ? nodePageHref(query.ticker) : null}
+        backLabel={query.ticker ? query.ticker : null}
       />
     </OperatorShell>
   );

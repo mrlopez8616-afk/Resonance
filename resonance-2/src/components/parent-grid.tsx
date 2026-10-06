@@ -11,7 +11,7 @@ import {
   parseHiddenIds,
   subscribeHiddenIds,
 } from "@/lib/floor-registry";
-import { parentAggregate, type FaceTotals } from "@/lib/node-parents";
+import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
 
 export function ParentGrid({
   faceTotals,
@@ -39,6 +39,7 @@ export function ParentGrid({
           fightDesk,
           fightDeskAvailability,
         );
+        const summary = parentSummaryLine(aggregate);
         return (
           <NodeSquare
             key={parent.id}
@@ -48,31 +49,17 @@ export function ParentGrid({
             label={parent.label}
           >
             <Link
-              href={`/n/${parent.id}`}
+              href={parentCardHref(parent.id)}
               className="node-log-link"
               title={`Open ${parent.label}`}
             >
               <div className="live-face parent-face">
                 <h2 className="node-ticker">{parent.label}</h2>
-                {aggregate.connected ? (
-                  <>
-                    <p className="live-units">
-                      {aggregate.childCount}
-                      <span>{aggregate.childCount === 1 ? " node" : " nodes"}</span>
-                    </p>
-                    {aggregate.liveUsdLabel !== null ? (
-                      <p className="live-value">
-                        {aggregate.liveUsdLabel}
-                        <span> sum</span>
-                      </p>
-                    ) : null}
-                    {aggregate.openBets !== null ? (
-                      <p className="live-units">
-                        {aggregate.openBets}
-                        <span> open</span>
-                      </p>
-                    ) : null}
-                  </>
+                {summary ? (
+                  <p className="live-units">
+                    {summary.value}
+                    <span> {summary.unit}</span>
+                  </p>
                 ) : (
                   <p className="node-note">not connected yet</p>
                 )}

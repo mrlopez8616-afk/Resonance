@@ -2,25 +2,9 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { FightDeskFace } from "@/components/fight-desk-face";
 import { FloorDialog } from "@/components/floor-dialog";
-import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
-import type { BookAvailability } from "@/components/bet-scorecard";
-import type { FightDeskSummary } from "@/lib/bets";
 import type { FloorNode } from "@/data/floor-nodes";
-import { CEG_SLEEVES } from "@/data/ceg-sleeves";
-import { ETN_SLEEVES } from "@/data/etn-sleeves";
-import { GEV_SLEEVES } from "@/data/gev-sleeves";
-import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
-import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
-import { PWR_SLEEVES } from "@/data/pwr-sleeves";
-import { SUI_SLEEVES } from "@/data/sui-sleeves";
-import { VRT_SLEEVES } from "@/data/vrt-sleeves";
-import { XRP_SLEEVES } from "@/data/xrp-sleeves";
-import type { NodeSleeve } from "@/data/sleeves";
-import { fillDeskHref } from "@/lib/fill-desk";
-import type { LiveFaceData } from "@/lib/live-face";
 import {
   hiddenIdsServerSnapshot,
   hiddenIdsSnapshot,
@@ -28,35 +12,18 @@ import {
   subscribeHiddenIds,
   writeHiddenIds,
 } from "@/lib/floor-registry";
-import { nodesOnParent, parentShowsFightDesk, removedOnParent } from "@/lib/node-parents";
+import { nodesOnParent, removedOnParent } from "@/lib/node-parents";
 import type { ParentId } from "@/data/node-parents";
-
-const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
-  XRP: XRP_SLEEVES,
-  SUI: SUI_SLEEVES,
-  PWR: PWR_SLEEVES,
-  ETN: ETN_SLEEVES,
-  VRT: VRT_SLEEVES,
-  GEV: GEV_SLEEVES,
-  CEG: CEG_SLEEVES,
-  HUBB: HUBB_SLEEVES,
-  HBAR: HBAR_SLEEVES,
-};
 
 export function NodeGrid({
   parentId,
   parentLabel,
-  faces,
-  sleeves: sleeveBooks = SEED_SLEEVES,
-  fightDesk,
-  fightDeskAvailability = "live",
+  faceLines,
 }: {
   parentId: ParentId;
   parentLabel: string;
-  faces: Record<string, LiveFaceData>;
-  sleeves?: Record<string, readonly NodeSleeve[]>;
-  fightDesk: FightDeskSummary | null;
-  fightDeskAvailability?: BookAvailability;
+  /** One real live-USD line per ticker. Null when that face has no total. */
+  faceLines: Readonly<Record<string, string | null>>;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -79,9 +46,8 @@ export function NodeGrid({
 
   const nodes = nodesOnParent(hiddenIds, parentId);
   const removed = removedOnParent(hiddenIds, parentId);
-  const showFightDesk = parentShowsFightDesk(parentId);
 
-  if (!showFightDesk && nodes.length === 0) {
+  if (nodes.length === 0) {
     return (
       <p className="parent-empty" role="status">
         not connected yet
@@ -92,48 +58,34 @@ export function NodeGrid({
   return (
     <>
       <section className="node-grid" aria-label={`${parentLabel} nodes`}>
-        {showFightDesk ? (
-          <NodeSquare live label="Fight Desk">
-            <Link href="/fights" className="node-log-link" title="Open Fight Desk">
-              <FightDeskFace summary={fightDesk} availability={fightDeskAvailability} />
-            </Link>
-          </NodeSquare>
-        ) : null}
         {nodes.map((node) => {
           if (node.status === "live") {
-            const face = faces[node.ticker];
-            const sleeves = sleeveBooks[node.ticker] ?? SEED_SLEEVES[node.ticker];
-            if (!face || !sleeves) {
-              return (
-                <NodeSquare
-                  key={node.id}
-                  dashed
-                  label={`${node.ticker} offline`}
-                  onDelete={() => setPending(node)}
-                >
-                  <h2 className="node-ticker">{node.ticker}</h2>
-                  <p className="node-note">offline</p>
-                </NodeSquare>
-              );
-            }
+            const liveUsd = faceLines[node.ticker] ?? null;
             return (
               <NodeSquare
                 key={node.id}
-                live
-                label={`${node.ticker} live node`}
+                parent
+                live={liveUsd !== null}
+                dashed={liveUsd === null}
+                label={`${node.ticker} node`}
                 onDelete={() => setPending(node)}
               >
                 <Link
-                  href={fillDeskHref({ ticker: node.ticker })}
+                  href={`/n/${parentId}/${node.id}`}
                   className="node-log-link"
-                  title={`Open ${node.ticker} log`}
+                  title={`Open ${node.ticker}`}
                 >
-                  <span className="sr-only">Open {node.ticker} operator log</span>
-                  <LiveNodeFace
-                    ticker={node.ticker}
-                    sleeves={sleeves}
-                    initial={face}
-                  />
+                  <div className="live-face parent-face">
+                    <h2 className="node-ticker">{node.ticker}</h2>
+                    {liveUsd !== null ? (
+                      <p className="live-value">
+                        {liveUsd}
+                        <span> live</span>
+                      </p>
+                    ) : (
+                      <p className="node-note">offline</p>
+                    )}
+                  </div>
                 </Link>
               </NodeSquare>
             );

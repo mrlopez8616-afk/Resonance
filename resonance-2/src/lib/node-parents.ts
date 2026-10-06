@@ -98,6 +98,43 @@ export function sumLiveUsd(totals: FaceTotals, tickers: readonly string[]): numb
   return sum;
 }
 
+/** Home cards link straight to /fights. Other parents open their child-card page. */
+export function parentCardHref(parentId: ParentId): string {
+  if (parentId === "fights") return "/fights";
+  return `/n/${parentId}`;
+}
+
+/** Live-face page for a floor node. FLR has no square, so it has no page. */
+export function nodePageHref(ticker: string): string | null {
+  const id = ticker.trim().toLowerCase();
+  const node = FLOOR_NODES.find((item) => item.id === id && item.status !== "empty");
+  if (!node) return null;
+  const parentId = nodeParent(node.id);
+  if (!parentId || parentId === "fights") return null;
+  return `/n/${parentId}/${node.id}`;
+}
+
+/**
+ * One real line for a parent card.
+ * A complete live sum wins. Otherwise the fight desk's open count.
+ * Otherwise the painted child count. Never more than one of these.
+ */
+export function parentSummaryLine(
+  aggregate: ParentAggregate,
+): { value: string; unit: string } | null {
+  if (!aggregate.connected) return null;
+  if (aggregate.liveUsdLabel !== null) {
+    return { value: aggregate.liveUsdLabel, unit: "sum" };
+  }
+  if (aggregate.openBets !== null) {
+    return { value: String(aggregate.openBets), unit: "open" };
+  }
+  return {
+    value: String(aggregate.childCount),
+    unit: aggregate.childCount === 1 ? "node" : "nodes",
+  };
+}
+
 export function parentAggregate(
   parentId: ParentId,
   hiddenIds: readonly string[],

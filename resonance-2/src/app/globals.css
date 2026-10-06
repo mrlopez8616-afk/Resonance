@@ -499,22 +499,6 @@ body {
   letter-spacing: -0.03em;
 }
 
-.parent-back {
-  align-self: flex-start;
-  margin-bottom: 0.75rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.parent-back:hover,
-.parent-back:focus-visible {
-  color: var(--text);
-}
-
 .parent-empty {
   margin: 0;
   font-size: 0.92rem;
