@@ -106,8 +106,71 @@ export type DeskEvent = {
 export type DeskNode = {
   id: FightDeskNodeId;
   label: string;
+  href: string;
   events: DeskEvent[];
 };
+
+export function isFightDeskNodeId(value: string): value is FightDeskNodeId {
+  return FIGHT_DESK_NODES.some((node) => node.id === value);
+}
+
+export function fightDeskNodeHref(id: FightDeskNodeId): string {
+  return `/fights/${id}`;
+}
+
+export function fightDeskNodeLabel(id: FightDeskNodeId): string {
+  return FIGHT_DESK_NODES.find((node) => node.id === id)?.label ?? id;
+}
+
+/** Main card, prelims (including early prelims), or Contender Series. */
+export function nodeForBet(
+  bet: Bet,
+  events: readonly CalendarEvent[] = [],
+): FightDeskNodeId | null {
+  if (!isUfc332Bet(bet)) {
+    return betEventSlug(bet, events) ? "contender-series" : null;
+  }
+  const fight = fightBySlug(bet.fightSlug);
+  if (!fight) return null;
+  return fight.segment === "main-card" ? "main-card" : "prelims";
+}
+
+export function betsForNode(
+  bets: readonly Bet[],
+  nodeId: FightDeskNodeId,
+  events: readonly CalendarEvent[] = [],
+): Bet[] {
+  return bets.filter((bet) => nodeForBet(bet, events) === nodeId);
+}
+
+/**
+ * One level up from an event page.
+ * A `node` query from the node page wins. UFC 332 without one returns to Main Card.
+ * Every other event returns to Contender Series.
+ */
+export function eventBackHref(
+  eventSlug: string,
+  requestedNode?: string | null,
+): { href: string; label: string } {
+  const requested = requestedNode?.trim().toLowerCase() ?? "";
+  if (isFightDeskNodeId(requested)) {
+    return { href: fightDeskNodeHref(requested), label: fightDeskNodeLabel(requested) };
+  }
+  if (eventSlug.trim().toLowerCase() === UFC_332_ID) {
+    return { href: fightDeskNodeHref("main-card"), label: fightDeskNodeLabel("main-card") };
+  }
+  return { href: fightDeskNodeHref("contender-series"), label: fightDeskNodeLabel("contender-series") };
+}
+
+/** Segment hint on a UFC 332 calendar row. Early prelims stay with Prelims. */
+export function ufcNodeHint(
+  event: Pick<CalendarEvent, "id" | "title">,
+): FightDeskNodeId | null {
+  const text = `${event.id} ${event.title}`.toLowerCase();
+  if (text.includes("main card") || text.includes("main-card")) return "main-card";
+  if (text.includes("prelim")) return "prelims";
+  return null;
+}
 
 function catalogFightRow(fight: CatalogFight, bets: readonly Bet[]): DeskFight {
   return {
@@ -120,11 +183,15 @@ function catalogFightRow(fight: CatalogFight, bets: readonly Bet[]): DeskFight {
   };
 }
 
-function ufcEvent(fights: readonly CatalogFight[], bets: readonly Bet[], anchor: string): DeskEvent {
+function ufcEvent(
+  fights: readonly CatalogFight[],
+  bets: readonly Bet[],
+  nodeId: FightDeskNodeId,
+): DeskEvent {
   return {
     slug: UFC_332_ID,
     title: UFC_332_EVENT.name,
-    href: `/fights/${UFC_332_ID}#${anchor}`,
+    href: `/fights/${UFC_332_ID}?node=${nodeId}`,
     meta: `${UFC_332_EVENT.venue}, ${UFC_332_EVENT.city}`,
     fights: fights.map((fight) => catalogFightRow(fight, bets)),
   };
@@ -181,7 +248,7 @@ export function fightDeskNodes(input: {
     .map(([slug, group]) => ({
       slug,
       title: group.title,
-      href: `/fights/${slug}`,
+      href: `/fights/${slug}?node=contender-series`,
       meta: group.meta,
       fights: listedFights(group.bets),
     }));
@@ -190,11 +257,13 @@ export function fightDeskNodes(input: {
     {
       id: "main-card",
       label: "Main Card",
+      href: fightDeskNodeHref("main-card"),
       events: [ufcEvent(fightsInSegment("main-card"), ufcBets, "main-card")],
     },
     {
       id: "prelims",
       label: "Prelims",
+      href: fightDeskNodeHref("prelims"),
       events: [
         ufcEvent(
           [...fightsInSegment("early-prelims"), ...fightsInSegment("prelims")],
@@ -203,7 +272,12 @@ export function fightDeskNodes(input: {
         ),
       ],
     },
-    { id: "contender-series", label: "Contender Series", events: contender },
+    {
+      id: "contender-series",
+      label: "Contender Series",
+      href: fightDeskNodeHref("contender-series"),
+      events: contender,
+    },
   ];
 }
 
@@ -225,7 +299,7 @@ export function resolveFightEventPage(
   events: readonly CalendarEvent[] = [],
 ): ResolvedFightEvent | null {
   const id = slug.trim().toLowerCase();
-  if (!SLUG.test(id)) return null;
+  if (!SLUG.test(id) || isFightDeskNodeId(id)) return null;
   if (id === UFC_332_ID) {
     return {
       kind: "ufc-332",

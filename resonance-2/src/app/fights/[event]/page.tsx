@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { FightEvent, ListedFightEvent } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { resolveFightEventPage } from "@/lib/fight-desk";
+import { eventBackHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "@/lib/store-page";
 
@@ -20,12 +20,20 @@ export async function generateMetadata({
   return { title: `${title} · Resonance 2.0` };
 }
 
+function oneQuery(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  return value?.[0] ?? null;
+}
+
 export default async function FightEventPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ event: string }>;
+  searchParams: Promise<{ node?: string | string[] }>;
 }) {
   const { event } = await params;
+  const requestedNode = oneQuery((await searchParams).node);
   const [book, card, calendar] = await Promise.all([
     loadBetsForPage(),
     loadFightResultsForPage(),
@@ -35,6 +43,7 @@ export default async function FightEventPage({
   const results = card.status === "unavailable" ? [] : card.results;
   const resolved = resolveFightEventPage(event, bets, calendar.events);
   if (!resolved) notFound();
+  const back = eventBackHref(resolved.slug, requestedNode);
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const resultsAvailability =
@@ -54,6 +63,8 @@ export default async function FightEventPage({
         <FightEvent
           bets={resolved.bets}
           results={results}
+          backHref={back.href}
+          backLabel={back.label}
           availability={availability}
           resultsAvailability={resultsAvailability}
         />
@@ -64,6 +75,8 @@ export default async function FightEventPage({
           fights={resolved.fights}
           bets={resolved.bets}
           results={results}
+          backHref={back.href}
+          backLabel={back.label}
           availability={availability}
           resultsAvailability={resultsAvailability}
         />

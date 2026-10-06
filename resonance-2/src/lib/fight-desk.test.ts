@@ -4,6 +4,8 @@ import type { CalendarEvent } from "@/data/calendar";
 import { betSeed, summarizeBets, type Bet } from "@/lib/bets";
 import {
   betsForEventSlug,
+  betsForNode,
+  eventBackHref,
   eventSlugFromTitle,
   fightDeskNodes,
   resolveFightEventPage,
@@ -72,7 +74,12 @@ describe("fight desk nodes", () => {
     assert.equal(series.events.length, 1);
     assert.equal(series.events[0]?.slug, "dwcs-s10-week-9");
     assert.equal(series.events[0]?.title, DWCS_EVENT);
-    assert.equal(series.events[0]?.href, "/fights/dwcs-s10-week-9");
+    assert.equal(main.href, "/fights/main-card");
+    assert.equal(prelims.href, "/fights/prelims");
+    assert.equal(series.href, "/fights/contender-series");
+    assert.equal(main.events[0]?.href, "/fights/ufc-332?node=main-card");
+    assert.equal(prelims.events[0]?.href, "/fights/ufc-332?node=prelims");
+    assert.equal(series.events[0]?.href, "/fights/dwcs-s10-week-9?node=contender-series");
     assert.equal(series.events[0]?.fights[0]?.bets[0]?.id, "dwcs-2026-10-06-a");
     assert.equal(
       main.events[0]?.fights.some((fight) => fight.bets.some((bet) => bet.id.startsWith("dwcs-"))),
@@ -94,7 +101,20 @@ describe("fight desk nodes", () => {
     assert.equal(page?.title, DWCS_EVENT);
     assert.equal(page && "bets" in page ? summarizeBets(page.bets).staked : "", "61.81");
     assert.equal(resolveFightEventPage("ufc-332", bets, [dwcsCalendar])?.kind, "ufc-332");
+    assert.equal(resolveFightEventPage("main-card", bets, [dwcsCalendar]), null);
     assert.equal(resolveFightEventPage("not-a-card", bets, [dwcsCalendar]), null);
+    assert.equal(eventBackHref("ufc-332", "prelims").href, "/fights/prelims");
+    assert.equal(eventBackHref("ufc-332", null).href, "/fights/main-card");
+    assert.equal(eventBackHref("dwcs-s10-week-9", null).href, "/fights/contender-series");
+    const mainOpen = summarizeBets(betsForNode(bets, "main-card", [dwcsCalendar])).staked;
+    const prelimOpen = summarizeBets(betsForNode(bets, "prelims", [dwcsCalendar])).staked;
+    const seriesOpen = summarizeBets(betsForNode(bets, "contender-series", [dwcsCalendar])).staked;
+    assert.equal(seriesOpen, "61.81");
+    assert.equal(mainOpen === "61.81" || prelimOpen === "61.81", false);
+    assert.equal(
+      betsForNode(bets, "contender-series", [dwcsCalendar]).every((bet) => bet.id.startsWith("dwcs-")),
+      true,
+    );
     assert.equal(eventSlugFromTitle(DWCS_EVENT), "dana-white-s-contender-series-s10-week-9");
     assert.equal(fightPageHref(dwcsCalendar), "/fights/dwcs-s10-week-9");
   });

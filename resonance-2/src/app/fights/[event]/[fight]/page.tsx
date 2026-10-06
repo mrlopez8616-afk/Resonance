@@ -4,6 +4,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { resultForFight } from "@/lib/fight-results";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadFightResultsForPage } from "@/lib/store-page";
+import { isFightDeskNodeId } from "@/lib/fight-desk";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +20,26 @@ export async function generateMetadata({
   return { title: `${title} · Resonance 2.0` };
 }
 
+function oneQuery(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  return value?.[0] ?? null;
+}
+
 export default async function FightPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ event: string; fight: string }>;
+  searchParams: Promise<{ node?: string | string[] }>;
 }) {
   const { event, fight: slug } = await params;
+  const requestedNode = oneQuery((await searchParams).node);
+  const node =
+    requestedNode && isFightDeskNodeId(requestedNode)
+      ? requestedNode
+      : fightBySlug(slug)?.segment === "main-card"
+        ? "main-card"
+        : "prelims";
   if (event !== UFC_332_EVENT.id) notFound();
   const fight = fightBySlug(slug);
   if (!fight) notFound();
@@ -50,6 +65,7 @@ export default async function FightPage({
         fight={fight}
         bets={bets}
         result={resultForFight(results, fight.slug)}
+        backHref={`/fights/${UFC_332_EVENT.id}?node=${node}`}
         availability={availability}
         resultsAvailability={resultsAvailability}
       />
