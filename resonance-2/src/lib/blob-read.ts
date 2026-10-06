@@ -13,6 +13,8 @@ export const BLOB_TAGS = {
   bets: "resonance-blob-bets",
   fills: "resonance-blob-fills",
   calendar: "resonance-blob-calendar",
+  // PR #50 adds fightResults: "resonance-blob-fight-results".
+  // Keep that string. Do not reuse the three tags above for another domain.
 } as const;
 
 export type BlobTag = (typeof BLOB_TAGS)[keyof typeof BLOB_TAGS];

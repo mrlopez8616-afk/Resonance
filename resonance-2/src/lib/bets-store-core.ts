@@ -8,13 +8,14 @@ import {
   type Bet,
   type BetStatus,
 } from "@/lib/bets";
+import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
 export const BETS_STORE_VERSION = 1;
 export const BETS_BLOB_PATH = "resonance-2/bets.json";
 export const DEFAULT_BETS_FILE = ".data/bets.json";
 
-export type BetsStoreBackend = "blob" | "file" | "none";
-export type EnvLike = Record<string, string | undefined>;
+export type BetsStoreBackend = StoreBackendName;
+export type { EnvLike };
 
 export interface BetsStoreEnvelope {
   version: typeof BETS_STORE_VERSION;
@@ -27,10 +28,19 @@ const BET_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void"]);
 
 export function detectBetsBackend(env: EnvLike = process.env): BetsStoreBackend {
-  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
-  if (env.RESONANCE_BETS_FILE?.trim()) return "file";
-  if (env.VERCEL) return "none";
-  return "file";
+  return detectStoreBackend(env, "RESONANCE_BETS_FILE");
+}
+
+/**
+ * Versioned bet corrections (PR #50) run here, after the lean backfill and
+ * before the dirty flag. This build is a no-op so a stored row is not rewritten.
+ * #50 replaces the body with its applyBetCorrections and returns changed only
+ * when a row's correctionVersion moves forward.
+ */
+export function applyStoredBetCorrections(
+  envelope: BetsStoreEnvelope,
+): { envelope: BetsStoreEnvelope; changed: boolean } {
+  return { envelope, changed: false };
 }
 
 export function isBetsStoreConfigured(env: EnvLike = process.env): boolean {

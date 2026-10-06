@@ -16,13 +16,14 @@ import {
 } from "@/lib/calendar-event";
 import { isCivilDay } from "@/lib/calendar-time";
 import { dailyBriefBackfillBodies } from "@/lib/calendar-writers";
+import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
 export const CALENDAR_STORE_VERSION = 1;
 export const CALENDAR_BLOB_PATH = "resonance-2/calendar.json";
 export const DEFAULT_CALENDAR_FILE = ".data/calendar.json";
 
-export type CalendarStoreBackend = "blob" | "file" | "none";
-export type EnvLike = Record<string, string | undefined>;
+export type CalendarStoreBackend = StoreBackendName;
+export type { EnvLike };
 
 export interface CalendarStoreEnvelope {
   version: typeof CALENDAR_STORE_VERSION;
@@ -31,13 +32,8 @@ export interface CalendarStoreEnvelope {
   events: CalendarEvent[];
 }
 
-export function detectCalendarBackend(
-  env: EnvLike = process.env,
-): CalendarStoreBackend {
-  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
-  if (env.RESONANCE_CALENDAR_FILE?.trim()) return "file";
-  if (env.VERCEL) return "none";
-  return "file";
+export function detectCalendarBackend(env: EnvLike = process.env): CalendarStoreBackend {
+  return detectStoreBackend(env, "RESONANCE_CALENDAR_FILE");
 }
 
 export function isCalendarStoreConfigured(

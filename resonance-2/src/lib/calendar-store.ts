@@ -27,6 +27,7 @@ import {
   type CalendarStoreBackend,
   type CalendarStoreEnvelope,
 } from "@/lib/calendar-store-core";
+import { loadCalendarEnvelope, saveCalendarEnvelope } from "@/lib/pg/envelopes";
 
 export {
   detectCalendarBackend,
@@ -60,6 +61,11 @@ async function persistEnvelope(
   revalidate: boolean,
 ): Promise<void> {
   const backend = detectCalendarBackend();
+  if (backend === "postgres") {
+    await saveCalendarEnvelope(envelope);
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.calendar);
+    return;
+  }
   if (backend === "blob") {
     await putPrivateBlob(CALENDAR_BLOB_PATH, JSON.stringify(envelope, null, 2));
     if (revalidate) revalidateBlobTag(BLOB_TAGS.calendar);
@@ -103,6 +109,22 @@ type CachedCalendar =
   | { status: "ok"; envelope: CalendarStoreEnvelope; seeded: boolean }
   | { status: "unavailable"; reason: string };
 
+async function readCalendarPostgres(revalidateWrites: boolean): Promise<CachedCalendar> {
+  try {
+    const finalized = ensureSeededCalendarEnvelope(await loadCalendarEnvelope());
+    if (finalized.seeded) await persistEnvelope(finalized.envelope, revalidateWrites);
+    return { status: "ok", ...finalized };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
+    return {
+      status: "unavailable",
+      reason: error instanceof Error ? error.message : "Calendar database could not be read.",
+    };
+  }
+}
+
 async function readCalendarBlob(revalidateWrites: boolean): Promise<CachedCalendar> {
   const body = await readPrivateBlob(CALENDAR_BLOB_PATH);
   if (body.status === "unavailable") return body;
@@ -145,6 +167,14 @@ async function loadCalendarStoreInner(fresh: boolean): Promise<{
       envelope: ensureSeededCalendarEnvelope(null).envelope,
       seeded: true,
     };
+  }
+  if (backend === "postgres") {
+    const loaded = fresh
+      ? unwrapCalendar(await readCalendarPostgres(true))
+      : unwrapCalendar(
+          await cachedBlobRead(BLOB_TAGS.calendar, () => readCalendarPostgres(false)),
+        );
+    return { configured: true, backend, ...loaded };
   }
   if (backend === "file") {
     const finalized = ensureSeededCalendarEnvelope(await readFileEnvelope());

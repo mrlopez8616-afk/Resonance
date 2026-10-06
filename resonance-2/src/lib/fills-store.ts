@@ -27,6 +27,7 @@ import {
   type FillsStoreBackend,
   type FillsStoreEnvelope,
 } from "./fills-store-core";
+import { loadFillsEnvelope, saveFillsEnvelope } from "@/lib/pg/envelopes";
 import { mergeSleeveBook, seedBookForTicker } from "./sleeve-apply";
 import type { NodeSleeve } from "@/data/sleeves";
 
@@ -66,6 +67,11 @@ function parseBlobText(text: string): FillsStoreEnvelope | null {
 
 async function persistEnvelope(envelope: FillsStoreEnvelope, revalidate: boolean): Promise<void> {
   const backend = detectFillsBackend();
+  if (backend === "postgres") {
+    await saveFillsEnvelope(envelope);
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.fills);
+    return;
+  }
   if (backend === "blob") {
     await putPrivateBlob(FILLS_BLOB_PATH, JSON.stringify(envelope, null, 2));
     if (revalidate) revalidateBlobTag(BLOB_TAGS.fills);
@@ -109,6 +115,22 @@ type CachedFills =
   | { status: "ok"; envelope: FillsStoreEnvelope; seeded: boolean }
   | { status: "unavailable"; reason: string };
 
+async function readFillsPostgres(revalidateWrites: boolean): Promise<CachedFills> {
+  try {
+    const finalized = finalizeFills(await loadFillsEnvelope());
+    if (finalized.seeded) await persistEnvelope(finalized.envelope, revalidateWrites);
+    return { status: "ok", ...finalized };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
+    return {
+      status: "unavailable",
+      reason: error instanceof Error ? error.message : "Fill database could not be read.",
+    };
+  }
+}
+
 async function readFillsBlob(revalidateWrites: boolean): Promise<CachedFills> {
   const body = await readPrivateBlob(FILLS_BLOB_PATH);
   if (body.status === "unavailable") return body;
@@ -148,6 +170,12 @@ async function loadFillsStoreInner(fresh: boolean): Promise<{
       envelope: ensureSeededFillsEnvelope(null).envelope,
       seeded: true,
     };
+  }
+  if (backend === "postgres") {
+    const loaded = fresh
+      ? unwrapFills(await readFillsPostgres(true))
+      : unwrapFills(await cachedBlobRead(BLOB_TAGS.fills, () => readFillsPostgres(false)));
+    return { configured: true, backend, ...loaded };
   }
   if (backend === "file") {
     const raw = await readFileEnvelope();

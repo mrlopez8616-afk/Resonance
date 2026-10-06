@@ -13,6 +13,7 @@ import {
 
 const TOKEN_KEY = "BLOB_READ_WRITE_TOKEN";
 let previousToken: string | undefined;
+let previousDatabaseUrl: string | undefined;
 let mode: "ok" | "missing" | "403" = "missing";
 let body: string | null = null;
 let gets = 0;
@@ -49,6 +50,8 @@ function installSdk(): void {
 
 before(() => {
   previousToken = process.env[TOKEN_KEY];
+  previousDatabaseUrl = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL;
   process.env[TOKEN_KEY] = "vercel_blob_rw_test";
   installSdk();
 });
@@ -56,6 +59,8 @@ before(() => {
 after(() => {
   if (previousToken === undefined) delete process.env[TOKEN_KEY];
   else process.env[TOKEN_KEY] = previousToken;
+  if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+  else process.env.DATABASE_URL = previousDatabaseUrl;
   setBlobSdkForTests(null);
   resetBlobReadCacheForTests();
 });

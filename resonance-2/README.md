@@ -72,6 +72,18 @@ Production path: Hub / RH Ops `POST /api/fills` with Bearer `RESONANCE_SYNC_SECR
 
 Local/dev without Blob still seeds from [`src/data/fills.ts`](src/data/fills.ts) and writes `.data/fills.json`. Do not paste keys, seeds, account numbers, or the gas wallet address into that file.
 
+## Postgres (Neon)
+
+Hosting stays on Vercel Hobby. When `DATABASE_URL` is set, bets, fills, settlements, and calendar rows are read from Postgres. When it is unset, the app keeps the Blob or local file and the same seed merge. Either way a store that cannot be read shows the storage banner and write routes return 503. Details, the import, and the outage replay are in [`db/README.md`](db/README.md).
+
+```bash
+npm run db:migrate
+npm run db:import-blob
+npm run db:replay -- --file outage.json
+```
+
+Connect Neon from the Vercel project **resonance3** (team **resonance9**): Storage → Marketplace → Neon, one click. Tick Production, Preview, and Development for `DATABASE_URL` (the pooled URL). Redeploy so the new variable is on the running build. Then run the three commands above. Import before replay.
+
 ## Deploy on Vercel (resonance3)
 
 1. Import this Git repository.
