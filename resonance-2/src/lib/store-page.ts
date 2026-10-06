@@ -6,6 +6,8 @@ import { loadBetsStore } from "@/lib/bets-store";
 import { ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
 import { loadCalendarStore, type CalendarStoreBackend } from "@/lib/calendar-store";
 import type { CalendarEvent } from "@/data/calendar";
+import type { FightResult } from "@/lib/fight-results";
+import { loadFightResultsStore } from "@/lib/fight-results-store";
 import {
   isStorageUnavailable,
   type StoreAvailability,
@@ -18,10 +20,32 @@ export type BetsPage =
   | { status: "unconfigured"; bets: Bet[] }
   | { status: "unavailable"; reason: string };
 
+export type FightResultsPage =
+  | { status: "live"; results: FightResult[]; backend: DurableBackend }
+  | { status: "unconfigured"; results: FightResult[] }
+  | { status: "unavailable"; reason: string };
+
 function liveBackend(backend: string): DurableBackend {
   if (backend === "postgres" || backend === "blob") return backend;
   return "file";
 }
+
+export const loadFightResultsForPage = cache(async (): Promise<FightResultsPage> => {
+  try {
+    const loaded = await loadFightResultsStore();
+    if (!loaded.configured) {
+      return { status: "unconfigured", results: loaded.envelope.results };
+    }
+    return {
+      status: "live",
+      results: loaded.envelope.results,
+      backend: liveBackend(loaded.backend),
+    };
+  } catch (error) {
+    if (!isStorageUnavailable(error)) throw error;
+    return { status: "unavailable", reason: error.reason };
+  }
+});
 
 export const loadBetsForPage = cache(async (): Promise<BetsPage> => {
   try {

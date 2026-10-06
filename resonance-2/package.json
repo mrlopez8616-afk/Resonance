@@ -14,6 +14,7 @@
     "fills:log": "tsx scripts/post-position-log-fills.ts",
     "bets:settle": "tsx scripts/settle-bet.ts",
     "bets:post": "tsx scripts/post-bet.ts",
+    "fights:result": "tsx scripts/post-fight-result.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:import-blob": "tsx scripts/db-import-blob.ts",
     "db:replay": "tsx scripts/db-replay-outage.ts"

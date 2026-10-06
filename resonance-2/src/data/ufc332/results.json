@@ -1,0 +1,114 @@
+[
+  {
+    "fight": 1,
+    "winner": "Eric Nolan",
+    "method": "KO/TKO (Punch)",
+    "round": 3,
+    "time": "3:26",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401907089: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punch, period 3, displayClock 3:26. live_state.json listed nolan under reported and had no results.nolan fields."
+  },
+  {
+    "fight": 2,
+    "winner": "Ismail Naurdiev",
+    "method": "Decision - Unanimous",
+    "round": 3,
+    "time": "5:00",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401912275: STATUS_FINAL, result.displayName Decision - Unanimous, period 3, displayClock 5:00. No judge scores on that status object. live_state.json had no results.naurdiev fields."
+  },
+  {
+    "fight": 3,
+    "winner": "Alexander Hernandez",
+    "method": "KO/TKO (Punch)",
+    "round": 2,
+    "time": "3:12",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401917346: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punch, period 2, displayClock 3:12. live_state.json had no results.hernandez fields."
+  },
+  {
+    "fight": 4,
+    "winner": "Jacobe Smith",
+    "method": "KO/TKO (Punches)",
+    "round": 1,
+    "time": "1:32",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401926808: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punches, period 1, displayClock 1:32. live_state.json had no results.smith fields."
+  },
+  {
+    "fight": 5,
+    "winner": "Johnny Walker",
+    "method": "KO/TKO (Knee)",
+    "round": 1,
+    "time": "3:35",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401912274: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Knee, period 1, displayClock 3:35."
+  },
+  {
+    "fight": 6,
+    "winner": "Anthony Wint",
+    "method": "KO/TKO (Punches)",
+    "round": 1,
+    "time": "0:23",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401922306: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punches, period 1, displayClock 0:23. UFC.com scorecards: TKO (strikes) at 0:23 of Round 1."
+  },
+  {
+    "fight": 7,
+    "winner": "Marcus McGhee",
+    "method": "KO/TKO (Punches)",
+    "round": 1,
+    "time": "4:58",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401927906: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punches, period 1, displayClock 4:58."
+  },
+  {
+    "fight": 8,
+    "winner": "Damian Pinas",
+    "method": "KO/TKO (Punch)",
+    "round": 1,
+    "time": "1:15",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401912277: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punch, period 1, displayClock 1:15."
+  },
+  {
+    "fight": 9,
+    "winner": "Imanol Rodriguez Pillado",
+    "method": "KO/TKO (Kick)",
+    "round": 1,
+    "time": "3:11",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401912276: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Kick, target Body, period 1, displayClock 3:11. Winner is the data.json name."
+  },
+  {
+    "fight": 10,
+    "winner": "Roman Kopylov",
+    "method": "KO/TKO (Punches)",
+    "round": 1,
+    "time": "3:12",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401907088: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punches, period 1, displayClock 3:12. Winner is the data.json name."
+  },
+  {
+    "fight": 11,
+    "winner": "Roberto Soldic",
+    "method": "UD (29-28, 29-27, 29-27)",
+    "round": 3,
+    "time": "5:00",
+    "source": "Hub confirmed method UD (29-28, 29-27, 29-27). Round 3 time 5:00 matches ESPN status competition 401917345 displayClock 5:00 and live_state.json results.soldic. Winner spelling is data.json."
+  },
+  {
+    "fight": 12,
+    "winner": "Esteban Ribovics",
+    "method": "KO/TKO (Punch)",
+    "round": 1,
+    "time": "4:08",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401917347: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punch, period 1, displayClock 4:08. UFC.com results: TKO (strikes) at 4:08 of Round 1."
+  },
+  {
+    "fight": 13,
+    "winner": "Payton Talbott",
+    "method": "KO/TKO (Punches)",
+    "round": 1,
+    "time": "2:09",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401907087: STATUS_FINAL, result.displayName KO/TKO, result.displayDescription Punches, period 1, displayClock 2:09. UFC.com results: TKO (strikes) at 2:09 of Round 1."
+  },
+  {
+    "fight": 14,
+    "winner": "Natalia Silva",
+    "method": "UD (48-47, 48-47, 49-46)",
+    "round": 5,
+    "time": "5:00",
+    "source": "ESPN sports.core.api status, event 600061182 competition 401912278: STATUS_FINAL, result.displayName Decision - Unanimous, period 5, displayClock 5:00. No judge scores on that status object. UFC.com results: unanimous decision (48-47, 48-47, 49-46)."
+  }
+]

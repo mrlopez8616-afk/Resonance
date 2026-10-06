@@ -110,6 +110,18 @@
     "oddsPct": 65
   },
   {
+    "id": "ufc-332-green",
+    "fight": 12,
+    "pick": "Yes King Green",
+    "stake": "21.31",
+    "payout": "0.00",
+    "oddsPct": 36,
+    "status": "lost",
+    "hubLean": "Esteban Ribovics",
+    "agreesWithLean": false,
+    "orderId": null
+  },
+  {
     "id": "ufc-332-talbott",
     "fight": 13,
     "pick": "Payton Talbott",

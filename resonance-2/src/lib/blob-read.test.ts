@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { BLOB_TAGS, resetBlobReadCacheForTests, setBlobSdkForTests } from "./blob-read";
 import { asBetWriteError, loadBetsStore, loadBetsStoreFresh, settleStoredBets } from "./bets-store";
+import { asFightResultWriteError, loadFightResultsStore } from "./fight-results-store";
 import { loadFillsStore } from "./fills-store";
 import { loadCalendarStore } from "./calendar-store";
 import { loadOperatorFills } from "./sleeve-prints";
-import { loadBetsForPage, loadCalendarForPage } from "./store-page";
+import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "./store-page";
 import {
   STORAGE_UNAVAILABLE_BANNER,
   isStorageUnavailable,
@@ -108,6 +109,29 @@ describe("blob reads", () => {
     assert.deepEqual(useCacheFlags, [false, false]);
   });
 
+  it("does not seed fight results when the blob SDK throws 403", async () => {
+    mode = "403";
+    await assert.rejects(loadFightResultsStore(), isStorageUnavailable);
+    assert.equal(puts, 0);
+    assert.equal(gets, 1);
+
+    const page = await loadFightResultsForPage();
+    assert.equal(page.status, "unavailable");
+    assert.equal("results" in page, false);
+    assert.equal(gets, 1);
+
+    const mapped = asFightResultWriteError(
+      await loadFightResultsStore().then(
+        () => null,
+        (error: unknown) => error,
+      ),
+    );
+    assert.equal(mapped.status, 503);
+    assert.equal(mapped.message, STORAGE_UNAVAILABLE_BANNER);
+    assert.match(mapped.reason ?? "", /403/);
+    assert.equal(puts, 0);
+  });
+
   it("seeds a missing blob, then serves the cached book without another get", async () => {
     const first = await loadBetsStore();
     assert.equal(first.configured, true);
@@ -197,5 +221,6 @@ describe("blob reads", () => {
     assert.equal(BLOB_TAGS.bets, "resonance-blob-bets");
     assert.equal(BLOB_TAGS.fills, "resonance-blob-fills");
     assert.equal(BLOB_TAGS.calendar, "resonance-blob-calendar");
+    assert.equal(BLOB_TAGS.fightResults, "resonance-blob-fight-results");
   });
 });

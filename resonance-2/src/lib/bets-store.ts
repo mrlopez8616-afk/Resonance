@@ -61,6 +61,7 @@ function filePath(env: Record<string, string | undefined> = process.env): string
 /**
  * Seed missing ids, backfill leans, then apply versioned corrections.
  * Corrections run before the dirty flag so a one-shot patch is persisted once.
+ * Rows that are not in the seed or the correction list are left as stored.
  */
 function finalizeBets(raw: BetsStoreEnvelope | null): {
   envelope: BetsStoreEnvelope;
@@ -194,11 +195,11 @@ async function loadBetsStoreInner(fresh: boolean): Promise<{
   throwIfStorageForced("bets");
   const backend = detectBetsBackend();
   if (backend === "none") {
-    const seeded = ensureSeededBetsEnvelope(null);
+    const finalized = finalizeBets(null);
     return {
       configured: false,
       backend,
-      envelope: backfillBetLeans(seeded.envelope).envelope,
+      envelope: finalized.envelope,
       seeded: true,
     };
   }

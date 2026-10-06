@@ -53,7 +53,9 @@ npm start
 
 `POST /api/bets` uses the same Bearer as `POST /api/bets/settle` and `POST /api/calendar`: `Authorization: Bearer $RESONANCE_SYNC_SECRET`. The secret stays server-side. Send one bet, `{ "bets": [ ... ] }`, or a bare array.
 
-`orderId` is the idempotency key. Re-posting the same orderId is a **no-op**: the stored row is returned and is not rewritten, so a later settlement stays put. It is not a field upsert. `status` defaults to `open`. `won`, `lost`, and `void` are accepted on the way in, with P&L computed the same way settle does (won = payout − stake, lost = −stake, void = 0). `payout` is the ticket payout. `hubLean` and `agreesWithLean` are optional; omitted leans are filled from the fight catalog when the fight is known.
+`orderId` is the idempotency key. Re-posting the same orderId is a **no-op**: the stored row is returned and is not rewritten, so a later settlement stays put. It is not a field upsert. `status` defaults to `open`. `won`, `lost`, `void`, and `sold` are accepted on the way in. P&L is payout − stake for won and sold, −stake for lost, and 0 for void. Sold proceeds live in `payout`. `hubLean` and `agreesWithLean` are optional; omitted leans are filled from the fight catalog when the fight is known.
+
+`override: true` corrects an already-settled row. On a full ticket it updates that order's status, payout, and stake. A settle-shaped body (`id`, `status`, optional `payout` and `stake`, `override: true`) does the same correction on both `POST /api/bets` and `POST /api/bets/settle`. Without the flag, stake changes are rejected and a settled row is left as stored.
 
 The live blob (`resonance-2/bets.json`) inserts seed ids that are missing on the next read. A row already stored under that id or orderId is left alone, including a settled row. The second Coria ticket (`ufc-332-coria-2`, order `e4f0c363-fefd-4cb5-8e7c-bb695def7711`) rides that path.
 

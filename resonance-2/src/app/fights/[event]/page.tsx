@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
-import { FightEvent } from "@/components/fight-board";
+import { FightEvent, ListedFightEvent } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { isPublishedFightEvent } from "@/lib/fight-pages";
+import { eventBackHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { loadBetsForPage } from "@/lib/store-page";
-import { UFC_332_EVENT } from "@/lib/ufc332";
+import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -14,27 +13,74 @@ export async function generateMetadata({
   params: Promise<{ event: string }>;
 }) {
   const { event } = await params;
-  const title = isPublishedFightEvent(event) ? UFC_332_EVENT.name : "Fights";
+  const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
+  const bets = book.status === "unavailable" ? [] : book.bets;
+  const resolved = resolveFightEventPage(event, bets, calendar.events);
+  const title = resolved?.title ?? "Fights";
   return { title: `${title} · Resonance 2.0` };
+}
+
+function oneQuery(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  return value?.[0] ?? null;
 }
 
 export default async function FightEventPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ event: string }>;
+  searchParams: Promise<{ node?: string | string[] }>;
 }) {
   const { event } = await params;
-  if (!isPublishedFightEvent(event)) notFound();
-  const book = await loadBetsForPage();
+  const requestedNode = oneQuery((await searchParams).node);
+  const [book, card, calendar] = await Promise.all([
+    loadBetsForPage(),
+    loadFightResultsForPage(),
+    loadCalendarForPage(),
+  ]);
   const bets = book.status === "unavailable" ? [] : book.bets;
+  const results = card.status === "unavailable" ? [] : card.results;
+  const resolved = resolveFightEventPage(event, bets, calendar.events);
+  if (!resolved) notFound();
+  const back = eventBackHref(resolved.slug, requestedNode);
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
+  const resultsAvailability =
+    card.status === "unavailable" ? "unavailable" : card.status === "unconfigured" ? "seed-only" : "live";
+  const storageMessage =
+    book.status === "unavailable" || card.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
+  const storageDetail = [
+    book.status === "unavailable" ? "Bet book is unavailable." : null,
+    card.status === "unavailable" ? "Fight results are unavailable." : null,
+  ]
+    .filter((line): line is string => line !== null)
+    .join(" ");
+
   return (
-    <OperatorShell
-      storageMessage={book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
-      storageDetail={book.status === "unavailable" ? "Bet book is unavailable." : null}
-    >
-      <FightEvent bets={bets} availability={availability} />
+    <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail || null}>
+      {resolved.kind === "ufc-332" ? (
+        <FightEvent
+          bets={resolved.bets}
+          results={results}
+          backHref={back.href}
+          backLabel={back.label}
+          availability={availability}
+          resultsAvailability={resultsAvailability}
+        />
+      ) : (
+        <ListedFightEvent
+          title={resolved.title}
+          meta={resolved.meta}
+          fights={resolved.fights}
+          bets={resolved.bets}
+          results={results}
+          backHref={back.href}
+          backLabel={back.label}
+          availability={availability}
+          resultsAvailability={resultsAvailability}
+        />
+      )}
     </OperatorShell>
   );
 }

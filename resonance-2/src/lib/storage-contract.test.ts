@@ -14,6 +14,9 @@ import { writeStoredCalendarEvent } from "@/lib/calendar-store";
 import { detectCalendarBackend } from "@/lib/calendar-store-core";
 import { ingestStoredFill, loadFillsStoreFresh } from "@/lib/fills-store";
 import { detectFillsBackend } from "@/lib/fills-store-core";
+import { fightResultSeed } from "@/lib/fight-results";
+import { loadFightResultsStoreFresh } from "@/lib/fight-results-store";
+import { detectFightResultsBackend } from "@/lib/fight-results-store-core";
 import { setSqlClientForTests, sqlQuery, postgresFailureReason, type SqlClient } from "@/lib/pg/client";
 import { saveFightResults, loadFightResults } from "@/lib/pg/envelopes";
 import { importBlobDocuments, ImportError } from "@/lib/pg/import-blob";
@@ -103,6 +106,13 @@ describe("storage contract", { concurrency: false }, () => {
       );
       assert.equal(detectFillsBackend({ BLOB_READ_WRITE_TOKEN: "token" }), "blob");
       assert.equal(detectCalendarBackend({ VERCEL: "1" }), "none");
+      assert.equal(
+        detectFightResultsBackend({
+          DATABASE_URL: "postgres://local/db",
+          BLOB_READ_WRITE_TOKEN: "token",
+        }),
+        "postgres",
+      );
       assert.equal(storeLabel("live", "postgres"), "durable store");
       assert.equal(
         postgresFailureReason(new Error("connect failed postgres://user:secret@host/db")),
@@ -350,6 +360,23 @@ describe("storage contract", { concurrency: false }, () => {
       assert.equal(loaded.length, 1);
       assert.equal(loaded[0]?.time, "3:26");
       assert.equal(loaded[0]?.winner, "Eric Nolan");
+    });
+
+    it("seeds fight results on read and keeps the clock column", async () => {
+      const first = await loadFightResultsStoreFresh();
+      assert.equal(first.backend, "postgres");
+      assert.equal(first.seeded, true);
+      assert.equal(first.envelope.results.length, fightResultSeed().length);
+      const sample = fightResultSeed()[0];
+      assert.ok(sample);
+      const clock = await sqlQuery<{ clock: string }>(
+        `SELECT clock FROM fight_results WHERE fight_slug = $1`,
+        [sample.fightSlug],
+      );
+      assert.equal(clock[0]?.clock, sample.time);
+      const second = await loadFightResultsStoreFresh();
+      assert.equal(second.seeded, false);
+      assert.equal(second.envelope.results.length, first.envelope.results.length);
     });
 
     it("skips a migration that already ran and fails soft when postgres is down", async () => {

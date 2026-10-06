@@ -290,13 +290,14 @@ describe("calendar desk", () => {
     assert.equal(fightsOnly.length, 3);
     assert.equal(fightsOnly.every((item) => item.event.kind === "fight"), true);
     const chips = chipsOnDay(events, "2026-10-03");
-    assert.ok(chips.chips.some((chip) => chip.tone === "fight" && chip.href === "/fights/ufc-332"));
+    assert.ok(chips.chips.some((chip) => chip.tone === "fight" && chip.href === "/fights/ufc-332?node=prelims"));
+    assert.ok(chips.chips.some((chip) => chip.tone === "fight" && chip.href === "/fights/ufc-332?node=main-card"));
     assert.equal(laneCountsOnDay(events, "2026-10-03").fights, 3);
     const month = civilMonthGrid("2026-10-03");
     assert.equal(month.includes("2026-10-03"), true);
   });
 
-  it("shows a posted fights lane in day, week, and month, and skips a missing card", () => {
+  it("shows a posted fights lane in day, week, and month, and links a resolved event slug", () => {
     const published = parseCalendarEvent({
       id: "ufc-332-hub-main",
       lane: "fights",
@@ -317,10 +318,10 @@ describe("calendar desk", () => {
       href: "/fights/ufc-325",
     });
     const events = [published, missing];
-    assert.equal(fightPageHref(published), "/fights/ufc-332");
-    assert.equal(fightPageHref(missing), undefined);
-    assert.equal(calendarOpenHref(missing), undefined);
-    assert.equal(calendarOpenHref(published), "/fights/ufc-332");
+    assert.equal(fightPageHref(published), "/fights/ufc-332?node=main-card");
+    assert.equal(fightPageHref(missing), "/fights/ufc-325");
+    assert.equal(calendarOpenHref(missing), "/fights/ufc-325");
+    assert.equal(calendarOpenHref(published), "/fights/ufc-332?node=main-card");
 
     const day = occurrencesOnDay(events, "2026-10-03");
     assert.deepEqual(day.map((item) => item.event.id), ["ufc-332-hub-main"]);
@@ -332,10 +333,10 @@ describe("calendar desk", () => {
     const january = occurrencesOnDay(events, "2027-01-16", "fights");
     assert.deepEqual(january.map((item) => item.event.id), ["ufc-325-main-card"]);
     const octoberChips = chipsOnDay(events, "2026-10-03");
-    assert.equal(octoberChips.chips[0]?.href, "/fights/ufc-332");
+    assert.equal(octoberChips.chips[0]?.href, "/fights/ufc-332?node=main-card");
     const januaryChips = chipsOnDay(events, "2027-01-16");
     assert.equal(januaryChips.chips[0]?.label, "Fight");
-    assert.equal(januaryChips.chips[0]?.href, undefined);
+    assert.equal(januaryChips.chips[0]?.href, "/fights/ufc-325");
     assert.equal(laneCountsOnDay(events, "2027-01-16").fights, 1);
     assert.equal(parseCalendarDeskQuery({ lane: "fights" }, "2026-10-03").lane, "fights");
     assert.equal(parseCalendarDeskQuery({ lane: "ufc" }, "2026-10-03").lane, "");
