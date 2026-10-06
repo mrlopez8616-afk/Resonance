@@ -14,13 +14,14 @@ import {
   sanitizeSleevePrints,
   type SleevePrints,
 } from "@/lib/sleeve-apply";
+import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
 export const FILLS_STORE_VERSION = 1;
 export const FILLS_BLOB_PATH = "resonance-2/fills.json";
 export const DEFAULT_FILLS_FILE = ".data/fills.json";
 
-export type FillsStoreBackend = "blob" | "file" | "none";
-export type EnvLike = Record<string, string | undefined>;
+export type FillsStoreBackend = StoreBackendName;
+export type { EnvLike };
 
 export interface FillsStoreEnvelope {
   version: typeof FILLS_STORE_VERSION;
@@ -30,13 +31,8 @@ export interface FillsStoreEnvelope {
   sleevePrints: SleevePrints;
 }
 
-export function detectFillsBackend(
-  env: EnvLike = process.env,
-): FillsStoreBackend {
-  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
-  if (env.RESONANCE_FILLS_FILE?.trim()) return "file";
-  if (env.VERCEL) return "none";
-  return "file";
+export function detectFillsBackend(env: EnvLike = process.env): FillsStoreBackend {
+  return detectStoreBackend(env, "RESONANCE_FILLS_FILE");
 }
 
 export function isFillsStoreConfigured(

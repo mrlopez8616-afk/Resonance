@@ -13,12 +13,16 @@
     "calendar:brief:backfill": "tsx scripts/post-daily-brief-backfill.ts",
     "fills:log": "tsx scripts/post-position-log-fills.ts",
     "bets:settle": "tsx scripts/settle-bet.ts",
-    "bets:post": "tsx scripts/post-bet.ts"
+    "bets:post": "tsx scripts/post-bet.ts",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "db:import-blob": "tsx scripts/db-import-blob.ts",
+    "db:replay": "tsx scripts/db-replay-outage.ts"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@vercel/blob": "^2.8.0",
     "next": "16.3.5",
     "react": "19.2.8",
@@ -32,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "pg-mem": "^3.0.14",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

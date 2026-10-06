@@ -27,6 +27,7 @@ import {
   BETS_BLOB_PATH,
   createEmptyBetsEnvelope,
   DEFAULT_BETS_FILE,
+  applyStoredBetCorrections,
   backfillBetLeans,
   detectBetsBackend,
   ensureSeededBetsEnvelope,
@@ -36,6 +37,7 @@ import {
   type BetsStoreBackend,
   type BetsStoreEnvelope,
 } from "@/lib/bets-store-core";
+import { loadBetsEnvelope, saveBetsEnvelope } from "@/lib/pg/envelopes";
 
 export {
   detectBetsBackend,
@@ -57,9 +59,8 @@ function filePath(env: Record<string, string | undefined> = process.env): string
 }
 
 /**
- * Seed missing ids, then backfill leans.
- * Versioned bet corrections belong in this function, next to backfillBetLeans,
- * before the dirty flag is computed.
+ * Seed missing ids, backfill leans, then apply versioned corrections.
+ * Corrections run before the dirty flag so a one-shot patch is persisted once.
  */
 function finalizeBets(raw: BetsStoreEnvelope | null): {
   envelope: BetsStoreEnvelope;
@@ -68,10 +69,11 @@ function finalizeBets(raw: BetsStoreEnvelope | null): {
 } {
   const seeded = ensureSeededBetsEnvelope(raw);
   const leaned = backfillBetLeans(seeded.envelope);
+  const corrected = applyStoredBetCorrections(leaned.envelope);
   return {
-    envelope: leaned.envelope,
+    envelope: corrected.envelope,
     seeded: seeded.seeded,
-    dirty: seeded.seeded || leaned.changed,
+    dirty: seeded.seeded || leaned.changed || corrected.changed,
   };
 }
 
@@ -85,6 +87,11 @@ function parseBlobText(text: string): BetsStoreEnvelope | null {
 
 async function persistEnvelope(envelope: BetsStoreEnvelope, revalidate: boolean): Promise<void> {
   const backend = detectBetsBackend();
+  if (backend === "postgres") {
+    await saveBetsEnvelope(envelope, { settlementSource: "store" });
+    if (revalidate) revalidateBlobTag(BLOB_TAGS.bets);
+    return;
+  }
   if (backend === "blob") {
     await putPrivateBlob(BETS_BLOB_PATH, JSON.stringify(envelope, null, 2));
     if (revalidate) revalidateBlobTag(BLOB_TAGS.bets);
@@ -127,6 +134,23 @@ async function materializeBlobText(text: string | null, revalidate: boolean): Pr
 type CachedBets =
   | { status: "ok"; envelope: BetsStoreEnvelope; seeded: boolean }
   | { status: "unavailable"; reason: string };
+
+async function readBetsPostgres(revalidateWrites: boolean): Promise<CachedBets> {
+  try {
+    const raw = await loadBetsEnvelope();
+    const finalized = finalizeBets(raw);
+    if (finalized.dirty) await persistEnvelope(finalized.envelope, revalidateWrites);
+    return { status: "ok", envelope: finalized.envelope, seeded: finalized.seeded };
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) {
+      return { status: "unavailable", reason: error.reason };
+    }
+    return {
+      status: "unavailable",
+      reason: error instanceof Error ? error.message : "Bet database could not be read.",
+    };
+  }
+}
 
 async function readBetsBlob(revalidateWrites: boolean): Promise<CachedBets> {
   const body = await readPrivateBlob(BETS_BLOB_PATH);
@@ -177,6 +201,12 @@ async function loadBetsStoreInner(fresh: boolean): Promise<{
       envelope: backfillBetLeans(seeded.envelope).envelope,
       seeded: true,
     };
+  }
+  if (backend === "postgres") {
+    const loaded = fresh
+      ? unwrapBets(await readBetsPostgres(true))
+      : unwrapBets(await cachedBlobRead(BLOB_TAGS.bets, () => readBetsPostgres(false)));
+    return { configured: true, backend, ...loaded };
   }
   if (backend === "file") {
     const loaded = await loadBetsFromFile();
