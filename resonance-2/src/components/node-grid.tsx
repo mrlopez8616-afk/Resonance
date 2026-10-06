@@ -25,11 +25,11 @@ import {
   hiddenIdsServerSnapshot,
   hiddenIdsSnapshot,
   parseHiddenIds,
-  removedNodes,
   subscribeHiddenIds,
-  visibleNodes,
   writeHiddenIds,
 } from "@/lib/floor-registry";
+import { nodesOnParent, parentShowsFightDesk, removedOnParent } from "@/lib/node-parents";
+import type { ParentId } from "@/data/node-parents";
 
 const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
   XRP: XRP_SLEEVES,
@@ -44,11 +44,15 @@ const SEED_SLEEVES: Record<string, readonly NodeSleeve[]> = {
 };
 
 export function NodeGrid({
+  parentId,
+  parentLabel,
   faces,
   sleeves: sleeveBooks = SEED_SLEEVES,
   fightDesk,
   fightDeskAvailability = "live",
 }: {
+  parentId: ParentId;
+  parentLabel: string;
   faces: Record<string, LiveFaceData>;
   sleeves?: Record<string, readonly NodeSleeve[]>;
   fightDesk: FightDeskSummary | null;
@@ -73,17 +77,28 @@ export function NodeGrid({
     setAdding(false);
   }
 
-  const nodes = visibleNodes(hiddenIds);
-  const removed = removedNodes(hiddenIds);
+  const nodes = nodesOnParent(hiddenIds, parentId);
+  const removed = removedOnParent(hiddenIds, parentId);
+  const showFightDesk = parentShowsFightDesk(parentId);
+
+  if (!showFightDesk && nodes.length === 0) {
+    return (
+      <p className="parent-empty" role="status">
+        not connected yet
+      </p>
+    );
+  }
 
   return (
     <>
-      <section className="node-grid" aria-label="Node floor">
-        <NodeSquare live label="Fight Desk">
-          <Link href="/fights" className="node-log-link" title="Open Fight Desk">
-            <FightDeskFace summary={fightDesk} availability={fightDeskAvailability} />
-          </Link>
-        </NodeSquare>
+      <section className="node-grid" aria-label={`${parentLabel} nodes`}>
+        {showFightDesk ? (
+          <NodeSquare live label="Fight Desk">
+            <Link href="/fights" className="node-log-link" title="Open Fight Desk">
+              <FightDeskFace summary={fightDesk} availability={fightDeskAvailability} />
+            </Link>
+          </NodeSquare>
+        ) : null}
         {nodes.map((node) => {
           if (node.status === "live") {
             const face = faces[node.ticker];
