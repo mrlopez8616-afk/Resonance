@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { loadOperatorFloor } from "@/lib/operator-floor";
-import { parentById } from "@/lib/node-parents";
+import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { valueCardFromFace } from "@/lib/value-card";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +26,8 @@ export default async function ParentNodePage({
   params: Promise<{ parent: string }>;
 }) {
   const { parent: id } = await params;
+  const legacy = legacyParentHref(id);
+  if (legacy) redirect(legacy);
   const parent = parentById(id);
   if (!parent) notFound();
   if (parent.id === "fights") redirect("/fights");

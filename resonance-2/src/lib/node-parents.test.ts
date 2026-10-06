@@ -4,6 +4,7 @@ import { FLOOR_NODES } from "@/data/floor-nodes";
 import { FIGHT_DESK_ID, NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { formatCompactUsd } from "@/lib/live-face";
 import {
+  legacyParentHref,
   nodePageHref,
   nodesOnParent,
   parentAggregate,
@@ -22,12 +23,12 @@ const PROPOSED = {
   eth: "crypto",
   sol: "crypto",
   flr: "crypto",
-  pwr: "ai",
-  etn: "ai",
-  vrt: "ai",
-  gev: "ai",
-  ceg: "ai",
-  hubb: "ai",
+  pwr: "ai-stocks",
+  etn: "ai-stocks",
+  vrt: "ai-stocks",
+  gev: "ai-stocks",
+  ceg: "ai-stocks",
+  hubb: "ai-stocks",
   [FIGHT_DESK_ID]: "fights",
 } as const;
 
@@ -49,12 +50,22 @@ describe("node parent map", () => {
     }
   });
 
-  it("leaves stocks, fitness, and money with no home nodes", () => {
-    assert.deepEqual(parentById("stocks"), { id: "stocks", label: "Stocks" });
-    assert.deepEqual(parentById("fitness"), { id: "fitness", label: "Fitness" });
-    assert.deepEqual(parentById("money"), { id: "money", label: "Money" });
+  it("shows the five confirmed parents and leaves fitness and finance empty", () => {
+    assert.deepEqual(
+      PARENTS.map((parent) => ({ id: parent.id, label: parent.label })),
+      [
+        { id: "crypto", label: "Crypto" },
+        { id: "ai-stocks", label: "AI Stocks" },
+        { id: "fitness", label: "Fitness" },
+        { id: "finance", label: "Finance" },
+        { id: "fights", label: "Fight Desk" },
+      ],
+    );
+    assert.equal(parentById("ai"), null);
+    assert.equal(parentById("stocks"), null);
+    assert.equal(parentById("money"), null);
     const assigned = new Set<string>(Object.values(NODE_PARENT));
-    for (const id of ["stocks", "fitness", "money"] as const) {
+    for (const id of ["fitness", "finance"] as const) {
       assert.equal(assigned.has(id), false);
       assert.deepEqual(nodesOnParent([], id).map((node) => node.ticker), []);
     }
@@ -67,7 +78,7 @@ describe("node parent map", () => {
       ["XRP", "SUI", "HBAR", "+"],
     );
     assert.deepEqual(
-      nodesOnParent([], "ai").map((node) => node.ticker),
+      nodesOnParent([], "ai-stocks").map((node) => node.ticker),
       ["PWR", "ETN", "VRT", "GEV", "CEG", "HUBB", "+"],
     );
     assert.deepEqual(nodesOnParent([], "fights").map((node) => node.ticker), []);
@@ -142,7 +153,7 @@ describe("node parent map", () => {
     assert.equal(none.valuedCount, 0);
     assert.equal(none.paintedCount, 3);
 
-    const hidden = parentAggregate("ai", ["pwr"], { ETN: 1, VRT: 1, GEV: 1, CEG: 1, HUBB: 1 }, null, "live");
+    const hidden = parentAggregate("ai-stocks", ["pwr"], { ETN: 1, VRT: 1, GEV: 1, CEG: 1, HUBB: 1 }, null, "live");
     assert.equal(hidden.childCount, 5);
     assert.equal(hidden.paintedCount, 5);
     assert.equal(hidden.liveUsd, 5);
@@ -197,7 +208,7 @@ describe("node parent map", () => {
     });
 
     const partial = parentAggregate(
-      "ai",
+      "ai-stocks",
       [],
       { PWR: 4, ETN: 1, VRT: null, GEV: 2, CEG: 1, HUBB: null },
       null,
@@ -237,12 +248,20 @@ describe("node parent map", () => {
       unit: "open",
       coverage: false,
     });
-    assert.equal(parentSummaryLine(parentAggregate("stocks", [], {}, null, "live")), null);
+    assert.equal(parentSummaryLine(parentAggregate("finance", [], {}, null, "live")), null);
+    assert.equal(parentSummaryLine(parentAggregate("fitness", [], {}, null, "live")), null);
 
     assert.equal(parentCardHref("fights"), "/fights");
     assert.equal(parentCardHref("crypto"), "/n/crypto");
+    assert.equal(parentCardHref("ai-stocks"), "/n/ai-stocks");
     assert.equal(nodePageHref("XRP"), "/n/crypto/xrp");
-    assert.equal(nodePageHref("PWR"), "/n/ai/pwr");
+    assert.equal(nodePageHref("PWR"), "/n/ai-stocks/pwr");
+    assert.equal(legacyParentHref("ai"), "/n/ai-stocks");
+    assert.equal(legacyParentHref("stocks"), "/n/ai-stocks");
+    assert.equal(legacyParentHref("ai", "pwr"), "/n/ai-stocks/pwr");
+    assert.equal(legacyParentHref("stocks", "xrp"), "/n/ai-stocks");
+    assert.equal(legacyParentHref("money"), "/n/finance");
+    assert.equal(legacyParentHref("crypto"), null);
     assert.equal(nodePageHref("FLR"), null);
     assert.equal(nodePageHref("UFC"), null);
   });

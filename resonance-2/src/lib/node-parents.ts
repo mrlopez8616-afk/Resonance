@@ -1,6 +1,7 @@
 import { FLOOR_NODES, type FloorNode } from "@/data/floor-nodes";
 import {
   FIGHT_DESK_ID,
+  LEGACY_PARENT_SLUGS,
   NODE_PARENT,
   PARENTS,
   type ParentId,
@@ -38,6 +39,17 @@ const PARENT_BY_NODE: Readonly<Record<string, ParentId>> = NODE_PARENT;
 
 export function parentById(id: string): (typeof PARENTS)[number] | null {
   return PARENTS.find((parent) => parent.id === id) ?? null;
+}
+
+/**
+ * Old `/n/ai`, `/n/stocks`, and `/n/money` routes.
+ * A child that still belongs to the replacement parent keeps its node path.
+ */
+export function legacyParentHref(slug: string, nodeId?: string): string | null {
+  const next = LEGACY_PARENT_SLUGS[slug as keyof typeof LEGACY_PARENT_SLUGS];
+  if (!next) return null;
+  if (nodeId && nodeParent(nodeId) === next) return `/n/${next}/${nodeId}`;
+  return `/n/${next}`;
 }
 
 export function nodeParent(nodeId: string): ParentId | null {

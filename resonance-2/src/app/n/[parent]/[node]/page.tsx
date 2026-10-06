@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
 import { ValueCard } from "@/components/value-card";
@@ -7,7 +7,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
-import { nodeParent, parentById } from "@/lib/node-parents";
+import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +35,8 @@ export default async function NodeDetailPage({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
+  const legacy = legacyParentHref(parentId, nodeId);
+  if (legacy) redirect(legacy);
   const parent = parentById(parentId);
   const node = FLOOR_NODES.find((item) => item.id === nodeId && item.status !== "empty");
   if (!parent || !node || nodeParent(node.id) !== parent.id) notFound();
