@@ -143,7 +143,10 @@ export function assembleLiveFace(
   sleeves: readonly NodeSleeve[],
   quote: SpotQuote | null = null,
 ): LiveFaceData {
-  const qtyKnown = sleeves.every((sleeve) => isDecimalString(sleeve.quantity));
+  // An empty book is not a position. `every` on [] would otherwise print $0.
+  const qtyKnown =
+    sleeves.length > 0 &&
+    sleeves.every((sleeve) => isDecimalString(sleeve.quantity));
   const totalUnits = qtyKnown ? totalSleeveQuantity(sleeves) : Number.NaN;
   const priceUsd =
     quote && Number.isFinite(quote.usd) && quote.usd > 0 ? quote.usd : null;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { FloorDialog } from "@/components/floor-dialog";
 import { NodeSquare } from "@/components/node-square";
+import { ValueCard } from "@/components/value-card";
 import type { FloorNode } from "@/data/floor-nodes";
 import {
   hiddenIdsServerSnapshot,
@@ -13,17 +14,24 @@ import {
   writeHiddenIds,
 } from "@/lib/floor-registry";
 import { nodesOnParent, removedOnParent } from "@/lib/node-parents";
+import type { ValueCardModel } from "@/lib/value-card";
 import type { ParentId } from "@/data/node-parents";
+
+const NOT_CONNECTED: ValueCardModel = {
+  headline: null,
+  priceLine: null,
+  label: "not connected",
+};
 
 export function NodeGrid({
   parentId,
   parentLabel,
-  faceLines,
+  cards,
 }: {
   parentId: ParentId;
   parentLabel: string;
-  /** One real live-USD line per ticker. Null when that face has no total. */
-  faceLines: Readonly<Record<string, string | null>>;
+  /** One shared value-card model per ticker. Missing tickers are not connected. */
+  cards: Readonly<Record<string, ValueCardModel>>;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -60,13 +68,14 @@ export function NodeGrid({
       <section className="node-grid" aria-label={`${parentLabel} nodes`}>
         {nodes.map((node) => {
           if (node.status === "live") {
-            const liveUsd = faceLines[node.ticker] ?? null;
+            const card = cards[node.ticker] ?? NOT_CONNECTED;
+            const shown = card.headline !== null || card.priceLine !== null;
             return (
               <NodeSquare
                 key={node.id}
                 parent
-                live={liveUsd !== null}
-                dashed={liveUsd === null}
+                live={shown}
+                dashed={!shown}
                 label={`${node.ticker} node`}
                 onDelete={() => setPending(node)}
               >
@@ -75,17 +84,7 @@ export function NodeGrid({
                   className="node-log-link"
                   title={`Open ${node.ticker}`}
                 >
-                  <div className="live-face parent-face">
-                    <h2 className="node-ticker">{node.ticker}</h2>
-                    {liveUsd !== null ? (
-                      <p className="live-value">
-                        {liveUsd}
-                        <span> live</span>
-                      </p>
-                    ) : (
-                      <p className="node-note">offline</p>
-                    )}
-                  </div>
+                  <ValueCard ticker={node.ticker} model={card} compact />
                 </Link>
               </NodeSquare>
             );

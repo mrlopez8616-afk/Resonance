@@ -14,11 +14,24 @@ export type FaceTotals = Readonly<Record<string, number | null | undefined>>;
 export type ParentAggregate = {
   connected: boolean;
   childCount: number;
-  /** Sum of painted child `totalUsd` values. Null when any painted child has no live USD. */
+  /**
+   * Sum of painted children that already have a real `totalUsd`.
+   * Null when none of them do. A partial sum is not a complete sum.
+   */
   liveUsd: number | null;
   liveUsdLabel: string | null;
+  /** Painted children whose `totalUsd` is a finite number, including a real zero. */
+  valuedCount: number;
+  /** Painted live children. Hidden and offline rows are not in this count. */
+  paintedCount: number;
   /** Fight Desk open count. Null when that summary is missing. */
   openBets: number | null;
+};
+
+export type LiveUsdCoverage = {
+  usd: number | null;
+  valued: number;
+  painted: number;
 };
 
 const PARENT_BY_NODE: Readonly<Record<string, ParentId>> = NODE_PARENT;
@@ -84,18 +97,26 @@ export function paintedTickers(
 }
 
 /**
- * Sum existing live-face USD totals.
- * Returns null when there is nothing painted or any painted total is missing.
+ * Sum the painted children that already have a real live-face USD total.
+ * Children with no total stay out of the sum and out of `valued`.
  */
-export function sumLiveUsd(totals: FaceTotals, tickers: readonly string[]): number | null {
-  if (tickers.length === 0) return null;
-  let sum = 0;
+export function sumLiveUsd(
+  totals: FaceTotals,
+  tickers: readonly string[],
+): LiveUsdCoverage {
+  let usd = 0;
+  let valued = 0;
   for (const ticker of tickers) {
-    const usd = totals[ticker];
-    if (typeof usd !== "number" || !Number.isFinite(usd)) return null;
-    sum += usd;
+    const value = totals[ticker];
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    usd += value;
+    valued += 1;
   }
-  return sum;
+  return {
+    usd: valued === 0 ? null : usd,
+    valued,
+    painted: tickers.length,
+  };
 }
 
 /** Home cards link straight to /fights. Other parents open their child-card page. */
@@ -114,24 +135,54 @@ export function nodePageHref(ticker: string): string | null {
   return `/n/${parentId}/${node.id}`;
 }
 
+export type ParentSummaryLine = {
+  value: string;
+  unit: string;
+  /** True when the line names how many children actually have a value. */
+  coverage: boolean;
+};
+
 /**
  * One real line for a parent card.
- * A complete live sum wins. Otherwise the fight desk's open count.
- * Otherwise the painted child count. Never more than one of these.
+ * A complete live sum says "sum". A partial sum names the coverage
+ * ("value of 4 of 6") and is never presented as the whole book.
+ * Otherwise the fight desk's open count, then the painted child count.
  */
-export function parentSummaryLine(
-  aggregate: ParentAggregate,
-): { value: string; unit: string } | null {
+export function parentSummaryLine(aggregate: ParentAggregate): ParentSummaryLine | null {
   if (!aggregate.connected) return null;
-  if (aggregate.liveUsdLabel !== null) {
-    return { value: aggregate.liveUsdLabel, unit: "sum" };
+  if (aggregate.paintedCount > 0) {
+    if (
+      aggregate.liveUsdLabel !== null &&
+      aggregate.valuedCount === aggregate.paintedCount
+    ) {
+      return { value: aggregate.liveUsdLabel, unit: "sum", coverage: false };
+    }
+    if (
+      aggregate.liveUsdLabel !== null &&
+      aggregate.valuedCount > 0 &&
+      aggregate.valuedCount < aggregate.paintedCount
+    ) {
+      return {
+        value: aggregate.liveUsdLabel,
+        unit: `value of ${aggregate.valuedCount} of ${aggregate.paintedCount}`,
+        coverage: true,
+      };
+    }
+    if (aggregate.valuedCount === 0) {
+      return {
+        value: `value of 0 of ${aggregate.paintedCount}`,
+        unit: "",
+        coverage: true,
+      };
+    }
   }
   if (aggregate.openBets !== null) {
-    return { value: String(aggregate.openBets), unit: "open" };
+    return { value: String(aggregate.openBets), unit: "open", coverage: false };
   }
   return {
     value: String(aggregate.childCount),
     unit: aggregate.childCount === 1 ? "node" : "nodes",
+    coverage: false,
   };
 }
 
@@ -144,7 +195,7 @@ export function parentAggregate(
 ): ParentAggregate {
   const painted = paintedTickers(hiddenIds, parentId);
   const showsFightDesk = parentShowsFightDesk(parentId);
-  const liveUsd = sumLiveUsd(faceTotals, painted);
+  const coverage = sumLiveUsd(faceTotals, painted);
   const openBets =
     showsFightDesk && fightDesk && fightDeskAvailability !== "unavailable"
       ? fightDesk.open
@@ -152,8 +203,10 @@ export function parentAggregate(
   return {
     connected: parentIsConnected(parentId),
     childCount: painted.length + (showsFightDesk ? 1 : 0),
-    liveUsd,
-    liveUsdLabel: liveUsd === null ? null : formatCompactUsd(liveUsd),
+    liveUsd: coverage.usd,
+    liveUsdLabel: coverage.usd === null ? null : formatCompactUsd(coverage.usd),
+    valuedCount: coverage.valued,
+    paintedCount: coverage.painted,
     openBets,
   };
 }

@@ -85,11 +85,23 @@ describe("node parent map", () => {
     );
   });
 
-  it("sums live USD only when every painted child already has one", () => {
-    assert.equal(sumLiveUsd({ XRP: 10, SUI: 5 }, ["XRP", "SUI"]), 15);
-    assert.equal(sumLiveUsd({ XRP: 10, SUI: null }, ["XRP", "SUI"]), null);
-    assert.equal(sumLiveUsd({ XRP: 10 }, ["XRP", "BTC"]), null);
-    assert.equal(sumLiveUsd({}, []), null);
+  it("sums the children that have a real value and counts the rest as missing", () => {
+    assert.deepEqual(sumLiveUsd({ XRP: 10, SUI: 5 }, ["XRP", "SUI"]), {
+      usd: 15,
+      valued: 2,
+      painted: 2,
+    });
+    assert.deepEqual(sumLiveUsd({ XRP: 10, SUI: null }, ["XRP", "SUI"]), {
+      usd: 10,
+      valued: 1,
+      painted: 2,
+    });
+    assert.deepEqual(sumLiveUsd({ XRP: 10 }, ["XRP", "BTC"]), {
+      usd: 10,
+      valued: 1,
+      painted: 2,
+    });
+    assert.deepEqual(sumLiveUsd({}, []), { usd: null, valued: 0, painted: 0 });
 
     const complete = parentAggregate(
       "crypto",
@@ -102,6 +114,8 @@ describe("node parent map", () => {
     assert.equal(complete.childCount, 3);
     assert.equal(complete.liveUsd, 12.5);
     assert.equal(complete.liveUsdLabel, formatCompactUsd(12.5));
+    assert.equal(complete.valuedCount, 3);
+    assert.equal(complete.paintedCount, 3);
     assert.equal(complete.openBets, null);
 
     const missing = parentAggregate(
@@ -111,12 +125,26 @@ describe("node parent map", () => {
       null,
       "live",
     );
-    assert.equal(missing.liveUsd, null);
-    assert.equal(missing.liveUsdLabel, null);
+    assert.equal(missing.liveUsd, 11);
+    assert.equal(missing.liveUsdLabel, formatCompactUsd(11));
+    assert.equal(missing.valuedCount, 2);
+    assert.equal(missing.paintedCount, 3);
     assert.equal(missing.childCount, 3);
+
+    const none = parentAggregate(
+      "crypto",
+      [],
+      { XRP: null, SUI: null, HBAR: null },
+      null,
+      "live",
+    );
+    assert.equal(none.liveUsd, null);
+    assert.equal(none.valuedCount, 0);
+    assert.equal(none.paintedCount, 3);
 
     const hidden = parentAggregate("ai", ["pwr"], { ETN: 1, VRT: 1, GEV: 1, CEG: 1, HUBB: 1 }, null, "live");
     assert.equal(hidden.childCount, 5);
+    assert.equal(hidden.paintedCount, 5);
     assert.equal(hidden.liveUsd, 5);
   });
 
@@ -165,7 +193,27 @@ describe("node parent map", () => {
     assert.deepEqual(parentSummaryLine(summed), {
       value: formatCompactUsd(12.5),
       unit: "sum",
+      coverage: false,
     });
+
+    const partial = parentAggregate(
+      "ai",
+      [],
+      { PWR: 4, ETN: 1, VRT: null, GEV: 2, CEG: 1, HUBB: null },
+      null,
+      "live",
+    );
+    assert.deepEqual(parentSummaryLine(partial), {
+      value: formatCompactUsd(8),
+      unit: "value of 4 of 6",
+      coverage: true,
+    });
+    assert.deepEqual(
+      parentSummaryLine(
+        parentAggregate("crypto", [], { XRP: null, SUI: null, HBAR: null }, null, "live"),
+      ),
+      { value: "value of 0 of 3", unit: "", coverage: true },
+    );
 
     const fights = parentAggregate(
       "fights",
@@ -184,7 +232,11 @@ describe("node parent map", () => {
       },
       "live",
     );
-    assert.deepEqual(parentSummaryLine(fights), { value: "15", unit: "open" });
+    assert.deepEqual(parentSummaryLine(fights), {
+      value: "15",
+      unit: "open",
+      coverage: false,
+    });
     assert.equal(parentSummaryLine(parentAggregate("stocks", [], {}, null, "live")), null);
 
     assert.equal(parentCardHref("fights"), "/fights");

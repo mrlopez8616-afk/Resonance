@@ -56,9 +56,9 @@ export function ParentGrid({
               <div className="live-face parent-face">
                 <h2 className="node-ticker">{parent.label}</h2>
                 {summary ? (
-                  <p className="live-units">
+                  <p className={`live-units${summary.coverage ? " is-coverage" : ""}`}>
                     {summary.value}
-                    <span> {summary.unit}</span>
+                    {summary.unit ? <span> {summary.unit}</span> : null}
                   </p>
                 ) : (
                   <p className="node-note">not connected yet</p>

@@ -4,6 +4,7 @@ import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { parentById } from "@/lib/node-parents";
+import { valueCardFromFace } from "@/lib/value-card";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +31,8 @@ export default async function ParentNodePage({
   if (parent.id === "fights") redirect("/fights");
 
   const floor = await loadOperatorFloor();
-  const faceLines = Object.fromEntries(
-    Object.entries(floor.faces).map(([ticker, face]) => [
-      ticker,
-      typeof face.totalUsd === "number" && Number.isFinite(face.totalUsd)
-        ? face.totalUsdLabel
-        : null,
-    ]),
+  const cards = Object.fromEntries(
+    Object.entries(floor.faces).map(([ticker, face]) => [ticker, valueCardFromFace(face)]),
   );
   return (
     <OperatorShell
@@ -49,7 +45,7 @@ export default async function ParentNodePage({
       <NodeGrid
         parentId={parent.id}
         parentLabel={parent.label}
-        faceLines={faceLines}
+        cards={cards}
       />
     </OperatorShell>
   );

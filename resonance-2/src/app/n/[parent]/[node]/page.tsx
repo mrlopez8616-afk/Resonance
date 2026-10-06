@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
+import { ValueCard } from "@/components/value-card";
 import { OperatorShell } from "@/components/operator-shell";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
@@ -55,7 +56,7 @@ export default async function NodeDetailPage({
         <NodeSquare
           live={ready}
           dashed={!ready}
-          label={ready ? `${node.ticker} live node` : `${node.ticker} offline`}
+          label={ready ? `${node.ticker} live node` : `${node.ticker} not connected`}
         >
           {ready && face && sleeves ? (
             <Link
@@ -67,10 +68,10 @@ export default async function NodeDetailPage({
               <LiveNodeFace ticker={node.ticker} sleeves={sleeves} initial={face} />
             </Link>
           ) : (
-            <>
-              <h2 className="node-ticker">{node.ticker}</h2>
-              <p className="node-note">offline</p>
-            </>
+            <ValueCard
+              ticker={node.ticker}
+              model={{ headline: null, priceLine: null, label: "not connected" }}
+            />
           )}
         </NodeSquare>
       </section>
