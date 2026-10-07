@@ -5,8 +5,10 @@ import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 export const BET_VENUE = "coinbase-predict" as const;
 export const BET_TICKER = "UFC" as const;
 export const BET_STATUSES = ["open", "won", "lost", "void", "sold"] as const;
+export const BET_TIERS = ["STRONG", "LEAN"] as const;
 
 export type BetStatus = (typeof BET_STATUSES)[number];
+export type BetTier = (typeof BET_TIERS)[number];
 export type SettleStatus = Exclude<BetStatus, "open">;
 
 export type Bet = {
@@ -39,6 +41,8 @@ export type Bet = {
   settledAt?: string;
   /** Highest seed-correction version already applied. A later edit is left alone. */
   correctionVersion?: number;
+  /** Desk conviction. Omitted on rows that were logged before the field existed. */
+  tier?: BetTier;
   venue: typeof BET_VENUE;
   ticker: typeof BET_TICKER;
   time: string;
@@ -128,6 +132,61 @@ export function summarizeBets(bets: readonly Bet[]): FightDeskSummary {
     losses,
     record: `${wins}-${losses}`,
     estimated: open.some((bet) => bet.estimated),
+  };
+}
+
+export type CardMoney = {
+  /** Dollar headline, or "No bets" when the card has no tickets. */
+  headline: string;
+  /** Open count, settled record, or both. Empty when there are no tickets. */
+  detail: string;
+};
+
+function settledPnlOf(bet: Bet): string | null {
+  if (bet.status === "open") return null;
+  if (bet.realizedPnl && isDecimalString(bet.realizedPnl)) return money(bet.realizedPnl);
+  return realizedPnl(bet.stake, bet.status, bet.settledPayout ?? bet.payout);
+}
+
+function recordDetail(wins: number, losses: number, sold: number): string {
+  if (wins + losses === 0 && sold > 0) return `${sold} sold`;
+  const record = `${wins}-${losses}`;
+  return sold > 0 ? `${record} · ${sold} sold` : record;
+}
+
+/**
+ * Promotion and event card face.
+ * Open stake is the headline while any ticket is open.
+ * A fully settled card leads with realized P/L and a W-L record.
+ * Sold changes P/L and is counted on its own. It is not a win or a loss.
+ */
+export function cardMoney(bets: readonly Bet[]): CardMoney {
+  if (bets.length === 0) return { headline: "No bets", detail: "" };
+  const open = bets.filter((bet) => bet.status === "open");
+  const wins = bets.filter((bet) => bet.status === "won").length;
+  const losses = bets.filter((bet) => bet.status === "lost").length;
+  const sold = bets.filter((bet) => bet.status === "sold").length;
+  const record = recordDetail(wins, losses, sold);
+  if (open.length === 0) {
+    const pnl = sumMoney(
+      bets.flatMap((bet) => {
+        const amount = settledPnlOf(bet);
+        return amount ? [amount] : [];
+      }),
+    );
+    return { headline: formatSignedUsd(pnl), detail: record };
+  }
+  const staked = formatUsd(sumMoney(open.map((bet) => bet.stake)));
+  if (open.length === bets.length) return { headline: staked, detail: `${open.length} open` };
+  const pnl = sumMoney(
+    bets.flatMap((bet) => {
+      const amount = settledPnlOf(bet);
+      return amount ? [amount] : [];
+    }),
+  );
+  return {
+    headline: staked,
+    detail: `${open.length} open · ${formatSignedUsd(pnl)} · ${record}`,
   };
 }
 
@@ -470,6 +529,56 @@ export function settleBet(
   return { bet: next, deduped: false };
 }
 
+export type PublicBet = {
+  id: string;
+  event: string;
+  fight: string;
+  fightSlug: string;
+  pick: string;
+  stake: string;
+  oddsPct: number;
+  payout: string;
+  status: BetStatus;
+  venue: typeof BET_VENUE;
+  ticker: typeof BET_TICKER;
+  time: string;
+  tier?: BetTier;
+  hubLean?: string;
+  agreesWithLean?: boolean;
+  note?: string;
+  estimated?: boolean;
+  settledPayout?: string;
+  realizedPnl?: string;
+  settledAt?: string;
+};
+
+/** Fields the fight pages already render. Broker order ids stay off this view. */
+export function publicBet(bet: Bet): PublicBet {
+  const view: PublicBet = {
+    id: bet.id,
+    event: bet.event,
+    fight: bet.fight,
+    fightSlug: bet.fightSlug,
+    pick: bet.pick,
+    stake: bet.stake,
+    oddsPct: bet.oddsPct,
+    payout: bet.payout,
+    status: bet.status,
+    venue: bet.venue,
+    ticker: bet.ticker,
+    time: bet.time,
+  };
+  if (bet.tier) view.tier = bet.tier;
+  if (bet.hubLean) view.hubLean = bet.hubLean;
+  if (typeof bet.agreesWithLean === "boolean") view.agreesWithLean = bet.agreesWithLean;
+  if (bet.note) view.note = bet.note;
+  if (bet.estimated) view.estimated = true;
+  if (bet.settledPayout) view.settledPayout = bet.settledPayout;
+  if (bet.realizedPnl) view.realizedPnl = bet.realizedPnl;
+  if (bet.settledAt) view.settledAt = bet.settledAt;
+  return view;
+}
+
 export function betsOnFight(bets: readonly Bet[], fightSlug: string): Bet[] {
   return bets.filter((bet) => bet.fightSlug === fightSlug);
 }
@@ -586,6 +695,7 @@ export type BetPost = {
   estimated?: boolean;
   note?: string;
   settledAt?: string;
+  tier?: BetTier;
   /** When true, a matching stored row is corrected instead of returned unchanged. */
   override?: boolean;
 };
@@ -665,6 +775,7 @@ export function parseBetPost(raw: unknown): BetPost {
   if ("agreesWithLean" in raw && raw.agreesWithLean != null && typeof raw.agreesWithLean !== "boolean") {
     throw new BetWriteError("agreesWithLean must be a boolean.");
   }
+  const tier = readTier(raw.tier);
 
   const settledAt = asTrimmed(raw.settledAt);
   if (settledAt) {
@@ -698,8 +809,19 @@ export function parseBetPost(raw: unknown): BetPost {
   if (raw.estimated === true) post.estimated = true;
   if (note) post.note = note;
   if (settledAt) post.settledAt = settledAt;
+  if (tier) post.tier = tier;
   if (raw.override === true) post.override = true;
   return post;
+}
+
+function readTier(value: unknown): BetTier | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value !== "string") throw new BetWriteError("tier must be STRONG or LEAN.");
+  const tier = value.trim().toUpperCase();
+  if (tier !== "STRONG" && tier !== "LEAN") {
+    throw new BetWriteError("tier must be STRONG or LEAN.");
+  }
+  return tier;
 }
 
 /** One bet, `{ bets: [...] }`, or a bare array. */
@@ -734,6 +856,7 @@ function postedBet(post: BetPost, now: string): Bet {
   };
   if (post.estimated) bet.estimated = true;
   if (post.note) bet.note = post.note;
+  if (post.tier) bet.tier = post.tier;
   const leaned = applyOptionalLean(bet, {
     hubLean: post.hubLean,
     agreesWithLean: post.agreesWithLean,
@@ -762,8 +885,9 @@ function correctPlacedBet(
   if (status === "open") {
     throw new BetWriteError("override status must be won, lost, void, or sold.");
   }
+  const base = post.tier ? { ...existing, tier: post.tier } : existing;
   const written = settleBet(
-    existing,
+    base,
     {
       id: existing.id,
       status,
@@ -774,7 +898,16 @@ function correctPlacedBet(
     },
     now,
   );
-  if (written.deduped) return { bets: [...bets], bet: existing, deduped: true };
+  if (written.deduped) {
+    if (base.tier !== existing.tier) {
+      return {
+        bets: bets.map((bet) => (bet.id === existing.id ? base : bet)),
+        bet: base,
+        deduped: false,
+      };
+    }
+    return { bets: [...bets], bet: existing, deduped: true };
+  }
   return {
     bets: bets.map((bet) => (bet.id === existing.id ? written.bet : bet)),
     bet: written.bet,

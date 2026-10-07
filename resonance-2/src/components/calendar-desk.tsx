@@ -6,7 +6,8 @@ import {
   type CalendarEvent,
   type CatalystNode,
 } from "@/data/calendar";
-import { calendarOpenHref, fightPageHref } from "@/lib/fight-pages";
+import { calendarFightHref, calendarOpenHref, type FightLinkContext } from "@/lib/fight-pages";
+import type { FightLinkTarget } from "@/lib/fight-desk";
 import {
   adjacentWeekDay,
   calendarDayHref,
@@ -92,13 +93,15 @@ function rowMark(event: CalendarEvent): string {
 function EventDetail({
   item,
   closeHref,
+  links,
 }: {
   item: CalendarOccurrence;
   closeHref: string;
+  links?: FightLinkContext;
 }) {
   const { event } = item;
-  const link = calendarOpenHref(event);
-  const page = fightPageHref(event);
+  const link = calendarOpenHref(event, links);
+  const page = calendarFightHref(event, links);
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
   const status = displayedCalendarStatus(event, item.start);
   const settled =
@@ -201,6 +204,7 @@ function Itinerary({
   emptyLane,
   quietEmpty = false,
   showDetail = true,
+  links,
 }: {
   items: CalendarOccurrence[];
   query: CalendarDeskQuery;
@@ -208,6 +212,7 @@ function Itinerary({
   emptyLane: string;
   quietEmpty?: boolean;
   showDetail?: boolean;
+  links?: FightLinkContext;
 }) {
   if (items.length === 0) {
     if (quietEmpty) {
@@ -224,7 +229,7 @@ function Itinerary({
     <ol className="calendar-itinerary">
       {items.map((item) => {
         const current = query.event === item.event.id;
-        const eventHref = fightPageHref(item.event);
+        const eventHref = calendarFightHref(item.event, links);
         const rowClass = [
           "calendar-row",
           current ? "is-current" : "",
@@ -263,6 +268,7 @@ function Itinerary({
             {current && showDetail ? (
               <EventDetail
                 item={item}
+                links={links}
                 closeHref={calendarHref({
                   day: query.view === "week" ? query.day : item.day,
                   view: query.view,
@@ -284,11 +290,13 @@ function MonthNotes({
   query,
   today,
   anchorDay,
+  links,
 }: {
   events: readonly CalendarEvent[];
   query: CalendarDeskQuery;
   today: string;
   anchorDay: string;
+  links?: FightLinkContext;
 }) {
   if (events.length === 0) return null;
   return (
@@ -324,6 +332,7 @@ function MonthNotes({
               {current ? (
                 <EventDetail
                   item={{ event, start: event.start, day: anchorDay }}
+                  links={links}
                   closeHref={calendarHref({
                     day: query.day,
                     view: query.view,
@@ -364,12 +373,15 @@ export function CalendarDesk({
   query,
   today,
   storeLabel,
+  fightTargets = [],
 }: {
   events: readonly CalendarEvent[];
   query: CalendarDeskQuery;
   today: string;
   storeLabel: string;
+  fightTargets?: readonly FightLinkTarget[];
 }) {
+  const links: FightLinkContext = { events, targets: fightTargets };
   const week = calendarWeekDays(query.day, today);
   const visible = occurrencesOnDay(events, query.day, query.lane, query.node);
   const weekDays = civilWeek(query.day);
@@ -579,8 +591,9 @@ export function CalendarDesk({
             query={query}
             today={today}
             anchorDay={query.day}
+            links={links}
           />
-          <Itinerary items={visible} query={query} today={today} emptyLane={emptyLane} />
+          <Itinerary items={visible} query={query} today={today} emptyLane={emptyLane} links={links} />
         </>
       ) : null}
 
@@ -613,7 +626,7 @@ export function CalendarDesk({
               </Link>
             </div>
           </div>
-          <MonthNotes events={monthNotes} query={query} today={today} anchorDay={query.day} />
+          <MonthNotes events={monthNotes} query={query} today={today} anchorDay={query.day} links={links} />
           <ol className="calendar-week-board">
             {week.map((day) => {
               const items = occurrencesOnDay(events, day.date, query.lane, query.node);
@@ -639,6 +652,7 @@ export function CalendarDesk({
                     emptyLane=""
                     quietEmpty
                     showDetail={false}
+                    links={links}
                   />
                 </li>
               );
@@ -647,6 +661,7 @@ export function CalendarDesk({
           {weekSelection && !monthNotes.some((event) => event.id === query.event) ? (
             <EventDetail
               item={weekSelection}
+              links={links}
               closeHref={calendarHref({
                 day: query.day,
                 view: "week",
@@ -688,7 +703,7 @@ export function CalendarDesk({
               </Link>
             </div>
           </div>
-          <MonthNotes events={monthNotes} query={query} today={today} anchorDay={query.day} />
+          <MonthNotes events={monthNotes} query={query} today={today} anchorDay={query.day} links={links} />
           <table className="calendar-month">
             <thead>
               <tr>
@@ -704,7 +719,7 @@ export function CalendarDesk({
                 <tr key={row[0]}>
                   {row.map((day) => {
                     const outside = monthKeyForDay(day) !== monthKey;
-                    const packed = chipsOnDay(events, day, query.lane, query.node);
+                    const packed = chipsOnDay(events, day, query.lane, query.node, fightTargets);
                     const counts = laneCountsOnDay(events, day, query.lane, query.node);
                     const count = occurrencesOnDay(events, day, query.lane, query.node).length;
                     const laneLabelText = CALENDAR_LANES.map(

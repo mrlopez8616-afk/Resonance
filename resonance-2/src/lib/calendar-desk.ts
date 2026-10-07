@@ -7,7 +7,8 @@ import {
   type CatalystNode,
 } from "@/data/calendar";
 import { isCalendarLane } from "@/lib/calendar-event";
-import { fightPageHref } from "@/lib/fight-pages";
+import type { FightLinkTarget } from "@/lib/fight-desk";
+import { calendarFightHref } from "@/lib/fight-pages";
 
 /** Lane value for hub fight rows and the desk filter. */
 export const FIGHT_DESK_LANE = "fights" as const;
@@ -252,6 +253,7 @@ export function chipsOnDay(
   day: string,
   lane: DeskLane = "",
   node: CatalystNode | "" = "",
+  targets: readonly FightLinkTarget[] = [],
 ): { chips: CalendarChip[]; overflow: number } {
   const ranked = [...occurrencesOnDay(events, day, lane, node)].sort((left, right) => {
     const span = spanDays(left.event) - spanDays(right.event);
@@ -273,7 +275,7 @@ export function chipsOnDay(
       tone: isFightEvent(item.event)
         ? "fight"
         : (item.event.node ?? item.event.lane ?? "cadence"),
-      href: fightPageHref(item.event),
+      href: calendarFightHref(item.event, { events, targets }),
       tentative: item.event.status === "tentative",
       window: item.event.datePrecision === "window",
     })),

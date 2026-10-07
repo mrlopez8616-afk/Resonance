@@ -23,7 +23,8 @@ import {
 } from "@/lib/calendar-desk";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { fillsOnPrintedDay } from "@/lib/fill-desk";
-import { calendarOpenHref, fightPageHref } from "@/lib/fight-pages";
+import type { FightLinkTarget } from "@/lib/fight-desk";
+import { calendarFightHref, calendarOpenHref, type FightLinkContext } from "@/lib/fight-pages";
 
 type DaySearch = {
   anchor: string;
@@ -70,10 +71,18 @@ function Field({
   );
 }
 
-function EventDetail({ item, closeHref }: { item: CalendarOccurrence; closeHref: string }) {
+function EventDetail({
+  item,
+  closeHref,
+  links,
+}: {
+  item: CalendarOccurrence;
+  closeHref: string;
+  links?: FightLinkContext;
+}) {
   const { event } = item;
-  const link = calendarOpenHref(event);
-  const page = fightPageHref(event);
+  const link = calendarOpenHref(event, links);
+  const page = calendarFightHref(event, links);
   const openLabel = link?.startsWith("/log") ? "Open log" : "Open";
   const status = displayedCalendarStatus(event, item.start);
   const settled = status === "history" || status === "merged" || status === "sent";
@@ -132,11 +141,13 @@ function DayRows({
   day,
   search,
   empty,
+  links,
 }: {
   items: CalendarOccurrence[];
   day: string;
   search: DaySearch;
   empty: string;
+  links?: FightLinkContext;
 }) {
   if (items.length === 0) {
     return <p className="calendar-quiet">{empty}</p>;
@@ -151,7 +162,7 @@ function DayRows({
     <ol className="calendar-itinerary">
       {items.map((item) => {
         const current = search.event === item.event.id;
-        const eventHref = fightPageHref(item.event);
+        const eventHref = calendarFightHref(item.event, links);
         const rowClass = [
           "calendar-row",
           current ? "is-current" : "",
@@ -189,7 +200,7 @@ function DayRows({
                 Source
               </a>
             ) : null}
-            {current ? <EventDetail item={item} closeHref={closeHref} /> : null}
+            {current ? <EventDetail item={item} closeHref={closeHref} links={links} /> : null}
           </li>
         );
       })}
@@ -209,6 +220,7 @@ export function CalendarDayView({
   search,
   today,
   storeLabel,
+  fightTargets = [],
 }: {
   day: string;
   events: readonly CalendarEvent[];
@@ -216,7 +228,9 @@ export function CalendarDayView({
   search: DaySearch;
   today: string;
   storeLabel: string;
+  fightTargets?: readonly FightLinkTarget[];
 }) {
+  const links: FightLinkContext = { events, targets: fightTargets };
   const visible = occurrencesOnDay(events, day, search.lane, search.node);
   const byLane: Record<CalendarLane, CalendarOccurrence[]> = {
     cadence: [],
@@ -317,21 +331,21 @@ export function CalendarDayView({
       {lanes.map((lane) => (
         <section key={lane} className="calendar-day-section" aria-label={CALENDAR_LANE_LABELS[lane]}>
           <h3>{CALENDAR_LANE_LABELS[lane]}</h3>
-          <DayRows items={byLane[lane]} day={day} search={search} empty="Clear" />
+          <DayRows items={byLane[lane]} day={day} search={search} empty="Clear" links={links} />
         </section>
       ))}
 
       {search.lane ? null : (
         <section className="calendar-day-section" aria-label="Catalysts">
           <h3>Catalysts</h3>
-          <DayRows items={catalysts} day={day} search={search} empty="Clear" />
+          <DayRows items={catalysts} day={day} search={search} empty="Clear" links={links} />
         </section>
       )}
 
       {fightFilter || search.lane === "" ? (
         <section className="calendar-day-section" aria-label="Fights">
           <h3>Fights</h3>
-          <DayRows items={fights} day={day} search={search} empty="Clear" />
+          <DayRows items={fights} day={day} search={search} empty="Clear" links={links} />
         </section>
       ) : null}
 

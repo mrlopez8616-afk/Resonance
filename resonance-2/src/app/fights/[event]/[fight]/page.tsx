@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FightDetail } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
 import { resultForFight } from "@/lib/fight-results";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadFightResultsForPage } from "@/lib/store-page";
-import { isFightDeskNodeId } from "@/lib/fight-desk";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -34,12 +33,7 @@ export default async function FightPage({
 }) {
   const { event, fight: slug } = await params;
   const requestedNode = oneQuery((await searchParams).node);
-  const node =
-    requestedNode && isFightDeskNodeId(requestedNode)
-      ? requestedNode
-      : fightBySlug(slug)?.segment === "main-card"
-        ? "main-card"
-        : "prelims";
+  if (requestedNode) redirect(`/fights/${event}/${slug}`);
   if (event !== UFC_332_EVENT.id) notFound();
   const fight = fightBySlug(slug);
   if (!fight) notFound();
@@ -65,7 +59,7 @@ export default async function FightPage({
         fight={fight}
         bets={bets}
         result={resultForFight(results, fight.slug)}
-        backHref={`/fights/${UFC_332_EVENT.id}?node=${node}`}
+        backHref={`/fights/${UFC_332_EVENT.id}`}
         availability={availability}
         resultsAvailability={resultsAvailability}
       />

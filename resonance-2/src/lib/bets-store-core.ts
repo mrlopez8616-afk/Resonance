@@ -225,6 +225,10 @@ function coerceBet(raw: unknown): Bet | null {
   const lean = readOptionalLean(raw);
   if (lean.hubLean) bet.hubLean = lean.hubLean;
   if (typeof lean.agreesWithLean === "boolean") bet.agreesWithLean = lean.agreesWithLean;
+  if (typeof raw.tier === "string") {
+    const tier = raw.tier.trim().toUpperCase();
+    if (tier === "STRONG" || tier === "LEAN") bet.tier = tier;
+  }
   return bet;
 }
 

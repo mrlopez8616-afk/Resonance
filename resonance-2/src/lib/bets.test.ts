@@ -13,6 +13,7 @@ import {
   parseBetPostBody,
   parseSettleBody,
   placeBet,
+  publicBet,
   realizedPnl,
   scoreBets,
   settleBet,
@@ -772,5 +773,34 @@ describe("UFC 332 bets", () => {
     assert.equal(kept?.stake, "17.23");
     assert.equal(kept?.status, "open");
     assert.equal(betSeed().some((bet) => bet.id === "ufc-332-wang-cong-2"), false);
+  });
+
+  it("keeps an optional tier on post and settle and hides the order id from the public view", () => {
+    const body = {
+      orderId: "tier-order",
+      id: "tier-bet",
+      event: "UFC Fight Night: Allen vs Duncan",
+      fight: "Brendan Allen vs Christian Leroy Duncan",
+      fightSlug: "brendan-allen-vs-christian-leroy-duncan",
+      pick: "Brendan Allen",
+      stake: "1.00",
+      payout: "2.00",
+      oddsPct: 50,
+      time: "2026-10-10T19:00:00-05:00",
+      tier: "strong",
+    };
+    const placed = placeBet([], parseBetPostBody(body)[0], "2026-10-10T18:00:00.000Z");
+    assert.equal(placed.bet.tier, "STRONG");
+    const settled = settleBet(placed.bet, { id: placed.bet.id, status: "won", payout: "2.00" }, "2026-10-11T00:00:00.000Z");
+    assert.equal(settled.bet.tier, "STRONG");
+    assert.equal(settled.bet.status, "won");
+    const view = publicBet(settled.bet);
+    assert.equal(view.tier, "STRONG");
+    assert.equal("orderId" in view, false);
+    const roundTrip = parseBetsEnvelope({ bets: [settled.bet] });
+    assert.equal(roundTrip?.bets[0]?.tier, "STRONG");
+    assert.throws(() => parseBetPostBody({ ...body, tier: "LOCK" }));
+    const lean = placeBet([], parseBetPostBody({ ...body, orderId: "lean-order", id: "lean-bet", tier: "LEAN" })[0], "t");
+    assert.equal(lean.bet.tier, "LEAN");
   });
 });

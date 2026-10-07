@@ -202,10 +202,10 @@ export async function saveBetsEnvelope(
       await sqlQuery(
         `INSERT INTO bets (
            id, order_id, event, fight, fight_slug, pick, stake, odds_pct, payout, status,
-           settled_payout, realized_pnl, settled_at, venue, ticker, placed_at, payload, updated_at
+           settled_payout, realized_pnl, settled_at, venue, ticker, placed_at, tier, payload, updated_at
          ) VALUES (
            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-           $11, $12, $13, $14, $15, $16, $17::jsonb, $18
+           $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19
          )
          ON CONFLICT (id) DO UPDATE SET
            order_id = EXCLUDED.order_id,
@@ -223,6 +223,7 @@ export async function saveBetsEnvelope(
            venue = EXCLUDED.venue,
            ticker = EXCLUDED.ticker,
            placed_at = EXCLUDED.placed_at,
+           tier = EXCLUDED.tier,
            payload = EXCLUDED.payload,
            updated_at = EXCLUDED.updated_at`,
         [
@@ -242,6 +243,7 @@ export async function saveBetsEnvelope(
           bet.venue,
           bet.ticker,
           bet.time,
+          bet.tier ?? null,
           JSON.stringify(bet),
           envelope.updatedAt,
         ],

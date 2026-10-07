@@ -26,6 +26,14 @@ type FightResultSeed = {
 };
 
 const TIME = /^(\d{1,2}):(\d{2})$/;
+const EVENT_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+const SETTLED_STATUSES = ["won", "lost", "sold", "void"] as const;
+
+export type KnownBout = {
+  event: string;
+  fightSlug: string;
+  fighters: readonly string[];
+};
 
 export class FightResultWriteError extends Error {
   readonly status: number;
@@ -92,15 +100,40 @@ export function fallbackFightResults(): FightResult[] {
   return fightResultSeed();
 }
 
-export function parseFightResult(raw: unknown): FightResult {
+function resolveBout(
+  event: string,
+  fightSlug: string,
+  known: readonly KnownBout[],
+): { fightSlug: string; fighters: readonly string[] } | null {
+  if (event === UFC_332_ID) {
+    const fight = fightBySlug(fightSlug);
+    if (fight) return { fightSlug: fight.slug, fighters: [fight.A.name, fight.B.name] };
+  }
+  const row = known.find((bout) => bout.event === event && bout.fightSlug === fightSlug);
+  if (!row || row.fighters.length < 2) return null;
+  return { fightSlug: row.fightSlug, fighters: row.fighters };
+}
+
+/**
+ * One bout result. UFC 332 bouts come from the catalog.
+ * Any other event must name a fight on `known` (the bets for that event).
+ * The winner has to be one of that bout's fighters.
+ */
+export function parseFightResult(raw: unknown, known: readonly KnownBout[] = []): FightResult {
   if (!isRecord(raw)) throw new FightResultWriteError("Each result must be an object.");
   const event = asTrimmed(raw.event).toLowerCase();
-  if (event !== UFC_332_ID) throw new FightResultWriteError("event must be ufc-332.");
+  if (!EVENT_SLUG.test(event)) throw new FightResultWriteError("event must be a slug.");
   const fightSlug = asTrimmed(raw.fightSlug).toLowerCase();
-  const fight = fightBySlug(fightSlug);
-  if (!fight) throw new FightResultWriteError(`Unknown fight slug ${fightSlug || "(blank)"}.`);
+  const bout = resolveBout(event, fightSlug, known);
+  if (!bout) {
+    throw new FightResultWriteError(
+      event === UFC_332_ID
+        ? `Unknown fight slug ${fightSlug || "(blank)"}.`
+        : `Unknown fight slug ${fightSlug || "(blank)"} on ${event}.`,
+    );
+  }
   const winner = asTrimmed(raw.winner);
-  if (winner !== fight.A.name && winner !== fight.B.name) {
+  if (!bout.fighters.includes(winner)) {
     throw new FightResultWriteError("winner must be a fighter on that bout.");
   }
   const method = asTrimmed(raw.method);
@@ -115,19 +148,20 @@ export function parseFightResult(raw: unknown): FightResult {
     }
     status = statusText;
   }
+  const other = bout.fighters.find((name) => name !== winner);
   const result: FightResult = {
     event,
-    fightSlug: fight.slug,
+    fightSlug: bout.fightSlug,
     winner,
-    opponent: winner === fight.A.name ? fight.B.name : fight.A.name,
     method,
     round: readRound(raw.round),
     time: readTime(raw.time),
     status,
   };
+  if (other) result.opponent = other;
   const opponent = asTrimmed(raw.opponent);
   if (opponent) {
-    if (opponent !== fight.A.name && opponent !== fight.B.name) {
+    if (!bout.fighters.includes(opponent)) {
       throw new FightResultWriteError("opponent must be a fighter on that bout.");
     }
     if (opponent === winner) throw new FightResultWriteError("opponent must be the other fighter.");
@@ -142,12 +176,12 @@ export function parseFightResult(raw: unknown): FightResult {
 }
 
 /** One object or a bare array. Does not settle bets. */
-export function parseFightResultBody(body: unknown): FightResult[] {
+export function parseFightResultBody(body: unknown, known: readonly KnownBout[] = []): FightResult[] {
   if (Array.isArray(body)) {
     if (body.length === 0) throw new FightResultWriteError("At least one result is required.");
-    return body.map((item) => parseFightResult(item));
+    return body.map((item) => parseFightResult(item, known));
   }
-  return [parseFightResult(body)];
+  return [parseFightResult(body, known)];
 }
 
 export function mergeFightResult(current: FightResult, incoming: FightResult): FightResult {
@@ -179,6 +213,26 @@ export function formatFightResult(result: FightResult | null | undefined): strin
   return `${who} · ${result.method} · R${result.round} ${result.time}`;
 }
 
+/**
+ * Result line for one bout.
+ * A posted final wins. With no final, settled tickets show won, lost, sold, or void.
+ * Open tickets stay Pending. This does not invent a winner or a method.
+ */
+export function formatBoutLine(
+  result: FightResult | null | undefined,
+  statuses: readonly string[] = [],
+): string {
+  if (result?.status === "final") return formatFightResult(result);
+  if (
+    statuses.length > 0 &&
+    statuses.every((status) => (SETTLED_STATUSES as readonly string[]).includes(status))
+  ) {
+    const labels = SETTLED_STATUSES.filter((status) => statuses.includes(status));
+    if (labels.length > 0) return labels.join(" · ");
+  }
+  return "Pending";
+}
+
 export function formatEventResultLine(
   fights: readonly { slug: string }[],
   results: readonly FightResult[],
@@ -198,8 +252,13 @@ export function formatEventResultLine(
 export function resultForFight(
   results: readonly FightResult[],
   fightSlug: string,
+  event?: string,
 ): FightResult | null {
-  return results.find((row) => row.fightSlug === fightSlug) ?? null;
+  return (
+    results.find(
+      (row) => row.fightSlug === fightSlug && (event ? row.event === event : true),
+    ) ?? null
+  );
 }
 
 export function ufc332ResultLine(results: readonly FightResult[]): string {

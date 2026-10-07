@@ -1690,6 +1690,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.bet-tier {
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  vertical-align: 0.08em;
+}
+
 .fight-split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

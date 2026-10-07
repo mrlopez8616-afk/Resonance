@@ -1,4 +1,4 @@
-import { FightNodeRoute } from "@/app/fights/node-route";
+import { FightPromotionRoute } from "@/app/fights/promotion-route";
 
 export const dynamic = "force-dynamic";
 
@@ -7,5 +7,5 @@ export const metadata = {
 };
 
 export default function ContenderSeriesPage() {
-  return <FightNodeRoute nodeId="contender-series" />;
+  return <FightPromotionRoute promotionId="contender-series" />;
 }

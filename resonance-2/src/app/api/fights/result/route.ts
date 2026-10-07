@@ -1,14 +1,26 @@
 import { NextResponse } from "next/server";
+import { knownBouts } from "@/lib/fight-desk";
 import { parseFightResultBody } from "@/lib/fight-results";
 import {
   asFightResultWriteError,
   isFightResultsStoreConfigured,
   recordFightResults,
 } from "@/lib/fight-results-store";
+import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { UFC_332_ID } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
+
+function bodyNeedsBetBook(body: unknown): boolean {
+  const rows = Array.isArray(body) ? body : [body];
+  return rows.some((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return true;
+    const event = "event" in row && typeof row.event === "string" ? row.event.trim().toLowerCase() : "";
+    return event !== UFC_332_ID;
+  });
+}
 
 function unauthorized(error: string) {
   return NextResponse.json({ ok: false, error }, { status: 401 });
@@ -43,7 +55,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const incoming = parseFightResultBody(body);
+    const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
+    if (book.status === "unavailable" && bodyNeedsBetBook(body)) {
+      return NextResponse.json(
+        { ok: false, error: "Bet book is unavailable." },
+        { status: 503 },
+      );
+    }
+    const bets = book.status === "unavailable" ? [] : book.bets;
+    const incoming = parseFightResultBody(body, knownBouts(bets, calendar.events));
     const written = await recordFightResults(incoming);
     return NextResponse.json({
       ok: true,
