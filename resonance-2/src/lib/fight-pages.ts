@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/data/calendar";
 import { chicagoDay } from "@/lib/calendar-time";
-import { ufcNodeHint, type FightLinkTarget } from "@/lib/fight-desk";
-import { personSlug, UFC_332_ID } from "@/lib/ufc332";
+import type { FightLinkTarget } from "@/lib/fight-desk";
+import { personSlug } from "@/lib/ufc332";
 
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 const FIGHT_PATH = /^\/fights\/([a-z0-9][a-z0-9-]*)(?:\/|$)/;
@@ -18,16 +18,6 @@ export function fightEventPageHref(slug: string): string | undefined {
   const id = slug.trim().toLowerCase();
   if (!SLUG.test(id)) return undefined;
   return `/fights/${id}`;
-}
-
-function withNodeHint(
-  href: string,
-  event: Pick<CalendarEvent, "id" | "title">,
-): string {
-  if (href !== `/fights/${UFC_332_ID}`) return href;
-  const node = ufcNodeHint(event);
-  if (!node) return href;
-  return `${href}?node=${node}`;
 }
 
 function isFightRow(event: Pick<CalendarEvent, "kind" | "lane">): boolean {
@@ -81,13 +71,11 @@ export function fightPageHref(
 ): string | undefined {
   if (event.eventSlug) {
     const page = fightEventPageHref(event.eventSlug);
-    if (page) return withNodeHint(page, event);
+    if (page) return page;
   }
   const match = FIGHT_PATH.exec(event.link ?? "");
   if (!match) return undefined;
-  const page = fightEventPageHref(match[1] ?? "");
-  if (!page) return undefined;
-  return withNodeHint(page, event);
+  return fightEventPageHref(match[1] ?? "");
 }
 
 /**
@@ -104,11 +92,7 @@ export function calendarFightHref(
   const events = context?.events ?? [];
   const target = matchFightTarget(event, events, targets);
   if (!target) return undefined;
-  const page = fightEventPageHref(target.slug);
-  if (!page) return undefined;
-  const hint = ufcNodeHint(event);
-  if (hint && hint === target.node) return `${page}?node=${hint}`;
-  return page;
+  return fightEventPageHref(target.slug);
 }
 
 /**

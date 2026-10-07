@@ -1,20 +1,22 @@
 import { notFound } from "next/navigation";
-import { FightNode } from "@/components/fight-board";
+import { FightPromotion } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { fightDeskNodes, type FightDeskNodeId } from "@/lib/fight-desk";
+import { fightPromotions, type FightPromotionId } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 
-export async function FightNodeRoute({ nodeId }: { nodeId: FightDeskNodeId }) {
+export async function FightPromotionRoute({ promotionId }: { promotionId: FightPromotionId }) {
   const [book, card] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
   const bets = book.status === "unavailable" ? [] : book.bets;
-  const node = fightDeskNodes({ bets, events: card.events }).find((row) => row.id === nodeId);
-  if (!node) notFound();
+  const promotion = fightPromotions({ bets, events: card.events }).find((row) => row.id === promotionId);
+  if (!promotion) notFound();
+  const availability =
+    book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const storageMessage = book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
   const storageDetail = book.status === "unavailable" ? "Bet book is unavailable." : null;
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail}>
-      <FightNode node={node} />
+      <FightPromotion promotion={promotion} availability={availability} />
     </OperatorShell>
   );
 }

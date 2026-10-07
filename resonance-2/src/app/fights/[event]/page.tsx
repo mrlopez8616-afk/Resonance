@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FightEvent, ListedFightEvent } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { eventBackHref, resolveFightEventPage } from "@/lib/fight-desk";
+import { eventBackHref, legacyFightNodeHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "@/lib/store-page";
 
@@ -33,7 +33,10 @@ export default async function FightEventPage({
   searchParams: Promise<{ node?: string | string[] }>;
 }) {
   const { event } = await params;
+  const legacy = legacyFightNodeHref(event);
+  if (legacy) redirect(legacy);
   const requestedNode = oneQuery((await searchParams).node);
+  if (requestedNode) redirect(`/fights/${event}`);
   const [book, card, calendar] = await Promise.all([
     loadBetsForPage(),
     loadFightResultsForPage(),
@@ -43,10 +46,7 @@ export default async function FightEventPage({
   const results = card.status === "unavailable" ? [] : card.results;
   const resolved = resolveFightEventPage(event, bets, calendar.events);
   if (!resolved) notFound();
-  const back = eventBackHref(resolved.slug, requestedNode, {
-    title: resolved.title,
-    events: calendar.events,
-  });
+  const back = eventBackHref(resolved.slug, { title: resolved.title });
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const resultsAvailability =

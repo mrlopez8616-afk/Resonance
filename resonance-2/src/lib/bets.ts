@@ -135,6 +135,61 @@ export function summarizeBets(bets: readonly Bet[]): FightDeskSummary {
   };
 }
 
+export type CardMoney = {
+  /** Dollar headline, or "No bets" when the card has no tickets. */
+  headline: string;
+  /** Open count, settled record, or both. Empty when there are no tickets. */
+  detail: string;
+};
+
+function settledPnlOf(bet: Bet): string | null {
+  if (bet.status === "open") return null;
+  if (bet.realizedPnl && isDecimalString(bet.realizedPnl)) return money(bet.realizedPnl);
+  return realizedPnl(bet.stake, bet.status, bet.settledPayout ?? bet.payout);
+}
+
+function recordDetail(wins: number, losses: number, sold: number): string {
+  if (wins + losses === 0 && sold > 0) return `${sold} sold`;
+  const record = `${wins}-${losses}`;
+  return sold > 0 ? `${record} · ${sold} sold` : record;
+}
+
+/**
+ * Promotion and event card face.
+ * Open stake is the headline while any ticket is open.
+ * A fully settled card leads with realized P/L and a W-L record.
+ * Sold changes P/L and is counted on its own. It is not a win or a loss.
+ */
+export function cardMoney(bets: readonly Bet[]): CardMoney {
+  if (bets.length === 0) return { headline: "No bets", detail: "" };
+  const open = bets.filter((bet) => bet.status === "open");
+  const wins = bets.filter((bet) => bet.status === "won").length;
+  const losses = bets.filter((bet) => bet.status === "lost").length;
+  const sold = bets.filter((bet) => bet.status === "sold").length;
+  const record = recordDetail(wins, losses, sold);
+  if (open.length === 0) {
+    const pnl = sumMoney(
+      bets.flatMap((bet) => {
+        const amount = settledPnlOf(bet);
+        return amount ? [amount] : [];
+      }),
+    );
+    return { headline: formatSignedUsd(pnl), detail: record };
+  }
+  const staked = formatUsd(sumMoney(open.map((bet) => bet.stake)));
+  if (open.length === bets.length) return { headline: staked, detail: `${open.length} open` };
+  const pnl = sumMoney(
+    bets.flatMap((bet) => {
+      const amount = settledPnlOf(bet);
+      return amount ? [amount] : [];
+    }),
+  );
+  return {
+    headline: staked,
+    detail: `${open.length} open · ${formatSignedUsd(pnl)} · ${record}`,
+  };
+}
+
 export type WinLoss = {
   wins: number;
   losses: number;

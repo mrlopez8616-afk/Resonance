@@ -1,13 +1,20 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { BookAvailability } from "@/components/bet-scorecard";
 import type { Bet } from "@/lib/bets";
-import { betStatusLabel, betsOnFight, formatSignedUsd, formatUsd, summarizeBets } from "@/lib/bets";
+import { betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd } from "@/lib/bets";
 import type { CalendarEvent } from "@/data/calendar";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
-import { betsForNode, fightDeskNodes, type DeskFight, type DeskNode } from "@/lib/fight-desk";
+import {
+  eventBoutSections,
+  fightPromotions,
+  type DeskFight,
+  type DeskPromotion,
+} from "@/lib/fight-desk";
 import { formatBoutLine, resultForFight, type FightResult } from "@/lib/fight-results";
 import {
   UFC_332_EVENT,
+  fightBySlug,
   fightsInSegment,
   type CatalogFight,
   type FighterSide,
@@ -71,6 +78,40 @@ function boutLine(result: FightResult | null | undefined, bets: readonly Bet[]):
   );
 }
 
+function FightSections({
+  fights,
+  renderFight,
+}: {
+  fights: readonly DeskFight[];
+  renderFight: (fight: DeskFight) => ReactNode;
+}) {
+  const layout = eventBoutSections(fights);
+  if (layout.kind === "list") {
+    if (layout.fights.length === 0) return <p className="calendar-quiet">—</p>;
+    return (
+      <ol className="flex flex-col gap-3">
+        {layout.fights.map((fight) => (
+          <li key={fight.slug}>{renderFight(fight)}</li>
+        ))}
+      </ol>
+    );
+  }
+  return (
+    <>
+      {layout.sections.map((section) => (
+        <section key={section.id} id={section.id} className="calendar-day-section" aria-label={section.label}>
+          <h3>{section.label}</h3>
+          <ol className="flex flex-col gap-3">
+            {section.fights.map((fight) => (
+              <li key={fight.slug}>{renderFight(fight)}</li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </>
+  );
+}
+
 function DeskFightCard({
   fight,
   resultLine,
@@ -95,6 +136,39 @@ function DeskFightCard({
   );
 }
 
+function ValueCard({
+  href,
+  label,
+  bets,
+  availability,
+}: {
+  href: string;
+  label: string;
+  bets: readonly Bet[];
+  availability: BookAvailability;
+}) {
+  const face = cardMoney(bets);
+  const line =
+    availability === "unavailable"
+      ? "unavailable"
+      : face.detail
+        ? `${label} · ${face.detail}`
+        : label;
+  return (
+    <Link href={href} className="fight-card">
+      {availability === "unavailable" ? (
+        <h3>{label}</h3>
+      ) : (
+        <h3 className="fight-card-value">{face.headline}</h3>
+      )}
+      <p>
+        {line}
+        {availability === "seed-only" ? " · seed-only" : ""}
+      </p>
+    </Link>
+  );
+}
+
 export function FightIndex({
   bets,
   events = [],
@@ -104,7 +178,7 @@ export function FightIndex({
   events?: readonly CalendarEvent[];
   availability?: BookAvailability;
 }) {
-  const nodes = fightDeskNodes({ bets, events });
+  const promotions = fightPromotions({ bets, events });
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -115,41 +189,28 @@ export function FightIndex({
         <h2 className="log-title">Fights</h2>
       </header>
       <ol className="flex flex-col gap-3">
-        {nodes.map((node) => {
-          const summary = summarizeBets(betsForNode(bets, node.id, events));
-          const summaryLine =
-            availability === "unavailable"
-              ? "unavailable"
-              : `${node.label} · ${summary.open} open${availability === "seed-only" ? " · seed-only" : ""}`;
-          return (
-            <li key={node.id}>
-              <Link href={node.href} className="fight-card">
-                {availability === "unavailable" ? (
-                  <h3>{node.label}</h3>
-                ) : (
-                  <h3 className="fight-card-value">{summary.stakedLabel}</h3>
-                )}
-                <p>{summaryLine}</p>
-              </Link>
-            </li>
-          );
-        })}
+        {promotions.map((promotion) => (
+          <li key={promotion.id}>
+            <ValueCard
+              href={promotion.href}
+              label={promotion.label}
+              bets={promotion.events.flatMap((event) => event.bets)}
+              availability={availability}
+            />
+          </li>
+        ))}
       </ol>
     </div>
   );
 }
 
-export function FightNode({ node }: { node: DeskNode }) {
-  const cards = node.events.flatMap((event) => [
-    { key: `event-${event.slug}`, href: event.href, kicker: "Event", title: event.title, detail: event.meta },
-    ...event.fights.map((fight) => ({
-      key: fight.slug,
-      href: fight.href ? `${fight.href}?node=${node.id}` : event.href,
-      kicker: fight.kicker || "Fight",
-      title: fight.title,
-      detail: fight.detail,
-    })),
-  ]);
+export function FightPromotion({
+  promotion,
+  availability = "live",
+}: {
+  promotion: DeskPromotion;
+  availability?: BookAvailability;
+}) {
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -157,19 +218,20 @@ export function FightNode({ node }: { node: DeskNode }) {
           Fights
         </Link>
         <p className="log-kicker">Fight Desk</p>
-        <h2 className="log-title">{node.label}</h2>
+        <h2 className="log-title">{promotion.label}</h2>
       </header>
-      {cards.length === 0 ? (
-        <p className="calendar-quiet">—</p>
+      {promotion.events.length === 0 ? (
+        <p className="calendar-quiet">No bets</p>
       ) : (
         <ol className="flex flex-col gap-3">
-          {cards.map((card) => (
-            <li key={card.key}>
-              <Link href={card.href} className="fight-card">
-                {card.kicker ? <p className="log-kicker">{card.kicker}</p> : null}
-                <h3>{card.title}</h3>
-                {card.detail ? <p>{card.detail}</p> : null}
-              </Link>
+          {promotion.events.map((event) => (
+            <li key={event.slug}>
+              <ValueCard
+                href={event.href}
+                label={event.title}
+                bets={event.bets}
+                availability={availability}
+              />
             </li>
           ))}
         </ol>
@@ -193,7 +255,7 @@ function EventMoneyHeader({
   bets: readonly Bet[];
   availability: BookAvailability;
 }) {
-  const summary = summarizeBets(bets);
+  const face = cardMoney(bets);
   return (
     <header className="log-header">
       <Link href={backHref} className="calendar-back">
@@ -207,14 +269,17 @@ function EventMoneyHeader({
         </>
       ) : (
         <>
-          <h2 className="log-title">{summary.stakedLabel}</h2>
+          <h2 className="log-title">{face.headline}</h2>
           <p className="log-meta">{title}</p>
           {meta ? <p className="log-meta">{meta}</p> : null}
-          <p className="log-meta">
-            {summary.open} open · {summary.potentialLabel}{" "}
-            {summary.estimated ? "return est." : "return"}
-            {availability === "seed-only" ? " · seed-only" : ""}
-          </p>
+          {face.detail ? (
+            <p className="log-meta">
+              {face.detail}
+              {availability === "seed-only" ? " · seed-only" : ""}
+            </p>
+          ) : availability === "seed-only" ? (
+            <p className="log-meta">seed-only</p>
+          ) : null}
         </>
       )}
     </header>
@@ -254,24 +319,19 @@ export function ListedFightEvent({
         bets={bets}
         availability={availability}
       />
-      {fights.length === 0 ? (
-        <p className="calendar-quiet">—</p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {fights.map((fight) => (
-            <li key={fight.slug}>
-              <DeskFightCard
-                fight={fight}
-                resultLine={
-                  resultsAvailability === "unavailable"
-                    ? "unavailable"
-                    : boutLine(resultForFight(results, fight.slug, eventSlug), fight.bets)
-                }
-              />
-            </li>
-          ))}
-        </ol>
-      )}
+      <FightSections
+        fights={fights}
+        renderFight={(fight) => (
+          <DeskFightCard
+            fight={fight}
+            resultLine={
+              resultsAvailability === "unavailable"
+                ? "unavailable"
+                : boutLine(resultForFight(results, fight.slug, eventSlug), fight.bets)
+            }
+          />
+        )}
+      />
     </div>
   );
 }
@@ -302,56 +362,53 @@ export function FightEvent({
         bets={bets}
         availability={availability}
       />
-      {UFC_332_EVENT.segments.map((segment) => {
-        const fights = fightsInSegment(segment.id);
-        return (
-          <section key={segment.id} id={segment.id} className="calendar-day-section" aria-label={segment.label}>
-            <h3>
-              {segment.label} · {segment.start}
-            </h3>
-            <ol className="flex flex-col gap-3">
-              {fights.map((fight) => {
-                const stake = betsOnFight(bets, fight.slug);
-                return (
-                  <li key={fight.slug}>
-                    <Link href={fight.href} className="fight-card">
-                      <p className="log-kicker">{fight.time} CT</p>
-                      <h3>
-                        {fight.A.name} vs {fight.B.name}
-                      </h3>
-                      <p>{fight.division}</p>
-                      {fight.lean ? (
-                        <p>
-                          Lean {fight.lean}
-                          {fight.confidence ? ` · ${fight.confidence}` : ""}
-                        </p>
-                      ) : null}
-                      <p className="fight-result">
-                        {resultsAvailability === "unavailable"
-                          ? "unavailable"
-                          : boutLine(
-                              resultForFight(results, fight.slug, UFC_332_EVENT.id),
-                              stake,
-                            )}
-                      </p>
-                      {stake.length > 0 ? (
-                        <ul className="fight-stakes">
-                          {stake.map((bet) => (
-                            <li key={bet.id}>
-                              <TierTag tier={bet.tier} />
-                              {ticketLine(bet)}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        );
-      })}
+      <FightSections
+        fights={[
+          ...fightsInSegment("early-prelims"),
+          ...fightsInSegment("prelims"),
+          ...fightsInSegment("main-card"),
+        ].map((fight) => ({
+          slug: fight.slug,
+          title: `${fight.A.name} vs ${fight.B.name}`,
+          kicker: `${fight.time} CT`,
+          detail: fight.division,
+          href: fight.href,
+          segment: fight.segment === "main-card" ? "main-card" : "prelims",
+          bets: betsOnFight(bets, fight.slug),
+        }))}
+        renderFight={(fight) => {
+          const catalog = fightBySlug(fight.slug);
+          const stake = fight.bets;
+          return (
+            <Link href={fight.href ?? `/fights/${UFC_332_EVENT.id}`} className="fight-card">
+              {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
+              <h3>{fight.title}</h3>
+              {fight.detail ? <p>{fight.detail}</p> : null}
+              {catalog?.lean ? (
+                <p>
+                  Lean {catalog.lean}
+                  {catalog.confidence ? ` · ${catalog.confidence}` : ""}
+                </p>
+              ) : null}
+              <p className="fight-result">
+                {resultsAvailability === "unavailable"
+                  ? "unavailable"
+                  : boutLine(resultForFight(results, fight.slug, UFC_332_EVENT.id), stake)}
+              </p>
+              {stake.length > 0 ? (
+                <ul className="fight-stakes">
+                  {stake.map((bet) => (
+                    <li key={bet.id}>
+                      <TierTag tier={bet.tier} />
+                      {ticketLine(bet)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </Link>
+          );
+        }}
+      />
     </div>
   );
 }
