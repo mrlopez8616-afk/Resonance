@@ -37,6 +37,20 @@ export type LiveUsdCoverage = {
 
 const PARENT_BY_NODE: Readonly<Record<string, ParentId>> = NODE_PARENT;
 
+const CRYPTO_TICKERS = new Set(
+  Object.entries(NODE_PARENT)
+    .filter(([, parentId]) => parentId === "crypto")
+    .map(([id]) => id.toUpperCase()),
+);
+
+/** A sold crypto book is a real zero. Hide that card and leave the config in place. */
+export function isZeroCryptoHolding(
+  ticker: string,
+  totalUsd: number | null | undefined,
+): boolean {
+  return CRYPTO_TICKERS.has(ticker.toUpperCase()) && totalUsd === 0;
+}
+
 export function parentById(id: string): (typeof PARENTS)[number] | null {
   return PARENTS.find((parent) => parent.id === id) ?? null;
 }
@@ -205,7 +219,9 @@ export function parentAggregate(
   fightDesk: FightDeskSummary | null,
   fightDeskAvailability: "live" | "seed-only" | "unavailable",
 ): ParentAggregate {
-  const painted = paintedTickers(hiddenIds, parentId);
+  const painted = paintedTickers(hiddenIds, parentId).filter(
+    (ticker) => !isZeroCryptoHolding(ticker, faceTotals[ticker]),
+  );
   const showsFightDesk = parentShowsFightDesk(parentId);
   const coverage = sumLiveUsd(faceTotals, painted);
   const openBets =

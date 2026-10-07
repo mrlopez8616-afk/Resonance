@@ -1,0 +1,117 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  fitnessCards,
+  fitnessHomeLine,
+  fitnessNode,
+  metricSamples,
+  workoutSamples,
+} from "./fitness-board";
+import { parseHealthExport } from "./fitness-parse";
+import { sampleLegacyWorkoutBody, sampleMetricsBody, sampleWorkoutsBody } from "./fitness-sample";
+import { manualFitnessSeed } from "./fitness-seed";
+
+const TODAY = "2026-10-07";
+
+describe("fitness board", () => {
+  it("shows the manual 5 Oct day without calling it today", () => {
+    const seed = manualFitnessSeed();
+    const metrics = metricSamples(seed.metrics);
+    const workouts = workoutSamples(seed.workouts);
+    assert.equal(seed.workouts.reduce((sum, row) => sum + Number(row.energyKcal), 0), 617);
+    assert.deepEqual(fitnessHomeLine(metrics, workouts, TODAY), {
+      value: "3.9",
+      unit: "mi this week",
+    });
+    assert.deepEqual(fitnessHomeLine(metrics, workouts, "2026-10-05"), {
+      value: "21,608",
+      unit: "steps",
+    });
+
+    const cards = Object.fromEntries(
+      fitnessCards(metrics, workouts, TODAY).map((card) => [card.id, card]),
+    );
+    assert.equal(cards.activity?.headline, "21,608");
+    assert.match(cards.activity?.detail ?? "", /5 Oct/);
+    assert.match(cards.activity?.detail ?? "", /7-day avg 21,608/);
+    assert.equal(cards.runs?.headline, "3.9 mi");
+    assert.match(cards.runs?.detail ?? "", /1\.9 mi · 19 min/);
+    assert.match(cards.runs?.detail ?? "", /2\.0 mi · 16 min/);
+    assert.equal(cards.lifting?.headline, null);
+    assert.match(cards.lifting?.detail ?? "", /phone sync/);
+    assert.equal(cards.heart?.headline, null);
+
+    const runs = fitnessNode("runs", metrics, workouts, TODAY);
+    assert.equal(runs?.rows.length, 2);
+    assert.match(runs?.rows[0]?.primary ?? "", /1\.9 mi · 19 min/);
+    assert.match(runs?.rows[0]?.secondary ?? "", /10:00 \/mi/);
+    assert.match(runs?.rows[0]?.secondary ?? "", /304 kcal/);
+    assert.match(runs?.rows[0]?.secondary ?? "", /Nike Run Club/);
+    assert.match(runs?.rows[1]?.primary ?? "", /2\.0 mi · 16 min/);
+    assert.match(runs?.rows[1]?.secondary ?? "", /8:00 \/mi/);
+    assert.match(runs?.rows[1]?.secondary ?? "", /313 kcal/);
+    assert.equal(fitnessNode("nope", metrics, workouts, TODAY), null);
+  });
+
+  it("lets a phone day replace the manual rows for that day", () => {
+    const seed = manualFitnessSeed();
+    const phone = parseHealthExport({
+      data: {
+        metrics: [
+          {
+            name: "step_count",
+            units: "count",
+            data: [{ qty: 100, date: "2026-10-05 00:00:00 -0500" }],
+          },
+        ],
+        workouts: [
+          {
+            id: "live-run",
+            name: "Running",
+            start: "2026-10-05 07:00:00 -0500",
+            end: "2026-10-05 07:10:00 -0500",
+            duration: 600,
+            distance: { qty: 1, units: "mi" },
+          },
+        ],
+      },
+    });
+    const metrics = metricSamples([...seed.metrics, ...phone.metrics]);
+    const workouts = workoutSamples([...seed.workouts, ...phone.workouts]);
+    assert.equal(metrics.find((row) => row.day === "2026-10-05")?.qty, 100);
+    assert.equal(workouts.filter((row) => row.kind === "run").length, 1);
+    assert.equal(workouts[0]?.origin, "health-auto-export");
+  });
+
+  it("parses metric and workout exports, including a version 1 workout", () => {
+    const metrics = parseHealthExport(sampleMetricsBody);
+    assert.deepEqual(
+      metrics.metrics.map((row) => row.externalId).sort(),
+      [
+        "active_energy:2026-10-06:kcal",
+        "heart_rate:2026-10-06:bpm",
+        "resting_heart_rate:2026-10-06:bpm",
+        "step_count:2026-10-06:count",
+        "walking_running_distance:2026-10-06:mi",
+      ],
+    );
+    const heart = metrics.metrics.find((row) => row.metric === "heart_rate");
+    assert.equal(heart?.qty, "72");
+    assert.equal(heart?.qtyMin, "60");
+    assert.equal(heart?.qtyMax, "110");
+
+    const workouts = parseHealthExport(sampleWorkoutsBody);
+    const run = workouts.workouts.find((row) => row.externalId === "nrc-sample-1");
+    assert.equal(run?.energyKcal, "220");
+    assert.equal(run?.heartRateAvg, "154");
+    assert.equal(JSON.stringify(run?.payload).includes("latitude"), false);
+    assert.equal(JSON.stringify(run?.payload).includes("heartRateData"), false);
+
+    const legacy = parseHealthExport(sampleLegacyWorkoutBody);
+    assert.equal(legacy.workouts.length, 1);
+    assert.equal(legacy.workouts[0]?.durationSec, "1140");
+    assert.equal(legacy.workouts[0]?.heartRateAvg, "150");
+    const again = parseHealthExport(sampleLegacyWorkoutBody);
+    assert.equal(again.workouts[0]?.externalId, legacy.workouts[0]?.externalId);
+  });
+});

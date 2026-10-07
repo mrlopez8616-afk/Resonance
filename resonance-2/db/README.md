@@ -18,6 +18,8 @@ npm run db:replay -- --file outage.json
 
 `db:migrate` applies `db/migrations` in order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips files already listed in `schema_migrations`.
 
+Production builds run that same migrator before `next build` (`npm run prebuild`) when `VERCEL_ENV` is `production` and `DATABASE_URL` is set. Preview and local builds skip it, because preview deployments share the production database. `POST /api/storage/migrate` with `Authorization: Bearer $RESONANCE_SYNC_SECRET` runs it on demand. The first fitness read also applies pending migrations when `fitness_metrics` is missing, then upserts the manual day, so a preview can show that day before the production deploy.
+
 `db:import-blob` reads `resonance-2/bets.json`, `resonance-2/fills.json`, and `resonance-2/calendar.json` from the private Blob and upserts them. A missing object is an empty domain. A 403 or a suspended store fails the whole run and writes nothing. `--dry-run` prints counts and does not write rows. Re-running is safe. Import does not delete rows that exist only in Postgres. Run it before replay: a later import copies the blob again and will overwrite a row the replay has already changed.
 
 `db:replay` reads a local file saved during the outage:
@@ -46,6 +48,8 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `fight_results` | `fight_slug` | Empty until PR #50. Bout clock is column `clock` and payload `time`. |
 | `bet_corrections` | `(bet_id, version)` | Empty until a bet payload carries `correctionVersion`. |
 | `store_meta` | `domain` | Envelope `updated_at` and `seeded_at`. |
+| `fitness_metrics` | `(source, external_id)` unique | Daily health metrics. One row per source, metric, Chicago day, and unit. A re-sent day updates `qty`. |
+| `fitness_workouts` | `(source, external_id)` unique | Workouts. Version 2 uses the export `id`. A re-sent workout updates the row. |
 
 Seeds still merge on read: missing seed ids are inserted, and a row already stored under that id or order id is left alone.
 
@@ -57,7 +61,7 @@ Money (bank and card transactions) and fitness (runs, steps, lifts) are new tabl
 
 Copy this shape:
 
-- One table per stream: `money_transactions`, `fitness_runs`, `fitness_steps`, `fitness_lifts`.
+- One table per stream. Fitness is two streams, because Health Auto Export posts metrics and workouts separately: `fitness_metrics` (steps, active energy, heart rate, resting heart rate, walking + running distance) and `fitness_workouts` (runs and strength, distinguished by workout name). Money stays a later table: `money_transactions`.
 - `source text not null` and `external_id text not null`, unique together. That pair is the idempotent ingest key. Re-posting the same source and external id is a no-op.
 - `timestamptz` for when it happened. `numeric` for amounts. Never `float`.
 - `payload jsonb` for the rest of the row.

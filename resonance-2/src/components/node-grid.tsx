@@ -13,7 +13,7 @@ import {
   subscribeHiddenIds,
   writeHiddenIds,
 } from "@/lib/floor-registry";
-import { nodesOnParent, removedOnParent } from "@/lib/node-parents";
+import { isZeroCryptoHolding, nodesOnParent, removedOnParent } from "@/lib/node-parents";
 import type { ValueCardModel } from "@/lib/value-card";
 import type { ParentId } from "@/data/node-parents";
 
@@ -27,11 +27,14 @@ export function NodeGrid({
   parentId,
   parentLabel,
   cards,
+  heldUsd,
 }: {
   parentId: ParentId;
   parentLabel: string;
   /** One shared value-card model per ticker. Missing tickers are not connected. */
   cards: Readonly<Record<string, ValueCardModel>>;
+  /** Position value in dollars. A crypto card at exactly zero is not painted. */
+  heldUsd?: Readonly<Record<string, number | null | undefined>>;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -68,6 +71,7 @@ export function NodeGrid({
       <section className="node-grid" aria-label={`${parentLabel} nodes`}>
         {nodes.map((node) => {
           if (node.status === "live") {
+            if (isZeroCryptoHolding(node.ticker, heldUsd?.[node.ticker])) return null;
             const card = cards[node.ticker] ?? NOT_CONNECTED;
             const shown = card.headline !== null || card.priceLine !== null;
             return (

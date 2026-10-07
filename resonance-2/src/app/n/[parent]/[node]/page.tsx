@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { FitnessDetail } from "@/components/fitness-detail";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
 import { ValueCard } from "@/components/value-card";
@@ -7,8 +8,11 @@ import { OperatorShell } from "@/components/operator-shell";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
+import { FITNESS_NODES } from "@/lib/fitness-board";
+import { loadFitnessNode } from "@/lib/fitness-store";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
+import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +28,11 @@ export async function generateMetadata({
 }) {
   const { parent: parentId, node: nodeId } = await params;
   const parent = parentById(parentId);
+  if (parent?.id === "fitness") {
+    const node = FITNESS_NODES.find((item) => item.id === nodeId);
+    const title = node ? `${node.title} · ${parent.label}` : "Node";
+    return { title: `${title} · Resonance 2.0` };
+  }
   const node = FLOOR_NODES.find((item) => item.id === nodeId);
   const title = node && parent ? `${node.ticker} · ${parent.label}` : "Node";
   return { title: `${title} · Resonance 2.0` };
@@ -38,6 +47,27 @@ export default async function NodeDetailPage({
   const legacy = legacyParentHref(parentId, nodeId);
   if (legacy) redirect(legacy);
   const parent = parentById(parentId);
+  if (parent?.id === "fitness") {
+    const [floor, fitness] = await Promise.all([
+      loadOperatorFloor(),
+      loadFitnessNode(nodeId),
+    ]);
+    if (!fitness.detail) notFound();
+    return (
+      <OperatorShell
+        storageMessage={
+          floor.storageMessage ??
+          (fitness.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+        }
+        storageDetail={floor.storageDetail}
+      >
+        <Link href={`/n/${parent.id}`} className="calendar-back">
+          {parent.label}
+        </Link>
+        <FitnessDetail detail={fitness.detail} />
+      </OperatorShell>
+    );
+  }
   const node = FLOOR_NODES.find((item) => item.id === nodeId && item.status !== "empty");
   if (!parent || !node || nodeParent(node.id) !== parent.id) notFound();
 

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { FitnessGrid } from "@/components/fitness-grid";
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
+import { loadFitnessCards } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
+import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { valueCardFromFace } from "@/lib/value-card";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +35,30 @@ export default async function ParentNodePage({
   if (!parent) notFound();
   if (parent.id === "fights") redirect("/fights");
 
+  if (parent.id === "fitness") {
+    const [floor, fitness] = await Promise.all([loadOperatorFloor(), loadFitnessCards()]);
+    return (
+      <OperatorShell
+        storageMessage={
+          floor.storageMessage ??
+          (fitness.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+        }
+        storageDetail={floor.storageDetail}
+      >
+        <Link href="/" className="calendar-back">
+          Floor
+        </Link>
+        <FitnessGrid cards={fitness.cards} />
+      </OperatorShell>
+    );
+  }
+
   const floor = await loadOperatorFloor();
   const cards = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, valueCardFromFace(face)]),
+  );
+  const heldUsd = Object.fromEntries(
+    Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
   );
   return (
     <OperatorShell
@@ -48,6 +72,7 @@ export default async function ParentNodePage({
         parentId={parent.id}
         parentLabel={parent.label}
         cards={cards}
+        heldUsd={heldUsd}
       />
     </OperatorShell>
   );

@@ -34,6 +34,38 @@ function secretsMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(left, right);
 }
 
+export const FITNESS_TOKEN_HEADER = "x-fitness-token";
+
+export function getFitnessIngestToken(env: EnvLike = process.env): string | null {
+  const value = env.FITNESS_INGEST_TOKEN?.trim() ?? "";
+  return value ? value : null;
+}
+
+export type FitnessAuthResult =
+  | { ok: true }
+  | { ok: false; status: 401 | 503; error: string };
+
+/**
+ * Fail closed. The phone token is not the hub sync secret, and an unset
+ * FITNESS_INGEST_TOKEN does not leave the route open.
+ */
+export function authorizeFitnessAccess(input: {
+  token: string | null;
+  bearer: string | null;
+  headerToken: string | null;
+}): FitnessAuthResult {
+  if (!input.token) {
+    return { ok: false, status: 503, error: "Fitness ingest is not configured." };
+  }
+  const provided = input.bearer || input.headerToken;
+  if (provided && secretsMatch(provided, input.token)) return { ok: true };
+  return {
+    ok: false,
+    status: 401,
+    error: "Send Authorization: Bearer <token> or X-Fitness-Token.",
+  };
+}
+
 /** Phase Zero Bearer-secret spirit: open only when the secret is unset (local/dev). */
 export function authorizeSyncAccess(input: {
   syncSecret: string | null;
