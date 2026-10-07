@@ -5,6 +5,7 @@ import { FIGHT_DESK_ID, NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { formatCompactUsd } from "@/lib/live-face";
 import {
   legacyParentHref,
+  isZeroCryptoHolding,
   nodePageHref,
   nodesOnParent,
   parentAggregate,
@@ -122,12 +123,16 @@ describe("node parent map", () => {
       "live",
     );
     assert.equal(complete.connected, true);
-    assert.equal(complete.childCount, 3);
+    assert.equal(complete.childCount, 2);
     assert.equal(complete.liveUsd, 12.5);
     assert.equal(complete.liveUsdLabel, formatCompactUsd(12.5));
-    assert.equal(complete.valuedCount, 3);
-    assert.equal(complete.paintedCount, 3);
+    assert.equal(complete.valuedCount, 2);
+    assert.equal(complete.paintedCount, 2);
     assert.equal(complete.openBets, null);
+    assert.equal(isZeroCryptoHolding("HBAR", 0), true);
+    assert.equal(isZeroCryptoHolding("HBAR", 0.004), true);
+    assert.equal(isZeroCryptoHolding("HBAR", 0.02), false);
+    assert.equal(isZeroCryptoHolding("PWR", 0), false);
 
     const missing = parentAggregate(
       "crypto",

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  authorizeFitnessAccess,
   authorizeSyncAccess,
   readBearerToken,
   writeProtectionEnabled,
@@ -27,6 +28,26 @@ describe("fill ingest auth", () => {
       bearer: "nope",
     });
     assert.equal(result.ok, false);
+  });
+
+  it("fails closed for fitness ingest unless the phone token matches", () => {
+    assert.deepEqual(authorizeFitnessAccess({ token: null, bearer: "phone", headerToken: null }), {
+      ok: false,
+      status: 503,
+      error: "Fitness ingest is not configured.",
+    });
+    assert.equal(
+      authorizeFitnessAccess({ token: "phone-token", bearer: "hub-secret", headerToken: null }).ok,
+      false,
+    );
+    assert.deepEqual(
+      authorizeFitnessAccess({ token: "phone-token", bearer: "phone-token", headerToken: null }),
+      { ok: true },
+    );
+    assert.deepEqual(
+      authorizeFitnessAccess({ token: "phone-token", bearer: null, headerToken: "phone-token" }),
+      { ok: true },
+    );
   });
 
   it("parses Bearer headers", () => {

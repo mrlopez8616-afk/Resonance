@@ -12,15 +12,19 @@ import {
   subscribeHiddenIds,
 } from "@/lib/floor-registry";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
+import type { FitnessHomeLine } from "@/lib/fitness-board";
 
 export function ParentGrid({
   faceTotals,
   fightDesk,
   fightDeskAvailability = "live",
+  fitnessLine = null,
 }: {
   faceTotals: FaceTotals;
   fightDesk: FightDeskSummary | null;
   fightDeskAvailability?: "live" | "seed-only" | "unavailable";
+  /** One real fitness line. Null keeps the card on "not connected yet". */
+  fitnessLine?: FitnessHomeLine | null;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -39,13 +43,17 @@ export function ParentGrid({
           fightDesk,
           fightDeskAvailability,
         );
-        const summary = parentSummaryLine(aggregate);
+        const summary =
+          parent.id === "fitness" && fitnessLine
+            ? { value: fitnessLine.value, unit: fitnessLine.unit, coverage: false }
+            : parentSummaryLine(aggregate);
+        const connected = parent.id === "fitness" ? fitnessLine !== null : aggregate.connected;
         return (
           <NodeSquare
             key={parent.id}
             parent
-            live={aggregate.connected}
-            dashed={!aggregate.connected}
+            live={connected}
+            dashed={!connected}
             label={parent.label}
           >
             <Link
