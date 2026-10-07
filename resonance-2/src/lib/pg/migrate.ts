@@ -1,18 +1,11 @@
-import { readdir, readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { sqlQuery } from "@/lib/pg/client";
+import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 function errorText(error: unknown): string {
   if (isStorageUnavailable(error)) return error.reason;
   return error instanceof Error ? error.message : "";
 }
-
-const MIGRATIONS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../db/migrations",
-);
 
 export function splitSqlStatements(source: string): string[] {
   const withoutLineComments = source
@@ -37,14 +30,11 @@ async function viewExists(name: string): Promise<boolean> {
 }
 
 export async function migrate(): Promise<{ applied: string[]; skipped: string[] }> {
-  const names = (await readdir(MIGRATIONS_DIR))
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
   const applied: string[] = [];
   const skipped: string[] = [];
 
-  for (const name of names) {
-    const id = name.replace(/\.sql$/, "");
+  for (const migration of EMBEDDED_MIGRATIONS) {
+    const id = migration.id;
     const seen = await sqlQuery<{ id: string }>(
       `SELECT id FROM schema_migrations WHERE id = $1`,
       [id],
@@ -60,8 +50,7 @@ export async function migrate(): Promise<{ applied: string[]; skipped: string[] 
       continue;
     }
 
-    const source = await readFile(path.join(MIGRATIONS_DIR, name), "utf8");
-    for (const statement of splitSqlStatements(source)) {
+    for (const statement of splitSqlStatements(migration.sql)) {
       const view = /^CREATE VIEW\s+([a-z_][a-z0-9_]*)/i.exec(statement);
       if (view?.[1] && (await viewExists(view[1]).catch(() => false))) continue;
       try {

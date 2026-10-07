@@ -13,8 +13,9 @@ import {
 } from "@/lib/fitness-board";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites } from "@/lib/fitness-types";
-import { sqlQuery } from "@/lib/pg/client";
-import { migrate } from "@/lib/pg/migrate";
+import { FITNESS_SCHEMA_SQL } from "@/lib/pg/embedded-migrations";
+import { postgresFailureReason, sqlQuery } from "@/lib/pg/client";
+import { splitSqlStatements } from "@/lib/pg/migrate";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 export type FitnessAvailability = "live" | "seed-only" | "unavailable";
@@ -91,8 +92,14 @@ async function manualSeedPresent(): Promise<boolean> {
   return metrics.length === 1 && workouts.length === 2;
 }
 
+async function ensureFitnessTables(): Promise<void> {
+  for (const statement of splitSqlStatements(FITNESS_SCHEMA_SQL)) {
+    await sqlQuery(statement);
+  }
+}
+
 async function ensureFitnessStoreOnce(): Promise<void> {
-  if (!(await tablesPresent())) await migrate();
+  if (!(await tablesPresent())) await ensureFitnessTables();
   if (!(await manualSeedPresent())) await upsertFitnessRows(manualFitnessSeed());
 }
 
@@ -271,7 +278,7 @@ export async function readFitness(today = chicagoToday()): Promise<FitnessRead> 
     const [metrics, workouts] = await Promise.all([readMetrics(), readWorkouts()]);
     return { availability: "live", metrics, workouts, today };
   } catch (error) {
-    if (!isStorageUnavailable(error) && !missingFitnessTable(error)) throw error;
+    console.error("fitness read failed", fitnessFailureText(error));
     const seed = manualFitnessSeed();
     return { availability: "unavailable", metrics: seed.metrics, workouts: seed.workouts, today };
   }
@@ -286,35 +293,71 @@ function present(read: FitnessRead) {
   };
 }
 
+function fitnessFailureText(error: unknown): string {
+  if (isStorageUnavailable(error)) return error.reason;
+  return postgresFailureReason(error);
+}
+
+function unavailableFitness(today: string): {
+  line: null;
+  cards: FitnessCard[];
+  detail: null;
+  availability: FitnessAvailability;
+} {
+  return {
+    line: null,
+    cards: fitnessCards([], [], today),
+    detail: null,
+    availability: "unavailable",
+  };
+}
+
 export async function loadFitnessHome(today = chicagoToday()): Promise<{
   line: FitnessHomeLine | null;
   availability: FitnessAvailability;
 }> {
-  const read = present(await readFitness(today));
-  return {
-    line: fitnessHomeLine(read.metrics, read.workouts, read.today),
-    availability: read.availability,
-  };
+  try {
+    const read = present(await readFitness(today));
+    return {
+      line: fitnessHomeLine(read.metrics, read.workouts, read.today),
+      availability: read.availability,
+    };
+  } catch (error) {
+    console.error("fitness read failed", fitnessFailureText(error));
+    const empty = unavailableFitness(today);
+    return { line: empty.line, availability: empty.availability };
+  }
 }
 
 export async function loadFitnessCards(today = chicagoToday()): Promise<{
   cards: FitnessCard[];
   availability: FitnessAvailability;
 }> {
-  const read = present(await readFitness(today));
-  return {
-    cards: fitnessCards(read.metrics, read.workouts, read.today),
-    availability: read.availability,
-  };
+  try {
+    const read = present(await readFitness(today));
+    return {
+      cards: fitnessCards(read.metrics, read.workouts, read.today),
+      availability: read.availability,
+    };
+  } catch (error) {
+    console.error("fitness read failed", fitnessFailureText(error));
+    const empty = unavailableFitness(today);
+    return { cards: empty.cards, availability: empty.availability };
+  }
 }
 
 export async function loadFitnessNode(
   id: string,
   today = chicagoToday(),
 ): Promise<{ detail: FitnessNodeDetail | null; availability: FitnessAvailability }> {
-  const read = present(await readFitness(today));
-  return {
-    detail: fitnessNode(id, read.metrics, read.workouts, read.today),
-    availability: read.availability,
-  };
+  try {
+    const read = present(await readFitness(today));
+    return {
+      detail: fitnessNode(id, read.metrics, read.workouts, read.today),
+      availability: read.availability,
+    };
+  } catch (error) {
+    console.error("fitness read failed", fitnessFailureText(error));
+    return { detail: fitnessNode(id, [], [], today), availability: "unavailable" };
+  }
 }

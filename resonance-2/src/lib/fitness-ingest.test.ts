@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { after, beforeEach, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { newDb } from "pg-mem";
 import { POST } from "@/app/api/fitness/ingest/route";
 import { loadFitnessCards, loadFitnessHome, resetFitnessStoreForTests } from "@/lib/fitness-store";
 import { sampleMetricsBody, sampleWorkoutsBody } from "@/lib/fitness-sample";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
+import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
 import { migrate } from "@/lib/pg/migrate";
 import { shouldMigrateOnBuild } from "@/lib/pg/prebuild";
 
@@ -130,16 +134,33 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal(lifting?.headline, "1");
   });
 
-  it("applies the fitness migration when the table is missing", async () => {
+  it("creates the fitness tables from embedded SQL when they are missing", async () => {
     setSqlClientForTests(createMemorySql());
     resetFitnessStoreForTests();
     const home = await loadFitnessHome("2026-10-07");
     assert.equal(home.availability, "live");
     assert.deepEqual(home.line, { value: "3.9", unit: "mi this week" });
-    const applied = await sqlQuery<{ id: string }>(
-      `SELECT id FROM schema_migrations WHERE id = '002_fitness'`,
+    const steps = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE source = 'manual' AND metric = 'step_count'`,
     );
-    assert.equal(applied.length, 1);
+    assert.equal(Number(steps[0]?.qty), 21608);
+  });
+
+  it("keeps the floor up when the fitness read throws", async () => {
+    setSqlClientForTests({
+      async query() {
+        throw new Error(
+          "ENOENT: no such file or directory, scandir '/var/task/resonance-2/db/migrations'",
+        );
+      },
+    });
+    resetFitnessStoreForTests();
+    const home = await loadFitnessHome("2026-10-07");
+    assert.equal(home.availability, "unavailable");
+    assert.deepEqual(home.line, { value: "3.9", unit: "mi this week" });
+    const cards = await loadFitnessCards("2026-10-07");
+    assert.equal(cards.availability, "unavailable");
+    assert.equal(cards.cards.length, 4);
   });
 
   it("seeds the manual day through the store once", async () => {
@@ -159,6 +180,14 @@ describe("fitness ingest", { concurrency: false }, () => {
 });
 
 describe("production migrate gate", () => {
+  it("embeds the migration files so runtime does not scan the folder", async () => {
+    const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../db/migrations");
+    for (const migration of EMBEDDED_MIGRATIONS) {
+      const file = await readFile(path.join(dir, `${migration.id}.sql`), "utf8");
+      assert.equal(migration.sql, file);
+    }
+  });
+
   it("migrates only production builds that have a database url", () => {
     assert.equal(shouldMigrateOnBuild({ VERCEL_ENV: "production", DATABASE_URL: "postgres://db" }), true);
     assert.equal(shouldMigrateOnBuild({ VERCEL_ENV: "preview", DATABASE_URL: "postgres://db" }), false);
