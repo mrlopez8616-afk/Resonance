@@ -3,8 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { FitnessDetail } from "@/components/fitness-detail";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
+import { BankrollLedgerView } from "@/components/predictions-floor";
 import { ValueCard } from "@/components/value-card";
 import { OperatorShell } from "@/components/operator-shell";
+import { loadBankroll } from "@/lib/bankroll-load";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
@@ -32,6 +34,9 @@ export async function generateMetadata({
     const node = FITNESS_NODES.find((item) => item.id === nodeId);
     const title = node ? `${node.title} · ${parent.label}` : "Node";
     return { title: `${title} · Resonance 2.0` };
+  }
+  if (parent?.id === "predictions" && nodeId === "bankroll") {
+    return { title: `Bankroll · ${parent.label} · Resonance 2.0` };
   }
   const node = FLOOR_NODES.find((item) => item.id === nodeId);
   const title = node && parent ? `${node.ticker} · ${parent.label}` : "Node";
@@ -68,6 +73,31 @@ export default async function NodeDetailPage({
       </OperatorShell>
     );
   }
+  if (parent?.id === "predictions") {
+    if (nodeId !== "bankroll") notFound();
+    const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
+    return (
+      <OperatorShell
+        storageMessage={
+          floor.storageMessage ??
+          (bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+        }
+        storageDetail={floor.storageDetail ?? bankroll.storageDetail}
+      >
+        <Link href={`/n/${parent.id}`} className="calendar-back">
+          {parent.label}
+        </Link>
+        {bankroll.ledger ? (
+          <BankrollLedgerView ledger={bankroll.ledger} />
+        ) : (
+          <p className="parent-empty" role="status">
+            unavailable
+          </p>
+        )}
+      </OperatorShell>
+    );
+  }
+
   const node = FLOOR_NODES.find((item) => item.id === nodeId && item.status !== "empty");
   if (!parent || !node || nodeParent(node.id) !== parent.id) notFound();
 

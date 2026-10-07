@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { FitnessGrid } from "@/components/fitness-grid";
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
+import { PredictionsFloor } from "@/components/predictions-floor";
+import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFitnessCards } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
@@ -33,7 +35,21 @@ export default async function ParentNodePage({
   if (legacy) redirect(legacy);
   const parent = parentById(id);
   if (!parent) notFound();
-  if (parent.id === "fights") redirect("/fights");
+
+  if (parent.id === "predictions") {
+    const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
+    return (
+      <OperatorShell
+        storageMessage={
+          floor.storageMessage ??
+          (bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+        }
+        storageDetail={floor.storageDetail ?? bankroll.storageDetail}
+      >
+        <PredictionsFloor ledger={bankroll.ledger} />
+      </OperatorShell>
+    );
+  }
 
   if (parent.id === "fitness") {
     const [floor, fitness] = await Promise.all([loadOperatorFloor(), loadFitnessCards()]);
