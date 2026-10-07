@@ -130,7 +130,8 @@ describe("node parent map", () => {
     assert.equal(complete.paintedCount, 2);
     assert.equal(complete.openBets, null);
     assert.equal(isZeroCryptoHolding("HBAR", 0), true);
-    assert.equal(isZeroCryptoHolding("HBAR", 1), false);
+    assert.equal(isZeroCryptoHolding("HBAR", 0.004), true);
+    assert.equal(isZeroCryptoHolding("HBAR", 0.02), false);
     assert.equal(isZeroCryptoHolding("PWR", 0), false);
 
     const missing = parentAggregate(

@@ -43,12 +43,17 @@ const CRYPTO_TICKERS = new Set(
     .map(([id]) => id.toUpperCase()),
 );
 
-/** A sold crypto book is a real zero. Hide that card and leave the config in place. */
+/**
+ * A sold crypto book prints ~$0.00. Hide that card and leave the config in place.
+ * A fraction of a cent uses the same dollar print as an exact zero.
+ */
 export function isZeroCryptoHolding(
   ticker: string,
   totalUsd: number | null | undefined,
 ): boolean {
-  return CRYPTO_TICKERS.has(ticker.toUpperCase()) && totalUsd === 0;
+  if (!CRYPTO_TICKERS.has(ticker.toUpperCase())) return false;
+  if (typeof totalUsd !== "number" || !Number.isFinite(totalUsd)) return false;
+  return formatCompactUsd(totalUsd) === "~$0.00";
 }
 
 export function parentById(id: string): (typeof PARENTS)[number] | null {
