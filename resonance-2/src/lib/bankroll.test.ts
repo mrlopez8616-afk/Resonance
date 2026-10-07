@@ -8,7 +8,9 @@ import {
   bankrollHomeFace,
   bankrollRoi,
   betConviction,
+  cardInBankroll,
   computeBankroll,
+  earliestPlacementDay,
   eventInBankroll,
   fightCardDay,
   suggestedStake,
@@ -313,5 +315,62 @@ describe("bankroll", () => {
     assert.equal(byId.untiered?.open, 1);
     assert.equal(ledger.bankroll, "17.31");
     assert.equal(ledger.roiLabel, "+5.20%");
+  });
+
+  it("scopes an undated card by the earliest bet's Chicago placement day", () => {
+    const edmonton = ticket({
+      id: "edmonton",
+      event: "UFC Fight Night: Edmonton",
+      stake: "2.00",
+      time: "2026-10-12T18:00:00-05:00",
+    });
+    const ghost = ticket({
+      id: "ghost",
+      event: "UFC Fight Night: Ghost Card",
+      stake: "4.00",
+      status: "lost",
+      realizedPnl: "-4.00",
+      time: "2026-10-06T21:00:00-05:00",
+    });
+    const splitLate = ticket({
+      id: "split-late",
+      event: "UFC Fight Night: Split Card",
+      stake: "1.00",
+      time: "2026-10-12T18:00:00-05:00",
+    });
+    const splitEarly = ticket({
+      id: "split-early",
+      event: "UFC Fight Night: Split Card",
+      stake: "1.00",
+      status: "lost",
+      realizedPnl: "-1.00",
+      time: "2026-10-05T12:00:00-05:00",
+    });
+    const edmontonSlug = "ufc-fight-night-edmonton";
+    const ghostSlug = "ufc-fight-night-ghost-card";
+    const splitSlug = "ufc-fight-night-split-card";
+    assert.equal(fightCardDay(edmontonSlug, edmonton.event, []), null);
+    assert.equal(fightCardDay(ghostSlug, ghost.event, []), null);
+    assert.equal(earliestPlacementDay([edmonton]), "2026-10-12");
+    assert.equal(earliestPlacementDay([ghost]), "2026-10-06");
+    assert.equal(earliestPlacementDay([splitLate, splitEarly]), "2026-10-05");
+    assert.equal(cardInBankroll(null, [edmonton]), true);
+    assert.equal(cardInBankroll(null, [ghost]), false);
+    assert.equal(cardInBankroll("2026-10-09", [edmonton]), false);
+
+    const ledger = computeBankroll([edmonton, ghost, splitLate, splitEarly]);
+    assert.deepEqual(
+      ledger.cards.map((card) => card.slug),
+      [edmontonSlug],
+    );
+    assert.equal(ledger.cards[0]?.date, null);
+    assert.deepEqual(
+      ledger.before.map((card) => card.slug),
+      [ghostSlug, splitSlug],
+    );
+    assert.equal(ledger.before.find((card) => card.slug === ghostSlug)?.pnlLabel, "-$4.00");
+    assert.equal(ledger.bankroll, "17.06");
+    assert.equal(ledger.atRisk, "2.00");
+    assert.equal(ledger.realizedLabel, "$0.00");
   });
 });

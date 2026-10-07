@@ -203,7 +203,7 @@ function titleHits(calendarTitle: string, eventTitle: string): boolean {
 /**
  * Civil date of the card. Catalog and calendar only.
  * A bet's placement time is not a card date: Allen vs Duncan was ticketed on
- * 2026-10-07 for a 2026-10-10 card.
+ * 2026-10-07 for a 2026-10-10 card. Null means no catalog or calendar row matched.
  */
 export function fightCardDay(
   slug: string,
@@ -226,6 +226,27 @@ export function fightCardDay(
 
 export function eventInBankroll(day: string | null): boolean {
   return day !== null && day >= BANKROLL_SCOPE_FROM;
+}
+
+/** Chicago civil day of the earliest bet placement. Invalid times are skipped. */
+export function earliestPlacementDay(bets: readonly Pick<Bet, "time">[]): string | null {
+  let earliest: string | null = null;
+  for (const bet of bets) {
+    const day = chicagoDay(bet.time);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    if (!earliest || day < earliest) earliest = day;
+  }
+  return earliest;
+}
+
+/**
+ * Known card dates use the catalog cutoff. An undated card is in scope when
+ * its earliest bet was placed on the as-of date or later.
+ */
+export function cardInBankroll(day: string | null, bets: readonly Pick<Bet, "time">[]): boolean {
+  if (day !== null) return eventInBankroll(day);
+  const placed = earliestPlacementDay(bets);
+  return placed !== null && placed >= BANKROLL_AS_OF;
 }
 
 function cardFrom(slug: string, title: string, href: string, day: string | null, bets: readonly Bet[]): BankrollCard {
@@ -280,7 +301,7 @@ export function computeBankroll(
       if (event.bets.length === 0) continue;
       const day = fightCardDay(event.slug, event.title, events);
       const row = cardFrom(event.slug, event.title, event.href, day, event.bets);
-      if (eventInBankroll(day)) {
+      if (cardInBankroll(day, event.bets)) {
         cards.push(row);
         inScope.push(...event.bets);
       } else {
