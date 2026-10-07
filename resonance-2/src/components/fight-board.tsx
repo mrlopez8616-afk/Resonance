@@ -5,7 +5,7 @@ import { betStatusLabel, betsOnFight, formatSignedUsd, formatUsd, summarizeBets 
 import type { CalendarEvent } from "@/data/calendar";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { betsForNode, fightDeskNodes, type DeskFight, type DeskNode } from "@/lib/fight-desk";
-import { formatFightResult, resultForFight, type FightResult } from "@/lib/fight-results";
+import { formatBoutLine, resultForFight, type FightResult } from "@/lib/fight-results";
 import {
   UFC_332_EVENT,
   fightsInSegment,
@@ -45,14 +45,29 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
+function TierTag({ tier }: { tier?: Bet["tier"] }) {
+  if (!tier) return null;
+  return <span className="bet-tier">{tier}</span>;
+}
+
 function FightStakeList({ bets }: { bets: readonly Bet[] }) {
   if (bets.length === 0) return null;
   return (
     <ul className="fight-stakes">
       {bets.map((bet) => (
-        <li key={bet.id}>{ticketLine(bet)}</li>
+        <li key={bet.id}>
+          <TierTag tier={bet.tier} />
+          {ticketLine(bet)}
+        </li>
       ))}
     </ul>
+  );
+}
+
+function boutLine(result: FightResult | null | undefined, bets: readonly Bet[]): string {
+  return formatBoutLine(
+    result,
+    bets.map((bet) => bet.status),
   );
 }
 
@@ -212,6 +227,7 @@ export function ListedFightEvent({
   fights,
   bets,
   results,
+  eventSlug,
   backHref,
   backLabel,
   availability = "live",
@@ -222,6 +238,7 @@ export function ListedFightEvent({
   fights: readonly DeskFight[];
   bets: readonly Bet[];
   results: readonly FightResult[];
+  eventSlug: string;
   backHref: string;
   backLabel: string;
   availability?: BookAvailability;
@@ -248,7 +265,7 @@ export function ListedFightEvent({
                 resultLine={
                   resultsAvailability === "unavailable"
                     ? "unavailable"
-                    : formatFightResult(resultForFight(results, fight.slug))
+                    : boutLine(resultForFight(results, fight.slug, eventSlug), fight.bets)
                 }
               />
             </li>
@@ -312,12 +329,18 @@ export function FightEvent({
                       <p className="fight-result">
                         {resultsAvailability === "unavailable"
                           ? "unavailable"
-                          : formatFightResult(results.find((row) => row.fightSlug === fight.slug))}
+                          : boutLine(
+                              resultForFight(results, fight.slug, UFC_332_EVENT.id),
+                              stake,
+                            )}
                       </p>
                       {stake.length > 0 ? (
                         <ul className="fight-stakes">
                           {stake.map((bet) => (
-                            <li key={bet.id}>{ticketLine(bet)}</li>
+                            <li key={bet.id}>
+                              <TierTag tier={bet.tier} />
+                              {ticketLine(bet)}
+                            </li>
                           ))}
                         </ul>
                       ) : null}
@@ -407,7 +430,9 @@ export function FightDetail({
           {fight.A.name} vs {fight.B.name}
         </h2>
         <p className="log-meta">
-          {resultsAvailability === "unavailable" ? "Result unavailable" : formatFightResult(result)}
+          {resultsAvailability === "unavailable"
+            ? "Result unavailable"
+            : boutLine(result, stakes)}
         </p>
         {availability === "unavailable" ? (
           <p className="log-meta">Tickets unavailable</p>
@@ -429,7 +454,7 @@ export function FightDetail({
             {result.opponent ? <Field label="Opponent" value={result.opponent} /> : null}
           </dl>
         ) : (
-          <p>Pending</p>
+          <p>{boutLine(result, stakes)}</p>
         )}
       </section>
 
@@ -539,6 +564,7 @@ export function FightDetail({
             {stakes.map((bet) => (
               <li key={bet.id} className="fight-card">
                 <dl>
+                  {bet.tier ? <Field label="Tier" value={bet.tier} /> : null}
                   <Field label="Pick" value={bet.pick} />
                   {bet.hubLean ? <Field label="Hub lean" value={bet.hubLean} /> : null}
                   {typeof bet.agreesWithLean === "boolean" ? (

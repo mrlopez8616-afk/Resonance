@@ -1,11 +1,13 @@
 import type { CalendarEvent } from "@/data/calendar";
 import type { Bet } from "@/lib/bets";
+import type { KnownBout } from "@/lib/fight-results";
 import {
   fightBySlug,
   fightsInSegment,
   personSlug,
   UFC_332_EVENT,
   UFC_332_ID,
+  ufc332Fights,
   type CatalogFight,
 } from "@/lib/ufc332";
 
@@ -122,17 +124,78 @@ export function fightDeskNodeLabel(id: FightDeskNodeId): string {
   return FIGHT_DESK_NODES.find((node) => node.id === id)?.label ?? id;
 }
 
+export type FightEventKind = "ufc" | "contender";
+
+/**
+ * Contender Series is only Dana White's Contender Series.
+ * A slug or title that contains contender or dwcs is that series.
+ * UFC numbered cards and UFC Fight Night cards are the UFC side.
+ */
+export function fightEventKind(input: { slug?: string; title?: string }): FightEventKind {
+  const text = `${input.slug ?? ""} ${input.title ?? ""}`.toLowerCase();
+  if (text.includes("contender") || text.includes("dwcs")) return "contender";
+  return "ufc";
+}
+
+export function legalNodesForEvent(input: {
+  slug?: string;
+  title?: string;
+}): readonly FightDeskNodeId[] {
+  return fightEventKind(input) === "contender"
+    ? ["contender-series"]
+    : ["main-card", "prelims"];
+}
+
+function calendarHintsForSlug(
+  slug: string,
+  events: readonly CalendarEvent[],
+): FightDeskNodeId[] {
+  const hints: FightDeskNodeId[] = [];
+  for (const event of events) {
+    if (calendarFightSlug(event) !== slug) continue;
+    const hint = ufcNodeHint(event);
+    if (hint && !hints.includes(hint)) hints.push(hint);
+  }
+  return hints;
+}
+
+/**
+ * A UFC card without per-bout segments sits on Main Card.
+ * It sits on Prelims only when every calendar hint for that slug says prelims.
+ */
+export function defaultUfcNode(
+  slug: string,
+  title: string,
+  events: readonly CalendarEvent[] = [],
+): FightDeskNodeId {
+  const hints = calendarHintsForSlug(slug, events);
+  if (hints.length > 0 && hints.every((hint) => hint === "prelims")) return "prelims";
+  return "main-card";
+}
+
+export function nodeForEvent(
+  slug: string,
+  title: string,
+  events: readonly CalendarEvent[] = [],
+): FightDeskNodeId {
+  if (fightEventKind({ slug, title }) === "contender") return "contender-series";
+  return defaultUfcNode(slug, title, events);
+}
+
 /** Main card, prelims (including early prelims), or Contender Series. */
 export function nodeForBet(
   bet: Bet,
   events: readonly CalendarEvent[] = [],
 ): FightDeskNodeId | null {
-  if (!isUfc332Bet(bet)) {
-    return betEventSlug(bet, events) ? "contender-series" : null;
+  const slug = betEventSlug(bet, events);
+  if (!slug) return null;
+  if (fightEventKind({ slug, title: bet.event }) === "contender") return "contender-series";
+  if (slug === UFC_332_ID) {
+    const fight = fightBySlug(bet.fightSlug);
+    if (!fight) return null;
+    return fight.segment === "main-card" ? "main-card" : "prelims";
   }
-  const fight = fightBySlug(bet.fightSlug);
-  if (!fight) return null;
-  return fight.segment === "main-card" ? "main-card" : "prelims";
+  return defaultUfcNode(slug, bet.event, events);
 }
 
 export function betsForNode(
@@ -145,21 +208,24 @@ export function betsForNode(
 
 /**
  * One level up from an event page.
- * A `node` query from the node page wins. UFC 332 without one returns to Main Card.
- * Every other event returns to Contender Series.
+ * A node query wins when that node is a legal parent for the event.
+ * UFC cards return to Main Card or Prelims. Contender Series is DWCS only.
  */
 export function eventBackHref(
   eventSlug: string,
   requestedNode?: string | null,
+  context?: { title?: string | null; events?: readonly CalendarEvent[] },
 ): { href: string; label: string } {
+  const slug = eventSlug.trim().toLowerCase();
+  const title = context?.title?.trim() ?? "";
+  const events = context?.events ?? [];
+  const legal = legalNodesForEvent({ slug, title });
   const requested = requestedNode?.trim().toLowerCase() ?? "";
-  if (isFightDeskNodeId(requested)) {
+  if (isFightDeskNodeId(requested) && legal.includes(requested)) {
     return { href: fightDeskNodeHref(requested), label: fightDeskNodeLabel(requested) };
   }
-  if (eventSlug.trim().toLowerCase() === UFC_332_ID) {
-    return { href: fightDeskNodeHref("main-card"), label: fightDeskNodeLabel("main-card") };
-  }
-  return { href: fightDeskNodeHref("contender-series"), label: fightDeskNodeLabel("contender-series") };
+  const node = nodeForEvent(slug, title, events);
+  return { href: fightDeskNodeHref(node), label: fightDeskNodeLabel(node) };
 }
 
 /** Segment hint on a UFC 332 calendar row. Early prelims stay with Prelims. */
@@ -243,22 +309,32 @@ export function fightDeskNodes(input: {
     grouped.set(slug, current);
   }
 
-  const contender: DeskEvent[] = [...grouped.entries()]
-    .sort((left, right) => left[1].title.localeCompare(right[1].title))
-    .map(([slug, group]) => ({
+  const mainExtras: DeskEvent[] = [];
+  const prelimExtras: DeskEvent[] = [];
+  const contender: DeskEvent[] = [];
+  const sorted = [...grouped.entries()].sort((left, right) =>
+    left[1].title.localeCompare(right[1].title),
+  );
+  for (const [slug, group] of sorted) {
+    const node = nodeForEvent(slug, group.title, events);
+    const deskEvent: DeskEvent = {
       slug,
       title: group.title,
-      href: `/fights/${slug}?node=contender-series`,
+      href: `/fights/${slug}?node=${node}`,
       meta: group.meta,
       fights: listedFights(group.bets),
-    }));
+    };
+    if (node === "contender-series") contender.push(deskEvent);
+    else if (node === "prelims") prelimExtras.push(deskEvent);
+    else mainExtras.push(deskEvent);
+  }
 
   return [
     {
       id: "main-card",
       label: "Main Card",
       href: fightDeskNodeHref("main-card"),
-      events: [ufcEvent(fightsInSegment("main-card"), ufcBets, "main-card")],
+      events: [ufcEvent(fightsInSegment("main-card"), ufcBets, "main-card"), ...mainExtras],
     },
     {
       id: "prelims",
@@ -270,6 +346,7 @@ export function fightDeskNodes(input: {
           ufcBets,
           "prelims",
         ),
+        ...prelimExtras,
       ],
     },
     {
@@ -312,8 +389,8 @@ export function resolveFightEventPage(
   const calendar = events.filter((event) => calendarFightSlug(event) === id);
   if (scoped.length === 0 && calendar.length === 0) return null;
   const listed = fightDeskNodes({ bets, events })
-    .find((node) => node.id === "contender-series")
-    ?.events.find((event) => event.slug === id);
+    .flatMap((node) => node.events)
+    .find((event) => event.slug === id);
   const title = scoped[0]?.event || listed?.title || calendar[0]?.title || id;
   const meta = [calendar[0]?.location, calendar[0]?.note].filter(Boolean).join(" · ");
   return {
@@ -324,4 +401,65 @@ export function resolveFightEventPage(
     bets: scoped,
     fights: listed?.fights ?? listedFights(scoped),
   };
+}
+
+/** Two names from a "A vs B" title. Anything else is not a bout. */
+export function fightersFromTitle(title: string): string[] {
+  const parts = title
+    .split(/\s+vs\.?\s+/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length !== 2) return [];
+  return parts;
+}
+
+/**
+ * Bouts a result may name. UFC 332 comes from the catalog.
+ * Every other card comes from bets on that event slug.
+ */
+export function knownBouts(
+  bets: readonly Bet[],
+  events: readonly CalendarEvent[] = [],
+): KnownBout[] {
+  const map = new Map<string, KnownBout>();
+  for (const fight of ufc332Fights) {
+    map.set(`${UFC_332_ID}\0${fight.slug}`, {
+      event: UFC_332_ID,
+      fightSlug: fight.slug,
+      fighters: [fight.A.name, fight.B.name],
+    });
+  }
+  for (const bet of bets) {
+    const event = betEventSlug(bet, events);
+    if (!event) continue;
+    const key = `${event}\0${bet.fightSlug}`;
+    if (map.has(key)) continue;
+    const fighters = fightersFromTitle(bet.fight);
+    if (fighters.length < 2) continue;
+    map.set(key, { event, fightSlug: bet.fightSlug, fighters });
+  }
+  return [...map.values()];
+}
+
+export type FightLinkTarget = {
+  slug: string;
+  title: string;
+  node: FightDeskNodeId;
+};
+
+/** Event pages the calendar may link. One row per slug. */
+export function fightLinkTargets(
+  bets: readonly Bet[],
+  events: readonly CalendarEvent[] = [],
+): FightLinkTarget[] {
+  const seen = new Set<string>();
+  const targets: FightLinkTarget[] = [];
+  for (const node of fightDeskNodes({ bets, events })) {
+    for (const event of node.events) {
+      if (seen.has(event.slug)) continue;
+      seen.add(event.slug);
+      targets.push({ slug: event.slug, title: event.title, node: node.id });
+    }
+  }
+  return targets;
 }

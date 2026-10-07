@@ -8,7 +8,8 @@ import {
 import { chicagoToday, formatCivilDate, isCivilDay } from "@/lib/calendar-time";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
-import { loadCalendarForPage } from "@/lib/store-page";
+import { fightLinkTargets } from "@/lib/fight-desk";
+import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,12 @@ export default async function CalendarDayRoute({
   params: Promise<{ day: string }>;
   searchParams: Promise<CalendarDaySearch>;
 }) {
-  const [{ day }, rawSearch, store, fillsLoaded] = await Promise.all([
+  const [{ day }, rawSearch, store, fillsLoaded, book] = await Promise.all([
     params,
     searchParams,
     loadCalendarForPage(),
     loadOperatorFills(),
+    loadBetsForPage(),
   ]);
   if (!isCivilDay(day)) notFound();
 
@@ -63,6 +65,7 @@ export default async function CalendarDayRoute({
         search={search}
         today={today}
         storeLabel={store.storeLabel}
+        fightTargets={fightLinkTargets(book.status === "unavailable" ? [] : book.bets, store.events)}
       />
     </OperatorShell>
   );

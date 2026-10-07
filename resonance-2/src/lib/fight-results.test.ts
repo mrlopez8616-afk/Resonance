@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   fightResultSeed,
+  formatBoutLine,
   formatEventResultLine,
   formatFightResult,
   parseFightResultBody,
   ufc332ResultLine,
+  type KnownBout,
 } from "@/lib/fight-results";
 import {
   ensureSeededFightResults,
@@ -243,5 +245,64 @@ describe("UFC 332 fight results", () => {
     );
     const held = ensureSeededFightResults(refreshed.envelope, "2026-10-04T07:00:00.000Z");
     assert.equal(held.seeded, false);
+  });
+
+  it("accepts a bout on any event when the fight belongs to that card", () => {
+    const known: KnownBout[] = [
+      {
+        event: "ufc-fight-night-allen-vs-duncan",
+        fightSlug: "brendan-allen-vs-christian-leroy-duncan",
+        fighters: ["Brendan Allen", "Christian Leroy Duncan"],
+      },
+    ];
+    const [result] = parseFightResultBody(
+      {
+        event: "ufc-fight-night-allen-vs-duncan",
+        fightSlug: "brendan-allen-vs-christian-leroy-duncan",
+        winner: "Brendan Allen",
+        method: "Decision - Unanimous",
+        round: 3,
+        time: "5:00",
+      },
+      known,
+    );
+    assert.equal(result?.event, "ufc-fight-night-allen-vs-duncan");
+    assert.equal(result?.winner, "Brendan Allen");
+    assert.equal(result?.opponent, "Christian Leroy Duncan");
+    assert.equal(
+      formatFightResult(result),
+      "Brendan Allen def. Christian Leroy Duncan · Decision - Unanimous · R3 5:00",
+    );
+    assert.throws(() =>
+      parseFightResultBody(
+        {
+          event: "ufc-fight-night-allen-vs-duncan",
+          fightSlug: "brendan-allen-vs-christian-leroy-duncan",
+          winner: "Someone Else",
+          method: "KO/TKO",
+          round: 1,
+          time: "1:00",
+        },
+        known,
+      ),
+    );
+    assert.throws(() =>
+      parseFightResultBody(
+        {
+          event: "ufc-fight-night-allen-vs-duncan",
+          fightSlug: "not-on-the-card",
+          winner: "Brendan Allen",
+          method: "KO/TKO",
+          round: 1,
+          time: "1:00",
+        },
+        known,
+      ),
+    );
+    assert.equal(formatBoutLine(null, ["lost", "lost"]), "lost");
+    assert.equal(formatBoutLine(null, ["won", "sold"]), "won · sold");
+    assert.equal(formatBoutLine(null, ["open"]), "Pending");
+    assert.equal(formatBoutLine(null, ["won", "open"]), "Pending");
+    assert.equal(formatBoutLine(result, ["lost"]), formatFightResult(result));
   });
 });

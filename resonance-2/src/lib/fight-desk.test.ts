@@ -8,9 +8,12 @@ import {
   eventBackHref,
   eventSlugFromTitle,
   fightDeskNodes,
+  fightEventKind,
+  fightLinkTargets,
+  knownBouts,
   resolveFightEventPage,
 } from "@/lib/fight-desk";
-import { fightPageHref } from "@/lib/fight-pages";
+import { calendarFightHref, fightPageHref } from "@/lib/fight-pages";
 import { fightsInSegment, UFC_332_ID } from "@/lib/ufc332";
 
 const DWCS_EVENT = "Dana White's Contender Series S10 Week 9";
@@ -117,5 +120,118 @@ describe("fight desk nodes", () => {
     );
     assert.equal(eventSlugFromTitle(DWCS_EVENT), "dana-white-s-contender-series-s10-week-9");
     assert.equal(fightPageHref(dwcsCalendar), "/fights/dwcs-s10-week-9");
+  });
+
+  it("files UFC Fight Night on the UFC side and leaves DWCS on Contender Series", () => {
+    const fightNight = dwcsBet("10.00");
+    fightNight.id = "fn-allen";
+    fightNight.event = "UFC Fight Night: Allen vs Duncan";
+    fightNight.fight = "Brendan Allen vs Christian Leroy Duncan";
+    fightNight.fightSlug = "brendan-allen-vs-christian-leroy-duncan";
+    fightNight.pick = "Brendan Allen";
+    const numbered = dwcsBet("4.00");
+    numbered.id = "ufc-325-a";
+    numbered.event = "UFC 325";
+    numbered.fight = "Fighter C vs Fighter D";
+    numbered.fightSlug = "fighter-c-vs-fighter-d";
+    const bets = [...betSeed(), dwcsBet(), fightNight, numbered];
+    const nodes = fightDeskNodes({ bets, events: [dwcsCalendar] });
+    const main = nodes[0];
+    const prelims = nodes[1];
+    const series = nodes[2];
+    assert.ok(main && prelims && series);
+    assert.equal(fightEventKind({ slug: "ufc-fight-night-allen-vs-duncan", title: fightNight.event }), "ufc");
+    assert.equal(fightEventKind({ slug: "ufc-332" }), "ufc");
+    assert.equal(fightEventKind({ slug: "dwcs-s10-week-9", title: DWCS_EVENT }), "contender");
+    assert.equal(fightEventKind({ slug: "dana-white-s-contender-series-s10-week-9" }), "contender");
+    assert.equal(
+      main.events.some((event) => event.slug === "ufc-fight-night-allen-vs-duncan"),
+      true,
+    );
+    assert.equal(main.events.some((event) => event.slug === "ufc-325"), true);
+    assert.equal(
+      main.events.find((event) => event.slug === "ufc-fight-night-allen-vs-duncan")?.href,
+      "/fights/ufc-fight-night-allen-vs-duncan?node=main-card",
+    );
+    assert.equal(series.events.some((event) => event.slug === "ufc-fight-night-allen-vs-duncan"), false);
+    assert.equal(series.events.some((event) => event.slug === "ufc-325"), false);
+    assert.equal(series.events[0]?.slug, "dwcs-s10-week-9");
+    assert.equal(eventBackHref("ufc-fight-night-allen-vs-duncan", null).href, "/fights/main-card");
+    assert.equal(
+      eventBackHref("ufc-fight-night-allen-vs-duncan", "contender-series").href,
+      "/fights/main-card",
+    );
+    assert.equal(eventBackHref("ufc-fight-night-allen-vs-duncan", "prelims").href, "/fights/prelims");
+    assert.equal(eventBackHref("dwcs-s10-week-9", "main-card").href, "/fights/contender-series");
+    assert.equal(eventBackHref("ufc-332", null).href, "/fights/main-card");
+    const mainStake = summarizeBets(betsForNode(bets, "main-card", [dwcsCalendar])).staked;
+    const seriesStake = summarizeBets(betsForNode(bets, "contender-series", [dwcsCalendar])).staked;
+    assert.equal(seriesStake, "61.81");
+    assert.equal(
+      betsForNode(bets, "main-card", [dwcsCalendar]).some((bet) => bet.id === "fn-allen"),
+      true,
+    );
+    assert.equal(
+      betsForNode(bets, "contender-series", [dwcsCalendar]).some((bet) => bet.id === "fn-allen"),
+      false,
+    );
+    assert.equal(mainStake === seriesStake, false);
+    const page = resolveFightEventPage("ufc-fight-night-allen-vs-duncan", bets, [dwcsCalendar]);
+    assert.equal(page?.kind, "listed");
+    assert.equal(page && "bets" in page ? summarizeBets(page.bets).staked : "", "10.00");
+
+    const prelimsOnly = {
+      ...dwcsCalendar,
+      id: "ufc-prelims-only",
+      title: "UFC 400 prelims",
+      eventSlug: "ufc-400",
+    } as CalendarEvent;
+    assert.equal(
+      eventBackHref("ufc-400", null, { title: "UFC 400 prelims", events: [prelimsOnly] }).href,
+      "/fights/prelims",
+    );
+
+    const oct10Prelims = {
+      id: "fights-2026-10-10-prelims",
+      kind: "fight",
+      lane: "fights",
+      start: "2026-10-10T16:00:00-05:00",
+      title: "UFC Fight Night Oct 10: Prelims",
+      status: "scheduled",
+      writer: "agent",
+    } as CalendarEvent;
+    const oct10Main = {
+      id: "fights-2026-10-10-main",
+      kind: "fight",
+      lane: "fights",
+      start: "2026-10-10T19:00:00-05:00",
+      title: "UFC Fight Night Oct 10: Main Card, Allen vs Duncan",
+      status: "scheduled",
+      writer: "agent",
+    } as CalendarEvent;
+    const oct17 = {
+      id: "fights-2026-10-17-prelims",
+      kind: "fight",
+      lane: "fights",
+      start: "2026-10-17T16:00:00-05:00",
+      title: "UFC Fight Night Edmonton Oct 17: Prelims",
+      status: "scheduled",
+      writer: "agent",
+    } as CalendarEvent;
+    const calendar = [dwcsCalendar, oct10Prelims, oct10Main, oct17];
+    const targets = fightLinkTargets(bets, calendar);
+    assert.equal(
+      calendarFightHref(oct10Main, { events: calendar, targets }),
+      "/fights/ufc-fight-night-allen-vs-duncan?node=main-card",
+    );
+    assert.equal(
+      calendarFightHref(oct10Prelims, { events: calendar, targets }),
+      "/fights/ufc-fight-night-allen-vs-duncan",
+    );
+    assert.equal(calendarFightHref(oct17, { events: calendar, targets }), undefined);
+    const bout = knownBouts(bets, calendar).find(
+      (row) => row.event === "ufc-fight-night-allen-vs-duncan",
+    );
+    assert.deepEqual(bout?.fighters, ["Brendan Allen", "Christian Leroy Duncan"]);
   });
 });

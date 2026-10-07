@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { isBetSettleOverride, parseBetPostBody, parseSettleBody } from "@/lib/bets";
+import { isBetSettleOverride, parseBetPostBody, parseSettleBody, publicBet } from "@/lib/bets";
 import { asBetWriteError, isBetsStoreConfigured, postStoredBets, settleStoredBets } from "@/lib/bets-store";
+import { loadBetsForPage } from "@/lib/store-page";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
@@ -36,6 +37,19 @@ function writtenJson(written: {
     bet: first?.bet,
     results: written.results,
     updatedAt: written.envelope.updatedAt,
+  });
+}
+
+/** Public ticket list. Same fields the fight pages render. No broker order ids. */
+export async function GET() {
+  const book = await loadBetsForPage();
+  if (book.status === "unavailable") {
+    return NextResponse.json({ ok: false, error: "Bet book is unavailable." }, { status: 503 });
+  }
+  return NextResponse.json({
+    ok: true,
+    configured: book.status === "live",
+    bets: book.bets.map((bet) => publicBet(bet)),
   });
 }
 

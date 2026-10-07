@@ -4,7 +4,6 @@ import { OperatorShell } from "@/components/operator-shell";
 import { resultForFight } from "@/lib/fight-results";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadFightResultsForPage } from "@/lib/store-page";
-import { isFightDeskNodeId } from "@/lib/fight-desk";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +34,7 @@ export default async function FightPage({
   const { event, fight: slug } = await params;
   const requestedNode = oneQuery((await searchParams).node);
   const node =
-    requestedNode && isFightDeskNodeId(requestedNode)
+    requestedNode === "main-card" || requestedNode === "prelims"
       ? requestedNode
       : fightBySlug(slug)?.segment === "main-card"
         ? "main-card"

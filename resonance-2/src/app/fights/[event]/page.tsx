@@ -43,7 +43,10 @@ export default async function FightEventPage({
   const results = card.status === "unavailable" ? [] : card.results;
   const resolved = resolveFightEventPage(event, bets, calendar.events);
   if (!resolved) notFound();
-  const back = eventBackHref(resolved.slug, requestedNode);
+  const back = eventBackHref(resolved.slug, requestedNode, {
+    title: resolved.title,
+    events: calendar.events,
+  });
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const resultsAvailability =
@@ -75,6 +78,7 @@ export default async function FightEventPage({
           fights={resolved.fights}
           bets={resolved.bets}
           results={results}
+          eventSlug={resolved.slug}
           backHref={back.href}
           backLabel={back.label}
           availability={availability}
