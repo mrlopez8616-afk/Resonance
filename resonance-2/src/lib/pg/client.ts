@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { Pool } from "pg";
 import { StorageUnavailableError } from "@/lib/storage-unavailable";
 
 export type SqlClient = {
@@ -26,6 +27,33 @@ export function postgresFailureReason(error: unknown): string {
   return message.replace(/postgres(?:ql)?:\/\/\S+/gi, "postgres://redacted").slice(0, 400);
 }
 
+/** Loopback URLs use node-postgres. Neon hosts keep the serverless driver. */
+export function isLoopbackPostgres(databaseUrl: string): boolean {
+  try {
+    const host = new URL(databaseUrl).hostname.replace(/^\[|\]$/g, "");
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
+export function createPgClient(databaseUrl: string): SqlClient {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    max: 4,
+    allowExitOnIdle: true,
+  });
+  return {
+    async query<T extends Record<string, unknown>>(
+      text: string,
+      params: readonly unknown[] = [],
+    ): Promise<T[]> {
+      const result = await pool.query(text, [...params]);
+      return result.rows as T[];
+    },
+  };
+}
+
 export function createNeonClient(databaseUrl: string): SqlClient {
   const sql = neon(databaseUrl);
   return {
@@ -47,7 +75,7 @@ export async function getSql(): Promise<SqlClient> {
   }
   if (cached && cachedUrl === url) return cached;
   cachedUrl = url;
-  cached = createNeonClient(url);
+  cached = isLoopbackPostgres(url) ? createPgClient(url) : createNeonClient(url);
   return cached;
 }
 

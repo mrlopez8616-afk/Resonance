@@ -9,6 +9,7 @@ import {
   liveSleevesFromEnvelope,
   loadFillsStore,
 } from "@/lib/fills-store";
+import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
 import { authorizeFillRequest } from "@/lib/sync-auth";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 
@@ -30,20 +31,25 @@ function notConfigured() {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const access = await authorizeReadRequest(request);
+  if (!access.ok) return access.response;
   try {
     const loaded = await loadFillsStore();
-    return NextResponse.json({
+    return finishAuthorizedRead(NextResponse.json({
       ok: true,
       configured: loaded.configured,
       backend: loaded.backend,
       seeded: loaded.seeded,
       updatedAt: loaded.envelope.updatedAt,
       fills: listFills(loaded.envelope.fills),
-    });
+    }), access);
   } catch (error) {
     const mapped = asFillWriteError(error);
-    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
+    return finishAuthorizedRead(
+      NextResponse.json(storageErrorJson(mapped), { status: mapped.status }),
+      access,
+    );
   }
 }
 

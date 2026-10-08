@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import { Geist_Mono, Inter } from "next/font/google";
+import { headers } from "next/headers";
+import { PATH_HEADER, isLoginPage } from "@/lib/auth-core";
+import { requireSession } from "@/lib/auth-session";
 import "./globals.css";
 
 const inter = Inter({
@@ -28,7 +32,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const path = (await headers()).get(PATH_HEADER) ?? "";
+  if (!isLoginPage(path)) await requireSession();
   return (
     <html
       lang="en"

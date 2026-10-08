@@ -19,27 +19,39 @@
     "db:migrate": "tsx scripts/db-migrate.ts",
     "fitness:sample": "tsx scripts/post-fitness-sample.ts",
     "db:import-blob": "tsx scripts/db-import-blob.ts",
-    "db:replay": "tsx scripts/db-replay-outage.ts"
+    "db:replay": "tsx scripts/db-replay-outage.ts",
+    "auth:setup": "node scripts/auth-setup.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@node-rs/argon2": "^2.2.2",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
     "@vercel/blob": "^2.8.0",
     "next": "16.3.5",
+    "otpauth": "^9.5.2",
+    "pg": "^8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "pg-mem": "^3.0.14",
+    "playwright": "^1.64.0",
+    "qrcode": "^1.5.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

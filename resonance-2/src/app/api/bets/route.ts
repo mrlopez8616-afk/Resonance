@@ -3,6 +3,7 @@ import { isBetSettleOverride, parseBetPostBody, parseSettleBody, publicBet } fro
 import { asBetWriteError, isBetsStoreConfigured, postStoredBets, settleStoredBets } from "@/lib/bets-store";
 import { loadBetsForPage } from "@/lib/store-page";
 import { storageErrorJson } from "@/lib/storage-unavailable";
+import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
@@ -40,17 +41,25 @@ function writtenJson(written: {
   });
 }
 
-/** Public ticket list. Same fields the fight pages render. No broker order ids. */
-export async function GET() {
+/** Ticket list. Session or hub Bearer. Same fields the fight pages render. */
+export async function GET(request: Request) {
+  const access = await authorizeReadRequest(request);
+  if (!access.ok) return access.response;
   const book = await loadBetsForPage();
   if (book.status === "unavailable") {
-    return NextResponse.json({ ok: false, error: "Bet book is unavailable." }, { status: 503 });
+    return finishAuthorizedRead(
+      NextResponse.json({ ok: false, error: "Bet book is unavailable." }, { status: 503 }),
+      access,
+    );
   }
-  return NextResponse.json({
-    ok: true,
-    configured: book.status === "live",
-    bets: book.bets.map((bet) => publicBet(bet)),
-  });
+  return finishAuthorizedRead(
+    NextResponse.json({
+      ok: true,
+      configured: book.status === "live",
+      bets: book.bets.map((bet) => publicBet(bet)),
+    }),
+    access,
+  );
 }
 
 /**

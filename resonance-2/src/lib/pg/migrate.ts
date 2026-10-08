@@ -29,11 +29,19 @@ async function viewExists(name: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-export async function migrate(): Promise<{ applied: string[]; skipped: string[] }> {
+/**
+ * Applies migrations in the order given.
+ * An id already stored in schema_migrations is skipped.
+ * Numbers do not have to be contiguous: 005 runs when 004 is absent,
+ * and a later deploy that adds 004 applies only that missing id.
+ */
+export async function applyMigrations(
+  migrations: readonly { id: string; sql: string }[],
+): Promise<{ applied: string[]; skipped: string[] }> {
   const applied: string[] = [];
   const skipped: string[] = [];
 
-  for (const migration of EMBEDDED_MIGRATIONS) {
+  for (const migration of migrations) {
     const id = migration.id;
     const seen = await sqlQuery<{ id: string }>(
       `SELECT id FROM schema_migrations WHERE id = $1`,
@@ -67,4 +75,8 @@ export async function migrate(): Promise<{ applied: string[]; skipped: string[] 
   }
 
   return { applied, skipped };
+}
+
+export async function migrate(): Promise<{ applied: string[]; skipped: string[] }> {
+  return applyMigrations(EMBEDDED_MIGRATIONS);
 }
