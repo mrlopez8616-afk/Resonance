@@ -2055,6 +2055,28 @@ body {
   }
 }
 
+.fitness-grid {
+  flex: none;
+  align-content: start;
+  align-items: start;
+  grid-auto-rows: auto;
+}
+
+.fitness-grid .node-square,
+.fitness-grid .node-square.is-parent,
+.fitness-grid .node-square.is-parent.is-live {
+  height: auto;
+  aspect-ratio: auto;
+  min-height: 0;
+  grid-column: auto;
+}
+
+.fitness-grid .node-log-link,
+.fitness-grid .live-face {
+  flex: none;
+  height: auto;
+}
+
 .fitness-detail {
   display: flex;
   flex-direction: column;
@@ -2070,6 +2092,35 @@ body {
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.fitness-totals h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fitness-totals ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fitness-totals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-totals strong {
+  font-weight: 600;
 }
 
 .fitness-log {

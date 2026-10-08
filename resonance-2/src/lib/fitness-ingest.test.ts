@@ -5,6 +5,7 @@ import { after, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { newDb } from "pg-mem";
 import { FITNESS_INGEST_BODY_LIMIT, POST } from "@/app/api/fitness/ingest/route";
+import { GET as getRuns } from "@/app/api/fitness/runs/route";
 import { addCivilDays } from "@/lib/calendar-time";
 import { loadFitnessCards, loadFitnessHome, loadFitnessNode, resetFitnessStoreForTests } from "@/lib/fitness-store";
 import { sampleMetricsBody, sampleWorkoutsBody } from "@/lib/fitness-sample";
@@ -394,6 +395,243 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal(response.status, 413);
   });
 
+  it("keeps an old shortcuts payload on the larger daily total and stores no runs", async () => {
+    const body = {
+      source: "shortcuts",
+      metric: "steps",
+      values: [4000, 1000],
+      starts: ["Oct 6, 2026 at 8:00 AM", "Oct 6, 2026 at 9:00 PM"],
+    };
+    assert.equal((await ingest(body)).status, 200);
+    const smaller = await ingest({
+      source: "shortcuts",
+      metric: "steps",
+      values: [50],
+      starts: ["Oct 6, 2026 at 11:00 PM"],
+    });
+    const smallerBody = await smaller.json();
+    assert.equal(smallerBody.runs, 0);
+    const steps = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics
+       WHERE source = 'shortcuts' AND metric = 'step_count' AND day = '2026-10-06'`,
+    );
+    assert.equal(Number(steps[0]?.qty), 5000);
+    const runs = await sqlQuery<{ n: string }>(
+      `SELECT count(*)::text AS n FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(Number(runs[0]?.n), 0);
+  });
+
+  it("normalizes workout units, stores pace, and does not double-count a re-send", async () => {
+    const workouts = [
+      {
+        type: "Running",
+        source: "Nike Run Club",
+        start: "2026-10-06T18:04:00-05:00",
+        duration: 30,
+        durationUnit: "min",
+        distance: 5,
+        distanceUnit: "km",
+        energy: "320 kcal",
+      },
+      {
+        type: "Walking",
+        source: "Apple Watch",
+        start: "2026-10-06T07:15:00-05:00",
+        duration: "1200 s",
+        distance: { qty: 1.5, units: "mi" },
+      },
+      {
+        type: "Cycling",
+        source: "Nike Run Club",
+        start: "2026-10-06T12:00:00-05:00",
+        duration: 40,
+        durationUnit: "min",
+      },
+    ];
+    const first = await ingest({
+      source: "shortcuts",
+      metric: "steps",
+      values: [100],
+      starts: ["Oct 6, 2026 at 8:00 AM"],
+      workouts,
+    });
+    assert.equal(first.status, 200);
+    assert.equal((await first.json()).runs, 2);
+    const again = await ingest({
+      source: "shortcuts",
+      workouts,
+    });
+    assert.equal(again.status, 200);
+    const rows = await sqlQuery<{
+      type: string;
+      source_name: string | null;
+      duration_sec: string;
+      distance_m: string | null;
+      energy_kcal: string | null;
+      pace_sec_per_km: string | null;
+      pace_sec_per_mi: string | null;
+    }>(
+      `SELECT type, source_name, duration_sec::text AS duration_sec, distance_m::text AS distance_m,
+              energy_kcal::text AS energy_kcal, pace_sec_per_km::text AS pace_sec_per_km,
+              pace_sec_per_mi::text AS pace_sec_per_mi
+       FROM fitness_shortcut_workouts
+       ORDER BY type`,
+    );
+    assert.equal(rows.length, 2);
+    const run = rows.find((row) => row.type === "Running");
+    assert.equal(run?.source_name, "Nike Run Club");
+    assert.equal(Number(run?.duration_sec), 1800);
+    assert.equal(Number(run?.distance_m), 5000);
+    assert.equal(Number(run?.energy_kcal), 320);
+    assert.equal(Number(run?.pace_sec_per_km), 360);
+    const walk = rows.find((row) => row.type === "Walking");
+    assert.equal(Number(walk?.duration_sec), 1200);
+    assert.ok(Math.abs(Number(walk?.distance_m) - 1.5 * 1609.344) < 0.01);
+    assert.equal(walk?.energy_kcal, null);
+    assert.ok(Math.abs(Number(walk?.pace_sec_per_mi) - 800) < 0.05);
+    assert.ok(Number(walk?.pace_sec_per_km) > 0);
+  });
+
+  it("fills nulls on conflict and keeps the latest present values", async () => {
+    const start = "2026-10-07T06:30:00-05:00";
+    const sparse = await ingest({
+      source: "shortcuts",
+      workouts: [
+        {
+          type: "Running",
+          start,
+          duration: 1500,
+          durationUnit: "s",
+          energy: 200,
+          energyUnit: "kcal",
+        },
+      ],
+    });
+    assert.equal(sparse.status, 200);
+    const richer = await ingest({
+      source: "shortcuts",
+      workouts: [
+        {
+          type: "Running",
+          source: "Nike Run Club",
+          start: "2026-10-07T11:30:00Z",
+          duration: 25,
+          durationUnit: "min",
+          distance: 4,
+          distanceUnit: "km",
+        },
+      ],
+    });
+    assert.equal(richer.status, 200);
+    const rows = await sqlQuery<{
+      n: string;
+      source_name: string | null;
+      duration_sec: string;
+      distance_m: string | null;
+      energy_kcal: string | null;
+      pace_sec_per_km: string | null;
+    }>(
+      `SELECT count(*)::text AS n, max(source_name) AS source_name,
+              max(duration_sec)::text AS duration_sec, max(distance_m)::text AS distance_m,
+              max(energy_kcal)::text AS energy_kcal, max(pace_sec_per_km)::text AS pace_sec_per_km
+       FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(rows[0]?.n, "1");
+    assert.equal(rows[0]?.source_name, "Nike Run Club");
+    assert.equal(Number(rows[0]?.duration_sec), 1500);
+    assert.equal(Number(rows[0]?.distance_m), 4000);
+    assert.equal(Number(rows[0]?.energy_kcal), 200);
+    assert.equal(Number(rows[0]?.pace_sec_per_km), 375);
+
+    const named = await ingest({
+      source: "shortcuts",
+      workouts: [
+        {
+          type: "Running",
+          source: "Watch",
+          start,
+          duration: 1600,
+          durationUnit: "s",
+        },
+      ],
+    });
+    assert.equal(named.status, 200);
+    const updated = await sqlQuery<{
+      source_name: string | null;
+      duration_sec: string;
+      distance_m: string | null;
+      energy_kcal: string | null;
+      pace_sec_per_km: string | null;
+    }>(
+      `SELECT source_name, duration_sec::text AS duration_sec, distance_m::text AS distance_m,
+              energy_kcal::text AS energy_kcal, pace_sec_per_km::text AS pace_sec_per_km
+       FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(updated[0]?.source_name, "Watch");
+    assert.equal(Number(updated[0]?.duration_sec), 1600);
+    assert.equal(Number(updated[0]?.distance_m), 4000);
+    assert.equal(Number(updated[0]?.energy_kcal), 200);
+    assert.equal(Number(updated[0]?.pace_sec_per_km), 400);
+  });
+
+  it("rejects a bad workout without writing the daily total", async () => {
+    const response = await ingest({
+      source: "shortcuts",
+      metric: "steps",
+      values: [800],
+      starts: ["Oct 8, 2026 at 9:00 AM"],
+      workouts: [{ type: "Running", start: "2026-10-08T09:00:00", duration: 10, durationUnit: "min" }],
+    });
+    assert.equal(response.status, 400);
+    const meters = await ingest({
+      source: "shortcuts",
+      workouts: [
+        {
+          type: "Running",
+          start: "2026-10-08T09:00:00-05:00",
+          duration: 10,
+          durationUnit: "min",
+          distance: 1,
+          distanceUnit: "meters",
+        },
+      ],
+    });
+    assert.equal(meters.status, 400);
+    const capped = await ingest({
+      source: "shortcuts",
+      workouts: Array.from({ length: 401 }, (_, index) => ({
+        type: index % 2 === 0 ? "Running" : "Walking",
+        start: `2026-10-08T09:${String(index % 60).padStart(2, "0")}:00-05:00`,
+        duration: 10,
+        durationUnit: "min",
+      })),
+    });
+    assert.equal(capped.status, 400);
+    const steps = await sqlQuery<{ n: string }>(
+      `SELECT count(*)::text AS n FROM fitness_metrics WHERE source = 'shortcuts'`,
+    );
+    const runs = await sqlQuery<{ n: string }>(
+      `SELECT count(*)::text AS n FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(Number(steps[0]?.n), 0);
+    assert.equal(Number(runs[0]?.n), 0);
+  });
+
+  it("requires a session or the sync bearer to read runs", async () => {
+    const closed = await getRuns(new Request("https://resonance3.vercel.app/api/fitness/runs"));
+    assert.equal(closed.status, 401);
+    const opened = await getRuns(
+      new Request("https://resonance3.vercel.app/api/fitness/runs", {
+        headers: { authorization: "Bearer hub-secret" },
+      }),
+    );
+    assert.equal(opened.status, 200);
+    const body = await opened.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.runs.length >= 2, true);
+  });
+
   it("applies migration 007 when 006 is absent", async () => {
     assert.deepEqual(
       migrationIdsInOrder(["007_fitness_shortcuts", "002_fitness", "006_other", "005_auth"]),
@@ -415,6 +653,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "007_fitness_shortcuts",
         "008_finance",
         "009_reset_rh_agentic_sleeves",
+        "010_fitness_workouts",
       ],
     );
     assert.equal(

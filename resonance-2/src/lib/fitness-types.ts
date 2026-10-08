@@ -33,7 +33,23 @@ export type FitnessWorkoutWrite = {
   payload: unknown;
 };
 
+export type ShortcutWorkoutType = "Running" | "Walking";
+
+/** One Shortcuts running or walking row. Amounts are decimal strings. Pace is null until distance is known. */
+export type ShortcutWorkoutWrite = {
+  startTime: string;
+  type: ShortcutWorkoutType;
+  sourceName: string | null;
+  durationSec: string;
+  distanceM: string | null;
+  energyKcal: string | null;
+  paceSecPerKm: string | null;
+  paceSecPerMi: string | null;
+};
+
 export type FitnessWrites = {
   metrics: FitnessMetricWrite[];
   workouts: FitnessWorkoutWrite[];
+  /** Running and walking rows from the Shortcuts `workouts` array. */
+  shortcutWorkouts?: ShortcutWorkoutWrite[];
 };
