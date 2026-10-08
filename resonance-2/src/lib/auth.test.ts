@@ -447,7 +447,7 @@ describe("login core", { concurrency: false }, () => {
     assert.equal(safeNextPath("/fights"), "/fights");
   });
 
-  it("applies 001 through 005 in order and still fills a gap", async () => {
+  it("applies 001 through 005 and 009 in order and still fills a gap", async () => {
     assert.deepEqual(
       EMBEDDED_MIGRATIONS.map((migration) => migration.id),
       [
@@ -456,6 +456,7 @@ describe("login core", { concurrency: false }, () => {
         "003_bet_tier",
         "004_fight_breakdowns",
         "005_auth",
+        "009_reset_rh_agentic_sleeves",
       ],
     );
     const ids = (await sqlQuery<{ id: string }>(`SELECT id FROM schema_migrations ORDER BY id`)).map(
