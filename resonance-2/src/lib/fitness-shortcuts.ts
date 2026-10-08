@@ -9,8 +9,9 @@ import type { FitnessMetricWrite, FitnessOrigin, FitnessWrites } from "@/lib/fit
  * Several in one call:
  *   {"source":"shortcuts","metrics":[{"metric":"steps","values":[...],"starts":[...]}, ...]}
  * values/starts may be arrays of numbers or strings, or one newline-joined string.
- * A missing timezone is America/Chicago. Each Chicago day in the payload replaces
- * that day's total for this source. Days the payload does not mention stay put.
+ * A missing timezone is America/Chicago. For source shortcuts, a Chicago day
+ * keeps the larger stored total. A partial nightly window does not shrink a full day.
+ * A later post with a higher total replaces it. Days the payload does not mention stay put.
  */
 const ISO_INSTANT =
   /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:\s*(Z|[+-]\d{2}:?\d{2}))?)?$/;

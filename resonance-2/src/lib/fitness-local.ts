@@ -39,9 +39,24 @@ function writeSnapshot(file: string, rows: FitnessWrites): void {
   renameSync(temp, file);
 }
 
+function keptQty(existing: string, incoming: string): string {
+  const stored = Number(existing);
+  const next = Number(incoming);
+  if (!Number.isFinite(stored) || !Number.isFinite(next)) return incoming;
+  return next < stored ? existing : incoming;
+}
+
 function merge(current: FitnessWrites, rows: FitnessWrites): FitnessWrites {
   const metrics = new Map(current.metrics.map((row) => [`${row.source}:${row.externalId}`, row]));
-  for (const row of rows.metrics) metrics.set(`${row.source}:${row.externalId}`, row);
+  for (const row of rows.metrics) {
+    const key = `${row.source}:${row.externalId}`;
+    const existing = metrics.get(key);
+    if (existing && row.source === "shortcuts") {
+      metrics.set(key, { ...row, qty: keptQty(existing.qty, row.qty) });
+      continue;
+    }
+    metrics.set(key, row);
+  }
   const workouts = new Map(current.workouts.map((row) => [`${row.source}:${row.externalId}`, row]));
   for (const row of rows.workouts) workouts.set(`${row.source}:${row.externalId}`, row);
   return { metrics: [...metrics.values()], workouts: [...workouts.values()] };

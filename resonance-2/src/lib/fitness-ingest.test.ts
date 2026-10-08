@@ -194,7 +194,7 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal(parseShortcutInstant("not a date"), null);
   });
 
-  it("replaces shortcut days and does not double-count an overlapping window", async () => {
+  it("keeps the larger shortcuts day and does not double-count an overlapping window", async () => {
     const nightly = {
       source: "shortcuts",
       metrics: [
@@ -254,7 +254,7 @@ describe("fitness ingest", { concurrency: false }, () => {
       rows.map((row) => [civil(row.day), Number(row.qty)]),
       [
         ["2026-10-07", 150],
-        ["2026-10-08", 55],
+        ["2026-10-08", 100],
         ["2026-10-09", 40],
       ],
     );
@@ -268,10 +268,58 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal(detail.detail?.rows.some((row) => row.id === "2026-10-06"), false);
     assert.equal(detail.detail?.rows.some((row) => row.primary === "0 steps"), false);
     const october8 = detail.detail?.rows.find((row) => row.id === "2026-10-08");
-    assert.equal(october8?.primary, "55 steps");
+    assert.equal(october8?.primary, "100 steps");
     assert.match(october8?.secondary ?? "", /410 kcal/);
     assert.match(october8?.secondary ?? "", /3\.8 mi/);
     assert.match(october8?.secondary ?? "", /32 min/);
+  });
+
+  it("does not let a 9 PM nightly slice shrink a full shortcuts day", async () => {
+    const fullDay = {
+      source: "shortcuts",
+      metric: "steps",
+      values: [4000, 3500, 2125],
+      starts: ["Oct 6, 2026 at 8:00 AM", "Oct 6, 2026 at 1:00 PM", "Oct 6, 2026 at 6:00 PM"],
+    };
+    const first = await ingest(fullDay);
+    assert.equal(first.status, 200);
+    const firstBody = await first.json();
+    const replay = await ingest(fullDay);
+    assert.deepEqual(await replay.json(), firstBody);
+
+    const nightlySlice = {
+      source: "shortcuts",
+      metric: "steps",
+      values: [180, 40],
+      starts: ["Oct 6, 2026 at 9:00 PM", "Oct 6, 2026 at 11:30 PM"],
+    };
+    assert.equal((await ingest(nightlySlice)).status, 200);
+    const sliceAgain = await ingest(nightlySlice);
+    assert.equal(sliceAgain.status, 200);
+    const kept = await sqlQuery<{ qty: string; n: string }>(
+      `SELECT qty::text AS qty, count(*)::text AS n
+       FROM fitness_metrics
+       WHERE source = 'shortcuts' AND metric = 'step_count' AND day = '2026-10-06'
+       GROUP BY qty`,
+    );
+    assert.equal(kept.length, 1);
+    assert.equal(Number(kept[0]?.qty), 9625);
+    assert.equal(Number(kept[0]?.n), 1);
+
+    const larger = {
+      source: "shortcuts",
+      metric: "steps",
+      values: [7000, 3000],
+      starts: ["Oct 6, 2026 at 8:00 AM", "Oct 6, 2026 at 9:14 PM"],
+    };
+    const raised = await ingest(larger);
+    const raisedAgain = await ingest(larger);
+    assert.deepEqual(await raisedAgain.json(), await raised.json());
+    const replaced = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics
+       WHERE source = 'shortcuts' AND metric = 'step_count' AND day = '2026-10-06'`,
+    );
+    assert.equal(Number(replaced[0]?.qty), 10000);
   });
 
   it("backfills from 2026-09-01 in chunks without stacking", async () => {
@@ -295,13 +343,13 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal(Number(stored[0]?.n), days);
     assert.equal(Number(stored[0]?.qty), 1005);
 
-    const later = {
+    const partial = {
       source: "shortcuts",
       metric: "steps",
       values: [7],
       starts: ["2026-09-10T23:30:00"],
     };
-    await ingest(later);
+    await ingest(partial);
     const edge = await sqlQuery<{ qty: string; n: string }>(
       `SELECT qty::text AS qty, count(*)::text AS n
        FROM fitness_metrics
@@ -309,8 +357,22 @@ describe("fitness ingest", { concurrency: false }, () => {
        GROUP BY qty`,
     );
     assert.equal(edge.length, 1);
-    assert.equal(Number(edge[0]?.qty), 7);
+    assert.equal(Number(edge[0]?.qty), 1014);
     assert.equal(Number(edge[0]?.n), 1);
+    const raised = {
+      source: "shortcuts",
+      metric: "steps",
+      values: [2500],
+      starts: ["2026-09-10T08:00:00"],
+    };
+    const raisedBody = await (await ingest(raised)).json();
+    const raisedAgain = await (await ingest(raised)).json();
+    assert.deepEqual(raisedAgain, raisedBody);
+    const replaced = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics
+       WHERE source = 'shortcuts' AND metric = 'step_count' AND day = '2026-09-10'`,
+    );
+    assert.equal(Number(replaced[0]?.qty), 2500);
     const earlier = await sqlQuery<{ qty: string }>(
       `SELECT qty::text AS qty FROM fitness_metrics
        WHERE source = 'shortcuts' AND metric = 'step_count' AND day = '2026-09-01'`,

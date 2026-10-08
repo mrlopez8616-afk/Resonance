@@ -139,7 +139,11 @@ export async function upsertFitnessRows(rows: FitnessWrites): Promise<{ metrics:
          metric = EXCLUDED.metric,
          day = EXCLUDED.day,
          recorded_at = EXCLUDED.recorded_at,
-         qty = EXCLUDED.qty,
+         -- Shortcuts keeps the larger quantity, the same rule as GREATEST(existing, new).
+         qty = CASE
+           WHEN EXCLUDED.source = 'shortcuts' AND fitness_metrics.qty > EXCLUDED.qty THEN fitness_metrics.qty
+           ELSE EXCLUDED.qty
+         END,
          units = EXCLUDED.units,
          qty_min = EXCLUDED.qty_min,
          qty_max = EXCLUDED.qty_max,

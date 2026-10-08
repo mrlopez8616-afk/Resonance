@@ -18,8 +18,10 @@ export const maxDuration = 60;
  * Header: `Authorization: Bearer <FITNESS_INGEST_TOKEN>`
  * or `X-Fitness-Token: <FITNESS_INGEST_TOKEN>`.
  * Unset token fails closed. The hub sync secret is not accepted.
- * A Shortcuts day total replaces that day. Post the same window again
- * and the totals stay the same.
+ * A Shortcuts day keeps the larger total, so a partial nightly window
+ * cannot shrink a full day. Post the same window again and the totals stay the same.
+ * A later post with a higher total replaces the stored one.
+ * Health Auto Export still replaces the day.
  */
 export async function POST(request: Request) {
   const auth = authorizeFitnessRequest(request);
