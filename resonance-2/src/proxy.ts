@@ -27,7 +27,8 @@ function unauthorized() {
 /**
  * Cookie shape is checked here. Pages with a well-formed cookie continue so
  * the root layout can validate the row. GET /api is session-or-Bearer, including
- * routes added later (GET /api/fights/breakdown). Writes keep their own checks.
+ * routes added later (GET /api/fights/breakdown). GET /api/finance is the
+ * exception: the sync Bearer does not open it. Writes keep their own checks.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

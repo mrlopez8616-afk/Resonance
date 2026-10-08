@@ -12,7 +12,7 @@ export const XRP_DAILY_CLOSE_USD = 1.55;
  */
 export const HOME_QUOTE_MAX_AGE_MS = 15 * 60 * 1000;
 
-/** Static until the Finance node exists. No balances. */
+/** Shown when there is no owner snapshot. No balances. */
 export const FINANCE_HOME_LABEL = "Bank linked · private";
 
 const BLOCKED = /\$0\.00|\bNaN\b|\bundefined\b/;

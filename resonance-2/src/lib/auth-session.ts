@@ -72,7 +72,7 @@ export async function requireSession(options?: { role?: UserRole }): Promise<Ses
   return user;
 }
 
-/** Owner-only gate for a later page. Nothing calls this yet. */
+/** Owner-only gate. Finance pages call this. */
 export async function requireRole(role: UserRole): Promise<SessionUser> {
   return requireSession({ role });
 }

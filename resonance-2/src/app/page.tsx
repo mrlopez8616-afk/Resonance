@@ -2,7 +2,10 @@ import { ParentGrid } from "@/components/parent-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { ThisWeek } from "@/components/this-week";
 import { NODE_PARENT } from "@/data/node-parents";
+import { getSession } from "@/lib/auth-session";
 import { bankrollHomeFace } from "@/lib/bankroll";
+import { loadFinancePage } from "@/lib/finance/store";
+import { financeHomeForRole, type FinanceHomeFace } from "@/lib/finance/view";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { heldCryptoQuantities, type CryptoBasketLeg } from "@/lib/crypto-basket";
 import { loadFitnessHome } from "@/lib/fitness-store";
@@ -30,13 +33,14 @@ function quoteSlice(
 }
 
 export default async function Home() {
-  const [floor, fitness, bankroll, calendar, book, closesByTicker] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, closesByTicker, session] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
     loadCalendarForPage(),
     loadBetsForPage(),
     loadCryptoBasketCloses(),
+    getSession(),
   ]);
   const basketLegs: CryptoBasketLeg[] = heldCryptoQuantities(
     Object.entries(NODE_PARENT).flatMap(([id, parentId]) => {
@@ -57,6 +61,14 @@ export default async function Home() {
     quantity: leg.quantity,
     closes: closesByTicker[leg.ticker] ?? [],
   }));
+  let financeHome: FinanceHomeFace | null = null;
+  if (session?.role === "owner") {
+    const finance = await loadFinancePage();
+    financeHome = financeHomeForRole(
+      session.role,
+      finance.status === "live" ? finance.snapshot : null,
+    );
+  }
   const faceTotals = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
   );
@@ -107,6 +119,7 @@ export default async function Home() {
             : null
         }
         bankrollLine={inScopeBankrollPoints(bets, calendar.events)}
+        financeHome={financeHome}
         asOf={asOf.toISOString()}
       />
     </OperatorShell>

@@ -170,6 +170,11 @@ export function isAuthApi(pathname: string): boolean {
   return pathname === "/api/auth" || pathname.startsWith("/api/auth/");
 }
 
+/** Finance reads are owner-session only. The sync Bearer does not open them. */
+export function isFinanceApi(pathname: string): boolean {
+  return pathname === "/api/finance" || pathname.startsWith("/api/finance/");
+}
+
 export function isLoginPage(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
@@ -200,6 +205,12 @@ export function planAccess(input: {
   const method = input.method.toUpperCase();
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     if (method !== "GET" && method !== "HEAD") return { kind: "allow" };
+    if (isFinanceApi(pathname)) {
+      if (input.loginConfigured && isSessionToken(input.sessionToken)) {
+        return { kind: "allow-session" };
+      }
+      return { kind: "deny" };
+    }
     if (input.bearerOk) return { kind: "allow" };
     if (input.loginConfigured && isSessionToken(input.sessionToken)) {
       return { kind: "allow-session" };
