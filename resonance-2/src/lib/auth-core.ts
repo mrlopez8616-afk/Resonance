@@ -94,6 +94,19 @@ const HOST_HEADER =
   /^(?:localhost|\[::1\]|(?:\d{1,3}\.){3}\d{1,3}|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*)(?::\d{1,5})?$/i;
 
 /**
+ * Browser POSTs must prove they came from this site. A present Origin has to
+ * match the request host, and a present Sec-Fetch-Site has to be same-origin.
+ * Missing both is rejected.
+ */
+export function isSameOriginRequest(request: Request): boolean {
+  const site = request.headers.get("sec-fetch-site")?.trim().toLowerCase() ?? "";
+  if (site && site !== "same-origin") return false;
+  const origin = request.headers.get("origin")?.trim() ?? "";
+  if (origin) return origin === requestOrigin(request);
+  return site === "same-origin";
+}
+
+/**
  * Origin the browser actually used. Route handlers see the bind address
  * (0.0.0.0) in request.url when the server listens on all interfaces, which
  * breaks WebAuthn's RP ID after a redirect.

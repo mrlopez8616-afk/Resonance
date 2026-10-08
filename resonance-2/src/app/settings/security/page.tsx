@@ -1,3 +1,4 @@
+import { FitnessShortcutSetup } from "@/components/fitness-shortcut-setup";
 import { OperatorShell } from "@/components/operator-shell";
 import { SecurityPanel } from "@/components/security-panel";
 import { webauthnConfig } from "@/lib/auth-core";
@@ -48,6 +49,8 @@ export default async function SecurityPage() {
           lastUsed: formatWhen(row.lastUsedAt),
         }))}
         passkeysConfigured={webauthnConfig() !== null}
+        fitnessTokenConfigured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())}
+        shortcut={<FitnessShortcutSetup />}
       />
     </OperatorShell>
   );

@@ -103,8 +103,20 @@ export async function ensureOwner(now = authNow()): Promise<{ id: string }> {
   throw new Error("Owner account was not created.");
 }
 
-export async function readLiveSession(token: string, now = authNow()): Promise<LiveSession | null> {
-  if (!isLoginConfigured() || !isSessionToken(token)) return null;
+export type SessionPresentation =
+  | { kind: "live"; live: LiveSession }
+  | { kind: "forbidden" }
+  | { kind: "absent" };
+
+/**
+ * Owner sessions stay. A live operator (or any other non-owner) is removed
+ * and reported as forbidden. Expired, disabled, and unknown rows are absent.
+ */
+export async function readSessionPresentation(
+  token: string,
+  now = authNow(),
+): Promise<SessionPresentation> {
+  if (!isLoginConfigured() || !isSessionToken(token)) return { kind: "absent" };
   const idHash = hashSessionId(token);
   const rows = await sqlQuery<SessionRow>(
     `SELECT s.id_hash, s.user_id, u.username, u.role, u.disabled_at,
@@ -115,11 +127,15 @@ export async function readLiveSession(token: string, now = authNow()): Promise<L
     [idHash],
   );
   const row = rows[0];
-  if (!row) return null;
+  if (!row) return { kind: "absent" };
   const role = asRole(row.role);
-  if (millis(row.expires_at) <= now || !role || role !== "owner" || row.disabled_at) {
+  if (millis(row.expires_at) <= now || !role || row.disabled_at) {
     await sqlQuery(`DELETE FROM auth_sessions WHERE id_hash = $1`, [idHash]);
-    return null;
+    return { kind: "absent" };
+  }
+  if (role !== "owner") {
+    await sqlQuery(`DELETE FROM auth_sessions WHERE id_hash = $1`, [idHash]);
+    return { kind: "forbidden" };
   }
   const seen = stamp(now);
   const resetCookie = needsRenewal(millis(row.renewed_at), now);
@@ -135,20 +151,28 @@ export async function readLiveSession(token: string, now = authNow()): Promise<L
     await sqlQuery(`UPDATE auth_sessions SET last_seen_at = $2 WHERE id_hash = $1`, [idHash, seen]);
   }
   return {
-    token,
-    resetCookie,
-    session: {
-      idHash,
-      userId: String(row.user_id),
-      username: row.username,
-      role,
-      createdAt: iso(row.created_at),
-      lastSeenAt: seen,
-      renewedAt: resetCookie ? seen : iso(row.renewed_at),
-      expiresAt: expires,
-      userAgent: row.user_agent,
+    kind: "live",
+    live: {
+      token,
+      resetCookie,
+      session: {
+        idHash,
+        userId: String(row.user_id),
+        username: row.username,
+        role,
+        createdAt: iso(row.created_at),
+        lastSeenAt: seen,
+        renewedAt: resetCookie ? seen : iso(row.renewed_at),
+        expiresAt: expires,
+        userAgent: row.user_agent,
+      },
     },
   };
+}
+
+export async function readLiveSession(token: string, now = authNow()): Promise<LiveSession | null> {
+  const presented = await readSessionPresentation(token, now);
+  return presented.kind === "live" ? presented.live : null;
 }
 
 export async function createSession(userAgent: string | null, now = authNow()): Promise<string> {
