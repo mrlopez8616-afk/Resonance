@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { FitnessGrid } from "@/components/fitness-grid";
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
@@ -32,11 +32,14 @@ export default async function ParentNodePage({
 }) {
   const { parent: id } = await params;
   const legacy = legacyParentHref(id);
-  if (legacy) redirect(legacy);
+  if (legacy) {
+    if (id === "predictions") permanentRedirect(legacy);
+    redirect(legacy);
+  }
   const parent = parentById(id);
   if (!parent) notFound();
 
-  if (parent.id === "predictions") {
+  if (parent.id === "fight-desk") {
     const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
     return (
       <OperatorShell

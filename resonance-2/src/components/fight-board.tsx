@@ -12,6 +12,7 @@ import {
   type DeskFight,
   type DeskPromotion,
 } from "@/lib/fight-desk";
+import { parentById, parentCardHref } from "@/lib/node-parents";
 import { formatBoutLine, resultForFight, type FightResult } from "@/lib/fight-results";
 import {
   UFC_332_EVENT,
@@ -196,10 +197,10 @@ export function FightIndex({
   return (
     <div className="log-canvas">
       <header className="log-header">
-        <Link href="/n/predictions" className="calendar-back">
-          Predictions
+        <Link href={parentCardHref("fight-desk")} className="calendar-back">
+          {parentById("fight-desk")?.label ?? "Fight Desk"}
         </Link>
-        <p className="log-kicker">Predictions</p>
+        <p className="log-kicker">{parentById("fight-desk")?.label ?? "Fight Desk"}</p>
         <h2 className="log-title">Fights</h2>
       </header>
       <ol className="flex flex-col gap-3">
@@ -387,7 +388,8 @@ export function FightEvent({
           kicker: `${fight.time} CT`,
           detail: fight.division,
           href: fight.href,
-          segment: fight.segment === "main-card" ? "main-card" : "prelims",
+          segment: fight.segment,
+          boutOrder: fight.n,
           bets: betsOnFight(bets, fight.slug),
         }))}
         renderFight={(fight) => {

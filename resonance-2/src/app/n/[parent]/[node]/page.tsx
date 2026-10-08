@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { FitnessDetail } from "@/components/fitness-detail";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
@@ -35,7 +35,7 @@ export async function generateMetadata({
     const title = node ? `${node.title} · ${parent.label}` : "Node";
     return { title: `${title} · Resonance 2.0` };
   }
-  if (parent?.id === "predictions" && nodeId === "bankroll") {
+  if (parent?.id === "fight-desk" && nodeId === "bankroll") {
     return { title: `Bankroll · ${parent.label} · Resonance 2.0` };
   }
   const node = FLOOR_NODES.find((item) => item.id === nodeId);
@@ -50,7 +50,10 @@ export default async function NodeDetailPage({
 }) {
   const { parent: parentId, node: nodeId } = await params;
   const legacy = legacyParentHref(parentId, nodeId);
-  if (legacy) redirect(legacy);
+  if (legacy) {
+    if (parentId === "predictions") permanentRedirect(legacy);
+    redirect(legacy);
+  }
   const parent = parentById(parentId);
   if (parent?.id === "fitness") {
     const [floor, fitness] = await Promise.all([
@@ -73,7 +76,7 @@ export default async function NodeDetailPage({
       </OperatorShell>
     );
   }
-  if (parent?.id === "predictions") {
+  if (parent?.id === "fight-desk") {
     if (nodeId !== "bankroll") notFound();
     const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
     return (

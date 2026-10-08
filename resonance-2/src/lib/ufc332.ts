@@ -324,6 +324,7 @@ function buildFight(raw: RawFight): CatalogFight {
   };
 }
 
+/** `n` is scheduled running order: 1 is the first fight of the night, and the main event is last. */
 export const ufc332Fights: CatalogFight[] = fightsRaw
   .slice()
   .sort((left, right) => left.n - right.n)

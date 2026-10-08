@@ -65,7 +65,8 @@ function linesFor(
   }
   if (parentId === "fitness") return fitnessSecondaryLines(input.fitnessWeek, input.fitnessLine);
   if (parentId === "finance") return [];
-  return predictionsSecondaryLines(input.predictions);
+  if (parentId === "fight-desk") return predictionsSecondaryLines(input.predictions);
+  return [];
 }
 
 export function ParentGrid({
@@ -91,7 +92,7 @@ export function ParentGrid({
   /** One real fitness line. Null keeps the card on "not connected yet" unless a week line exists. */
   fitnessLine?: FitnessHomeLine | null;
   fitnessWeek?: FitnessWeekFacts | null;
-  /** Predictions bankroll headline. Null when the bet book cannot be read. */
+  /** Fight Desk bankroll headline. Null when the bet book cannot be read. */
   bankroll?: { headline: string; priceLine: string } | null;
   predictions?: PredictionsHomeFacts | null;
   xrpQuote?: HomeQuote | null;
@@ -144,7 +145,7 @@ export function ParentGrid({
             </NodeSquare>
           );
         }
-        if (parent.id === "predictions") {
+        if (parent.id === "fight-desk") {
           const headline = bankroll ? predictionsHeadline(bankroll.headline) : null;
           const live = bankroll !== null && (headline !== null || lines.length > 0);
           return (

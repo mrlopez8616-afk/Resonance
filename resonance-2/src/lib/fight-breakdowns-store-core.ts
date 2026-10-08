@@ -46,7 +46,13 @@ function isBreakdown(value: unknown): value is FightBreakdown {
 /** Drop rows that are not breakdowns. A second read of the same file is stable. */
 export function parseBreakdownsEnvelope(raw: unknown): FightBreakdownsEnvelope | null {
   if (!isRecord(raw) || !Array.isArray(raw.breakdowns)) return null;
-  const breakdowns = raw.breakdowns.filter(isBreakdown);
+  const breakdowns = raw.breakdowns.filter(isBreakdown).map((row) => ({
+    ...row,
+    boutOrder:
+      typeof row.boutOrder === "number" && Number.isInteger(row.boutOrder) && row.boutOrder >= 1
+        ? row.boutOrder
+        : null,
+  }));
   return {
     version: BREAKDOWNS_STORE_VERSION,
     updatedAt:

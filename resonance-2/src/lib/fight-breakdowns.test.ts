@@ -6,10 +6,16 @@ import { after, beforeEach, describe, it } from "node:test";
 import { GET, POST } from "@/app/api/fights/breakdown/route";
 import { BET_TICKER, BET_VENUE, type Bet } from "@/lib/bets";
 import { resetBlobReadCacheForTests, setBlobSdkForTests } from "@/lib/blob-read";
+import { applyStaticCard, DWCS_S10_WEEK_9 } from "@/data/dwcs-cards";
+import { eventBoutSections } from "@/lib/fight-desk";
 import {
   annotateDeskFights,
   applyBreakdowns,
+  derivedBoutOrder,
   fightDetailVisibility,
+  deskFightsForEvent,
+  fightsFromBreakdowns,
+  linksColumn,
   parseBreakdownBody,
   resolveFightView,
   type FightBreakdown,
@@ -257,6 +263,196 @@ describe("fight page resolver", () => {
   });
 });
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const ALLEN_FIRST_TO_LAST = [
+  "ernesta-kareckaite-vs-melissa-gatto",
+  "alice-pereira-vs-darya-zheleznyakova",
+  "allen-frye-jr-vs-rj-harris",
+  "felipe-franco-vs-brendson-ribeiro",
+  "niko-price-vs-leon-shahbazyan",
+  "francisco-prado-vs-ismael-bonfim",
+  "julius-walker-vs-gerald-meerschaert",
+  "malcolm-wellmaker-vs-otari-tanzilovi",
+  "andre-fili-vs-kai-kamaka-iii",
+  "lupita-godinez-vs-ketlen-souza",
+  "matheus-camilo-vs-jai-herbert",
+  "brendan-allen-vs-christian-leroy-duncan",
+] as const;
+
+function allenSite() {
+  const fights: Record<string, { fightSlug: string }> = {};
+  const data: { n: number; card: string; A: { name: string }; B: { name: string } }[] = [];
+  ALLEN_FIRST_TO_LAST.forEach((slug, index) => {
+    const n = ALLEN_FIRST_TO_LAST.length - index;
+    const card = n <= 5 ? "Main card" : "Prelims";
+    fights[String(n)] = { fightSlug: slug };
+    data.push({ n, card, A: { name: "A" }, B: { name: "B" } });
+  });
+  return { eventSlug: EVENT, fights, data };
+}
+
+describe("card bout order", () => {
+  it("lists Allen vs Duncan from the prelims opener to the main event", () => {
+    const rows = parseBreakdownBody(allenSite());
+    assert.equal(rows.length, 12);
+    assert.equal(rows.find((row) => row.fightSlug === SLUG)?.boutOrder, null);
+    assert.equal(rows.find((row) => row.fightSlug === SLUG)?.fightN, 1);
+    const fights = fightsFromBreakdowns(EVENT, rows);
+    assert.deepEqual(
+      fights.map((fight) => fight.slug),
+      [...ALLEN_FIRST_TO_LAST],
+    );
+    assert.equal(fights[0]?.boutOrder, 1);
+    assert.equal(fights.at(-1)?.boutOrder, 12);
+    const layout = eventBoutSections(fights);
+    assert.equal(layout.kind, "sections");
+    if (layout.kind !== "sections") return;
+    assert.deepEqual(
+      layout.sections.map((section) => section.id),
+      ["prelims", "main-card"],
+    );
+    assert.equal(layout.sections[0]?.fights[0]?.slug, "ernesta-kareckaite-vs-melissa-gatto");
+    assert.equal(layout.sections[1]?.fights.at(-1)?.slug, SLUG);
+  });
+
+  it("derives boutOrder from n when the post omits it", () => {
+    const rows = parseBreakdownBody(allenSite());
+    const main = rows.find((row) => row.fightN === 1);
+    const opener = rows.find((row) => row.fightN === 12);
+    assert.ok(main && opener);
+    assert.equal(derivedBoutOrder(main, rows), 12);
+    assert.equal(derivedBoutOrder(opener, rows), 1);
+    const explicit = parseBreakdownBody([
+      camel({ fightSlug: "late-vs-late", fightN: 1, boutOrder: 5, card: "Main card" }),
+      camel({
+        fightSlug: "early-vs-early",
+        fightN: 2,
+        card: "Prelims",
+      }),
+    ]);
+    assert.equal(explicit[0]?.boutOrder, 5);
+    assert.equal(explicit[1]?.boutOrder, null);
+    assert.equal(derivedBoutOrder(explicit[1]!, explicit), 1);
+    assert.deepEqual(
+      fightsFromBreakdowns(EVENT, explicit).map((fight) => fight.slug),
+      ["early-vs-early", "late-vs-late"],
+    );
+  });
+
+  it("orders early prelims, then prelims, then the main card, and leaves unknown order last", () => {
+    const rows = parseBreakdownBody([
+      camel({ fightSlug: "main-late", card: "Main card", boutOrder: 2, fightN: null }),
+      camel({ fightSlug: "prelim-first", card: "Prelims", boutOrder: 1, fightN: null }),
+      camel({ fightSlug: "early-late", card: "Early prelims", boutOrder: 3, fightN: null }),
+      camel({ fightSlug: "early-first", card: "Early prelims", boutOrder: 1, fightN: null }),
+      camel({ fightSlug: "main-first", card: "Main card", boutOrder: 1, fightN: null }),
+      camel({ fightSlug: "prelim-unknown", card: "Prelims", fightN: null }),
+      camel({ fightSlug: "prelim-unknown-2", card: "Prelims", fightN: null }),
+    ]);
+    assert.deepEqual(
+      fightsFromBreakdowns(EVENT, rows).map((fight) => fight.slug),
+      [
+        "early-first",
+        "early-late",
+        "prelim-first",
+        "prelim-unknown",
+        "prelim-unknown-2",
+        "main-first",
+        "main-late",
+      ],
+    );
+    const layout = eventBoutSections(fightsFromBreakdowns(EVENT, rows));
+    assert.equal(layout.kind, "sections");
+    if (layout.kind !== "sections") return;
+    assert.deepEqual(
+      layout.sections.map((section) => section.id),
+      ["early-prelims", "prelims", "main-card"],
+    );
+  });
+
+  it("joins a bet list to breakdown bout order and keeps an unordered bet last", () => {
+    const rows = parseBreakdownBody(allenSite());
+    const fights = annotateDeskFights(
+      [
+        {
+          slug: SLUG,
+          title: "Brendan Allen vs Christian Leroy Duncan",
+          kicker: "",
+          detail: "",
+          segment: "main-card",
+          bets: [bet()],
+        },
+        {
+          slug: "ernesta-kareckaite-vs-melissa-gatto",
+          title: "Ernesta Kareckaite vs Melissa Gatto",
+          kicker: "",
+          detail: "",
+          segment: null,
+          bets: [bet({ id: "opener", fightSlug: "ernesta-kareckaite-vs-melissa-gatto" })],
+        },
+        {
+          slug: "nobody-vs-nobody",
+          title: "Nobody vs Nobody",
+          kicker: "",
+          detail: "",
+          segment: "prelims",
+          bets: [bet({ id: "extra", fightSlug: "nobody-vs-nobody", fight: "Nobody vs Nobody" })],
+        },
+      ],
+      EVENT,
+      rows,
+    );
+    assert.deepEqual(
+      fights.map((fight) => fight.slug),
+      ["ernesta-kareckaite-vs-melissa-gatto", "nobody-vs-nobody", SLUG],
+    );
+    const card = deskFightsForEvent(
+      EVENT,
+      fights.filter((fight) => fight.slug === SLUG || fight.slug === "nobody-vs-nobody"),
+      rows,
+    );
+    assert.equal(card[0]?.slug, "ernesta-kareckaite-vs-melissa-gatto");
+    assert.equal(card.at(-1)?.slug, SLUG);
+    assert.equal(card.find((fight) => fight.slug === SLUG)?.bets.length, 1);
+    assert.equal(card.length, 13);
+  });
+
+  it("uses the DWCS week 9 card order and leaves an unlisted bet last", () => {
+    const ordered = applyStaticCard("dwcs-s10-week-9", [
+      {
+        slug: "summer-onley-vs-alivia-bierley",
+        title: "Summer Onley vs Alivia Bierley",
+        kicker: "",
+        detail: "",
+        segment: null,
+        bets: [],
+      },
+      {
+        slug: "unlisted-vs-unlisted",
+        title: "Unlisted vs Unlisted",
+        kicker: "",
+        detail: "",
+        segment: null,
+        bets: [],
+      },
+    ]);
+    assert.deepEqual(
+      ordered.map((fight) => fight.slug),
+      [...DWCS_S10_WEEK_9.fights.map((fight) => fight.slug), "unlisted-vs-unlisted"],
+    );
+    assert.equal(ordered[0]?.title, "Preston LaGrange vs Nell Ariano");
+    assert.equal(ordered[4]?.title, "Summer Onley vs Alivia Bierley");
+  });
+
+  it("rejects a non-positive boutOrder", () => {
+    assert.throws(() => parseBreakdownBody([camel({ boutOrder: 0 })]), /boutOrder must be a positive integer/);
+    assert.throws(() => parseBreakdownBody([camel({ boutOrder: 1.5 })]), /boutOrder must be an integer/);
+  });
+});
+
 function createMemorySql(): SqlClient {
   const db = newDb();
   const { Pool } = db.adapters.createPg();
@@ -353,8 +549,9 @@ describe("breakdown route", { concurrency: false }, () => {
     const listed = (await read.json()) as { ok: boolean; breakdowns: FightBreakdown[] };
     assert.equal(listed.ok, true);
     assert.equal(listed.breakdowns.length, 2);
-    assert.equal(listed.breakdowns[0]?.fightSlug, SLUG);
-    assert.equal(listed.breakdowns[0]?.why, "Allen is the better grappler.");
+    assert.equal(listed.breakdowns[0]?.fightSlug, "andre-fili-vs-kai-kamaka-iii");
+    assert.equal(listed.breakdowns[1]?.fightSlug, SLUG);
+    assert.equal(listed.breakdowns[1]?.why, "Allen is the better grappler.");
   });
 
   it("returns 503 when the store is not configured", async () => {
@@ -377,6 +574,14 @@ describe("breakdown route", { concurrency: false }, () => {
     const changed = await postFightBreakdowns(parseBreakdownBody([camel({ conf: "Strong", tier: "STRONG" })]));
     assert.equal(changed.results[0]?.deduped, false);
     assert.equal(changed.results[0]?.breakdown.tier, "STRONG");
+    const ordered = await postFightBreakdowns(parseBreakdownBody([camel({ boutOrder: 7, fightN: 1 })]));
+    assert.equal(ordered.results[0]?.deduped, false);
+    assert.equal(ordered.results[0]?.breakdown.boutOrder, 7);
+    const orderedAgain = await postFightBreakdowns(parseBreakdownBody([camel({ boutOrder: 7, fightN: 1 })]));
+    assert.equal(orderedAgain.results[0]?.deduped, true);
+    assert.equal(orderedAgain.results[0]?.breakdown.boutOrder, 7);
+    const stored = linksColumn(orderedAgain.results[0]!.breakdown);
+    assert.equal(isRecord(stored) ? stored.boutOrder : null, 7);
   });
 
   it("writes and dedupes on the blob fallback", async () => {

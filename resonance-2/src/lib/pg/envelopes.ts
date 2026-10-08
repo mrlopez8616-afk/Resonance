@@ -17,7 +17,7 @@ import {
   parseFillsEnvelope,
   type FillsStoreEnvelope,
 } from "@/lib/fills-store-core";
-import { breakdownFromColumns, type FightBreakdown } from "@/lib/fight-breakdowns";
+import { breakdownFromColumns, linksColumn, type FightBreakdown } from "@/lib/fight-breakdowns";
 import {
   BREAKDOWNS_STORE_VERSION,
   createEmptyBreakdownsEnvelope,
@@ -663,7 +663,7 @@ export async function saveFightBreakdowns(envelope: FightBreakdownsEnvelope): Pr
         JSON.stringify(row.edges),
         jsonOrNull(row.odds),
         jsonOrNull(row.stats),
-        jsonOrNull(row.links),
+        jsonOrNull(linksColumn(row)),
         envelope.updatedAt,
       ],
     );
