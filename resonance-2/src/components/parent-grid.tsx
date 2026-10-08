@@ -13,7 +13,8 @@ import {
   parseHiddenIds,
   subscribeHiddenIds,
 } from "@/lib/floor-registry";
-import { AiChangeVisual, FitnessStepVisual, PredictionsVisual, XrpSparkVisual } from "@/components/home-visual";
+import { AiChangeVisual, CryptoBasketVisual, FitnessStepVisual, PredictionsVisual } from "@/components/home-visual";
+import { cryptoBasketValues, type CryptoBasketLeg } from "@/lib/crypto-basket";
 import {
   aiStockSecondaryLines,
   cryptoSecondaryLines,
@@ -27,7 +28,7 @@ import {
   type HomeQuote,
   type PredictionsHomeFacts,
 } from "@/lib/home-lines";
-import type { StepSlot, TierSegment, XrpSpark } from "@/lib/home-visuals";
+import type { StepSlot, TierSegment } from "@/lib/home-visuals";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
 
 function ParentLines({ lines }: { lines: readonly string[] }) {
@@ -78,7 +79,7 @@ export function ParentGrid({
   xrpQuote = null,
   moves = [],
   catalystLine = null,
-  spark = null,
+  basketLegs = [],
   stepSlots = null,
   tierBar = null,
   bankrollLine = null,
@@ -96,7 +97,8 @@ export function ParentGrid({
   xrpQuote?: HomeQuote | null;
   moves?: readonly HomeMove[];
   catalystLine?: string | null;
-  spark?: XrpSpark | null;
+  /** Held crypto legs. Empty history leaves the chart unmounted. */
+  basketLegs?: readonly CryptoBasketLeg[];
   stepSlots?: readonly StepSlot[] | null;
   tierBar?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
@@ -111,6 +113,7 @@ export function ParentGrid({
   const hiddenIds = parseHiddenIds(hiddenRaw);
   const asOfDate = new Date(asOf);
   const changeBars = aiChangeBars(visibleHomeMoves(moves, hiddenIds), asOfDate);
+  const basket = cryptoBasketValues(basketLegs.filter((leg) => !hiddenIds.includes(leg.id)));
 
   return (
     <section className="node-grid home-floor" aria-label="Node floor">
@@ -194,8 +197,8 @@ export function ParentGrid({
             : aggregate.connected;
         const showNote = !summary && lines.length === 0;
         const visual =
-          parent.id === "crypto" && spark ? (
-            <XrpSparkVisual spark={spark} />
+          parent.id === "crypto" && basket ? (
+            <CryptoBasketVisual points={basket} />
           ) : parent.id === "ai-stocks" && changeBars ? (
             <AiChangeVisual bars={changeBars} />
           ) : parent.id === "fitness" && stepSlots ? (
