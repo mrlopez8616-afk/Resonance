@@ -66,6 +66,16 @@ export function authorizeFitnessAccess(input: {
   };
 }
 
+export function bearerMatchesSyncSecret(
+  authorizationHeader: string | null | undefined,
+  env: EnvLike = process.env,
+): boolean {
+  const secret = getSyncSecret(env);
+  const bearer = readBearerToken(authorizationHeader);
+  if (!secret || !bearer) return false;
+  return secretsMatch(bearer, secret);
+}
+
 /** Phase Zero Bearer-secret spirit: open only when the secret is unset (local/dev). */
 export function authorizeSyncAccess(input: {
   syncSecret: string | null;

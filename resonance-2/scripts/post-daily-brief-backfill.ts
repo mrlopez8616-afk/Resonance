@@ -23,9 +23,26 @@ function calendarReadUrl(): string {
   );
 }
 
+function syncSecret(): string {
+  const secret = process.env.RESONANCE_SYNC_SECRET?.trim() ?? "";
+  if (!secret) {
+    console.error(
+      "Set RESONANCE_SYNC_SECRET. The calendar read uses the same Bearer as POST /api/calendar. Do not prefix it with NEXT_PUBLIC_.",
+    );
+    process.exit(1);
+  }
+  return secret;
+}
+
 async function main(): Promise<void> {
+  const secret = syncSecret();
   const url = calendarReadUrl();
-  const response = await fetch(url, { headers: { accept: "application/json" } });
+  const response = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${secret}`,
+    },
+  });
   const text = await response.text();
   if (!response.ok) {
     console.error(text);

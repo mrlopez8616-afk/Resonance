@@ -16,3 +16,24 @@ KEEP IT CLEAN, DRILL DOWN ALWAYS.
 - A parent page shows only its child nodes as cards. Details live one level down, on that node's page. Predictions shows Bankroll and Fights. Fights links to `/fights`.
 - A back control or breadcrumb goes up exactly one level.
 - VALUE FIRST. On a value node card the top headline number is the position's current value in dollars (quantity held times the live price). The live price sits under it as a smaller line. Quantity comes only from sleeve quantities, sleeve prints, or live store rows, and the price is a live price. No position or quantity source: show the live price as the secondary line with "no position" or "not connected". Never invent a value. A parent number is the sum of its children's real values; if a child has no value, say so (for example "value of 4 of 6"). New value nodes use the shared value card.
+
+## Login
+
+The floor is one user, Andres. Password plus a 6-digit authenticator code creates a 30-day sliding session. Passkeys are optional on `/settings/security` and are not offered after sign-in. If `AUTH_PASSWORD_HASH`, `AUTH_TOTP_SECRET`, or `AUTH_SESSION_SECRET` is missing, the site stays locked.
+
+Set these on the Vercel project before that change is merged. `npm run auth:setup` prints them and does not write a file.
+
+- `AUTH_SESSION_SECRET` — 64 hex characters (`openssl rand -hex 32`). HMAC key for session ids and passkey challenges.
+- `AUTH_PASSWORD_HASH` — argon2id PHC string, `$argon2id$v=19$m=19456,t=2,p=1$...`
+- `AUTH_TOTP_SECRET` — base32, no spaces. Example shape: `JBSWY3DPEHPK3PXP`
+- `WEBAUTHN_RP_ID` — `resonance3.vercel.app`
+- `WEBAUTHN_ORIGIN` — `https://resonance3.vercel.app`
+
+Server components call `requireSession({ role? })` (redirects) or `getSession()` from `src/lib/auth-session.ts`. Both return `{ userId, username, role }`. `requireRole('owner')` is the same check for a later owner-only page and is unused. Only username `andres` can sign in. A second person is a row in `users`, not a screen:
+
+```sql
+INSERT INTO users (username, role, password_hash, totp_secret, created_at)
+VALUES ('carla', 'operator', '<argon2id phc>', '<base32>', now());
+```
+
+This deploy still rejects that login. Read APIs call `authorizeReadRequest()`. Machine routes keep `Authorization: Bearer $RESONANCE_SYNC_SECRET`. Fitness ingest keeps `X-Fitness-Token`.

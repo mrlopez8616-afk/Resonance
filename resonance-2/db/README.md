@@ -16,7 +16,7 @@ npm run db:replay -- --file outage.json --dry-run
 npm run db:replay -- --file outage.json
 ```
 
-`db:migrate` applies `db/migrations` in order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips files already listed in `schema_migrations`.
+`db:migrate` applies the embedded migration list in array order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips ids already listed in `schema_migrations`. The id is the file name without `.sql`. A gap is allowed: `005_auth` applies when `004` is not in the list, and a later deploy that adds `004` applies only that missing id. Applied rows are not reordered.
 
 Production builds run that same migrator before `next build` (`npm run prebuild`) when `VERCEL_ENV` is `production` and `DATABASE_URL` is set. Preview and local builds skip it, because preview deployments share the production database. `POST /api/storage/migrate` with `Authorization: Bearer $RESONANCE_SYNC_SECRET` runs it on demand. The SQL lives in the server bundle (`src/lib/pg/embedded-migrations.ts`). Runtime does not read `db/migrations` from disk. The files stay the reviewed source, and a test checks the constants match them. The first fitness read runs the embedded fitness DDL when `fitness_metrics` is missing, then upserts the manual day, so a preview can show that day before the production deploy. A failed fitness read is logged and the page still renders.
 
@@ -51,6 +51,11 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `store_meta` | `domain` | Envelope `updated_at` and `seeded_at`. |
 | `fitness_metrics` | `(source, external_id)` unique | Daily health metrics. One row per source, metric, Chicago day, and unit. A re-sent day updates `qty`. |
 | `fitness_workouts` | `(source, external_id)` unique | Workouts. Version 2 uses the export `id`. A re-sent workout updates the row. |
+| `users` | `username` unique | Owner and operator accounts. `andres` is created at sign-in; the password and authenticator secret stay in env. An operator is a later `INSERT` (`role` `operator`, `password_hash`, `totp_secret`). |
+| `auth_sessions` | `id_hash` | HMAC of the session cookie. No raw token. `user_id` references `users`. |
+| `auth_passkeys` | `credential_id` | Optional WebAuthn credentials. |
+| `auth_login_attempts` | `ip_hash`, `failed_at` | Failed sign-in attempts. The address is hashed. |
+| `auth_global_lockout` | `id` = 1 | Shared backoff after repeated failures. |
 
 Seeds still merge on read: missing seed ids are inserted, and a row already stored under that id or order id is left alone.
 

@@ -6,6 +6,7 @@ import {
   loadFightBreakdownsStore,
   postFightBreakdowns,
 } from "@/lib/fight-breakdowns-store";
+import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
@@ -30,30 +31,41 @@ function notConfigured() {
 }
 
 /**
- * Public read of one event's breakdowns.
+ * One event's breakdowns. Session or hub Bearer.
  * Fight Desk posts site_analysis.json as the body (eventSlug + fights).
  * Add `data` (the data.json array) on that object to store per-side stats and books.
  * `{breakdowns:[...]}` and a bare camelCase array are the same write.
  */
 export async function GET(request: Request) {
+  const access = await authorizeReadRequest(request);
+  if (!access.ok) return access.response;
   const event = new URL(request.url).searchParams.get("event")?.trim() ?? "";
   if (!SLUG.test(event)) {
-    return NextResponse.json({ ok: false, error: "event must be a lowercase slug." }, { status: 400 });
+    return finishAuthorizedRead(
+      NextResponse.json({ ok: false, error: "event must be a lowercase slug." }, { status: 400 }),
+      access,
+    );
   }
   try {
     const loaded = await loadFightBreakdownsStore();
-    return NextResponse.json({
-      ok: true,
-      configured: loaded.configured,
-      backend: loaded.backend,
-      event,
-      breakdowns: breakdownsForEvent(loaded.envelope.breakdowns, event),
-      updatedAt: loaded.envelope.updatedAt,
-    });
+    return finishAuthorizedRead(
+      NextResponse.json({
+        ok: true,
+        configured: loaded.configured,
+        backend: loaded.backend,
+        event,
+        breakdowns: breakdownsForEvent(loaded.envelope.breakdowns, event),
+        updatedAt: loaded.envelope.updatedAt,
+      }),
+      access,
+    );
   } catch (error) {
     const mapped = asBreakdownWriteError(error);
     console.error("breakdown read failed", mapped.message);
-    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
+    return finishAuthorizedRead(
+      NextResponse.json(storageErrorJson(mapped), { status: mapped.status }),
+      access,
+    );
   }
 }
 

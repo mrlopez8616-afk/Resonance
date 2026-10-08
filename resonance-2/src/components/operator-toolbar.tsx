@@ -103,7 +103,12 @@ export function OperatorToolbar() {
           );
         })}
       </nav>
-      <RailButton label="Settings" footer>
+      <RailButton
+        href="/settings/security"
+        label="Security"
+        footer
+        active={pathname.startsWith("/settings")}
+      >
         <SettingsIcon />
       </RailButton>
     </aside>

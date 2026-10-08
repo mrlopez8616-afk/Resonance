@@ -9,6 +9,7 @@ import {
 import { occurrencesOnDay } from "@/lib/calendar-desk";
 import { listCalendarEvents } from "@/lib/calendar-store-core";
 import { isCivilDay } from "@/lib/calendar-time";
+import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 
@@ -31,18 +32,23 @@ function notConfigured() {
 }
 
 export async function GET(request: Request) {
+  const access = await authorizeReadRequest(request);
+  if (!access.ok) return access.response;
   const day = new URL(request.url).searchParams.get("day")?.trim() ?? "";
   if (day && !isCivilDay(day)) {
-    return NextResponse.json(
-      { ok: false, error: "day must be YYYY-MM-DD." },
-      { status: 400 },
+    return finishAuthorizedRead(
+      NextResponse.json(
+        { ok: false, error: "day must be YYYY-MM-DD." },
+        { status: 400 },
+      ),
+      access,
     );
   }
 
   try {
     const loaded = await loadCalendarStore();
     const events = listCalendarEvents(loaded.envelope.events);
-    return NextResponse.json({
+    return finishAuthorizedRead(NextResponse.json({
       ok: true,
       configured: loaded.configured,
       backend: loaded.backend,
@@ -51,10 +57,13 @@ export async function GET(request: Request) {
       timeZone: CALENDAR_TIME_ZONE,
       events,
       ...(day ? { day, occurrences: occurrencesOnDay(events, day) } : {}),
-    });
+    }), access);
   } catch (error) {
     const mapped = asCalendarWriteError(error);
-    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
+    return finishAuthorizedRead(
+      NextResponse.json(storageErrorJson(mapped), { status: mapped.status }),
+      access,
+    );
   }
 }
 
