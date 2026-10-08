@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { NodeSquare } from "@/components/node-square";
+import { ValueCard } from "@/components/value-card";
 import { PARENTS } from "@/data/node-parents";
 import type { FightDeskSummary } from "@/lib/bets";
 import {
@@ -19,12 +20,15 @@ export function ParentGrid({
   fightDesk,
   fightDeskAvailability = "live",
   fitnessLine = null,
+  bankroll = null,
 }: {
   faceTotals: FaceTotals;
   fightDesk: FightDeskSummary | null;
   fightDeskAvailability?: "live" | "seed-only" | "unavailable";
   /** One real fitness line. Null keeps the card on "not connected yet". */
   fitnessLine?: FitnessHomeLine | null;
+  /** Predictions bankroll. Null when the bet book cannot be read. */
+  bankroll?: { headline: string; priceLine: string } | null;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -36,6 +40,37 @@ export function ParentGrid({
   return (
     <section className="node-grid" aria-label="Node floor">
       {PARENTS.map((parent) => {
+        if (parent.id === "predictions") {
+          const face = bankroll;
+          return (
+            <NodeSquare
+              key={parent.id}
+              parent
+              live={face !== null}
+              dashed={face === null}
+              label={parent.label}
+            >
+              <Link
+                href={parentCardHref(parent.id)}
+                className="node-log-link"
+                title={`Open ${parent.label}`}
+              >
+                {face ? (
+                  <ValueCard
+                    ticker={parent.label}
+                    compact
+                    model={{ headline: face.headline, priceLine: face.priceLine, label: null }}
+                  />
+                ) : (
+                  <div className="live-face parent-face">
+                    <h2 className="node-ticker">{parent.label}</h2>
+                    <p className="node-note">unavailable</p>
+                  </div>
+                )}
+              </Link>
+            </NodeSquare>
+          );
+        }
         const aggregate = parentAggregate(
           parent.id,
           hiddenIds,

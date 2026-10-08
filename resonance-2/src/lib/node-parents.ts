@@ -25,7 +25,7 @@ export type ParentAggregate = {
   valuedCount: number;
   /** Painted live children. Hidden and offline rows are not in this count. */
   paintedCount: number;
-  /** Fight Desk open count. Null when that summary is missing. */
+  /** Open bet count for the predictions parent. Null when that summary is missing. */
   openBets: number | null;
 };
 
@@ -150,9 +150,8 @@ export function sumLiveUsd(
   };
 }
 
-/** Home cards link straight to /fights. Other parents open their child-card page. */
+/** Home cards open the parent page. Predictions is /n/predictions. */
 export function parentCardHref(parentId: ParentId): string {
-  if (parentId === "fights") return "/fights";
   return `/n/${parentId}`;
 }
 
@@ -162,7 +161,7 @@ export function nodePageHref(ticker: string): string | null {
   const node = FLOOR_NODES.find((item) => item.id === id && item.status !== "empty");
   if (!node) return null;
   const parentId = nodeParent(node.id);
-  if (!parentId || parentId === "fights") return null;
+  if (!parentId || parentId === "predictions") return null;
   return `/n/${parentId}/${node.id}`;
 }
 
@@ -174,47 +173,38 @@ export type ParentSummaryLine = {
 };
 
 /**
- * One real line for a parent card.
+ * One real line for a holding parent.
  * A complete live sum says "sum". A partial sum names the coverage
  * ("value of 4 of 6") and is never presented as the whole book.
- * Otherwise the fight desk's open count, then the painted child count.
+ * Predictions is a bankroll card and does not use this line.
  */
 export function parentSummaryLine(aggregate: ParentAggregate): ParentSummaryLine | null {
-  if (!aggregate.connected) return null;
-  if (aggregate.paintedCount > 0) {
-    if (
-      aggregate.liveUsdLabel !== null &&
-      aggregate.valuedCount === aggregate.paintedCount
-    ) {
-      return { value: aggregate.liveUsdLabel, unit: "sum", coverage: false };
-    }
-    if (
-      aggregate.liveUsdLabel !== null &&
-      aggregate.valuedCount > 0 &&
-      aggregate.valuedCount < aggregate.paintedCount
-    ) {
-      return {
-        value: aggregate.liveUsdLabel,
-        unit: `value of ${aggregate.valuedCount} of ${aggregate.paintedCount}`,
-        coverage: true,
-      };
-    }
-    if (aggregate.valuedCount === 0) {
-      return {
-        value: `value of 0 of ${aggregate.paintedCount}`,
-        unit: "",
-        coverage: true,
-      };
-    }
+  if (!aggregate.connected || aggregate.paintedCount === 0) return null;
+  if (
+    aggregate.liveUsdLabel !== null &&
+    aggregate.valuedCount === aggregate.paintedCount
+  ) {
+    return { value: aggregate.liveUsdLabel, unit: "sum", coverage: false };
   }
-  if (aggregate.openBets !== null) {
-    return { value: String(aggregate.openBets), unit: "open", coverage: false };
+  if (
+    aggregate.liveUsdLabel !== null &&
+    aggregate.valuedCount > 0 &&
+    aggregate.valuedCount < aggregate.paintedCount
+  ) {
+    return {
+      value: aggregate.liveUsdLabel,
+      unit: `value of ${aggregate.valuedCount} of ${aggregate.paintedCount}`,
+      coverage: true,
+    };
   }
-  return {
-    value: String(aggregate.childCount),
-    unit: aggregate.childCount === 1 ? "node" : "nodes",
-    coverage: false,
-  };
+  if (aggregate.valuedCount === 0) {
+    return {
+      value: `value of 0 of ${aggregate.paintedCount}`,
+      unit: "",
+      coverage: true,
+    };
+  }
+  return null;
 }
 
 export function parentAggregate(

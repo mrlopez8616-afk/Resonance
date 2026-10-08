@@ -182,10 +182,10 @@ export function FightIndex({
   return (
     <div className="log-canvas">
       <header className="log-header">
-        <Link href="/" className="calendar-back">
-          Home
+        <Link href="/n/predictions" className="calendar-back">
+          Predictions
         </Link>
-        <p className="log-kicker">Fight Desk</p>
+        <p className="log-kicker">Predictions</p>
         <h2 className="log-title">Fights</h2>
       </header>
       <ol className="flex flex-col gap-3">

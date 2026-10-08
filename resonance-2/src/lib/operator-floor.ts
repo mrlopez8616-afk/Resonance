@@ -42,8 +42,8 @@ export async function loadOperatorFloor(): Promise<OperatorFloor> {
   ]);
   const details = [
     sleeves.status === "seed-only" ? "Sleeve quantities are seed-only." : null,
-    fightDesk.status === "unavailable" ? "Fight Desk record is unavailable." : null,
-    fightDesk.status === "seed-only" ? "Fight Desk record is seed-only." : null,
+    fightDesk.status === "unavailable" ? "Bet book is unavailable." : null,
+    fightDesk.status === "seed-only" ? "Bet book is seed-only." : null,
   ].filter((line): line is string => line !== null);
 
   return {

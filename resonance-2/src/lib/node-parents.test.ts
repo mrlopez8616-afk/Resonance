@@ -30,7 +30,7 @@ const PROPOSED = {
   gev: "ai-stocks",
   ceg: "ai-stocks",
   hubb: "ai-stocks",
-  [FIGHT_DESK_ID]: "fights",
+  [FIGHT_DESK_ID]: "predictions",
 } as const;
 
 describe("node parent map", () => {
@@ -59,7 +59,7 @@ describe("node parent map", () => {
         { id: "ai-stocks", label: "AI Stocks" },
         { id: "fitness", label: "Fitness" },
         { id: "finance", label: "Finance" },
-        { id: "fights", label: "Fight Desk" },
+        { id: "predictions", label: "Predictions" },
       ],
     );
     assert.equal(parentById("ai"), null);
@@ -82,7 +82,7 @@ describe("node parent map", () => {
       nodesOnParent([], "ai-stocks").map((node) => node.ticker),
       ["PWR", "ETN", "VRT", "GEV", "CEG", "HUBB", "+"],
     );
-    assert.deepEqual(nodesOnParent([], "fights").map((node) => node.ticker), []);
+    assert.deepEqual(nodesOnParent([], "predictions").map((node) => node.ticker), []);
     assert.deepEqual(
       nodesOnParent(["xrp", "pwr", "btc"], "crypto").map((node) => node.ticker),
       ["SUI", "HBAR", "+"],
@@ -166,7 +166,7 @@ describe("node parent map", () => {
 
   it("counts the fight desk tile and uses its open count only when the summary exists", () => {
     const live = parentAggregate(
-      "fights",
+      "predictions",
       [],
       {},
       {
@@ -187,7 +187,7 @@ describe("node parent map", () => {
     assert.equal(live.openBets, 2);
     assert.equal(live.liveUsd, null);
 
-    const down = parentAggregate("fights", [], {}, null, "unavailable");
+    const down = parentAggregate("predictions", [], {}, null, "unavailable");
     assert.equal(down.childCount, 1);
     assert.equal(down.openBets, null);
 
@@ -231,8 +231,8 @@ describe("node parent map", () => {
       { value: "value of 0 of 3", unit: "", coverage: true },
     );
 
-    const fights = parentAggregate(
-      "fights",
+    const predictions = parentAggregate(
+      "predictions",
       [],
       {},
       {
@@ -248,15 +248,12 @@ describe("node parent map", () => {
       },
       "live",
     );
-    assert.deepEqual(parentSummaryLine(fights), {
-      value: "15",
-      unit: "open",
-      coverage: false,
-    });
+    assert.equal(predictions.openBets, 15);
+    assert.equal(parentSummaryLine(predictions), null);
     assert.equal(parentSummaryLine(parentAggregate("finance", [], {}, null, "live")), null);
     assert.equal(parentSummaryLine(parentAggregate("fitness", [], {}, null, "live")), null);
 
-    assert.equal(parentCardHref("fights"), "/fights");
+    assert.equal(parentCardHref("predictions"), "/n/predictions");
     assert.equal(parentCardHref("crypto"), "/n/crypto");
     assert.equal(parentCardHref("ai-stocks"), "/n/ai-stocks");
     assert.equal(nodePageHref("XRP"), "/n/crypto/xrp");
@@ -266,6 +263,8 @@ describe("node parent map", () => {
     assert.equal(legacyParentHref("ai", "pwr"), "/n/ai-stocks/pwr");
     assert.equal(legacyParentHref("stocks", "xrp"), "/n/ai-stocks");
     assert.equal(legacyParentHref("money"), "/n/finance");
+    assert.equal(legacyParentHref("fights"), "/n/predictions");
+    assert.equal(legacyParentHref("fights", "bankroll"), "/n/predictions");
     assert.equal(legacyParentHref("crypto"), null);
     assert.equal(nodePageHref("FLR"), null);
     assert.equal(nodePageHref("UFC"), null);

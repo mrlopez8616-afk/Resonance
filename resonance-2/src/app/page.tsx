@@ -1,5 +1,7 @@
 import { ParentGrid } from "@/components/parent-grid";
 import { OperatorShell } from "@/components/operator-shell";
+import { bankrollHomeFace } from "@/lib/bankroll";
+import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -7,7 +9,11 @@ import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [floor, fitness] = await Promise.all([loadOperatorFloor(), loadFitnessHome()]);
+  const [floor, fitness, bankroll] = await Promise.all([
+    loadOperatorFloor(),
+    loadFitnessHome(),
+    loadBankroll(),
+  ]);
   const faceTotals = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
   );
@@ -22,6 +28,7 @@ export default async function Home() {
         fightDesk={floor.fightDesk}
         fightDeskAvailability={floor.fightDeskAvailability}
         fitnessLine={fitness.line}
+        bankroll={bankroll.ledger ? bankrollHomeFace(bankroll.ledger) : null}
       />
     </OperatorShell>
   );
