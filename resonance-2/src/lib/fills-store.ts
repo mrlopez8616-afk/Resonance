@@ -207,6 +207,7 @@ export async function ingestStoredFill(body: unknown): Promise<{
   fill: ReturnType<typeof ingestFillIntoEnvelope>["fill"];
   deduped: boolean;
   applied: boolean;
+  backfill?: true;
 }> {
   if (!isFillsStoreConfigured()) {
     throw new FillsStoreError(
@@ -226,6 +227,7 @@ export async function ingestStoredFill(body: unknown): Promise<{
     fill: written.fill,
     deduped: written.deduped,
     applied: written.applied,
+    ...(written.backfill ? { backfill: true as const } : {}),
   };
 }
 

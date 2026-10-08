@@ -153,6 +153,7 @@ function coerceStoredFill(raw: unknown): Fill | null {
     fill.note = raw.note.trim();
   }
   if (raw.logOnly === true) fill.logOnly = true;
+  if (raw.backfill === true) fill.backfill = true;
   return fill;
 }
 
@@ -196,6 +197,10 @@ export function findFillInEnvelope(
   return envelope.fills.find((row) => fillMatchesEvent(row, event));
 }
 
+function fillIsBackfill(fill: Fill): boolean {
+  return fill.kind !== "bet" && fill.backfill === true;
+}
+
 export function ingestFillIntoEnvelope(
   envelope: FillsStoreEnvelope,
   event: NormalizedFillEvent,
@@ -205,6 +210,8 @@ export function ingestFillIntoEnvelope(
   fill: Fill;
   deduped: boolean;
   applied: boolean;
+  /** Present when the stored row is a historical replay. */
+  backfill?: true;
 } {
   const existing = findFillInEnvelope(envelope, event);
   if (existing) {
@@ -213,13 +220,16 @@ export function ingestFillIntoEnvelope(
       fill: existing,
       deduped: true,
       applied: false,
+      ...(fillIsBackfill(existing) ? { backfill: true as const } : {}),
     };
   }
 
   // These order ids are already accounted for: HBAR inside its sleeve seed,
   // XLM only on the operator log. Logging them must not move a sleeve.
   if (isPositionLogOrder(event.orderId)) {
-    const fill: Fill = { ...eventToFill(event), logOnly: true };
+    const logged = eventToFill(event);
+    delete logged.backfill;
+    const fill: Fill = { ...logged, logOnly: true };
     return {
       envelope: {
         ...envelope,
@@ -230,6 +240,27 @@ export function ingestFillIntoEnvelope(
       fill,
       deduped: false,
       applied: false,
+    };
+  }
+
+  // General form of the position-log exception. `backfill: true` (alias
+  // `historical: true`) logs a new order without moving a sleeve. The
+  // order-id dedupe above still covers a second POST. Face checks stay
+  // the same as a live fill; the computed prints are discarded.
+  if (event.backfill) {
+    applyFillToSleevePrints(envelope.sleevePrints, event);
+    const fill = eventToFill(event);
+    return {
+      envelope: {
+        ...envelope,
+        updatedAt: now,
+        fills: [...envelope.fills, fill],
+        sleevePrints: envelope.sleevePrints,
+      },
+      fill,
+      deduped: false,
+      applied: false,
+      backfill: true,
     };
   }
 

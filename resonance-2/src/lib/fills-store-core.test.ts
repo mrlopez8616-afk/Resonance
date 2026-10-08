@@ -323,6 +323,152 @@ describe("fills store core", () => {
     assert.equal(later.envelope.sleevePrints.XLM, undefined);
   });
 
+  it("logs a backfill without changing sleeves", () => {
+    const seeded = createSeededFillsEnvelope("2026-09-19T00:00:00.000Z");
+    const body = {
+      venue: "robinhood",
+      orderId: "hist-sui-1",
+      ticker: "SUI",
+      side: "buy",
+      qty: "24",
+      price: "1.10",
+      sleeve: "rh-agentic",
+      filledAt: "2026-09-01T08:30:00-05:00",
+      backfill: true,
+    };
+    const written = ingestFillIntoEnvelope(
+      seeded,
+      parseFillEvent(body),
+      "2026-10-08T12:00:00.000Z",
+    );
+    assert.equal(written.deduped, false);
+    assert.equal(written.applied, false);
+    assert.equal(written.backfill, true);
+    assert.equal(written.fill.kind, undefined);
+    assert.equal(written.fill.backfill, true);
+    assert.equal(written.fill.logOnly, undefined);
+    assert.equal(written.envelope.fills.length, seedFills.length + 1);
+    assert.deepEqual(written.envelope.sleevePrints, {});
+
+    const retry = ingestFillIntoEnvelope(written.envelope, parseFillEvent(body));
+    assert.equal(retry.deduped, true);
+    assert.equal(retry.applied, false);
+    assert.equal(retry.backfill, true);
+    assert.equal(retry.envelope.fills.length, written.envelope.fills.length);
+    assert.deepEqual(retry.envelope.sleevePrints, {});
+
+    const roundTrip = parseFillsEnvelope(JSON.parse(JSON.stringify(written.envelope)));
+    const stored = roundTrip?.fills.find((fill) => fill.orderId === "hist-sui-1");
+    assert.ok(stored);
+    assert.equal(stored.kind, undefined);
+    assert.equal(stored.backfill, true);
+  });
+
+  it("still applies a normal fill when backfill is absent", () => {
+    const seeded = createSeededFillsEnvelope("2026-09-19T00:00:00.000Z");
+    const written = ingestFillIntoEnvelope(
+      seeded,
+      parseFillEvent({
+        venue: "robinhood",
+        orderId: "live-sui-1",
+        ticker: "SUI",
+        side: "buy",
+        qty: "2",
+        price: "1.10",
+        sleeve: "rh-agentic",
+        filledAt: "2026-09-21T08:30:00-05:00",
+        backfill: false,
+        historical: false,
+      }),
+      "2026-09-21T13:30:00.000Z",
+    );
+    assert.equal(written.applied, true);
+    assert.equal(written.deduped, false);
+    assert.equal(written.backfill, undefined);
+    assert.equal(written.fill.kind, undefined);
+    assert.equal(written.fill.backfill, undefined);
+    assert.equal(written.envelope.sleevePrints.SUI?.["rh-agentic"], "2");
+  });
+
+  it("applies the same order id once", () => {
+    const seeded = createSeededFillsEnvelope("2026-09-19T00:00:00.000Z");
+    const event = mondayBuy("once-sui");
+    const first = ingestFillIntoEnvelope(seeded, event, "2026-09-21T13:30:00.000Z");
+    assert.equal(first.applied, true);
+    assert.equal(first.deduped, false);
+    assert.equal(first.envelope.sleevePrints.SUI?.["rh-agentic"], "2");
+
+    const second = ingestFillIntoEnvelope(first.envelope, event);
+    assert.equal(second.deduped, true);
+    assert.equal(second.applied, false);
+    assert.equal(second.backfill, undefined);
+    assert.equal(second.envelope.fills.length, first.envelope.fills.length);
+    assert.equal(second.envelope.sleevePrints.SUI?.["rh-agentic"], "2");
+    assert.equal(second.fill.orderId, first.fill.orderId);
+  });
+
+  it("treats historical: true as a backfill alias", () => {
+    const seeded = createSeededFillsEnvelope("2026-09-19T00:00:00.000Z");
+    const written = ingestFillIntoEnvelope(
+      seeded,
+      parseFillEvent({
+        fill: {
+          venue: "robinhood",
+          orderId: "hist-alias-1",
+          ticker: "SUI",
+          side: "sell",
+          qty: "3",
+          price: "1.05",
+          sleeve: "rh-agentic",
+          filledAt: "2026-09-02T08:30:00-05:00",
+        },
+        historical: true,
+      }),
+      "2026-10-08T12:00:00.000Z",
+    );
+    assert.equal(written.deduped, false);
+    assert.equal(written.applied, false);
+    assert.equal(written.backfill, true);
+    assert.equal(written.fill.kind, undefined);
+    assert.equal(written.fill.backfill, true);
+    assert.equal(written.fill.side, "sell");
+    assert.equal(written.fill.quantity, "3");
+    assert.deepEqual(written.envelope.sleevePrints, {});
+    assert.equal(
+      mergeSleeveBook("SUI", written.envelope.sleevePrints).find(
+        (row) => row.id === "rh-agentic",
+      )?.quantity,
+      seedBookForTicker("SUI")?.find((row) => row.id === "rh-agentic")?.quantity,
+    );
+  });
+
+  it("still refuses a backfill aimed at a sleeve that is not on the face", () => {
+    const seeded = createSeededFillsEnvelope();
+    assert.throws(
+      () =>
+        ingestFillIntoEnvelope(
+          seeded,
+          parseFillEvent({
+            venue: "robinhood",
+            orderId: "hist-xrp-main",
+            ticker: "XRP",
+            side: "buy",
+            qty: "1",
+            price: "1.40",
+            sleeve: "rh-main",
+            filledAt: "2026-09-21T09:00:00-05:00",
+            backfill: true,
+          }),
+        ),
+      /sleeve rh-main is not on the XRP face/,
+    );
+    assert.equal(
+      seeded.fills.some((fill) => fill.orderId === "hist-xrp-main"),
+      false,
+    );
+    assert.deepEqual(seeded.sleevePrints, {});
+  });
+
   it("picks blob, local file, or none on Vercel the same way Phase Zero does", () => {
     assert.equal(
       detectFillsBackend({
