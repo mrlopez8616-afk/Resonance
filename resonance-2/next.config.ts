@@ -12,8 +12,20 @@ const nextConfig: NextConfig = {
     root: appRoot,
   },
   outputFileTracingRoot: appRoot,
+  experimental: {
+    // A Sept 1 backfill can post several weeks of Health samples in one body.
+    // This buffer applies only when proxy is enabled. Week-sized chunks stay smaller.
+    proxyClientMaxBodySize: "32mb",
+  },
   async redirects() {
-    return FIGHT_DESK_REDIRECTS.map((redirect) => ({ ...redirect }));
+    return [
+      ...FIGHT_DESK_REDIRECTS.map((redirect) => ({ ...redirect })),
+      {
+        source: "/n/fitness/activity",
+        destination: "/n/fitness/steps",
+        permanent: true,
+      },
+    ];
   },
 };
 

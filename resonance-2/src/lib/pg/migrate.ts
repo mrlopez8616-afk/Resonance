@@ -30,6 +30,23 @@ async function viewExists(name: string): Promise<boolean> {
 }
 
 /**
+ * Numeric filename order. 006 may be absent while 007 is present.
+ * A gap is not an error and does not block a later file.
+ */
+export function migrationIdsInOrder(ids: readonly string[]): string[] {
+  return [...ids].sort((left, right) => {
+    const leftNumber = /^(\d+)/.exec(left)?.[1];
+    const rightNumber = /^(\d+)/.exec(right)?.[1];
+    if (leftNumber && rightNumber && leftNumber !== rightNumber) {
+      return Number(leftNumber) - Number(rightNumber);
+    }
+    if (left < right) return -1;
+    if (left > right) return 1;
+    return 0;
+  });
+}
+
+/**
  * Applies migrations in the order given.
  * An id already stored in schema_migrations is skipped.
  * Numbers do not have to be contiguous: 005 runs when 004 is absent,
@@ -77,6 +94,18 @@ export async function applyMigrations(
   return { applied, skipped };
 }
 
+/** Sorts by numeric prefix, then applies. A missing number does not block later ids. */
+export async function migrateMigrations(
+  migrations: readonly { id: string; sql: string }[],
+): Promise<{ applied: string[]; skipped: string[] }> {
+  const byId = new Map(migrations.map((migration) => [migration.id, migration]));
+  const ordered = migrationIdsInOrder([...byId.keys()]).flatMap((id) => {
+    const migration = byId.get(id);
+    return migration ? [migration] : [];
+  });
+  return applyMigrations(ordered);
+}
+
 export async function migrate(): Promise<{ applied: string[]; skipped: string[] }> {
-  return applyMigrations(EMBEDDED_MIGRATIONS);
+  return migrateMigrations(EMBEDDED_MIGRATIONS);
 }
