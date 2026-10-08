@@ -1,7 +1,8 @@
 "use client";
 
 import { startRegistration } from "@simplewebauthn/browser";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { FitnessTokenRow } from "@/components/fitness-token-row";
 
 export type SecuritySession = {
   label: string;
@@ -21,10 +22,14 @@ export function SecurityPanel({
   sessions,
   passkeys,
   passkeysConfigured,
+  fitnessTokenConfigured,
+  shortcut,
 }: {
   sessions: SecuritySession[];
   passkeys: SecurityPasskey[];
   passkeysConfigured: boolean;
+  fitnessTokenConfigured: boolean;
+  shortcut: ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -88,6 +93,8 @@ export function SecurityPanel({
         Password and an authenticator code stay the way in. A passkey is optional and is never
         asked for after sign-in.
       </p>
+
+      <FitnessTokenRow configured={fitnessTokenConfigured} shortcut={shortcut} />
 
       <section className="security-block">
         <h3>Devices</h3>
