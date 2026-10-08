@@ -182,14 +182,24 @@ export function topMoverLine(moves: readonly HomeMove[], now: Date): string | nu
   return publish(`${top.ticker} ${change}`);
 }
 
-/** Soonest AI-stock catalyst on or after today. Past rows and other nodes are skipped. */
-export function nextAiCatalystLine(events: readonly CalendarEvent[], now: Date): string | null {
+const CRYPTO_CATALYST_TICKERS = ["XRP", "SUI", "BTC", "ETH", "SOL", "FLR"] as const;
+const CRYPTO_TICKER_RE = /\b(XRP|SUI|BTC|ETH|SOL|FLR)\b/i;
+const CRYPTO_WORD_RE = /\bcrypto\b/i;
+
+function nextHomeCatalystLine(
+  events: readonly CalendarEvent[],
+  now: Date,
+  include: (event: CalendarEvent) => boolean,
+  labelFor: (event: CalendarEvent) => string | null,
+): string | null {
   const today = chicagoToday(now);
   const upcoming = events.flatMap((event) => {
-    if (event.kind !== "catalyst" || !event.node || !AI_TICKERS.has(event.node)) return [];
+    if (!include(event)) return [];
     const day = chicagoDay(event.start);
     if (!day || day < today) return [];
-    return [{ event, day }];
+    const label = labelFor(event);
+    if (!label?.trim()) return [];
+    return [{ event, day, label }];
   });
   upcoming.sort((left, right) => {
     if (left.day !== right.day) return left.day < right.day ? -1 : 1;
@@ -201,7 +211,55 @@ export function nextAiCatalystLine(events: readonly CalendarEvent[], now: Date):
     next.event.datePrecision === "month" ? formatCivilMonth(next.day) : shortCivil(next.day, today);
   if (!when.trim()) return null;
   const earnings = /earnings/i.test(next.event.title);
-  return publish(earnings ? `${next.event.node} earnings · ${when}` : `${next.event.node} · ${when}`);
+  return publish(earnings ? `${next.label} earnings · ${when}` : `${next.label} · ${when}`);
+}
+
+/** Soonest AI-stock catalyst on or after today. Past rows and other nodes are skipped. */
+export function nextAiCatalystLine(events: readonly CalendarEvent[], now: Date): string | null {
+  return nextHomeCatalystLine(
+    events,
+    now,
+    (event) => event.kind === "catalyst" && event.node !== undefined && AI_TICKERS.has(event.node),
+    (event) => event.node ?? null,
+  );
+}
+
+function cryptoNodeLabel(node: string): string | null {
+  const upper = node.trim().toUpperCase();
+  if (upper === "CRYPTO") return "Crypto";
+  if ((CRYPTO_CATALYST_TICKERS as readonly string[]).includes(upper)) return upper;
+  return null;
+}
+
+/** A catalyst node, or a calendar row whose title or link names a crypto book. */
+export function isCryptoHomeItem(event: CalendarEvent): boolean {
+  const labeled = event.node ? cryptoNodeLabel(event.node) : null;
+  if (event.node) return labeled !== null;
+  const blob = `${event.title} ${event.link ?? ""}`;
+  return CRYPTO_TICKER_RE.test(blob) || CRYPTO_WORD_RE.test(blob) || /\/n\/crypto(?:\/|$)/i.test(event.link ?? "");
+}
+
+function cryptoCatalystLabel(event: CalendarEvent): string | null {
+  if (event.node) return cryptoNodeLabel(event.node);
+  const found = CRYPTO_TICKER_RE.exec(`${event.title} ${event.link ?? ""}`);
+  if (found?.[1]) return found[1].toUpperCase();
+  if (CRYPTO_WORD_RE.test(event.title) || CRYPTO_WORD_RE.test(event.link ?? "") || /\/n\/crypto(?:\/|$)/i.test(event.link ?? "")) {
+    return "Crypto";
+  }
+  return null;
+}
+
+/** Soonest crypto calendar or catalyst row on or after today. Past and other books are skipped. */
+export function nextCryptoCatalystLine(events: readonly CalendarEvent[], now: Date): string | null {
+  return nextHomeCatalystLine(events, now, isCryptoHomeItem, cryptoCatalystLabel);
+}
+
+function moverCatalystLines(
+  moves: readonly HomeMove[],
+  catalyst: string | null,
+  now: Date,
+): string[] {
+  return keep([topMoverLine(moves, now), catalyst]);
 }
 
 export function aiStockSecondaryLines(input: {
@@ -216,7 +274,29 @@ export function aiStockSecondaryLines(input: {
       : input.events
         ? nextAiCatalystLine(input.events, input.now)
         : null;
-  return keep([topMoverLine(input.moves, input.now), catalyst]);
+  return moverCatalystLines(input.moves, catalyst, input.now);
+}
+
+/**
+ * Same two lines as the AI Stocks card: the larger XRP/SUI day move, then the next crypto catalyst.
+ * A missing quote is skipped. Both quotes missing hides the mover. No catalyst hides that line.
+ */
+export function cryptoHomeSecondaryLines(input: {
+  moves: readonly HomeMove[];
+  events?: readonly CalendarEvent[];
+  catalystLine?: string | null;
+  now: Date;
+}): string[] {
+  const moves = input.moves.filter((move) =>
+    (CRYPTO_HOME_TICKERS as readonly string[]).includes(move.ticker),
+  );
+  const catalyst =
+    input.catalystLine !== undefined
+      ? input.catalystLine
+      : input.events
+        ? nextCryptoCatalystLine(input.events, input.now)
+        : null;
+  return moverCatalystLines(moves, catalyst, input.now);
 }
 
 /**

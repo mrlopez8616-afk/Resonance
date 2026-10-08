@@ -10,12 +10,14 @@ import {
   HOME_QUOTE_MAX_AGE_MS,
   XRP_DAILY_CLOSE_USD,
   aiStockSecondaryLines,
+  cryptoHomeSecondaryLines,
   cryptoSecondaryLines,
   financeSecondaryLines,
   fitnessSecondaryLines,
   formatHomePct,
   homeQuoteFresh,
   nextAiCatalystLine,
+  nextCryptoCatalystLine,
   predictionsHeadline,
   predictionsSecondaryLines,
   topMoverLine,
@@ -236,6 +238,147 @@ describe("AI stock home lines", () => {
         now: NOW,
       }),
       ["VRT +1.0%"],
+    );
+  });
+});
+
+describe("crypto home mover and catalyst", () => {
+  it("picks the larger absolute move and skips a missing quote", () => {
+    assert.deepEqual(
+      cryptoHomeSecondaryLines({
+        moves: [
+          move({ ticker: "XRP", changePct: -3.14 }),
+          move({ ticker: "SUI", changePct: 1.2 }),
+          move({ ticker: "HBAR", changePct: 20 }),
+        ],
+        events: [],
+        now: NOW,
+      }),
+      ["XRP -3.1%"],
+    );
+    assert.deepEqual(
+      cryptoHomeSecondaryLines({
+        moves: [
+          move({ ticker: "XRP", changePct: null }),
+          move({ ticker: "SUI", changePct: -2.04 }),
+        ],
+        catalystLine: null,
+        now: NOW,
+      }),
+      ["SUI -2.0%"],
+    );
+    assert.equal(
+      topMoverLine(
+        [
+          move({ ticker: "XRP", changePct: -2 }),
+          move({ ticker: "SUI", changePct: 2 }),
+        ],
+        NOW,
+      ),
+      "SUI +2.0%",
+    );
+  });
+
+  it("hides the mover when neither quote is available", () => {
+    assert.deepEqual(
+      cryptoHomeSecondaryLines({
+        moves: [
+          move({ ticker: "XRP", changePct: null }),
+          move({ ticker: "SUI", changePct: Number.NaN }),
+        ],
+        catalystLine: null,
+        now: NOW,
+      }),
+      [],
+    );
+    assert.deepEqual(
+      cryptoHomeSecondaryLines({
+        moves: [
+          move({
+            ticker: "XRP",
+            changePct: -9,
+            fetchedAt: new Date(NOW.getTime() - HOME_QUOTE_MAX_AGE_MS - 10).toISOString(),
+          }),
+          move({ ticker: "SUI", changePct: null }),
+        ],
+        catalystLine: null,
+        now: NOW,
+      }),
+      [],
+    );
+    assert.deepEqual(cryptoHomeSecondaryLines({ moves: [], catalystLine: null, now: NOW }), []);
+  });
+
+  it("keeps the next crypto catalyst, future only, and hides when none exist", () => {
+    const lines = cryptoHomeSecondaryLines({
+      moves: [
+        move({ ticker: "XRP", changePct: -3.1 }),
+        move({ ticker: "SUI", changePct: 1 }),
+      ],
+      events: [
+        catalyst({ id: "past-xrp", start: "2026-10-01T00:00:00-05:00", title: "XRP Seoul", node: "XRP" }),
+        catalyst({ id: "vrt", start: "2026-10-09T00:00:00-05:00", title: "Vertiv earnings", node: "VRT" }),
+        catalyst({ id: "macro", start: "2026-10-10T00:00:00-05:00", title: "FOMC meeting", node: "MACRO" }),
+        catalyst({ id: "xrp", start: "2026-10-11T00:00:00-05:00", title: "Teucrium 2x Short Daily XRP ETF", node: "XRP" }),
+        catalyst({ id: "flr", start: "2026-10-27T00:00:00-05:00", title: "Flare at Ripple Swell", node: "FLR" }),
+        {
+          id: "sui-log",
+          lane: "capital",
+          start: "2026-10-20T00:00:00-05:00",
+          title: "Agentic SUI note",
+          status: "scheduled",
+          writer: "agent",
+          link: "/log?ticker=SUI&from=2026-10-20&to=2026-10-20",
+        },
+      ],
+      now: NOW,
+    });
+    assert.deepEqual(lines, ["XRP -3.1%", "XRP · 11 Oct"]);
+    assert.equal(
+      nextCryptoCatalystLine(
+        [
+          { ...catalyst({ id: "btc", start: "2026-10-09T00:00:00-05:00", title: "BTC desk" }), node: "BTC" } as unknown as CalendarEvent,
+          { ...catalyst({ id: "eth", start: "2026-10-12T00:00:00-05:00", title: "ETH desk" }), node: "ETH" } as unknown as CalendarEvent,
+        ],
+        NOW,
+      ),
+      "BTC · 9 Oct",
+    );
+    assert.equal(
+      nextCryptoCatalystLine(
+        [
+          {
+            id: "generic",
+            lane: "capital",
+            start: "2026-10-15T00:00:00-05:00",
+            title: "Crypto summit",
+            status: "scheduled",
+            writer: "agent",
+          },
+        ],
+        NOW,
+      ),
+      "Crypto · 15 Oct",
+    );
+    assert.equal(nextCryptoCatalystLine([], NOW), null);
+    assert.equal(
+      nextCryptoCatalystLine(
+        [
+          catalyst({ id: "past", start: "2026-09-01T00:00:00-05:00", title: "Old XRP", node: "XRP" }),
+          catalyst({ id: "stock", start: "2026-10-21T00:00:00-05:00", title: "Vertiv earnings", node: "VRT" }),
+        ],
+        NOW,
+      ),
+      null,
+    );
+    assert.deepEqual(
+      cryptoHomeSecondaryLines({
+        moves: [move({ ticker: "SUI", changePct: 0.4 })],
+        catalystLine: null,
+        events: [catalyst({ id: "xrp", start: "2026-10-11T00:00:00-05:00", title: "XRP day", node: "XRP" })],
+        now: NOW,
+      }),
+      ["SUI +0.4%"],
     );
   });
 });
