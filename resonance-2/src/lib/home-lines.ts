@@ -111,20 +111,47 @@ export type ChangeBar = {
   changePct: number;
 };
 
+/** Crypto home bars, in display order. Same day-change treatment as the equity faces. */
+export const CRYPTO_HOME_TICKERS = ["XRP", "SUI"] as const;
+
 /**
- * Session-change bars in floor order. A stale or missing quote is left out.
- * Hidden when none of the six is live.
+ * Day-change bars in the given ticker order.
+ * A stale, missing, or non-finite quote is left out. Hidden when none are live.
  */
-export function aiChangeBars(moves: readonly HomeMove[], now: Date): ChangeBar[] | null {
+export function changeBarsForTickers(
+  tickers: readonly string[],
+  moves: readonly HomeMove[],
+  now: Date,
+): ChangeBar[] | null {
   const byTicker = new Map(moves.map((move) => [move.ticker, move]));
   const bars: ChangeBar[] = [];
-  for (const ticker of EQUITY_FACE_TICKERS) {
+  for (const ticker of tickers) {
     const move = byTicker.get(ticker);
     if (!move || !homeQuoteFresh(move.fetchedAt, now)) continue;
     if (typeof move.changePct !== "number" || !Number.isFinite(move.changePct)) continue;
     bars.push({ ticker, changePct: move.changePct });
   }
   return bars.length > 0 ? bars : null;
+}
+
+/**
+ * Session-change bars in floor order. A stale or missing quote is left out.
+ * Hidden when none of the six is live.
+ */
+export function aiChangeBars(moves: readonly HomeMove[], now: Date): ChangeBar[] | null {
+  return changeBarsForTickers(EQUITY_FACE_TICKERS, moves, now);
+}
+
+/** XRP then SUI. A missing quote drops that bar rather than painting a zero. */
+export function cryptoChangeBars(moves: readonly HomeMove[], now: Date): ChangeBar[] | null {
+  return changeBarsForTickers(CRYPTO_HOME_TICKERS, moves, now);
+}
+
+/** Bar fill shared by the home day-change chart. Positive is green, negative is red. */
+export function changeBarClass(changePct: number): "is-up" | "is-down" | "is-flat" {
+  if (changePct > 0) return "is-up";
+  if (changePct < 0) return "is-down";
+  return "is-flat";
 }
 
 export function visibleHomeMoves(moves: readonly HomeMove[], hiddenIds: readonly string[]): HomeMove[] {

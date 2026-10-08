@@ -540,23 +540,12 @@ body {
   height: auto;
 }
 
-.home-spark-fill {
-  fill: color-mix(in srgb, var(--live) 14%, transparent);
-}
-
-.home-spark-line,
 .home-bankroll-line {
   fill: none;
   stroke: var(--live);
   stroke-width: 1.4;
   stroke-linejoin: round;
   stroke-linecap: round;
-}
-
-.home-spark-ref {
-  stroke: #6d5bd0;
-  stroke-width: 1;
-  stroke-dasharray: 2.5 2.5;
 }
 
 .home-zero,

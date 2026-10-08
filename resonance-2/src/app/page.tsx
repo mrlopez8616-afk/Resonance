@@ -1,18 +1,15 @@
 import { ParentGrid } from "@/components/parent-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { ThisWeek } from "@/components/this-week";
-import { NODE_PARENT } from "@/data/node-parents";
 import { getSession } from "@/lib/auth-session";
 import { bankrollHomeFace } from "@/lib/bankroll";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeHomeForRole, type FinanceHomeFace } from "@/lib/finance/view";
 import { loadBankroll } from "@/lib/bankroll-load";
-import { heldCryptoQuantities, type CryptoBasketLeg } from "@/lib/crypto-basket";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { EQUITY_FACE_TICKERS } from "@/lib/live-face";
-import { nextAiCatalystLine, type HomeMove, type HomeQuote } from "@/lib/home-lines";
+import { CRYPTO_HOME_TICKERS, nextAiCatalystLine, type HomeMove } from "@/lib/home-lines";
 import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
-import { loadCryptoBasketCloses } from "@/lib/xrp-history";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -21,46 +18,27 @@ import { thisWeekItems } from "@/lib/this-week";
 
 export const dynamic = "force-dynamic";
 
-function quoteSlice(
-  quote: { usd: number; change24hPct?: number | null; fetchedAt: string } | null,
-): HomeQuote | null {
-  if (!quote) return null;
+function moveFromQuote(
+  ticker: string,
+  quote: { change24hPct?: number | null; fetchedAt?: string | null } | null | undefined,
+): HomeMove {
   return {
-    usd: quote.usd,
-    change24hPct: typeof quote.change24hPct === "number" ? quote.change24hPct : null,
-    fetchedAt: quote.fetchedAt,
+    id: ticker.toLowerCase(),
+    ticker,
+    changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
+    fetchedAt: quote?.fetchedAt ?? null,
   };
 }
 
 export default async function Home() {
-  const [floor, fitness, bankroll, calendar, book, closesByTicker, session] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, session] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
     loadCalendarForPage(),
     loadBetsForPage(),
-    loadCryptoBasketCloses(),
     getSession(),
   ]);
-  const basketLegs: CryptoBasketLeg[] = heldCryptoQuantities(
-    Object.entries(NODE_PARENT).flatMap(([id, parentId]) => {
-      if (parentId !== "crypto") return [];
-      const face = floor.faces[id.toUpperCase()];
-      if (!face) return [];
-      return [
-        {
-          id,
-          ticker: face.ticker,
-          quantity: face.totalUnits,
-          totalUsd: face.totalUsd,
-        },
-      ];
-    }),
-  ).map((leg) => ({
-    id: leg.id,
-    quantity: leg.quantity,
-    closes: closesByTicker[leg.ticker] ?? [],
-  }));
   let financeHome: FinanceHomeFace | null = null;
   if (session?.role === "owner") {
     const finance = await loadFinancePage();
@@ -77,15 +55,12 @@ export default async function Home() {
     (fitness.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null);
   const asOf = new Date();
   const bets = book.status === "unavailable" ? [] : book.bets;
-  const moves: HomeMove[] = EQUITY_FACE_TICKERS.map((ticker) => {
-    const quote = floor.equityQuotes[ticker];
-    return {
-      id: ticker.toLowerCase(),
-      ticker,
-      changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
-      fetchedAt: quote?.fetchedAt ?? null,
-    };
-  });
+  const moves: HomeMove[] = EQUITY_FACE_TICKERS.map((ticker) =>
+    moveFromQuote(ticker, floor.equityQuotes[ticker]),
+  );
+  const cryptoMoves: HomeMove[] = CRYPTO_HOME_TICKERS.map((ticker) =>
+    moveFromQuote(ticker, floor.spotQuotes[ticker]),
+  );
   const ledger = bankroll.ledger;
 
   return (
@@ -108,10 +83,9 @@ export default async function Home() {
               }
             : null
         }
-        xrpQuote={quoteSlice(floor.spotQuotes.XRP)}
         moves={moves}
+        cryptoMoves={cryptoMoves}
         catalystLine={nextAiCatalystLine(calendar.events, asOf)}
-        basketLegs={basketLegs}
         stepSlots={fitnessStepBars(fitness.stepDays)}
         tierBar={
           ledger
