@@ -366,6 +366,20 @@ function heartFacts(metrics: readonly MetricSample[], today: string): { headline
   return { headline: null, detail: FITNESS_EMPTY };
 }
 
+export type FitnessStepDay = {
+  day: string;
+  /** Null when that civil day has no step sample. A real zero stays zero. */
+  steps: number | null;
+};
+
+/** Monday through Sunday of the civil week. Days after today, and days with no sample, stay null. */
+export function fitnessWeekStepDays(metrics: readonly MetricSample[], today: string): FitnessStepDay[] {
+  return civilWeek(today).map((day) => ({
+    day,
+    steps: day <= today ? stepsOn(metrics, day) : null,
+  }));
+}
+
 export type FitnessWeekFacts = {
   /** Step count summed across this civil week, through today. Null when no sample exists. */
   steps: number | null;

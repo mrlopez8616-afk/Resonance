@@ -6,7 +6,7 @@ import { manualFitnessSeed } from "@/lib/fitness-seed";
 import { formatSpotPrice } from "@/lib/live-face";
 import type { FitnessMetricWrite } from "@/lib/fitness-types";
 import {
-  FINANCE_HOME_HINT,
+  FINANCE_HOME_LABEL,
   HOME_QUOTE_MAX_AGE_MS,
   XRP_DAILY_CLOSE_USD,
   aiStockSecondaryLines,
@@ -299,10 +299,10 @@ describe("fitness home lines", () => {
 });
 
 describe("finance and predictions home lines", () => {
-  it("keeps the finance hint and no dollar figure", () => {
-    const lines = financeSecondaryLines();
-    assert.deepEqual(lines, [FINANCE_HOME_HINT]);
-    assert.equal(lines.some((line) => /\$\d|NaN|undefined/.test(line)), false);
+  it("keeps finance as a static label with no hint and no dollar figure", () => {
+    assert.equal(FINANCE_HOME_LABEL, "Bank linked · private");
+    assert.equal(/\$|\d|NaN|undefined/.test(FINANCE_HOME_LABEL), false);
+    assert.deepEqual(financeSecondaryLines(), []);
   });
 
   it("prints at risk, open count, and record, and hides a zero dollar amount", () => {

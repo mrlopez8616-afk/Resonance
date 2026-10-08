@@ -506,7 +506,132 @@ body {
 }
 
 .home-floor {
-  grid-auto-rows: minmax(11.5rem, 1fr);
+  flex: none;
+  align-content: start;
+  align-items: start;
+  grid-auto-rows: auto;
+  gap: 0.55rem;
+}
+
+.home-floor .node-square {
+  height: auto;
+  min-height: 0;
+  padding: 0.7rem 0.85rem 0.62rem;
+}
+
+.home-floor .node-log-link,
+.home-floor .live-face {
+  flex: none;
+  height: auto;
+}
+
+.home-floor .finance-status {
+  white-space: normal;
+}
+
+.home-visual {
+  margin-top: 0.42rem;
+  min-width: 0;
+}
+
+.home-visual svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.home-spark-fill {
+  fill: color-mix(in srgb, var(--live) 14%, transparent);
+}
+
+.home-spark-line,
+.home-bankroll-line {
+  fill: none;
+  stroke: var(--live);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.home-spark-ref {
+  stroke: #6d5bd0;
+  stroke-width: 1;
+  stroke-dasharray: 2.5 2.5;
+}
+
+.home-zero,
+.home-step-empty {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.home-visual .is-up {
+  fill: #16c784;
+}
+
+.home-visual .is-down {
+  fill: var(--live);
+}
+
+.home-step {
+  fill: #6d5bd0;
+}
+
+.home-visual .is-flat {
+  fill: var(--muted);
+}
+
+.home-tick {
+  fill: var(--muted);
+  font-size: 7px;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.home-tier-bar {
+  display: flex;
+  overflow: hidden;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.home-tier {
+  min-width: 0.35rem;
+  height: 100%;
+}
+
+.home-tier.is-strong {
+  background: var(--live);
+}
+
+.home-tier.is-lean {
+  background: #6d5bd0;
+}
+
+.home-tier.is-untiered {
+  background: #9aa7b2;
+}
+
+.home-tier-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+  margin: 0.28rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.home-tier-labels .is-strong {
+  color: var(--live);
+}
+
+.home-tier-labels .is-lean {
+  color: #6d5bd0;
 }
 
 .parent-lines {
@@ -1628,7 +1753,7 @@ body {
   .node-square.is-home.is-parent,
   .node-square.is-home.is-parent.is-live {
     aspect-ratio: auto;
-    min-height: 9.5rem;
+    min-height: 0;
     grid-column: auto;
   }
 

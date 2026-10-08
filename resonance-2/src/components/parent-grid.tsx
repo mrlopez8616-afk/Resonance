@@ -13,10 +13,12 @@ import {
   parseHiddenIds,
   subscribeHiddenIds,
 } from "@/lib/floor-registry";
+import { AiChangeVisual, FitnessStepVisual, PredictionsVisual, XrpSparkVisual } from "@/components/home-visual";
 import {
   aiStockSecondaryLines,
   cryptoSecondaryLines,
-  financeSecondaryLines,
+  aiChangeBars,
+  FINANCE_HOME_LABEL,
   fitnessSecondaryLines,
   predictionsHeadline,
   predictionsSecondaryLines,
@@ -25,6 +27,7 @@ import {
   type HomeQuote,
   type PredictionsHomeFacts,
 } from "@/lib/home-lines";
+import type { StepSlot, TierSegment, XrpSpark } from "@/lib/home-visuals";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
 
 function ParentLines({ lines }: { lines: readonly string[] }) {
@@ -60,7 +63,7 @@ function linesFor(
     });
   }
   if (parentId === "fitness") return fitnessSecondaryLines(input.fitnessWeek, input.fitnessLine);
-  if (parentId === "finance") return financeSecondaryLines();
+  if (parentId === "finance") return [];
   return predictionsSecondaryLines(input.predictions);
 }
 
@@ -75,6 +78,10 @@ export function ParentGrid({
   xrpQuote = null,
   moves = [],
   catalystLine = null,
+  spark = null,
+  stepSlots = null,
+  tierBar = null,
+  bankrollLine = null,
   asOf,
 }: {
   faceTotals: FaceTotals;
@@ -89,6 +96,10 @@ export function ParentGrid({
   xrpQuote?: HomeQuote | null;
   moves?: readonly HomeMove[];
   catalystLine?: string | null;
+  spark?: XrpSpark | null;
+  stepSlots?: readonly StepSlot[] | null;
+  tierBar?: readonly TierSegment[] | null;
+  bankrollLine?: readonly number[] | null;
   /** Render instant. Quote age is measured from this, so server and client agree. */
   asOf: string;
 }) {
@@ -99,6 +110,7 @@ export function ParentGrid({
   );
   const hiddenIds = parseHiddenIds(hiddenRaw);
   const asOfDate = new Date(asOf);
+  const changeBars = aiChangeBars(visibleHomeMoves(moves, hiddenIds), asOfDate);
 
   return (
     <section className="node-grid home-floor" aria-label="Node floor">
@@ -113,6 +125,22 @@ export function ParentGrid({
           fitnessLine,
           predictions,
         });
+        if (parent.id === "finance") {
+          return (
+            <NodeSquare key={parent.id} parent home live label={parent.label}>
+              <Link
+                href={parentCardHref(parent.id)}
+                className="node-log-link"
+                title={`Open ${parent.label}`}
+              >
+                <div className="live-face parent-face">
+                  <h2 className="node-ticker">{parent.label}</h2>
+                  <p className="live-units finance-status">{FINANCE_HOME_LABEL}</p>
+                </div>
+              </Link>
+            </NodeSquare>
+          );
+        }
         if (parent.id === "predictions") {
           const headline = bankroll ? predictionsHeadline(bankroll.headline) : null;
           const live = bankroll !== null && (headline !== null || lines.length > 0);
@@ -137,6 +165,7 @@ export function ParentGrid({
                     model={{ headline, priceLine: null, label: null }}
                   >
                     <ParentLines lines={lines} />
+                    <PredictionsVisual segments={tierBar} bankroll={bankrollLine} />
                   </ValueCard>
                 ) : (
                   <div className="live-face parent-face">
@@ -163,7 +192,15 @@ export function ParentGrid({
           parent.id === "fitness"
             ? fitnessLine !== null || lines.length > 0
             : aggregate.connected;
-        const showNote = !summary && (parent.id === "finance" || lines.length === 0);
+        const showNote = !summary && lines.length === 0;
+        const visual =
+          parent.id === "crypto" && spark ? (
+            <XrpSparkVisual spark={spark} />
+          ) : parent.id === "ai-stocks" && changeBars ? (
+            <AiChangeVisual bars={changeBars} />
+          ) : parent.id === "fitness" && stepSlots ? (
+            <FitnessStepVisual slots={stepSlots} />
+          ) : null;
         return (
           <NodeSquare
             key={parent.id}
@@ -189,6 +226,7 @@ export function ParentGrid({
                   <p className="node-note">not connected yet</p>
                 ) : null}
                 <ParentLines lines={lines} />
+                {visual}
               </div>
             </Link>
           </NodeSquare>

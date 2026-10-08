@@ -12,7 +12,8 @@ export const XRP_DAILY_CLOSE_USD = 1.55;
  */
 export const HOME_QUOTE_MAX_AGE_MS = 15 * 60 * 1000;
 
-export const FINANCE_HOME_HINT = "Connect accounts to see cash and bills";
+/** Static until the Finance node exists. No balances. */
+export const FINANCE_HOME_LABEL = "Bank linked · private";
 
 const BLOCKED = /\$0\.00|\bNaN\b|\bundefined\b/;
 const AI_TICKERS = new Set<string>(EQUITY_FACE_TICKERS);
@@ -105,6 +106,27 @@ export function cryptoSecondaryLines(quote: HomeQuote | null, now: Date): string
   return keep([priceLine, closeLine]);
 }
 
+export type ChangeBar = {
+  ticker: string;
+  changePct: number;
+};
+
+/**
+ * Session-change bars in floor order. A stale or missing quote is left out.
+ * Hidden when none of the six is live.
+ */
+export function aiChangeBars(moves: readonly HomeMove[], now: Date): ChangeBar[] | null {
+  const byTicker = new Map(moves.map((move) => [move.ticker, move]));
+  const bars: ChangeBar[] = [];
+  for (const ticker of EQUITY_FACE_TICKERS) {
+    const move = byTicker.get(ticker);
+    if (!move || !homeQuoteFresh(move.fetchedAt, now)) continue;
+    if (typeof move.changePct !== "number" || !Number.isFinite(move.changePct)) continue;
+    bars.push({ ticker, changePct: move.changePct });
+  }
+  return bars.length > 0 ? bars : null;
+}
+
 export function visibleHomeMoves(moves: readonly HomeMove[], hiddenIds: readonly string[]): HomeMove[] {
   const hidden = new Set(hiddenIds);
   return moves.filter((move) => move.id && !hidden.has(move.id));
@@ -195,8 +217,9 @@ export function fitnessSecondaryLines(
   return keep([miles]);
 }
 
+/** No hint and no dollar figure. The card's only finance copy is the static label. */
 export function financeSecondaryLines(): string[] {
-  return keep([FINANCE_HOME_HINT]);
+  return [];
 }
 
 /** Bankroll stays the headline. These are the lines under it. A zero dollar amount is omitted. */

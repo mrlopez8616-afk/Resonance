@@ -6,6 +6,8 @@ import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { EQUITY_FACE_TICKERS } from "@/lib/live-face";
 import { nextAiCatalystLine, type HomeMove, type HomeQuote } from "@/lib/home-lines";
+import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar, xrpSparkline } from "@/lib/home-visuals";
+import { loadXrpWeek } from "@/lib/xrp-history";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -26,12 +28,13 @@ function quoteSlice(
 }
 
 export default async function Home() {
-  const [floor, fitness, bankroll, calendar, book] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, xrpWeek] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
     loadCalendarForPage(),
     loadBetsForPage(),
+    loadXrpWeek(),
   ]);
   const faceTotals = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
@@ -75,6 +78,14 @@ export default async function Home() {
         xrpQuote={quoteSlice(floor.spotQuotes.XRP)}
         moves={moves}
         catalystLine={nextAiCatalystLine(calendar.events, asOf)}
+        spark={xrpSparkline(xrpWeek ?? [])}
+        stepSlots={fitnessStepBars(fitness.stepDays)}
+        tierBar={
+          ledger
+            ? predictionsTierBar(ledger.tiers.map((tier) => ({ id: tier.id, atRiskLabel: tier.atRiskLabel })))
+            : null
+        }
+        bankrollLine={inScopeBankrollPoints(bets, calendar.events)}
         asOf={asOf.toISOString()}
       />
     </OperatorShell>
