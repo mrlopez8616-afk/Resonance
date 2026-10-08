@@ -17,6 +17,9 @@ export const FINANCE_NODES = [
   { id: "fees", title: "Fees & Alerts" },
 ] as const;
 
+/** Quiet line when the table is reachable and has no rows. Not a balance. */
+export const FINANCE_EMPTY_LINE = "no snapshot yet";
+
 export type FinanceNodeId = (typeof FINANCE_NODES)[number]["id"];
 
 export function financeNode(id: string): (typeof FINANCE_NODES)[number] | null {

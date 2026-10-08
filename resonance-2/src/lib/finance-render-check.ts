@@ -63,7 +63,7 @@ assert.match(debtHtml, /stale/);
 assert.equal(debtHtml.includes("$0"), false);
 
 const waiting = renderToStaticMarkup(createElement(FinanceWaiting));
-assert.equal(waiting.includes("Waiting for first snapshot"), true);
+assert.equal(waiting.includes("no snapshot yet"), true);
 assert.equal(waiting.includes("$"), false);
 
 console.log("finance render ok");

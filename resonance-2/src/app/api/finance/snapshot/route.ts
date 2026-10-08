@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { authorizeFinanceIngest, getFinanceIngestToken } from "@/lib/finance/auth";
 import { financeKeyFromEnv } from "@/lib/finance/crypto";
-import { parseFinanceSnapshot } from "@/lib/finance/schema";
-import { writeFinanceSnapshot } from "@/lib/finance/store";
+import { parseFinanceSnapshot, type FinanceSnapshot } from "@/lib/finance/schema";
+import { readOwnerFinanceSnapshot, writeFinanceSnapshot } from "@/lib/finance/store";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 import { readBearerToken } from "@/lib/sync-auth-core";
 
@@ -10,32 +10,54 @@ export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 256 * 1024;
 
-function json(body: { ok: boolean; error?: string; deduped?: boolean; asOf?: string; storedAt?: string }, status: number) {
+type FinanceJson = {
+  ok: boolean;
+  error?: string;
+  deduped?: boolean;
+  asOf?: string;
+  storedAt?: string;
+  snapshot?: FinanceSnapshot | null;
+};
+
+function json(body: FinanceJson, status: number) {
   return NextResponse.json(body, {
     status,
     headers: { "cache-control": "no-store" },
   });
 }
 
+/** Test hook. `undefined` uses the session cookie. */
+let sessionForTests: { role: string } | null | undefined;
+
+export function setFinanceSessionForTests(session: { role: string } | null | undefined) {
+  sessionForTests = session;
+}
+
 /**
- * Finance has no Bearer read. A session still does not receive the snapshot
- * here: owner pages read the store in the server component.
+ * Owner session read. Bearer is rejected. Zero rows is 200 `{ snapshot: null }`.
+ * Missing env or an unreachable database is 503.
  */
 export async function GET(request: Request) {
   if (request.headers.get("authorization")) {
     return json({ ok: false, error: "Unauthorized." }, 401);
   }
   let session: { role: string } | null = null;
-  try {
-    const { getSession } = await import("@/lib/auth-session");
-    session = await getSession();
-  } catch {
-    session = null;
+  if (sessionForTests !== undefined) {
+    session = sessionForTests;
+  } else {
+    try {
+      const { getSession } = await import("@/lib/auth-session");
+      session = await getSession();
+    } catch {
+      session = null;
+    }
   }
   if (!session || session.role !== "owner") {
     return json({ ok: false, error: "Unauthorized." }, 401);
   }
-  return json({ ok: false, error: "Not found." }, 404);
+  const read = await readOwnerFinanceSnapshot();
+  if (!read.ok) return json({ ok: false, error: read.error }, read.status);
+  return json({ ok: true, snapshot: read.snapshot }, 200);
 }
 
 export function HEAD(request: Request) {

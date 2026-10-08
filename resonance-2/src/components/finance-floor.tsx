@@ -3,7 +3,7 @@ import { NodeSquare } from "@/components/node-square";
 import { ValueCard } from "@/components/value-card";
 import { CashFlowBars } from "@/components/home-visual";
 import { formatCivilDate } from "@/lib/calendar-time";
-import type { FinanceCardModel } from "@/lib/finance/view";
+import { FINANCE_EMPTY_LINE, type FinanceCardModel } from "@/lib/finance/view";
 
 export function FinanceAsOf({ asOf, stale }: { asOf: string; stale: boolean }) {
   return (
@@ -17,7 +17,7 @@ export function FinanceAsOf({ asOf, stale }: { asOf: string; stale: boolean }) {
 export function FinanceWaiting() {
   return (
     <p className="parent-empty" role="status">
-      Waiting for first snapshot
+      {FINANCE_EMPTY_LINE}
     </p>
   );
 }

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { after, beforeEach, describe, it } from "node:test";
 import { NextRequest } from "next/server";
 import { newDb } from "pg-mem";
-import { GET, POST } from "@/app/api/finance/snapshot/route";
+import { GET, POST, setFinanceSessionForTests } from "@/app/api/finance/snapshot/route";
 import { proxy } from "@/proxy";
 import { planAccess } from "@/lib/auth-core";
 import {
@@ -15,12 +15,17 @@ import {
 } from "@/lib/finance/crypto";
 import { SYNTHETIC_FINANCE_SNAPSHOT } from "@/lib/finance/fixture";
 import { parseFinanceSnapshot, type FinanceSnapshot } from "@/lib/finance/schema";
-import { readLatestFinanceSnapshot } from "@/lib/finance/store";
+import { loadFinancePage, readLatestFinanceSnapshot } from "@/lib/finance/store";
+import { FINANCE_HOME_LABEL } from "@/lib/home-lines";
+import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import {
+  FINANCE_EMPTY_LINE,
+  FINANCE_NODES,
   financeAsOfStale,
   financeCards,
   financeDetail,
   financeHomeForRole,
+  financeNode,
   notLinkedCount,
 } from "@/lib/finance/view";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
@@ -117,6 +122,7 @@ describe("finance snapshot", { concurrency: false }, () => {
       else process.env[name] = value;
     }
     setSqlClientForTests(null);
+    setFinanceSessionForTests(undefined);
   });
 
   beforeEach(async () => {
@@ -204,6 +210,48 @@ describe("finance snapshot", { concurrency: false }, () => {
     assert.match(page.headers.get("location") ?? "", /\/login\?next=%2Fn%2Ffinance$/);
     const child = await proxy(new NextRequest("https://resonance.test/n/finance/net-worth"));
     assert.match(child.headers.get("location") ?? "", /\/login\?next=%2Fn%2Ffinance%2Fnet-worth$/);
+  });
+
+  it("reads an empty table as no snapshot, and 503s only when env or the database is missing", async () => {
+    const page = await loadFinancePage();
+    assert.deepEqual(page, { status: "waiting" });
+    assert.equal(financeHomeForRole("owner", null), null);
+    assert.equal(FINANCE_HOME_LABEL, "Bank linked · private");
+    assert.equal(FINANCE_EMPTY_LINE, "no snapshot yet");
+    assert.equal(FINANCE_HOME_LABEL.includes("$"), false);
+    assert.equal(FINANCE_EMPTY_LINE.includes("$"), false);
+    assert.notEqual(FINANCE_EMPTY_LINE, STORAGE_UNAVAILABLE_BANNER);
+    assert.equal(FINANCE_NODES.length, 5);
+    for (const node of FINANCE_NODES) {
+      assert.equal(financeNode(node.id)?.id, node.id);
+    }
+
+    setFinanceSessionForTests({ role: "owner" });
+    const read = await GET(new Request("https://resonance.test/api/finance/snapshot"));
+    assert.equal(read.status, 200);
+    const body = await read.json();
+    assert.deepEqual(body, { ok: true, snapshot: null });
+    assert.equal(JSON.stringify(body).includes("$0"), false);
+    assert.equal(JSON.stringify(body).includes("5000"), false);
+
+    setFinanceSessionForTests({ role: "operator" });
+    assert.equal((await GET(new Request("https://resonance.test/api/finance/snapshot"))).status, 401);
+
+    setFinanceSessionForTests({ role: "owner" });
+    delete process.env.FINANCE_INGEST_TOKEN;
+    assert.equal((await GET(new Request("https://resonance.test/api/finance/snapshot"))).status, 503);
+    assert.equal((await loadFinancePage()).status, "unavailable");
+
+    process.env.FINANCE_INGEST_TOKEN = TOKEN;
+    delete process.env.FINANCE_ENC_KEY;
+    assert.equal((await GET(new Request("https://resonance.test/api/finance/snapshot"))).status, 503);
+    assert.equal((await loadFinancePage()).status, "unavailable");
+
+    process.env.FINANCE_ENC_KEY = KEY;
+    delete process.env.DATABASE_URL;
+    assert.equal((await GET(new Request("https://resonance.test/api/finance/snapshot"))).status, 503);
+    assert.equal((await loadFinancePage()).status, "unavailable");
+    setFinanceSessionForTests(undefined);
   });
 
   it("rejects unknown keys, a negative spend, and a fee older than 90 days", () => {

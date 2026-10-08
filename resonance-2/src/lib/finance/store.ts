@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getFinanceIngestToken } from "@/lib/finance/auth";
 import {
   decryptFinancePayload,
   encryptFinancePayload,
@@ -188,13 +189,40 @@ export async function readFinanceNetWorthSeries(limit = 12): Promise<NetWorthPoi
   return points.reverse();
 }
 
-export async function loadFinancePage(now = new Date()): Promise<FinancePageData> {
-  if (!process.env.DATABASE_URL?.trim()) return { status: "unavailable" };
+function financeConfigured(): { ok: true } | { ok: false; error: string } {
+  if (!getFinanceIngestToken()) {
+    return { ok: false, error: "Finance ingest is not configured." };
+  }
+  if (!financeKeyFromEnv()) {
+    return { ok: false, error: "Finance encryption is not configured." };
+  }
+  if (!process.env.DATABASE_URL?.trim()) {
+    return { ok: false, error: "Postgres is not configured." };
+  }
+  return { ok: true };
+}
+
+/**
+ * Owner read. Zero rows is `{ snapshot: null }` with status 200.
+ * 503 is only a missing env var or a database that cannot be queried.
+ */
+export async function readOwnerFinanceSnapshot(): Promise<
+  | { ok: true; snapshot: FinanceSnapshot | null }
+  | { ok: false; status: 503; error: string }
+> {
+  const configured = financeConfigured();
+  if (!configured.ok) return { ok: false, status: 503, error: configured.error };
   try {
-    const count = await sqlQuery<{ n: string | number }>(
-      `SELECT count(*) AS n FROM finance_snapshots`,
-    );
-    if (Number(count[0]?.n ?? 0) === 0) return { status: "waiting" };
+    const latest = await readLatestFinanceSnapshot();
+    return { ok: true, snapshot: latest?.snapshot ?? null };
+  } catch {
+    return { ok: false, status: 503, error: "Postgres is not configured." };
+  }
+}
+
+export async function loadFinancePage(now = new Date()): Promise<FinancePageData> {
+  if (!financeConfigured().ok) return { status: "unavailable" };
+  try {
     const latest = await readLatestFinanceSnapshot();
     if (!latest) return { status: "waiting" };
     return {
