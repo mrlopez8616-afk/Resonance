@@ -37,3 +37,7 @@ VALUES ('carla', 'operator', '<argon2id phc>', '<base32>', now());
 ```
 
 This deploy still rejects that login. Read APIs call `authorizeReadRequest()`. Machine routes keep `Authorization: Bearer $RESONANCE_SYNC_SECRET`. Fitness ingest keeps `X-Fitness-Token`.
+
+## Build/deploy notes
+
+Vercel build budget: only resonance3 production builds (vercel.json ignoreCommand + previews disabled on resonance3). Verify PRs with local npm test + next build; push once per PR.
