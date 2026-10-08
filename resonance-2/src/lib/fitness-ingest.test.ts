@@ -413,6 +413,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "004_fight_breakdowns",
         "005_auth",
         "007_fitness_shortcuts",
+        "008_finance",
         "009_reset_rh_agentic_sleeves",
       ],
     );
