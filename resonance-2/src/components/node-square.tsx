@@ -5,6 +5,7 @@ export function NodeSquare({
   dashed = false,
   empty = false,
   parent = false,
+  home = false,
   label,
   onDelete,
   children,
@@ -13,6 +14,8 @@ export function NodeSquare({
   dashed?: boolean;
   empty?: boolean;
   parent?: boolean;
+  /** Home parent card. Lets the square grow so secondary lines stay visible. */
+  home?: boolean;
   label: string;
   onDelete?: () => void;
   children: ReactNode;
@@ -20,7 +23,7 @@ export function NodeSquare({
   const state = live ? "is-live" : dashed ? "is-offline" : "";
   return (
     <article
-      className={`node-square ${state} ${empty ? "is-empty" : ""} ${parent ? "is-parent" : ""}`}
+      className={`node-square ${state} ${empty ? "is-empty" : ""} ${parent ? "is-parent" : ""} ${home ? "is-home" : ""}`}
       aria-label={label}
     >
       {onDelete ? (

@@ -2,14 +2,19 @@ import "server-only";
 
 import { chicagoToday } from "@/lib/calendar-time";
 import {
+  EMPTY_FITNESS_WEEK,
   fitnessCards,
   fitnessHomeLine,
   fitnessNode,
+  fitnessWeekFacts,
+  fitnessWeekStepDays,
   metricSamples,
   workoutSamples,
   type FitnessCard,
   type FitnessHomeLine,
   type FitnessNodeDetail,
+  type FitnessStepDay,
+  type FitnessWeekFacts,
 } from "@/lib/fitness-board";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites } from "@/lib/fitness-types";
@@ -314,18 +319,27 @@ function unavailableFitness(today: string): {
 
 export async function loadFitnessHome(today = chicagoToday()): Promise<{
   line: FitnessHomeLine | null;
+  week: FitnessWeekFacts;
+  stepDays: FitnessStepDay[];
   availability: FitnessAvailability;
 }> {
   try {
     const read = present(await readFitness(today));
     return {
       line: fitnessHomeLine(read.metrics, read.workouts, read.today),
+      week: fitnessWeekFacts(read.metrics, read.workouts, read.today),
+      stepDays: fitnessWeekStepDays(read.metrics, read.today),
       availability: read.availability,
     };
   } catch (error) {
     console.error("fitness read failed", fitnessFailureText(error));
     const empty = unavailableFitness(today);
-    return { line: empty.line, availability: empty.availability };
+    return {
+      line: empty.line,
+      week: EMPTY_FITNESS_WEEK,
+      stepDays: [],
+      availability: empty.availability,
+    };
   }
 }
 

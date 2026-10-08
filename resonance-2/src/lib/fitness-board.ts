@@ -366,6 +366,74 @@ function heartFacts(metrics: readonly MetricSample[], today: string): { headline
   return { headline: null, detail: FITNESS_EMPTY };
 }
 
+export type FitnessStepDay = {
+  day: string;
+  /** Null when that civil day has no step sample. A real zero stays zero. */
+  steps: number | null;
+};
+
+/** Monday through Sunday of the civil week. Days after today, and days with no sample, stay null. */
+export function fitnessWeekStepDays(metrics: readonly MetricSample[], today: string): FitnessStepDay[] {
+  return civilWeek(today).map((day) => ({
+    day,
+    steps: day <= today ? stepsOn(metrics, day) : null,
+  }));
+}
+
+export type FitnessWeekFacts = {
+  /** Step count summed across this civil week, through today. Null when no sample exists. */
+  steps: number | null;
+  /** Active-energy kilocalories summed the same way. Workout calories are a different series. */
+  activeKcal: number | null;
+  /** Mean resting heart rate on the days this week that have a sample. */
+  restingHr: number | null;
+  /** Run miles this civil week. Null when the week has none. */
+  miles: number | null;
+};
+
+export const EMPTY_FITNESS_WEEK: FitnessWeekFacts = {
+  steps: null,
+  activeKcal: null,
+  restingHr: null,
+  miles: null,
+};
+
+/** This civil week, through today. Missing series stay null. Nothing is filled in. */
+export function fitnessWeekFacts(
+  metrics: readonly MetricSample[],
+  workouts: readonly WorkoutSample[],
+  today: string,
+): FitnessWeekFacts {
+  const days = civilWeek(today).filter((day) => day <= today);
+  let steps = 0;
+  let stepsSeen = false;
+  let activeKcal = 0;
+  let energySeen = false;
+  const resting: number[] = [];
+  for (const day of days) {
+    const daySteps = stepsOn(metrics, day);
+    if (daySteps !== null) {
+      steps += daySteps;
+      stepsSeen = true;
+    }
+    const dayEnergy = energyOn(metrics, day);
+    if (dayEnergy !== null) {
+      activeKcal += dayEnergy;
+      energySeen = true;
+    }
+    const dayResting = heartOn(metrics, "resting_heart_rate", day);
+    if (dayResting !== null) resting.push(dayResting);
+  }
+  const miles = weekMiles(workouts, today).miles;
+  const restingHr = average(resting);
+  return {
+    steps: stepsSeen ? steps : null,
+    activeKcal: energySeen ? activeKcal : null,
+    restingHr,
+    miles: miles > 0 ? miles : null,
+  };
+}
+
 export function fitnessHomeLine(
   metrics: readonly MetricSample[],
   workouts: readonly WorkoutSample[],
