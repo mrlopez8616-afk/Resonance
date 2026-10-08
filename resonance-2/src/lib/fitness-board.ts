@@ -5,11 +5,21 @@ import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite } from "@/l
 export const FITNESS_EMPTY = "Data appears once the phone sync runs.";
 
 export const FITNESS_NODES = [
-  { id: "activity", title: "Activity" },
+  { id: "steps", title: "Steps" },
   { id: "runs", title: "Runs" },
   { id: "lifting", title: "Lifting" },
   { id: "heart", title: "Heart" },
 ] as const;
+
+/** Old child slug. `/n/fitness/activity` redirects here permanently. */
+export const FITNESS_LEGACY_SLUGS = {
+  activity: "steps",
+} as const satisfies Record<string, FitnessNodeId>;
+
+export function fitnessLegacyHref(nodeId: string): string | null {
+  const next = FITNESS_LEGACY_SLUGS[nodeId as keyof typeof FITNESS_LEGACY_SLUGS];
+  return next ? `/n/fitness/${next}` : null;
+}
 
 export type FitnessNodeId = (typeof FITNESS_NODES)[number]["id"];
 
@@ -102,9 +112,21 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function originRank(origin: FitnessOrigin): number {
+  if (origin === "shortcuts") return 3;
+  if (origin === "health-auto-export") return 2;
+  return 1;
+}
+
 function preferLive<T extends { origin: FitnessOrigin }>(rows: T[], group: (row: T) => string): T[] {
-  const live = new Set(rows.filter((row) => row.origin !== "manual").map(group));
-  return rows.filter((row) => row.origin !== "manual" || !live.has(group(row)));
+  const best = new Map<string, number>();
+  for (const row of rows) {
+    const key = group(row);
+    const rank = originRank(row.origin);
+    const current = best.get(key);
+    if (current === undefined || rank > current) best.set(key, rank);
+  }
+  return rows.filter((row) => originRank(row.origin) === best.get(group(row)));
 }
 
 function formatCount(value: number): string {
@@ -220,6 +242,12 @@ function stepsOn(metrics: readonly MetricSample[], day: string): number | null {
   });
 }
 
+/** Missing and zero stay off the card. A day with no sample is not shown as 0. */
+function shown(value: number | null): number | null {
+  if (value === null || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
 function energyOn(metrics: readonly MetricSample[], day: string): number | null {
   return sumMetric(metrics, "active_energy", day, (qty, units) => energyKcal(qty, units));
 }
@@ -242,22 +270,25 @@ function average(values: readonly number[]): number | null {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-type ActivityFacts = {
+type StepsFacts = {
   headline: string | null;
   detail: string | null;
   todaySteps: number | null;
   latest: { day: string; steps: number } | null;
 };
 
-function activityFacts(metrics: readonly MetricSample[], today: string): ActivityFacts {
-  const todaySteps = stepsOn(metrics, today);
-  const latestDayValue = latestDay(daysWith(metrics, "step_count", today), today);
-  const latestSteps = latestDayValue ? stepsOn(metrics, latestDayValue) : null;
+function stepsFacts(metrics: readonly MetricSample[], today: string): StepsFacts {
+  const todaySteps = shown(stepsOn(metrics, today));
+  const latestDayValue = latestDay(
+    daysWith(metrics, "step_count", today).filter((day) => shown(stepsOn(metrics, day)) !== null),
+    today,
+  );
+  const latestSteps = latestDayValue ? shown(stepsOn(metrics, latestDayValue)) : null;
   const windowStart = addCivilDays(today, -6);
   const windowDays = daysWith(metrics, "step_count", today).filter((day) => day >= windowStart);
   const avg = average(
     windowDays
-      .map((day) => stepsOn(metrics, day))
+      .map((day) => shown(stepsOn(metrics, day)))
       .filter((value): value is number => value !== null),
   );
   const avgLabel = avg === null ? null : `7-day avg ${formatCount(avg)}`;
@@ -439,7 +470,7 @@ export function fitnessHomeLine(
   workouts: readonly WorkoutSample[],
   today: string,
 ): FitnessHomeLine | null {
-  const activity = activityFacts(metrics, today);
+  const activity = stepsFacts(metrics, today);
   if (activity.todaySteps !== null) {
     return { value: formatCount(activity.todaySteps), unit: "steps" };
   }
@@ -457,7 +488,7 @@ export function fitnessCards(
   today: string,
 ): FitnessCard[] {
   const facts = {
-    activity: activityFacts(metrics, today),
+    steps: stepsFacts(metrics, today),
     runs: runsFacts(workouts, today),
     lifting: liftingFacts(workouts, today),
     heart: heartFacts(metrics, today),
@@ -475,7 +506,24 @@ function originLabel(origin: FitnessOrigin): string | null {
   return origin === "manual" ? "manual" : null;
 }
 
-function activityRows(metrics: readonly MetricSample[], today: string): FitnessRow[] {
+function workoutLine(metrics: readonly MetricSample[], day: string): string | null {
+  const rows = metrics.filter((metric) => metric.metric === "workouts" && metric.day === day && metric.qty > 0);
+  if (rows.length === 0) return null;
+  const parts: string[] = [];
+  const minutes = rows.filter((row) => row.units.trim().toLowerCase() !== "count");
+  const counts = rows.filter((row) => row.units.trim().toLowerCase() === "count");
+  if (minutes.length > 0) {
+    const total = minutes.reduce((sum, row) => sum + row.qty, 0);
+    if (total > 0) parts.push(`${formatCount(total)} min`);
+  }
+  if (counts.length > 0) {
+    const total = counts.reduce((sum, row) => sum + row.qty, 0);
+    if (total > 0) parts.push(`${formatCount(total)} ${total === 1 ? "workout" : "workouts"}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function stepsRows(metrics: readonly MetricSample[], today: string): FitnessRow[] {
   const days = [
     ...new Set(
       metrics
@@ -484,15 +532,18 @@ function activityRows(metrics: readonly MetricSample[], today: string): FitnessR
             metric.day <= today &&
             (metric.metric === "step_count" ||
               metric.metric === "active_energy" ||
-              metric.metric === "walking_running_distance"),
+              metric.metric === "walking_running_distance" ||
+              metric.metric === "workouts"),
         )
         .map((metric) => metric.day),
     ),
   ].sort((a, b) => (a < b ? 1 : -1));
-  return days.map((day) => {
-    const steps = stepsOn(metrics, day);
-    const energy = energyOn(metrics, day);
-    const distance = distanceOn(metrics, day);
+  return days.flatMap((day) => {
+    const steps = shown(stepsOn(metrics, day));
+    const energy = shown(energyOn(metrics, day));
+    const distance = shown(distanceOn(metrics, day));
+    const workouts = workoutLine(metrics, day);
+    if (steps === null && energy === null && distance === null && workouts === null) return [];
     const manual = metrics.some(
       (metric) => metric.day === day && metric.metric === "step_count" && metric.origin === "manual",
     );
@@ -500,15 +551,18 @@ function activityRows(metrics: readonly MetricSample[], today: string): FitnessR
       formatCivilDate(day),
       energy === null ? null : `${formatCount(energy)} kcal`,
       distance === null ? null : formatMiles(distance),
+      workouts,
       manual ? "manual" : null,
     ]
       .filter(Boolean)
       .join(" · ");
-    return {
-      id: day,
-      primary: steps === null ? formatCivilDate(day) : `${formatCount(steps)} steps`,
-      secondary: secondary || null,
-    };
+    return [
+      {
+        id: day,
+        primary: steps === null ? formatCivilDate(day) : `${formatCount(steps)} steps`,
+        secondary: secondary || null,
+      },
+    ];
   });
 }
 
@@ -595,8 +649,8 @@ export function fitnessNode(
   const cards = fitnessCards(metrics, workouts, today);
   const card = cards.find((item) => item.id === node.id);
   const rows =
-    node.id === "activity"
-      ? activityRows(metrics, today)
+    node.id === "steps"
+      ? stepsRows(metrics, today)
       : node.id === "runs"
         ? runRows(workouts, today)
         : node.id === "lifting"

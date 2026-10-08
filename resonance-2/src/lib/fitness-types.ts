@@ -1,4 +1,4 @@
-export type FitnessOrigin = "manual" | "health-auto-export";
+export type FitnessOrigin = "manual" | "health-auto-export" | "shortcuts";
 
 /** One daily metric row. `qty` is a decimal string. */
 export type FitnessMetricWrite = {

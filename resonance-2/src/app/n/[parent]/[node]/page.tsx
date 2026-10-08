@@ -10,7 +10,7 @@ import { loadBankroll } from "@/lib/bankroll-load";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
-import { FITNESS_NODES } from "@/lib/fitness-board";
+import { FITNESS_NODES, fitnessLegacyHref } from "@/lib/fitness-board";
 import { loadFitnessNode } from "@/lib/fitness-store";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
@@ -29,6 +29,10 @@ export async function generateMetadata({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
+  if (parentId === "fitness") {
+    const moved = fitnessLegacyHref(nodeId);
+    if (moved) permanentRedirect(moved);
+  }
   const parent = parentById(parentId);
   if (parent?.id === "fitness") {
     const node = FITNESS_NODES.find((item) => item.id === nodeId);
@@ -53,6 +57,10 @@ export default async function NodeDetailPage({
   if (legacy) {
     if (parentId === "predictions") permanentRedirect(legacy);
     redirect(legacy);
+  }
+  if (parentId === "fitness") {
+    const moved = fitnessLegacyHref(nodeId);
+    if (moved) permanentRedirect(moved);
   }
   const parent = parentById(parentId);
   if (parent?.id === "fitness") {

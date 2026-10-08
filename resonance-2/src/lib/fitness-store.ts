@@ -16,6 +16,7 @@ import {
   type FitnessStepDay,
   type FitnessWeekFacts,
 } from "@/lib/fitness-board";
+import { fitnessLocalFile, readLocalFitness, upsertLocalFitness } from "@/lib/fitness-local";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites } from "@/lib/fitness-types";
 import { FITNESS_SCHEMA_SQL } from "@/lib/pg/embedded-migrations";
@@ -52,7 +53,9 @@ function dayText(value: unknown): string {
 }
 
 function originOf(value: unknown): FitnessOrigin {
-  return value === "manual" ? "manual" : "health-auto-export";
+  if (value === "manual") return "manual";
+  if (value === "shortcuts") return "shortcuts";
+  return "health-auto-export";
 }
 
 function payloadOf(value: unknown): unknown {
@@ -110,6 +113,10 @@ async function ensureFitnessStoreOnce(): Promise<void> {
 
 /** Create the fitness tables when they are missing, then upsert the manual day once. */
 export async function ensureFitnessStore(): Promise<void> {
+  if (fitnessLocalFile()) {
+    readLocalFitness();
+    return;
+  }
   if (!ready) {
     ready = ensureFitnessStoreOnce().catch((error: unknown) => {
       ready = null;
@@ -120,6 +127,7 @@ export async function ensureFitnessStore(): Promise<void> {
 }
 
 export async function upsertFitnessRows(rows: FitnessWrites): Promise<{ metrics: number; workouts: number }> {
+  if (fitnessLocalFile()) return upsertLocalFitness(rows);
   for (const metric of rows.metrics) {
     await sqlQuery(
       `INSERT INTO fitness_metrics (
@@ -131,7 +139,11 @@ export async function upsertFitnessRows(rows: FitnessWrites): Promise<{ metrics:
          metric = EXCLUDED.metric,
          day = EXCLUDED.day,
          recorded_at = EXCLUDED.recorded_at,
-         qty = EXCLUDED.qty,
+         -- Shortcuts keeps the larger quantity, the same rule as GREATEST(existing, new).
+         qty = CASE
+           WHEN EXCLUDED.source = 'shortcuts' AND fitness_metrics.qty > EXCLUDED.qty THEN fitness_metrics.qty
+           ELSE EXCLUDED.qty
+         END,
          units = EXCLUDED.units,
          qty_min = EXCLUDED.qty_min,
          qty_max = EXCLUDED.qty_max,
@@ -274,6 +286,10 @@ async function readWorkouts(): Promise<FitnessWorkoutWrite[]> {
 }
 
 export async function readFitness(today = chicagoToday()): Promise<FitnessRead> {
+  if (fitnessLocalFile()) {
+    const rows = readLocalFitness();
+    return { availability: "live", metrics: rows.metrics, workouts: rows.workouts, today };
+  }
   if (!process.env.DATABASE_URL?.trim()) {
     const seed = manualFitnessSeed();
     return { availability: "seed-only", metrics: seed.metrics, workouts: seed.workouts, today };
