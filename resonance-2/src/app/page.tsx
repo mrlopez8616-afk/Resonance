@@ -1,13 +1,15 @@
 import { ParentGrid } from "@/components/parent-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { ThisWeek } from "@/components/this-week";
+import { NODE_PARENT } from "@/data/node-parents";
 import { bankrollHomeFace } from "@/lib/bankroll";
 import { loadBankroll } from "@/lib/bankroll-load";
+import { heldCryptoQuantities, type CryptoBasketLeg } from "@/lib/crypto-basket";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { EQUITY_FACE_TICKERS } from "@/lib/live-face";
 import { nextAiCatalystLine, type HomeMove, type HomeQuote } from "@/lib/home-lines";
-import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar, xrpSparkline } from "@/lib/home-visuals";
-import { loadXrpWeek } from "@/lib/xrp-history";
+import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
+import { loadCryptoBasketCloses } from "@/lib/xrp-history";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -28,14 +30,33 @@ function quoteSlice(
 }
 
 export default async function Home() {
-  const [floor, fitness, bankroll, calendar, book, xrpWeek] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, closesByTicker] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
     loadCalendarForPage(),
     loadBetsForPage(),
-    loadXrpWeek(),
+    loadCryptoBasketCloses(),
   ]);
+  const basketLegs: CryptoBasketLeg[] = heldCryptoQuantities(
+    Object.entries(NODE_PARENT).flatMap(([id, parentId]) => {
+      if (parentId !== "crypto") return [];
+      const face = floor.faces[id.toUpperCase()];
+      if (!face) return [];
+      return [
+        {
+          id,
+          ticker: face.ticker,
+          quantity: face.totalUnits,
+          totalUsd: face.totalUsd,
+        },
+      ];
+    }),
+  ).map((leg) => ({
+    id: leg.id,
+    quantity: leg.quantity,
+    closes: closesByTicker[leg.ticker] ?? [],
+  }));
   const faceTotals = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
   );
@@ -78,7 +99,7 @@ export default async function Home() {
         xrpQuote={quoteSlice(floor.spotQuotes.XRP)}
         moves={moves}
         catalystLine={nextAiCatalystLine(calendar.events, asOf)}
-        spark={xrpSparkline(xrpWeek ?? [])}
+        basketLegs={basketLegs}
         stepSlots={fitnessStepBars(fitness.stepDays)}
         tierBar={
           ledger

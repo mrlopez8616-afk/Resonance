@@ -1,5 +1,45 @@
+import type { ReactNode } from "react";
 import type { ChangeBar } from "@/lib/home-lines";
-import type { StepSlot, TierSegment, XrpSpark } from "@/lib/home-visuals";
+import type { StepSlot, TierSegment } from "@/lib/home-visuals";
+
+/** Shared frame for the AI day-change bars and the crypto basket line. */
+const HOME_CHART_WIDTH = 168;
+const HOME_CHART_HEIGHT = 52;
+
+function HomeChartFrame({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="home-visual">
+      <svg
+        viewBox={`0 0 ${HOME_CHART_WIDTH} ${HOME_CHART_HEIGHT}`}
+        role="img"
+        aria-label={label}
+      >
+        {children}
+      </svg>
+    </div>
+  );
+}
+
+export function CryptoBasketVisual({ points }: { points: readonly number[] }) {
+  if (points.length < 2) return null;
+  const width = HOME_CHART_WIDTH;
+  const height = HOME_CHART_HEIGHT;
+  const { min, max } = scale(points, points[0] ?? 0);
+  const span = max - min || 1;
+  const xAt = (index: number) => (index / (points.length - 1)) * width;
+  const yAt = (value: number) => height - ((value - min) / span) * height;
+  const line = points
+    .map((price, index) => `${index === 0 ? "M" : "L"}${xAt(index).toFixed(2)} ${yAt(price).toFixed(2)}`)
+    .join(" ");
+  const last = points.length - 1;
+  const area = `${line} L${xAt(last).toFixed(2)} ${height} L0 ${height} Z`;
+  return (
+    <HomeChartFrame label="Crypto basket value">
+      <path d={area} className="home-spark-fill" />
+      <path d={line} className="home-spark-line" />
+    </HomeChartFrame>
+  );
+}
 
 function scale(values: readonly number[], extra: number): { min: number; max: number } {
   let min = Math.min(...values, extra);
@@ -13,61 +53,33 @@ function scale(values: readonly number[], extra: number): { min: number; max: nu
   return { min: min - pad, max: max + pad };
 }
 
-export function XrpSparkVisual({ spark }: { spark: XrpSpark }) {
-  const width = 160;
-  const height = 36;
-  const { min, max } = scale(spark.prices, spark.referenceUsd);
-  const span = max - min || 1;
-  const xAt = (index: number) =>
-    spark.prices.length === 1 ? width / 2 : (index / (spark.prices.length - 1)) * width;
-  const yAt = (value: number) => height - ((value - min) / span) * height;
-  const line = spark.prices
-    .map((price, index) => `${index === 0 ? "M" : "L"}${xAt(index).toFixed(2)} ${yAt(price).toFixed(2)}`)
-    .join(" ");
-  const last = spark.prices.length - 1;
-  const area = `${line} L${xAt(last).toFixed(2)} ${height} L0 ${height} Z`;
-  const refY = yAt(spark.referenceUsd);
-  return (
-    <div className="home-visual">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="XRP over 7 days, with a $1.55 reference">
-        <path d={area} className="home-spark-fill" />
-        <path d={line} className="home-spark-line" />
-        <line x1="0" x2={width} y1={refY} y2={refY} className="home-spark-ref" />
-      </svg>
-    </div>
-  );
-}
-
 export function AiChangeVisual({ bars }: { bars: readonly ChangeBar[] }) {
-  const width = 168;
-  const height = 52;
+  const width = HOME_CHART_WIDTH;
   const labelY = 48;
   const mid = 24;
   const room = 18;
   const max = Math.max(1, ...bars.map((bar) => Math.abs(bar.changePct)));
   const slot = width / bars.length;
   return (
-    <div className="home-visual">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Day change by ticker">
-        <line x1="0" x2={width} y1={mid} y2={mid} className="home-zero" />
-        {bars.map((bar, index) => {
-          const magnitude = (Math.abs(bar.changePct) / max) * room;
-          const heightPx = bar.changePct === 0 ? 1.5 : Math.max(magnitude, 1.5);
-          const y = bar.changePct >= 0 ? mid - heightPx : mid;
-          const tone = bar.changePct > 0 ? "is-up" : bar.changePct < 0 ? "is-down" : "is-flat";
-          const x = index * slot + slot * 0.22;
-          return (
-            <g key={bar.ticker}>
-              <title>{`${bar.ticker} ${bar.changePct > 0 ? "+" : ""}${bar.changePct.toFixed(1)}%`}</title>
-              <rect x={x} y={y} width={slot * 0.56} height={heightPx} rx="1.2" className={tone} />
-              <text x={index * slot + slot / 2} y={labelY} textAnchor="middle" className="home-tick">
-                {bar.ticker}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
+    <HomeChartFrame label="Day change by ticker">
+      <line x1="0" x2={width} y1={mid} y2={mid} className="home-zero" />
+      {bars.map((bar, index) => {
+        const magnitude = (Math.abs(bar.changePct) / max) * room;
+        const heightPx = bar.changePct === 0 ? 1.5 : Math.max(magnitude, 1.5);
+        const y = bar.changePct >= 0 ? mid - heightPx : mid;
+        const tone = bar.changePct > 0 ? "is-up" : bar.changePct < 0 ? "is-down" : "is-flat";
+        const x = index * slot + slot * 0.22;
+        return (
+          <g key={bar.ticker}>
+            <title>{`${bar.ticker} ${bar.changePct > 0 ? "+" : ""}${bar.changePct.toFixed(1)}%`}</title>
+            <rect x={x} y={y} width={slot * 0.56} height={heightPx} rx="1.2" className={tone} />
+            <text x={index * slot + slot / 2} y={labelY} textAnchor="middle" className="home-tick">
+              {bar.ticker}
+            </text>
+          </g>
+        );
+      })}
+    </HomeChartFrame>
   );
 }
 
