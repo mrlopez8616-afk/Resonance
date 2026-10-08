@@ -5,7 +5,6 @@ import { civilWeekdayShort } from "@/lib/calendar-time";
 import { money, realizedPnl, type Bet } from "@/lib/bets";
 import { fightPromotions } from "@/lib/fight-desk";
 import type { FitnessStepDay } from "@/lib/fitness-board";
-import { marketChartPoints } from "@/lib/crypto-basket";
 import { XRP_DAILY_CLOSE_USD } from "@/lib/home-lines";
 
 const SPARK_POINTS = 48;
@@ -45,6 +44,29 @@ function downsample(values: readonly number[], max: number): number[] {
     if (typeof value === "number") out.push(value);
   }
   return out;
+}
+
+type MarketPoint = {
+  t: number;
+  usd: number;
+};
+
+/** CoinGecko `market_chart` prices, oldest first. Invalid rows are dropped. */
+function marketChartPoints(body: unknown): MarketPoint[] {
+  if (typeof body !== "object" || body === null) return [];
+  const prices = (body as { prices?: unknown }).prices;
+  if (!Array.isArray(prices)) return [];
+  const rows: MarketPoint[] = [];
+  for (const row of prices) {
+    if (!Array.isArray(row) || row.length < 2) continue;
+    const t = row[0];
+    const usd = row[1];
+    if (typeof t !== "number" || typeof usd !== "number") continue;
+    if (!Number.isFinite(t) || !Number.isFinite(usd) || usd <= 0) continue;
+    rows.push({ t, usd });
+  }
+  rows.sort((left, right) => left.t - right.t);
+  return rows;
 }
 
 /** CoinGecko `market_chart` prices, oldest first. Invalid rows are dropped. */

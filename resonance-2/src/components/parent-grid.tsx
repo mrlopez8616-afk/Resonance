@@ -13,19 +13,17 @@ import {
   parseHiddenIds,
   subscribeHiddenIds,
 } from "@/lib/floor-registry";
-import { AiChangeVisual, CryptoBasketVisual, FitnessStepVisual, PredictionsVisual } from "@/components/home-visual";
-import { cryptoBasketValues, type CryptoBasketLeg } from "@/lib/crypto-basket";
+import { AiChangeVisual, FitnessStepVisual, PredictionsVisual } from "@/components/home-visual";
 import {
   aiStockSecondaryLines,
-  cryptoSecondaryLines,
   aiChangeBars,
+  cryptoChangeBars,
   FINANCE_HOME_LABEL,
   fitnessSecondaryLines,
   predictionsHeadline,
   predictionsSecondaryLines,
   visibleHomeMoves,
   type HomeMove,
-  type HomeQuote,
   type PredictionsHomeFacts,
 } from "@/lib/home-lines";
 import type { FinanceHomeFace } from "@/lib/finance/view";
@@ -48,7 +46,6 @@ function linesFor(
   input: {
     hiddenIds: readonly string[];
     asOf: Date;
-    xrpQuote: HomeQuote | null;
     moves: readonly HomeMove[];
     catalystLine: string | null;
     fitnessWeek: FitnessWeekFacts | null;
@@ -56,7 +53,6 @@ function linesFor(
     predictions: PredictionsHomeFacts | null;
   },
 ): string[] {
-  if (parentId === "crypto") return cryptoSecondaryLines(input.xrpQuote, input.asOf);
   if (parentId === "ai-stocks") {
     return aiStockSecondaryLines({
       moves: visibleHomeMoves(input.moves, input.hiddenIds),
@@ -78,10 +74,9 @@ export function ParentGrid({
   fitnessWeek = null,
   bankroll = null,
   predictions = null,
-  xrpQuote = null,
   moves = [],
+  cryptoMoves = [],
   catalystLine = null,
-  basketLegs = [],
   stepSlots = null,
   tierBar = null,
   bankrollLine = null,
@@ -97,11 +92,10 @@ export function ParentGrid({
   /** Fight Desk bankroll headline. Null when the bet book cannot be read. */
   bankroll?: { headline: string; priceLine: string } | null;
   predictions?: PredictionsHomeFacts | null;
-  xrpQuote?: HomeQuote | null;
   moves?: readonly HomeMove[];
+  /** XRP and SUI day changes from the same spot quotes the crypto faces already use. */
+  cryptoMoves?: readonly HomeMove[];
   catalystLine?: string | null;
-  /** Held crypto legs. Empty history leaves the chart unmounted. */
-  basketLegs?: readonly CryptoBasketLeg[];
   stepSlots?: readonly StepSlot[] | null;
   tierBar?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
@@ -118,7 +112,7 @@ export function ParentGrid({
   const hiddenIds = parseHiddenIds(hiddenRaw);
   const asOfDate = new Date(asOf);
   const changeBars = aiChangeBars(visibleHomeMoves(moves, hiddenIds), asOfDate);
-  const basket = cryptoBasketValues(basketLegs.filter((leg) => !hiddenIds.includes(leg.id)));
+  const cryptoBars = cryptoChangeBars(visibleHomeMoves(cryptoMoves, hiddenIds), asOfDate);
 
   return (
     <section className="node-grid home-floor" aria-label="Node floor">
@@ -126,7 +120,6 @@ export function ParentGrid({
         const lines = linesFor(parent.id, {
           hiddenIds,
           asOf: asOfDate,
-          xrpQuote,
           moves,
           catalystLine,
           fitnessWeek,
@@ -216,14 +209,13 @@ export function ParentGrid({
             ? fitnessLine !== null || lines.length > 0
             : aggregate.connected;
         const showNote = !summary && lines.length === 0;
-        const visual =
-          parent.id === "crypto" && basket ? (
-            <CryptoBasketVisual points={basket} />
-          ) : parent.id === "ai-stocks" && changeBars ? (
-            <AiChangeVisual bars={changeBars} />
-          ) : parent.id === "fitness" && stepSlots ? (
-            <FitnessStepVisual slots={stepSlots} />
-          ) : null;
+        const dayBars =
+          parent.id === "crypto" ? cryptoBars : parent.id === "ai-stocks" ? changeBars : null;
+        const visual = dayBars ? (
+          <AiChangeVisual bars={dayBars} />
+        ) : parent.id === "fitness" && stepSlots ? (
+          <FitnessStepVisual slots={stepSlots} />
+        ) : null;
         return (
           <NodeSquare
             key={parent.id}

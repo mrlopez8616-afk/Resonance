@@ -4,7 +4,13 @@ import { BANKROLL_FIRST_EVENT } from "@/lib/bankroll";
 import { metricSamples } from "@/lib/fitness-board";
 import { fitnessWeekStepDays } from "@/lib/fitness-board";
 import { manualFitnessSeed } from "@/lib/fitness-seed";
-import { HOME_QUOTE_MAX_AGE_MS, aiChangeBars, type HomeMove } from "@/lib/home-lines";
+import {
+  HOME_QUOTE_MAX_AGE_MS,
+  aiChangeBars,
+  changeBarClass,
+  cryptoChangeBars,
+  type HomeMove,
+} from "@/lib/home-lines";
 import {
   fitnessStepBars,
   inScopeBankrollPoints,
@@ -101,6 +107,48 @@ describe("home visuals", () => {
       null,
     );
     assert.equal(aiChangeBars([], NOW), null);
+  });
+
+  it("paints XRP then SUI, green or red by sign, and hides a missing quote", () => {
+    const bars = cryptoChangeBars(
+      [
+        move("SUI", -1.25),
+        move("HBAR", 9),
+        move("XRP", 2.4),
+      ],
+      NOW,
+    );
+    assert.deepEqual(bars, [
+      { ticker: "XRP", changePct: 2.4 },
+      { ticker: "SUI", changePct: -1.25 },
+    ]);
+    assert.deepEqual(
+      bars?.map((bar) => [bar.ticker, changeBarClass(bar.changePct)]),
+      [
+        ["XRP", "is-up"],
+        ["SUI", "is-down"],
+      ],
+    );
+    assert.equal(changeBarClass(0), "is-flat");
+
+    assert.deepEqual(
+      cryptoChangeBars([move("XRP", 0.4), move("SUI", null)], NOW),
+      [{ ticker: "XRP", changePct: 0.4 }],
+    );
+    assert.deepEqual(
+      cryptoChangeBars([move("XRP", Number.NaN), move("SUI", -0.2)], NOW)?.map((bar) => [
+        bar.ticker,
+        changeBarClass(bar.changePct),
+      ]),
+      [["SUI", "is-down"]],
+    );
+    assert.equal(
+      cryptoChangeBars(
+        [move("XRP", 1, HOME_QUOTE_MAX_AGE_MS + 1), move("SUI", null)],
+        NOW,
+      ),
+      null,
+    );
   });
 
   it("keeps empty step slots and hides a week with no samples", () => {

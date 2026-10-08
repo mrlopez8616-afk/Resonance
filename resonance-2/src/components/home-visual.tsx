@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import type { ChangeBar } from "@/lib/home-lines";
+import { changeBarClass, type ChangeBar } from "@/lib/home-lines";
 import type { StepSlot, TierSegment } from "@/lib/home-visuals";
 
-/** Shared frame for the AI day-change bars and the crypto basket line. */
+/** Shared frame for the home day-change bars. */
 const HOME_CHART_WIDTH = 168;
 const HOME_CHART_HEIGHT = 52;
 
@@ -17,27 +17,6 @@ function HomeChartFrame({ label, children }: { label: string; children: ReactNod
         {children}
       </svg>
     </div>
-  );
-}
-
-export function CryptoBasketVisual({ points }: { points: readonly number[] }) {
-  if (points.length < 2) return null;
-  const width = HOME_CHART_WIDTH;
-  const height = HOME_CHART_HEIGHT;
-  const { min, max } = scale(points, points[0] ?? 0);
-  const span = max - min || 1;
-  const xAt = (index: number) => (index / (points.length - 1)) * width;
-  const yAt = (value: number) => height - ((value - min) / span) * height;
-  const line = points
-    .map((price, index) => `${index === 0 ? "M" : "L"}${xAt(index).toFixed(2)} ${yAt(price).toFixed(2)}`)
-    .join(" ");
-  const last = points.length - 1;
-  const area = `${line} L${xAt(last).toFixed(2)} ${height} L0 ${height} Z`;
-  return (
-    <HomeChartFrame label="Crypto basket value">
-      <path d={area} className="home-spark-fill" />
-      <path d={line} className="home-spark-line" />
-    </HomeChartFrame>
   );
 }
 
@@ -67,7 +46,7 @@ export function AiChangeVisual({ bars }: { bars: readonly ChangeBar[] }) {
         const magnitude = (Math.abs(bar.changePct) / max) * room;
         const heightPx = bar.changePct === 0 ? 1.5 : Math.max(magnitude, 1.5);
         const y = bar.changePct >= 0 ? mid - heightPx : mid;
-        const tone = bar.changePct > 0 ? "is-up" : bar.changePct < 0 ? "is-down" : "is-flat";
+        const tone = changeBarClass(bar.changePct);
         const x = index * slot + slot * 0.22;
         return (
           <g key={bar.ticker}>
