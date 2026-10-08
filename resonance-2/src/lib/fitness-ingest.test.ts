@@ -575,6 +575,91 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal(Number(updated[0]?.pace_sec_per_km), 400);
   });
 
+  it("derives distance from the post, then lets a later explicit distance replace it", async () => {
+    const start = "2026-10-03T07:00:00-05:00";
+    const samples = {
+      metric: "distance",
+      units: "km",
+      values: [1.5, 4],
+      starts: ["2026-10-03T07:10:00-05:00", "2026-10-03T09:00:00-05:00"],
+      sources: ["Nike Run Club", "Nike Run Club"],
+    };
+    const derived = await ingest({
+      source: "shortcuts",
+      metrics: [samples, { metric: "steps", values: [10], starts: ["Oct 3, 2026 at 8:00 AM"] }],
+      workouts: [
+        { type: "Running", source: "Nike Run Club", start, duration: 30, durationUnit: "min" },
+      ],
+    });
+    assert.equal(derived.status, 200);
+    const first = await sqlQuery<{
+      distance_m: string | null;
+      distance_source: string | null;
+      pace_sec_per_km: string | null;
+    }>(
+      `SELECT distance_m::text AS distance_m, distance_source, pace_sec_per_km::text AS pace_sec_per_km
+       FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(Number(first[0]?.distance_m), 1500);
+    assert.equal(first[0]?.distance_source, "derived");
+    assert.equal(Number(first[0]?.pace_sec_per_km), 1200);
+
+    const explicit = await ingest({
+      source: "shortcuts",
+      workouts: [
+        {
+          type: "Running",
+          source: "Nike Run Club",
+          start,
+          duration: 30,
+          durationUnit: "min",
+          distance: 4,
+          distanceUnit: "km",
+        },
+      ],
+    });
+    assert.equal(explicit.status, 200);
+    const second = await sqlQuery<{
+      distance_m: string | null;
+      distance_source: string | null;
+      pace_sec_per_km: string | null;
+    }>(
+      `SELECT distance_m::text AS distance_m, distance_source, pace_sec_per_km::text AS pace_sec_per_km
+       FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(Number(second[0]?.distance_m), 4000);
+    assert.equal(second[0]?.distance_source, "workout");
+    assert.equal(Number(second[0]?.pace_sec_per_km), 450);
+
+    const again = await ingest({
+      source: "shortcuts",
+      metrics: [
+        {
+          metric: "distance",
+          units: "km",
+          values: [9],
+          starts: ["2026-10-03T07:12:00-05:00"],
+          sources: ["iPhone"],
+        },
+      ],
+      workouts: [
+        { type: "Running", source: "Nike Run Club", start, duration: 30, durationUnit: "min" },
+      ],
+    });
+    assert.equal(again.status, 200);
+    const kept = await sqlQuery<{
+      distance_m: string | null;
+      distance_source: string | null;
+      pace_sec_per_km: string | null;
+    }>(
+      `SELECT distance_m::text AS distance_m, distance_source, pace_sec_per_km::text AS pace_sec_per_km
+       FROM fitness_shortcut_workouts`,
+    );
+    assert.equal(Number(kept[0]?.distance_m), 4000);
+    assert.equal(kept[0]?.distance_source, "workout");
+    assert.equal(Number(kept[0]?.pace_sec_per_km), 450);
+  });
+
   it("rejects a bad workout without writing the daily total", async () => {
     const response = await ingest({
       source: "shortcuts",

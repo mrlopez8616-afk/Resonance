@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { NIGHTLY_STEPS, WORKOUTS_NOTE } from "@/components/fitness-shortcut-setup";
+import { BACKFILL_STEPS, NIGHTLY_STEPS, WORKOUTS_NOTE } from "@/components/fitness-shortcut-setup";
 import { fitnessCards, fitnessNode, workoutSamples } from "@/lib/fitness-board";
 import { MILE_METERS, paceFrom, readShortcutWorkouts, shortcutWorkoutsAsWrites } from "@/lib/fitness-workouts";
 
@@ -168,15 +168,188 @@ describe("shortcut workout parsing", () => {
   });
 });
 
+describe("sample distance and energy", () => {
+  const start = "2026-10-07T06:30:00-05:00";
+
+  it("sums samples inside the workout, including an end that falls inside", () => {
+    const parsed = readShortcutWorkouts(
+      {
+        source: "shortcuts",
+        metrics: [
+          {
+            metric: "distance",
+            units: "mi",
+            values: [1, 0.25, 5, 0.4],
+            starts: [
+              "2026-10-07T06:40:00-05:00",
+              "2026-10-07T06:20:00-05:00",
+              "2026-10-07T07:05:00-05:00",
+              "2026-10-07T06:00:00-05:00",
+            ],
+            ends: ["", "2026-10-07T06:31:00-05:00", "2026-10-07T07:10:00-05:00", "2026-10-07T06:10:00-05:00"],
+          },
+          {
+            metric: "active_energy",
+            units: "kcal",
+            values: [120, 400],
+            starts: ["2026-10-07T06:45:00-05:00", "2026-10-07T08:00:00-05:00"],
+          },
+        ],
+        workouts: [{ type: "Running", source: "Nike Run Club", start, duration: 30, durationUnit: "min" }],
+      },
+      true,
+    );
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    const run = parsed.workouts[0];
+    assert.equal(run?.distanceSource, "derived");
+    assert.ok(Math.abs(Number(run?.distanceM) - 1.25 * MILE_METERS) < 0.01);
+    assert.equal(Number(run?.energyKcal), 120);
+    assert.equal(run?.paceSecPerKm, paceFrom(1800, 1.25 * MILE_METERS)?.perKm);
+    assert.notEqual(run?.distanceM, "0");
+  });
+
+  it("keeps one source when the iPhone and the Watch both recorded the window", () => {
+    const metrics = [
+      {
+        metric: "distance",
+        units: "mi",
+        values: [2, 1],
+        starts: ["2026-10-07T06:40:00-05:00", "2026-10-07T06:41:00-05:00"],
+        sources: ["Andres’s iPhone", "Nike Run Club"],
+      },
+    ];
+    const matched = readShortcutWorkouts(
+      {
+        source: "shortcuts",
+        metrics,
+        workouts: [{ type: "Running", source: "nike run club", start, duration: 30, durationUnit: "min" }],
+      },
+      true,
+    );
+    assert.equal(matched.ok, true);
+    if (!matched.ok) return;
+    assert.ok(Math.abs(Number(matched.workouts[0]?.distanceM) - MILE_METERS) < 0.01);
+
+    const largest = readShortcutWorkouts(
+      {
+        source: "shortcuts",
+        metrics,
+        workouts: [{ type: "Running", source: "Apple Watch", start, duration: 30, durationUnit: "min" }],
+      },
+      true,
+    );
+    assert.equal(largest.ok, true);
+    if (!largest.ok) return;
+    assert.ok(Math.abs(Number(largest.workouts[0]?.distanceM) - 2 * MILE_METERS) < 0.01);
+    assert.ok(Math.abs(Number(largest.workouts[0]?.distanceM) - 3 * MILE_METERS) > 1);
+  });
+
+  it("sums the window when the payload has no per-sample source", () => {
+    const parsed = readShortcutWorkouts(
+      {
+        source: "shortcuts",
+        metrics: [
+          {
+            metric: "distance",
+            units: "km",
+            values: [0.4, 0.6, 9],
+            starts: [
+              "2026-10-07T06:35:00-05:00",
+              "2026-10-07T06:50:00-05:00",
+              "2026-10-07T08:00:00-05:00",
+            ],
+          },
+        ],
+        workouts: [{ type: "Walking", start, duration: 30, durationUnit: "min" }],
+      },
+      true,
+    );
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    assert.equal(parsed.workouts[0]?.distanceSource, "derived");
+    assert.equal(Number(parsed.workouts[0]?.distanceM), 1000);
+  });
+
+  it("keeps an explicit workout distance ahead of the samples", () => {
+    const parsed = readShortcutWorkouts(
+      {
+        source: "shortcuts",
+        metrics: [
+          {
+            metric: "distance",
+            units: "mi",
+            values: [5],
+            starts: ["2026-10-07T06:40:00-05:00"],
+          },
+          {
+            metric: "active_energy",
+            units: "kcal",
+            values: [80],
+            starts: ["2026-10-07T06:40:00-05:00"],
+          },
+        ],
+        workouts: [
+          {
+            type: "Running",
+            start,
+            duration: 30,
+            durationUnit: "min",
+            distance: 3,
+            distanceUnit: "km",
+          },
+        ],
+      },
+      true,
+    );
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    assert.equal(parsed.workouts[0]?.distanceSource, "workout");
+    assert.equal(Number(parsed.workouts[0]?.distanceM), 3000);
+    assert.equal(Number(parsed.workouts[0]?.energyKcal), 80);
+  });
+
+  it("leaves distance empty when no sample falls inside the workout", () => {
+    const parsed = readShortcutWorkouts(
+      {
+        source: "shortcuts",
+        metrics: [
+          {
+            metric: "distance",
+            units: "mi",
+            values: [2],
+            starts: ["2026-10-07T09:00:00-05:00"],
+          },
+        ],
+        workouts: [{ type: "Running", start, duration: 10, durationUnit: "min" }],
+      },
+      true,
+    );
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    assert.equal(parsed.workouts[0]?.distanceM, null);
+    assert.equal(parsed.workouts[0]?.distanceSource, null);
+    assert.equal(parsed.workouts[0]?.paceSecPerKm, null);
+    assert.equal(parsed.workouts[0]?.energyKcal, null);
+  });
+});
+
 describe("shortcut setup steps", () => {
   it("adds workouts to the same Nightly post", () => {
     const steps = NIGHTLY_STEPS.join("\n");
+    const backfill = BACKFILL_STEPS.join("\n");
     assert.match(steps, /Find Workout/);
     assert.match(steps, /Workout Rows/);
     assert.match(steps, /`workouts`/);
     assert.match(steps, /Resonance Nightly/);
+    assert.match(steps, /48-hour window/);
+    assert.match(steps, /Leave distance and energy off/);
+    assert.match(steps, /Distance Ends/);
     assert.equal(steps.includes("not part of Nightly"), false);
+    assert.match(backfill, /same range/);
     assert.match(WORKOUTS_NOTE, /Find Health Samples/);
+    assert.match(WORKOUTS_NOTE, /only the workout list/);
+    assert.match(WORKOUTS_NOTE, /sums every sample/);
     assert.match(WORKOUTS_NOTE, /Actions/);
     assert.match(WORKOUTS_NOTE, /Premium/);
     assert.match(WORKOUTS_NOTE, /larger shortcuts total/);

@@ -228,26 +228,57 @@ export async function upsertFitnessRows(
   for (const run of rows.shortcutWorkouts ?? []) {
     await sqlQuery(
       `INSERT INTO fitness_shortcut_workouts (
-         start_time, type, source_name, duration_sec, distance_m, energy_kcal,
+         start_time, type, source_name, duration_sec, distance_m, distance_source, energy_kcal,
          pace_sec_per_km, pace_sec_per_mi
        ) VALUES (
-         $1::timestamptz, $2, $3, $4, $5, $6, $7, $8
+         $1::timestamptz, $2, $3, $4, $5, $6, $7, $8, $9
        )
        ON CONFLICT (start_time, type) DO UPDATE SET
          source_name = COALESCE(EXCLUDED.source_name, fitness_shortcut_workouts.source_name),
          duration_sec = EXCLUDED.duration_sec,
-         distance_m = COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m),
+         distance_m = CASE
+           WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+           WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+           ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+         END,
+         distance_source = CASE
+           WHEN EXCLUDED.distance_source = 'workout' THEN 'workout'
+           WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN 'workout'
+           ELSE COALESCE(EXCLUDED.distance_source, fitness_shortcut_workouts.distance_source)
+         END,
          energy_kcal = COALESCE(EXCLUDED.energy_kcal, fitness_shortcut_workouts.energy_kcal),
          pace_sec_per_km = CASE
-           WHEN COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m) > 0
-             AND EXCLUDED.duration_sec > 0
-           THEN EXCLUDED.duration_sec / (COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m) / 1000.0)
+           WHEN (
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) > 0 AND EXCLUDED.duration_sec > 0
+           THEN EXCLUDED.duration_sec / ((
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) / 1000.0)
            ELSE NULL
          END,
          pace_sec_per_mi = CASE
-           WHEN COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m) > 0
-             AND EXCLUDED.duration_sec > 0
-           THEN EXCLUDED.duration_sec / (COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m) / 1609.344)
+           WHEN (
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) > 0 AND EXCLUDED.duration_sec > 0
+           THEN EXCLUDED.duration_sec / ((
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) / 1609.344)
            ELSE NULL
          END,
          updated_at = now()`,
@@ -257,6 +288,7 @@ export async function upsertFitnessRows(
         run.sourceName,
         run.durationSec,
         run.distanceM,
+        run.distanceSource,
         run.energyKcal,
         run.paceSecPerKm,
         run.paceSecPerMi,
@@ -354,11 +386,12 @@ async function readShortcutWorkouts(): Promise<ShortcutWorkoutWrite[]> {
     source_name: string | null;
     duration_sec: unknown;
     distance_m: unknown;
+    distance_source: string | null;
     energy_kcal: unknown;
     pace_sec_per_km: unknown;
     pace_sec_per_mi: unknown;
   }>(
-    `SELECT start_time, type, source_name, duration_sec, distance_m, energy_kcal,
+    `SELECT start_time, type, source_name, duration_sec, distance_m, distance_source, energy_kcal,
             pace_sec_per_km, pace_sec_per_mi
      FROM fitness_shortcut_workouts`,
   );
@@ -368,12 +401,15 @@ async function readShortcutWorkouts(): Promise<ShortcutWorkoutWrite[]> {
     if (row.type !== "Running" && row.type !== "Walking") return [];
     const durationSec = text(row.duration_sec);
     if (!durationSec) return [];
+    const distanceSource =
+      row.distance_source === "workout" || row.distance_source === "derived" ? row.distance_source : null;
     return [
       {
         startTime,
         type: row.type === "Running" ? "Running" : "Walking",
         sourceName: row.source_name?.trim() || null,
         durationSec,
+        distanceSource,
         distanceM: text(row.distance_m),
         energyKcal: text(row.energy_kcal),
         paceSecPerKm: text(row.pace_sec_per_km),

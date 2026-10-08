@@ -1,4 +1,5 @@
-import { decimalString } from "@/lib/fitness-parse";
+import { parseShortcutInstant } from "@/lib/fitness-shortcuts";
+import { decimalString, energyKcal } from "@/lib/fitness-parse";
 import type {
   FitnessWorkoutWrite,
   ShortcutWorkoutType,
@@ -230,6 +231,7 @@ function buildRow(entry: Record<string, unknown>, index: number): ShortcutWorkou
         type,
         sourceName,
         durationSec: decimalString(durationSec),
+        distanceSource: distance.value === null ? null : "workout",
         distanceM: distance.value === null ? null : decimalString(distance.value),
         energyKcal: energy.value === null ? null : decimalString(energy.value),
         paceSecPerKm: pace?.perKm ?? null,
@@ -239,22 +241,232 @@ function buildRow(entry: Record<string, unknown>, index: number): ShortcutWorkou
   };
 }
 
-/** Later non-null fields win. A null field keeps the value already stored in this post. */
+function chosenDistance(
+  previous: ShortcutWorkoutWrite,
+  next: ShortcutWorkoutWrite,
+): { distanceM: string | null; distanceSource: ShortcutWorkoutWrite["distanceSource"] } {
+  if (next.distanceSource === "workout" && next.distanceM !== null) {
+    return { distanceM: next.distanceM, distanceSource: "workout" };
+  }
+  if (previous.distanceSource === "workout" && previous.distanceM !== null) {
+    return { distanceM: previous.distanceM, distanceSource: "workout" };
+  }
+  if (next.distanceM !== null) {
+    return { distanceM: next.distanceM, distanceSource: next.distanceSource };
+  }
+  return { distanceM: previous.distanceM, distanceSource: previous.distanceSource };
+}
+
+/** Later non-null fields win. An explicit workout distance beats a derived one. */
 export function mergeShortcutWorkout(
   previous: ShortcutWorkoutWrite,
   next: ShortcutWorkoutWrite,
 ): ShortcutWorkoutWrite {
   const durationSec = Number(next.durationSec);
-  const distanceM = next.distanceM ?? previous.distanceM;
-  const meters = distanceM === null ? null : Number(distanceM);
+  const distance = chosenDistance(previous, next);
+  const meters = distance.distanceM === null ? null : Number(distance.distanceM);
   const pace = meters === null ? null : paceFrom(durationSec, meters);
   return {
     startTime: next.startTime,
     type: next.type,
     sourceName: next.sourceName ?? previous.sourceName,
     durationSec: next.durationSec,
-    distanceM,
+    distanceSource: distance.distanceSource,
+    distanceM: distance.distanceM,
     energyKcal: next.energyKcal ?? previous.energyKcal,
+    paceSecPerKm: pace?.perKm ?? null,
+    paceSecPerMi: pace?.perMi ?? null,
+  };
+}
+
+type SamplePoint = {
+  atMs: number;
+  endMs: number | null;
+  qty: number;
+  source: string | null;
+};
+
+/** Keeps blank slots so values, starts, ends, and sources stay on the same index. */
+function alignedList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      if (typeof item === "number" && Number.isFinite(item)) return String(item);
+      if (typeof item === "string") return item.trim();
+      return "";
+    });
+  }
+  if (typeof value === "number" && Number.isFinite(value)) return [String(value)];
+  if (typeof value !== "string") return [];
+  const normalized = value.replace(/\r\n/g, "\n");
+  if (!normalized.includes("\n")) return [normalized.trim()];
+  return normalized.split("\n").map((line) => line.trim());
+}
+
+function measurementKind(name: string): "distance" | "energy" | null {
+  const key = name.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (
+    key === "distance" ||
+    key === "walking_running_distance" ||
+    key === "walking_and_running_distance"
+  ) {
+    return "distance";
+  }
+  if (key === "active_energy" || key === "active_energy_burned") return "energy";
+  return null;
+}
+
+function metersFromSample(qty: number, units: string | null): number | null {
+  const unit = (units ?? "mi").trim().toLowerCase();
+  if (MILES.has(unit)) return qty * MILE_METERS;
+  if (KILOMETERS.has(unit)) return qty * 1000;
+  if (unit === "m" || unit === "meter" || unit === "meters") return qty;
+  return null;
+}
+
+function kcalFromSample(qty: number, units: string | null): number | null {
+  const unit = (units ?? "kcal").trim().toLowerCase();
+  return energyKcal(qty, unit === "kj" ? "kJ" : unit);
+}
+
+function instantMs(value: string): number | null {
+  const parsed = parseShortcutInstant(value);
+  if (!parsed) return null;
+  const ms = Date.parse(parsed.iso);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function collectMeasurementSeries(root: Record<string, unknown>): Record<string, unknown>[] {
+  const listed = field(root, "metrics");
+  const rows = Array.isArray(listed) ? listed.flat(2) : listed ? [listed] : [];
+  const series = rows.flatMap((item) => {
+    const record = asRecord(item);
+    return record ? [record] : [];
+  });
+  if (series.length > 0) return series;
+  return field(root, "values", "value") !== undefined && field(root, "starts", "startDates", "start_dates", "dates") !== undefined
+    ? [root]
+    : [];
+}
+
+/**
+ * Samples in the same POST. A missing end uses the start. A missing per-sample
+ * source stays null so the caller can sum the window instead of picking a device.
+ */
+function measurementPoints(body: unknown): { distance: SamplePoint[]; energy: SamplePoint[] } {
+  const root = asRecord(body);
+  const distance: SamplePoint[] = [];
+  const energy: SamplePoint[] = [];
+  if (!root) return { distance, energy };
+  for (const series of collectMeasurementSeries(root)) {
+    const name = field(series, "metric", "name");
+    if (typeof name !== "string") continue;
+    const kind = measurementKind(name);
+    if (!kind) continue;
+    const values = alignedList(field(series, "values", "value"));
+    const starts = alignedList(field(series, "starts", "startDates", "start_dates", "dates"));
+    const ends = alignedList(field(series, "ends", "endDates", "end_dates", "endTimes"));
+    const sources = alignedList(field(series, "sources", "sourceNames", "source_names"));
+    const seriesSourceRaw = field(series, "source", "sourceName", "source_name");
+    const seriesSource =
+      typeof seriesSourceRaw === "string" &&
+      seriesSourceRaw.trim() &&
+      seriesSourceRaw.trim().toLowerCase() !== "shortcuts"
+        ? seriesSourceRaw.trim()
+        : null;
+    const units = typeof field(series, "units", "unit") === "string" ? String(field(series, "units", "unit")) : null;
+    const count = Math.min(values.length, starts.length);
+    for (let index = 0; index < count; index += 1) {
+      const qty = numberOrNull(values[index]);
+      const atMs = instantMs(starts[index] ?? "");
+      if (qty === null || qty <= 0 || atMs === null) continue;
+      const converted = kind === "distance" ? metersFromSample(qty, units) : kcalFromSample(qty, units);
+      if (converted === null || !(converted > 0)) continue;
+      const endMs = ends[index] ? instantMs(ends[index]) : null;
+      const own = sources[index]?.trim() ?? "";
+      const point: SamplePoint = {
+        atMs,
+        endMs,
+        qty: converted,
+        source: own || seriesSource,
+      };
+      (kind === "distance" ? distance : energy).push(point);
+    }
+  }
+  return { distance, energy };
+}
+
+/** A sample counts when its start is inside the workout, or its end is when the payload has one. */
+function sampleInWorkout(point: SamplePoint, startMs: number, endMs: number): boolean {
+  const startIn = point.atMs >= startMs && point.atMs <= endMs;
+  if (point.endMs === null) return startIn;
+  const endIn = point.endMs >= startMs && point.endMs <= endMs;
+  return startIn || endIn;
+}
+
+/**
+ * Matching the workout source wins. Otherwise one source, the largest sum.
+ * No per-sample source: add the samples in the window. Callers must not treat that
+ * sum as device-deduped; an iPhone and a Watch would both be included.
+ */
+function sumInWindow(points: readonly SamplePoint[], workoutSource: string | null): number | null {
+  const inside = points.filter((point) => point.qty > 0);
+  if (inside.length === 0) return null;
+  const sourced = inside.filter((point) => point.source);
+  if (sourced.length === 0) {
+    const total = inside.reduce((sum, point) => sum + point.qty, 0);
+    return total > 0 ? total : null;
+  }
+  const wanted = workoutSource?.trim().toLowerCase() ?? "";
+  if (wanted) {
+    const matched = sourced.filter((point) => point.source?.trim().toLowerCase() === wanted);
+    if (matched.length > 0) {
+      const total = matched.reduce((sum, point) => sum + point.qty, 0);
+      return total > 0 ? total : null;
+    }
+  }
+  const totals = new Map<string, number>();
+  for (const point of sourced) {
+    const key = point.source?.trim().toLowerCase() ?? "";
+    totals.set(key, (totals.get(key) ?? 0) + point.qty);
+  }
+  let best = 0;
+  for (const total of totals.values()) {
+    if (total > best) best = total;
+  }
+  return best > 0 ? best : null;
+}
+
+function fillFromSamples(
+  row: ShortcutWorkoutWrite,
+  distance: readonly SamplePoint[],
+  energy: readonly SamplePoint[],
+): ShortcutWorkoutWrite {
+  const startMs = Date.parse(row.startTime);
+  const durationSec = Number(row.durationSec);
+  if (!Number.isFinite(startMs) || !(durationSec > 0)) return row;
+  const endMs = startMs + durationSec * 1000;
+  const inWindow = (point: SamplePoint) => sampleInWorkout(point, startMs, endMs);
+  let distanceM = row.distanceM;
+  let distanceSource = row.distanceSource;
+  if (distanceM === null) {
+    const meters = sumInWindow(distance.filter(inWindow), row.sourceName);
+    if (meters !== null) {
+      distanceM = decimalString(meters);
+      distanceSource = "derived";
+    }
+  }
+  let kcal = row.energyKcal;
+  if (kcal === null) {
+    const filled = sumInWindow(energy.filter(inWindow), row.sourceName);
+    if (filled !== null) kcal = decimalString(filled);
+  }
+  const meters = distanceM === null ? null : Number(distanceM);
+  const pace = meters === null ? null : paceFrom(durationSec, meters);
+  return {
+    ...row,
+    distanceSource,
+    distanceM,
+    energyKcal: kcal,
     paceSecPerKm: pace?.perKm ?? null,
     paceSecPerMi: pace?.perMi ?? null,
   };
@@ -263,6 +475,7 @@ export function mergeShortcutWorkout(
 /**
  * Shortcuts `workouts` array. Other activity types are skipped.
  * When `shortcuts` is false the array is ignored so Health Auto Export keeps its parser.
+ * A missing distance or energy is filled from samples in this same body.
  */
 export function readShortcutWorkouts(body: unknown, shortcuts: boolean): ShortcutWorkoutResult {
   const root = asRecord(body);
@@ -287,7 +500,11 @@ export function readShortcutWorkouts(body: unknown, shortcuts: boolean): Shortcu
     const previous = merged.get(key);
     merged.set(key, previous ? mergeShortcutWorkout(previous, row) : row);
   }
-  return { ok: true, workouts: [...merged.values()] };
+  const samples = measurementPoints(body);
+  return {
+    ok: true,
+    workouts: [...merged.values()].map((row) => fillFromSamples(row, samples.distance, samples.energy)),
+  };
 }
 
 export function shortcutWorkoutsAsWrites(

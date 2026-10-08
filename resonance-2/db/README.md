@@ -51,7 +51,7 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `store_meta` | `domain` | Envelope `updated_at` and `seeded_at`. |
 | `fitness_metrics` | `(source, external_id)` unique | Daily health metrics. One row per source, metric, Chicago day, and unit. A re-sent day updates `qty`. |
 | `fitness_workouts` | `(source, external_id)` unique | Workouts. Version 2 uses the export `id`. A re-sent workout updates the row. |
-| `fitness_shortcut_workouts` | `(start_time, type)` unique | Running and walking workouts from the Shortcuts post. A re-send of the same start fills nulls and keeps the latest values. Pace is computed when distance is present. |
+| `fitness_shortcut_workouts` | `(start_time, type)` unique | Running and walking workouts from the Shortcuts post. A re-send of the same start fills nulls and keeps the latest values. `distance_source` is `workout` or `derived`. An explicit distance replaces a derived one. Pace is computed when distance is present. |
 | `users` | `username` unique | Owner and operator accounts. `andres` is created at sign-in; the password and authenticator secret stay in env. An operator is a later `INSERT` (`role` `operator`, `password_hash`, `totp_secret`). |
 | `auth_sessions` | `id_hash` | HMAC of the session cookie. No raw token. `user_id` references `users`. |
 | `auth_passkeys` | `credential_id` | Optional WebAuthn credentials. |

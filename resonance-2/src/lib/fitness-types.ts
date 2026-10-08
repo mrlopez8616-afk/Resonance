@@ -41,6 +41,8 @@ export type ShortcutWorkoutWrite = {
   type: ShortcutWorkoutType;
   sourceName: string | null;
   durationSec: string;
+  /** `workout` is a distance on the workout. `derived` was summed from samples in the same POST. */
+  distanceSource: "workout" | "derived" | null;
   distanceM: string | null;
   energyKcal: string | null;
   paceSecPerKm: string | null;
