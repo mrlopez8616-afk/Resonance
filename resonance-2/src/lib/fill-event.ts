@@ -63,6 +63,8 @@ export type NormalizedFillEvent = {
   filledAt: string;
   result: string;
   note?: string;
+  /** Set when the POST body sent `backfill: true` or `historical: true`. */
+  backfill?: boolean;
   idempotencyKey: string;
 };
 
@@ -135,6 +137,18 @@ function readSleeve(raw: Record<string, unknown>): string {
   return asTrimmed(raw.sleeve || raw.sleeveTarget || raw.sleeveId).toLowerCase();
 }
 
+/** JSON boolean true only. `historical` is an alias for `backfill`. */
+function readBackfill(
+  raw: Record<string, unknown>,
+  outer: Record<string, unknown> | null,
+): boolean {
+  if (raw.backfill === true || raw.historical === true) return true;
+  if (outer && outer !== raw) {
+    return outer.backfill === true || outer.historical === true;
+  }
+  return false;
+}
+
 export function extractFillBody(body: unknown): Record<string, unknown> {
   if (!isRecord(body)) {
     throw new FillIngestError("JSON object is required.");
@@ -145,6 +159,7 @@ export function extractFillBody(body: unknown): Record<string, unknown> {
 
 export function parseFillEvent(body: unknown): NormalizedFillEvent {
   const raw = extractFillBody(body);
+  const outer = isRecord(body) ? body : null;
   const venueRaw = asTrimmed(raw.venue).toLowerCase();
   if (!isFillVenue(venueRaw)) {
     throw new FillIngestError("venue must be robinhood or coinbase.");
@@ -206,6 +221,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
 
   const result = asTrimmed(raw.result) || "filled";
   const note = asTrimmed(raw.note) || undefined;
+  const backfill = readBackfill(raw, outer);
 
   return {
     venue: venueRaw,
@@ -219,6 +235,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     filledAt,
     result,
     note,
+    ...(backfill ? { backfill: true as const } : {}),
     idempotencyKey: fillIdempotencyKey(venueRaw, tradeKey),
   };
 }
@@ -237,6 +254,7 @@ export function eventToFill(event: NormalizedFillEvent): TradeFill {
     sleeve: event.sleeve,
     idempotencyKey: event.idempotencyKey,
     note: event.note,
+    ...(event.backfill ? { backfill: true as const } : {}),
   };
 }
 

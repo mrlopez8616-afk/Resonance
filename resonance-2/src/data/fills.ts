@@ -34,6 +34,12 @@ export type TradeFill = FillBase & {
    * includes this fill, so sleeve math must not run again.
    */
   logOnly?: boolean;
+  /**
+   * Historical replay (`backfill: true` or `historical: true` on POST).
+   * The row is on the operator log and the capital calendar. Sleeve math
+   * must not run. A later POST of the same order id dedupes.
+   */
+  backfill?: boolean;
 };
 
 /**
@@ -62,6 +68,7 @@ export type BetFill = FillBase & {
   settledAt?: string;
   estimated?: boolean;
   logOnly?: undefined;
+  backfill?: undefined;
 };
 
 export type Fill = TradeFill | BetFill;

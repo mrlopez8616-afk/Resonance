@@ -75,6 +75,7 @@ Canonical ingest object. Strings stay strings so quantity and price stay exact.
 | `filledAt` | yes | ISO-8601 with offset or `Z`. Alias: `time` (existing `Fill` field) |
 | `result` | no | Defaults to `filled` |
 | `note` | no | Operator copy only (packet name). Not a second quantity |
+| `backfill` | no | JSON boolean `true` only. Logs the fill and does **not** apply sleeve math. Alias: `historical` (same rule). Any other value is ignored and the fill applies as usual |
 
 Aliases exist so hub can POST either the cabinet names (`ticker`, `qty`, `filledAt`) or the existing fill-log names (`symbol`, `quantity`, `time`). Stored rows always use the existing `Fill` field names plus the extensions below.
 
@@ -99,6 +100,8 @@ A second POST with the same key:
 
 Also treat an existing seed row with the same `orderId` / `tradeId` as a hit, even if that seed row predates `venue`. Retries must not double-count.
 
+That match is the only apply guard. A fill that is new to the log is applied unless it is on the position-log list below or the body sets `backfill` / `historical`. There is no second order-id check: `orderId` is already the trade key inside the idempotency key, and `fillMatchesEvent` also matches `orderId` and `tradeId` on their own. A re-POST of a logged fill returns `deduped: true` and `applied: false` whether or not the new body sets `backfill`. The stored row is left as it was.
+
 ## Stored row (operator log)
 
 Ingest writes one `Fill` and keeps `/log` on the same component:
@@ -114,8 +117,9 @@ Ingest writes one `Fill` and keeps `/log` on the same component:
   result,
   venue,         // robinhood | coinbase
   tradeId?,      // present when hub sent it
-  sleeve,        // rh-main | rh-agentic | coinbase
-  idempotencyKey // venue:trade-key
+  sleeve,         // rh-main | rh-agentic | coinbase
+  idempotencyKey, // venue:trade-key
+  backfill?       // true when the POST was a historical replay
 }
 ```
 
@@ -131,6 +135,41 @@ Start from the durable override for that ticker + sleeve id, else the static see
 | `sell` | sleeve quantity **decreases** by `qty` |
 
 Math is decimal-string (no binary float). Trailing zeros are stripped.
+
+### Historical backfill
+
+`backfill: true` is the general form of the position-log exception below. Robinhood Ops can replay fills whose quantity is already in the live sleeve. The row is logged. The sleeve is not.
+
+Send it on the fill object, or beside a `{ "fill": { ... } }` wrapper. `historical: true` is the same flag. Only the JSON boolean `true` counts. The stored row and the POST response use `backfill`, not `historical`.
+
+- Same validation as a live fill, including "sleeve is not on this face".
+- Same idempotency key and the same dedupe.
+- Operator log appends one row with `backfill: true`. The capital calendar row is written the same way as any other fill.
+- `sleevePrints` are not written. Response includes `"applied": false` and `"backfill": true`.
+- Omit the flag and sleeve apply is unchanged.
+
+```json
+{
+  "venue": "robinhood",
+  "orderId": "REPLACE-WITH-ROBINHOOD-ORDER-ID",
+  "ticker": "SUI",
+  "side": "buy",
+  "qty": "16.931",
+  "price": "0.80729341",
+  "sleeve": "rh-agentic",
+  "filledAt": "2026-09-18T11:49:18-05:00",
+  "backfill": true
+}
+```
+
+```bash
+curl -X POST https://resonance3.vercel.app/api/fills \
+  -H "Authorization: Bearer $RESONANCE_SYNC_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"venue":"robinhood","orderId":"REPLACE-WITH-ROBINHOOD-ORDER-ID","ticker":"SUI","side":"buy","qty":"16.931","price":"0.80729341","sleeve":"rh-agentic","filledAt":"2026-09-18T11:49:18-05:00","backfill":true}'
+```
+
+A live fill of that same `orderId` later is a dedupe. It does not apply the quantity.
 
 ### Which sleeve ids update
 
@@ -227,6 +266,8 @@ POST 200 body:
 ```
 
 Retry of the same key: `"deduped": true` and the original stored fill. Sleeve quantities unchanged.
+
+A historical backfill uses that same 200 shape with `"applied": false` and `"backfill": true`. The stored `fill` includes `"backfill": true`. A live fill omits `backfill`.
 
 The operator log desk (`/log`, live-node drill-down) is a read of this envelope. See [`operator-log.md`](./operator-log.md). It does not change POST, idempotency, or sleeve apply.
 

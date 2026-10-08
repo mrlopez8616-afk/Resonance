@@ -91,6 +91,7 @@ export async function POST(request: Request) {
       idempotencyKey: written.fill.idempotencyKey,
       fill: written.fill,
       applied: written.applied,
+      ...(written.backfill ? { backfill: true } : {}),
       sleeves: sleeves
         ? { ticker: written.fill.symbol, sleeves }
         : { ticker: written.fill.symbol, sleeves: [] },
