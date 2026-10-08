@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { FightEvent, ListedFightEvent } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
-import { annotateDeskFights, fightsFromBreakdowns } from "@/lib/fight-breakdowns";
+import { applyStaticCard, staticFightCard } from "@/data/dwcs-cards";
+import { deskFightsForEvent } from "@/lib/fight-breakdowns";
 import { eventBackHref, legacyFightNodeHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import {
@@ -22,7 +23,7 @@ export async function generateMetadata({
   const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const resolved = resolveFightEventPage(event, bets, calendar.events);
-  const title = resolved?.title ?? "Fights";
+  const title = resolved?.title ?? staticFightCard(event)?.title ?? "Fights";
   return { title: `${title} · Resonance 2.0` };
 }
 
@@ -53,11 +54,14 @@ export default async function FightEventPage({
   const results = card.status === "unavailable" ? [] : card.results;
   const breakdowns = breakdownPage.status === "unavailable" ? [] : breakdownPage.breakdowns;
   const resolved = resolveFightEventPage(event, bets, calendar.events);
-  const listedFights =
-    resolved?.kind === "listed"
-      ? annotateDeskFights(resolved.fights, resolved.slug, breakdowns)
-      : fightsFromBreakdowns(event, breakdowns);
-  if (!resolved && listedFights.length === 0) notFound();
+  const listedFights = deskFightsForEvent(
+    resolved?.slug ?? event,
+    resolved?.kind === "listed" ? resolved.fights : [],
+    breakdowns,
+  );
+  const staticCard = staticFightCard(event);
+  const fights = applyStaticCard(event, listedFights);
+  if (!resolved && fights.length === 0) notFound();
   const back = eventBackHref(resolved?.slug ?? event, { title: resolved?.title ?? event });
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
@@ -90,9 +94,9 @@ export default async function FightEventPage({
         />
       ) : (
         <ListedFightEvent
-          title={resolved?.kind === "listed" ? resolved.title : event}
-          meta={resolved?.kind === "listed" ? resolved.meta : ""}
-          fights={listedFights}
+          title={resolved?.kind === "listed" ? resolved.title : staticCard?.title ?? event}
+          meta={resolved?.kind === "listed" ? resolved.meta : staticCard?.meta ?? ""}
+          fights={fights}
           bets={resolved?.kind === "listed" ? resolved.bets : []}
           results={results}
           eventSlug={event}

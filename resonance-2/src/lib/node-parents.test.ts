@@ -30,7 +30,7 @@ const PROPOSED = {
   gev: "ai-stocks",
   ceg: "ai-stocks",
   hubb: "ai-stocks",
-  [FIGHT_DESK_ID]: "predictions",
+  [FIGHT_DESK_ID]: "fight-desk",
 } as const;
 
 describe("node parent map", () => {
@@ -59,7 +59,7 @@ describe("node parent map", () => {
         { id: "ai-stocks", label: "AI Stocks" },
         { id: "fitness", label: "Fitness" },
         { id: "finance", label: "Finance" },
-        { id: "predictions", label: "Predictions" },
+        { id: "fight-desk", label: "Fight Desk" },
       ],
     );
     assert.equal(parentById("ai"), null);
@@ -82,7 +82,7 @@ describe("node parent map", () => {
       nodesOnParent([], "ai-stocks").map((node) => node.ticker),
       ["PWR", "ETN", "VRT", "GEV", "CEG", "HUBB", "+"],
     );
-    assert.deepEqual(nodesOnParent([], "predictions").map((node) => node.ticker), []);
+    assert.deepEqual(nodesOnParent([], "fight-desk").map((node) => node.ticker), []);
     assert.deepEqual(
       nodesOnParent(["xrp", "pwr", "btc"], "crypto").map((node) => node.ticker),
       ["SUI", "HBAR", "+"],
@@ -166,7 +166,7 @@ describe("node parent map", () => {
 
   it("counts the fight desk tile and uses its open count only when the summary exists", () => {
     const live = parentAggregate(
-      "predictions",
+      "fight-desk",
       [],
       {},
       {
@@ -187,7 +187,7 @@ describe("node parent map", () => {
     assert.equal(live.openBets, 2);
     assert.equal(live.liveUsd, null);
 
-    const down = parentAggregate("predictions", [], {}, null, "unavailable");
+    const down = parentAggregate("fight-desk", [], {}, null, "unavailable");
     assert.equal(down.childCount, 1);
     assert.equal(down.openBets, null);
 
@@ -232,7 +232,7 @@ describe("node parent map", () => {
     );
 
     const predictions = parentAggregate(
-      "predictions",
+      "fight-desk",
       [],
       {},
       {
@@ -253,7 +253,7 @@ describe("node parent map", () => {
     assert.equal(parentSummaryLine(parentAggregate("finance", [], {}, null, "live")), null);
     assert.equal(parentSummaryLine(parentAggregate("fitness", [], {}, null, "live")), null);
 
-    assert.equal(parentCardHref("predictions"), "/n/predictions");
+    assert.equal(parentCardHref("fight-desk"), "/n/fight-desk");
     assert.equal(parentCardHref("crypto"), "/n/crypto");
     assert.equal(parentCardHref("ai-stocks"), "/n/ai-stocks");
     assert.equal(nodePageHref("XRP"), "/n/crypto/xrp");
@@ -263,8 +263,11 @@ describe("node parent map", () => {
     assert.equal(legacyParentHref("ai", "pwr"), "/n/ai-stocks/pwr");
     assert.equal(legacyParentHref("stocks", "xrp"), "/n/ai-stocks");
     assert.equal(legacyParentHref("money"), "/n/finance");
-    assert.equal(legacyParentHref("fights"), "/n/predictions");
-    assert.equal(legacyParentHref("fights", "bankroll"), "/n/predictions");
+    assert.equal(legacyParentHref("fights"), "/n/fight-desk");
+    assert.equal(legacyParentHref("fights", "bankroll"), "/n/fight-desk");
+    assert.equal(legacyParentHref("predictions"), "/n/fight-desk");
+    assert.equal(legacyParentHref("predictions", "bankroll"), "/n/fight-desk/bankroll");
+    assert.equal(legacyParentHref("predictions", "not a slug"), "/n/fight-desk");
     assert.equal(legacyParentHref("crypto"), null);
     assert.equal(nodePageHref("FLR"), null);
     assert.equal(nodePageHref("UFC"), null);

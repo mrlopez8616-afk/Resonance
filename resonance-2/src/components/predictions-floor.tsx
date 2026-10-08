@@ -4,17 +4,19 @@ import { ValueCard } from "@/components/value-card";
 import { formatUsd } from "@/lib/bets";
 import { bankrollHomeFace, type BankrollLedger } from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
+import { parentById, parentCardHref } from "@/lib/node-parents";
 
 export function PredictionsFloor({ ledger }: { ledger: BankrollLedger | null }) {
   const face = ledger ? bankrollHomeFace(ledger) : null;
   const fightsOpen = ledger ? (ledger.deskOpen === 1 ? "1 open" : `${ledger.deskOpen} open`) : null;
+  const label = parentById("fight-desk")?.label ?? "Fight Desk";
   return (
     <>
       <Link href="/" className="calendar-back">
         Floor
       </Link>
       <header className="log-header">
-        <p className="log-kicker">Predictions</p>
+        <p className="log-kicker">{label}</p>
         {face ? (
           <>
             <h2 className="log-title">{face.headline}</h2>
@@ -22,14 +24,14 @@ export function PredictionsFloor({ ledger }: { ledger: BankrollLedger | null }) 
           </>
         ) : (
           <>
-            <h2 className="log-title">Predictions</h2>
+            <h2 className="log-title">{label}</h2>
             <p className="log-meta">unavailable</p>
           </>
         )}
       </header>
-      <section className="node-grid" aria-label="Predictions nodes">
+      <section className="node-grid" aria-label="Fight Desk nodes">
         <NodeSquare parent live={face !== null} dashed={face === null} label="Bankroll node">
-          <Link href="/n/predictions/bankroll" className="node-log-link" title="Open Bankroll">
+          <Link href={`${parentCardHref("fight-desk")}/bankroll`} className="node-log-link" title="Open Bankroll">
             {face && ledger ? (
               <ValueCard
                 ticker="Bankroll"

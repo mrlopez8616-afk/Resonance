@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import { FIGHT_DESK_REDIRECTS } from "./src/lib/fight-desk-redirects";
 
 const appRoot = path.dirname(fileURLToPath(import.meta.url));
 
@@ -11,6 +12,9 @@ const nextConfig: NextConfig = {
     root: appRoot,
   },
   outputFileTracingRoot: appRoot,
+  async redirects() {
+    return FIGHT_DESK_REDIRECTS.map((redirect) => ({ ...redirect }));
+  },
 };
 
 export default nextConfig;

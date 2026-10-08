@@ -87,12 +87,25 @@ describe("fight promotions", () => {
     assert.equal(layout.kind, "sections");
     if (layout.kind !== "sections") return;
     assert.deepEqual(
-      layout.sections.find((section) => section.id === "main-card")?.fights.map((fight) => fight.slug),
-      fightsInSegment("main-card").map((fight) => fight.slug),
+      layout.sections.map((section) => section.id),
+      ["early-prelims", "prelims", "main-card"],
+    );
+    assert.deepEqual(
+      layout.sections.find((section) => section.id === "early-prelims")?.fights.map((fight) => fight.slug),
+      fightsInSegment("early-prelims").map((fight) => fight.slug),
     );
     assert.deepEqual(
       layout.sections.find((section) => section.id === "prelims")?.fights.map((fight) => fight.slug),
-      [...fightsInSegment("early-prelims"), ...fightsInSegment("prelims")].map((fight) => fight.slug),
+      fightsInSegment("prelims").map((fight) => fight.slug),
+    );
+    assert.deepEqual(
+      layout.sections.find((section) => section.id === "main-card")?.fights.map((fight) => fight.slug),
+      fightsInSegment("main-card").map((fight) => fight.slug),
+    );
+    assert.equal(layout.sections[0]?.fights[0]?.boutOrder, 1);
+    assert.equal(
+      layout.sections.at(-1)?.fights.at(-1)?.slug,
+      "natalia-silva-vs-wang-cong",
     );
     assert.equal(eventBackHref("ufc-332").href, "/fights/ufc");
     assert.equal(eventBackHref("dwcs-s10-week-9", { title: DWCS_EVENT }).href, "/fights/contender-series");
@@ -186,6 +199,8 @@ describe("fight promotions", () => {
     }
     assert.equal(segmentHint("Main card (co-main)"), "main-card");
     assert.equal(segmentHint("Prelims (top)"), "prelims");
+    assert.equal(segmentHint("Early prelims"), "early-prelims");
+    assert.equal(segmentHint("Early prelims moved from main card"), "early-prelims");
     assert.equal(segmentHint("DWCS S10 Wk9"), null);
     const page = resolveFightEventPage("ufc-fight-night-allen-vs-duncan", bets, [dwcsCalendar]);
     assert.equal(page && "bets" in page ? cardMoney(page.bets).headline : "", "$13.85");

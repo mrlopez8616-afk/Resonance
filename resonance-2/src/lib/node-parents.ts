@@ -25,7 +25,7 @@ export type ParentAggregate = {
   valuedCount: number;
   /** Painted live children. Hidden and offline rows are not in this count. */
   paintedCount: number;
-  /** Open bet count for the predictions parent. Null when that summary is missing. */
+  /** Open bet count for the Fight Desk parent. Null when that summary is missing. */
   openBets: number | null;
 };
 
@@ -60,13 +60,17 @@ export function parentById(id: string): (typeof PARENTS)[number] | null {
   return PARENTS.find((parent) => parent.id === id) ?? null;
 }
 
+const NODE_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
 /**
- * Old `/n/ai`, `/n/stocks`, and `/n/money` routes.
+ * Old `/n/ai`, `/n/stocks`, `/n/money`, `/n/fights`, and `/n/predictions` routes.
  * A child that still belongs to the replacement parent keeps its node path.
+ * `/n/predictions/...` keeps every subpath, including bankroll.
  */
 export function legacyParentHref(slug: string, nodeId?: string): string | null {
   const next = LEGACY_PARENT_SLUGS[slug as keyof typeof LEGACY_PARENT_SLUGS];
   if (!next) return null;
+  if (slug === "predictions" && nodeId && NODE_SLUG.test(nodeId)) return `/n/${next}/${nodeId}`;
   if (nodeId && nodeParent(nodeId) === next) return `/n/${next}/${nodeId}`;
   return `/n/${next}`;
 }
@@ -150,7 +154,7 @@ export function sumLiveUsd(
   };
 }
 
-/** Home cards open the parent page. Predictions is /n/predictions. */
+/** Home cards open the parent page. Fight Desk is /n/fight-desk. */
 export function parentCardHref(parentId: ParentId): string {
   return `/n/${parentId}`;
 }
@@ -161,7 +165,7 @@ export function nodePageHref(ticker: string): string | null {
   const node = FLOOR_NODES.find((item) => item.id === id && item.status !== "empty");
   if (!node) return null;
   const parentId = nodeParent(node.id);
-  if (!parentId || parentId === "predictions") return null;
+  if (!parentId || parentId === "fight-desk") return null;
   return `/n/${parentId}/${node.id}`;
 }
 
@@ -176,7 +180,7 @@ export type ParentSummaryLine = {
  * One real line for a holding parent.
  * A complete live sum says "sum". A partial sum names the coverage
  * ("value of 4 of 6") and is never presented as the whole book.
- * Predictions is a bankroll card and does not use this line.
+ * Fight Desk is a bankroll card and does not use this line.
  */
 export function parentSummaryLine(aggregate: ParentAggregate): ParentSummaryLine | null {
   if (!aggregate.connected || aggregate.paintedCount === 0) return null;

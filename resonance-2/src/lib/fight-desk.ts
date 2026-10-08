@@ -95,7 +95,7 @@ export function betsForEventSlug(
   return bets.filter((bet) => betEventSlug(bet, events) === id);
 }
 
-export type BoutSegment = "main-card" | "prelims";
+export type BoutSegment = "early-prelims" | "prelims" | "main-card";
 
 export type DeskFight = {
   slug: string;
@@ -104,6 +104,8 @@ export type DeskFight = {
   detail: string;
   href?: string;
   segment: BoutSegment | null;
+  /** 1 is the first fight of the night. Missing means the order is unknown. */
+  boutOrder?: number | null;
   bets: Bet[];
   lean?: string;
   conf?: string;
@@ -171,17 +173,58 @@ export function eventBackHref(
   return { href: fightPromotionHref(id), label: promotion?.label ?? "UFC" };
 }
 
+const EARLY = /\bearly[\s-]*prelims?\b/i;
 const MAIN_CARD = /\bmain[\s-]*card\b/i;
-const PRELIM = /\b(?:early[\s-]*)?prelims?\b/i;
+const PRELIM = /\bprelims?\b/i;
 
-/** Main card or prelims when the text says so. Early prelims stay with Prelims. */
+/**
+ * Early prelims, prelims, or main card.
+ * When more than one phrase is present, the earlier one wins.
+ * "early prelims" is its own segment; the word prelims inside it does not win.
+ */
 export function segmentHint(text: string): BoutSegment | null {
+  const hits: { at: number; segment: BoutSegment }[] = [];
+  const earlyAt = text.search(EARLY);
   const mainAt = text.search(MAIN_CARD);
   const prelimAt = text.search(PRELIM);
-  if (mainAt < 0 && prelimAt < 0) return null;
-  if (mainAt < 0) return "prelims";
-  if (prelimAt < 0) return "main-card";
-  return mainAt < prelimAt ? "main-card" : "prelims";
+  if (earlyAt >= 0) hits.push({ at: earlyAt, segment: "early-prelims" });
+  if (mainAt >= 0) hits.push({ at: mainAt, segment: "main-card" });
+  if (prelimAt >= 0) hits.push({ at: prelimAt, segment: "prelims" });
+  if (hits.length === 0) return null;
+  hits.sort((left, right) => left.at - right.at);
+  return hits[0]?.segment ?? null;
+}
+
+const SEGMENT_RANK: Record<BoutSegment, number> = {
+  "early-prelims": 0,
+  prelims: 1,
+  "main-card": 2,
+};
+
+/**
+ * Early prelims, then prelims, then main card.
+ * A known boutOrder is 1 = first fight of the night.
+ * Fights with no order go last inside their segment.
+ * Ties keep the incoming order. Names and insertion time are not keys.
+ */
+export function sortCardFights<T extends { segment: BoutSegment | null; boutOrder?: number | null }>(
+  fights: readonly T[],
+): T[] {
+  return fights
+    .map((fight, index) => ({ fight, index }))
+    .sort((left, right) => {
+      const leftRank = left.fight.segment ? SEGMENT_RANK[left.fight.segment] : 3;
+      const rightRank = right.fight.segment ? SEGMENT_RANK[right.fight.segment] : 3;
+      if (leftRank !== rightRank) return leftRank - rightRank;
+      const leftKnown = typeof left.fight.boutOrder === "number";
+      const rightKnown = typeof right.fight.boutOrder === "number";
+      if (leftKnown !== rightKnown) return leftKnown ? -1 : 1;
+      if (leftKnown && rightKnown && left.fight.boutOrder !== right.fight.boutOrder) {
+        return (left.fight.boutOrder ?? 0) - (right.fight.boutOrder ?? 0);
+      }
+      return left.index - right.index;
+    })
+    .map((row) => row.fight);
 }
 
 const BOUT =
@@ -193,10 +236,6 @@ function boutKey(title: string): string | null {
   return `${personSlug(match[1])} vs ${personSlug(match[2])}`;
 }
 
-function catalogSegment(fight: CatalogFight): BoutSegment {
-  return fight.segment === "main-card" ? "main-card" : "prelims";
-}
-
 function catalogFightRow(fight: CatalogFight, bets: readonly Bet[]): DeskFight {
   return {
     slug: fight.slug,
@@ -204,7 +243,8 @@ function catalogFightRow(fight: CatalogFight, bets: readonly Bet[]): DeskFight {
     kicker: `${fight.time} CT`,
     detail: fight.division,
     href: fight.href,
-    segment: catalogSegment(fight),
+    segment: fight.segment,
+    boutOrder: fight.n,
     bets: bets.filter((bet) => bet.fightSlug === fight.slug),
   };
 }
@@ -255,8 +295,9 @@ function listedFights(
   for (const fight of fights.values()) {
     const catalog = fightBySlug(fight.slug);
     fight.segment = catalog
-      ? catalogSegment(catalog)
+      ? catalog.segment
       : segmentForListedFight(fight.title, fight.bets, calendarTexts);
+    if (catalog) fight.boutOrder = catalog.n;
   }
   return [...fights.values()];
 }
@@ -415,20 +456,30 @@ export type EventBoutLayout =
       sections: { id: BoutSegment; label: string; fights: DeskFight[] }[];
     };
 
+const SECTION_LABEL: Record<BoutSegment, string> = {
+  "early-prelims": "Early prelims",
+  prelims: "Prelims",
+  "main-card": "Main Card",
+};
+
+const SECTION_ORDER: readonly BoutSegment[] = ["early-prelims", "prelims", "main-card"];
+
 /**
- * Main Card and Prelims only when every bout already has a segment.
- * A card with no segment info stays one list.
+ * Early prelims, then prelims, then main card, each in bout order.
+ * Sections only when every bout already has a segment.
+ * A card with no segment info stays one list, still in bout order.
  */
 export function eventBoutSections(fights: readonly DeskFight[]): EventBoutLayout {
-  if (fights.length === 0 || fights.some((fight) => fight.segment === null)) {
-    return { kind: "list", fights: [...fights] };
+  const ordered = sortCardFights(fights);
+  if (ordered.length === 0 || ordered.some((fight) => fight.segment === null)) {
+    return { kind: "list", fights: ordered };
   }
-  const prelims = fights.filter((fight) => fight.segment === "prelims");
-  const main = fights.filter((fight) => fight.segment === "main-card");
-  const sections: { id: BoutSegment; label: string; fights: DeskFight[] }[] = [];
-  if (prelims.length > 0) sections.push({ id: "prelims", label: "Prelims", fights: prelims });
-  if (main.length > 0) sections.push({ id: "main-card", label: "Main Card", fights: main });
-  if (sections.length === 0) return { kind: "list", fights: [...fights] };
+  const sections = SECTION_ORDER.map((id) => ({
+    id,
+    label: SECTION_LABEL[id],
+    fights: ordered.filter((fight) => fight.segment === id),
+  })).filter((section) => section.fights.length > 0);
+  if (sections.length === 0) return { kind: "list", fights: ordered };
   return { kind: "sections", sections };
 }
 

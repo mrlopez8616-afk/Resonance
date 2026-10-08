@@ -3,6 +3,7 @@ import {
   betEventSlug,
   fightersFromTitle,
   segmentHint,
+  sortCardFights,
   type BoutSegment,
   type DeskFight,
 } from "@/lib/fight-desk";
@@ -124,6 +125,11 @@ export type FightBreakdown = {
   odds: BreakdownOdds | null;
   stats: BreakdownStats | null;
   links: BreakdownLinks | null;
+  /**
+   * 1 is the first fight of the night.
+   * Null when the post omitted it. Display then derives it from fightN.
+   */
+  boutOrder: number | null;
 };
 
 export type BreakdownWriteResult = {
@@ -174,6 +180,15 @@ function readInt(value: unknown, label: string): number | null {
     throw new BreakdownWriteError(`${label} must be an integer.`);
   }
   return value;
+}
+
+/** 1 is the first fight of the night. Omitted stays null so display can derive it. */
+function readBoutOrder(value: unknown): number | null {
+  const order = readInt(value, "boutOrder");
+  if (order != null && order < 1) {
+    throw new BreakdownWriteError("boutOrder must be a positive integer.");
+  }
+  return order;
 }
 
 function readNumber(value: unknown, label: string): number | null {
@@ -333,6 +348,7 @@ function blankBreakdown(eventSlug: string, fightSlug: string): FightBreakdown {
     odds: null,
     stats: null,
     links: null,
+    boutOrder: null,
   };
 }
 
@@ -356,6 +372,7 @@ function breakdownFromCamel(raw: unknown): FightBreakdown {
   row.odds = readOdds(raw.odds);
   row.stats = readStats(raw.stats);
   row.links = readLinks(raw.links);
+  row.boutOrder = readBoutOrder(raw.boutOrder);
   return row;
 }
 
@@ -443,6 +460,7 @@ function breakdownFromSiteFight(
 ): FightBreakdown {
   const row = blankBreakdown(eventSlug, readSlug(fight.fightSlug, "fightSlug"));
   row.fightN = fightN;
+  row.boutOrder = readBoutOrder(fight.boutOrder);
   row.lean = readText(fight.lean, "lean");
   row.conf = readText(fight.conf, "conf");
   row.tier = readTier(fight.tier);
@@ -553,10 +571,37 @@ function intValue(value: unknown): number | null {
   return null;
 }
 
+function positiveInt(value: unknown): number | null {
+  const order = intValue(value);
+  return order != null && order >= 1 ? order : null;
+}
+
+/** Pull a stored boutOrder out of the links jsonb. The links object itself stays link fields. */
+function splitStoredLinks(value: unknown): { boutOrder: number | null; links: unknown } {
+  if (!isRecord(value) || !Object.prototype.hasOwnProperty.call(value, "boutOrder")) {
+    return { boutOrder: null, links: value };
+  }
+  const rest: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (key !== "boutOrder") rest[key] = item;
+  }
+  return {
+    boutOrder: positiveInt(value.boutOrder),
+    links: Object.keys(rest).length ? rest : null,
+  };
+}
+
+/** Postgres has no bout_order column. The explicit order rides in the links jsonb. */
+export function linksColumn(row: FightBreakdown): unknown {
+  if (row.boutOrder == null) return row.links;
+  return { ...(row.links ?? {}), boutOrder: row.boutOrder };
+}
+
 /** Rebuild a row from fight_breakdowns columns. A bad row is dropped. */
 export function breakdownFromColumns(raw: Record<string, unknown>): FightBreakdown | null {
   if (typeof raw.event_slug !== "string" || typeof raw.fight_slug !== "string") return null;
   try {
+    const storedLinks = splitStoredLinks(jsonValue(raw.links));
     return breakdownFromCamel({
       eventSlug: raw.event_slug,
       fightSlug: raw.fight_slug,
@@ -576,7 +621,8 @@ export function breakdownFromColumns(raw: Record<string, unknown>): FightBreakdo
       edges: jsonValue(raw.edges) ?? [],
       odds: jsonValue(raw.odds),
       stats: jsonValue(raw.stats),
-      links: jsonValue(raw.links),
+      links: storedLinks.links,
+      boutOrder: storedLinks.boutOrder,
     });
   } catch {
     return null;
@@ -617,18 +663,41 @@ export function applyBreakdowns(
   return { rows: next, results, changed };
 }
 
+/**
+ * Explicit boutOrder wins.
+ * Otherwise boutOrder = max(n) - n + 1 inside the event.
+ * site_analysis `n` counts down from the main event, so this is the running order.
+ */
+export function derivedBoutOrder(
+  row: Pick<FightBreakdown, "boutOrder" | "fightN">,
+  eventRows: readonly Pick<FightBreakdown, "fightN">[],
+): number | null {
+  if (row.boutOrder != null) return row.boutOrder;
+  if (row.fightN == null) return null;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const item of eventRows) {
+    if (item.fightN != null && item.fightN > max) max = item.fightN;
+  }
+  if (!Number.isFinite(max)) return null;
+  return max - row.fightN + 1;
+}
+
+function rowSegment(row: FightBreakdown): BoutSegment | null {
+  return row.card ? segmentHint(row.card) : null;
+}
+
 export function breakdownsForEvent(
   rows: readonly FightBreakdown[],
   eventSlug: string,
 ): FightBreakdown[] {
-  return rows
-    .filter((row) => row.eventSlug === eventSlug)
-    .slice()
-    .sort(
-      (left, right) =>
-        (left.fightN ?? 1_000_000) - (right.fightN ?? 1_000_000) ||
-        left.fightSlug.localeCompare(right.fightSlug),
-    );
+  const eventRows = rows.filter((row) => row.eventSlug === eventSlug);
+  return sortCardFights(
+    eventRows.map((row) => ({
+      row,
+      segment: rowSegment(row),
+      boutOrder: derivedBoutOrder(row, eventRows),
+    })),
+  ).map((item) => item.row);
 }
 
 function namesFromSlug(slug: string): [string, string] | null {
@@ -712,7 +781,8 @@ function sideFromBreakdown(
 
 function catalogSegment(card: string | null): FightSegmentId {
   const hint = card ? segmentHint(card) : null;
-  return hint === "prelims" ? "prelims" : "main-card";
+  if (hint === "early-prelims" || hint === "prelims" || hint === "main-card") return hint;
+  return "main-card";
 }
 
 function plainEdge(edge: string): string {
@@ -838,19 +908,14 @@ export function detailTimeLabel(time: string): string {
   return CLOCK.test(time) ? `${time} CT` : time;
 }
 
-function fightOrder(row: FightBreakdown | undefined): number | null {
-  return row?.fightN ?? null;
-}
-
 /** Lean, conf, tier, and why on the bet's fight card, plus a link to the fight page. */
 export function annotateDeskFights(
   fights: readonly DeskFight[],
   eventSlug: string,
   breakdowns: readonly FightBreakdown[],
 ): DeskFight[] {
-  const bySlug = new Map(
-    breakdowns.filter((row) => row.eventSlug === eventSlug).map((row) => [row.fightSlug, row]),
-  );
+  const eventRows = breakdowns.filter((row) => row.eventSlug === eventSlug);
+  const bySlug = new Map(eventRows.map((row) => [row.fightSlug, row]));
   const annotated = fights.map((fight) => {
     const row = bySlug.get(fight.slug);
     const next: DeskFight = {
@@ -868,15 +933,11 @@ export function annotateDeskFights(
       const hint = segmentHint(row.card);
       if (hint) next.segment = hint;
     }
+    const order = derivedBoutOrder(row, eventRows);
+    if (order != null) next.boutOrder = order;
     return next;
   });
-  const ranked = annotated.filter((fight) => fightOrder(bySlug.get(fight.slug)) != null);
-  const rest = annotated.filter((fight) => fightOrder(bySlug.get(fight.slug)) == null);
-  ranked.sort(
-    (left, right) =>
-      (fightOrder(bySlug.get(left.slug)) ?? 0) - (fightOrder(bySlug.get(right.slug)) ?? 0),
-  );
-  return [...ranked, ...rest];
+  return sortCardFights(annotated);
 }
 
 export function fightsFromBreakdowns(
@@ -896,4 +957,42 @@ export function fightsFromBreakdowns(
     eventSlug,
     rows,
   );
+}
+
+/**
+ * Breakdown rows are the card. Bets join on fight slug and add stakes.
+ * A bet with no breakdown stays on the card, last inside its segment.
+ */
+export function deskFightsForEvent(
+  eventSlug: string,
+  betFights: readonly DeskFight[],
+  breakdowns: readonly FightBreakdown[],
+): DeskFight[] {
+  const fromBreakdowns = fightsFromBreakdowns(eventSlug, breakdowns);
+  const annotated = annotateDeskFights(betFights, eventSlug, breakdowns);
+  const bySlug = new Map(annotated.map((fight) => [fight.slug, fight]));
+  const seen = new Set<string>();
+  const merged: DeskFight[] = [];
+  for (const fight of fromBreakdowns) {
+    seen.add(fight.slug);
+    const bet = bySlug.get(fight.slug);
+    if (!bet) {
+      merged.push(fight);
+      continue;
+    }
+    merged.push({
+      ...fight,
+      ...bet,
+      title: bet.title || fight.title,
+      detail: bet.detail || fight.detail,
+      kicker: bet.kicker || fight.kicker,
+      segment: bet.segment ?? fight.segment,
+      boutOrder: bet.boutOrder ?? fight.boutOrder,
+      bets: bet.bets,
+    });
+  }
+  for (const fight of annotated) {
+    if (!seen.has(fight.slug)) merged.push(fight);
+  }
+  return sortCardFights(merged);
 }
