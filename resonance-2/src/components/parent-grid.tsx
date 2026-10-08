@@ -18,6 +18,7 @@ import {
   aiStockSecondaryLines,
   aiChangeBars,
   cryptoChangeBars,
+  cryptoHomeSecondaryLines,
   FINANCE_HOME_LABEL,
   fitnessSecondaryLines,
   predictionsHeadline,
@@ -47,12 +48,21 @@ function linesFor(
     hiddenIds: readonly string[];
     asOf: Date;
     moves: readonly HomeMove[];
+    cryptoMoves: readonly HomeMove[];
     catalystLine: string | null;
+    cryptoCatalystLine: string | null;
     fitnessWeek: FitnessWeekFacts | null;
     fitnessLine: FitnessHomeLine | null;
     predictions: PredictionsHomeFacts | null;
   },
 ): string[] {
+  if (parentId === "crypto") {
+    return cryptoHomeSecondaryLines({
+      moves: visibleHomeMoves(input.cryptoMoves, input.hiddenIds),
+      catalystLine: input.cryptoCatalystLine,
+      now: input.asOf,
+    });
+  }
   if (parentId === "ai-stocks") {
     return aiStockSecondaryLines({
       moves: visibleHomeMoves(input.moves, input.hiddenIds),
@@ -77,6 +87,7 @@ export function ParentGrid({
   moves = [],
   cryptoMoves = [],
   catalystLine = null,
+  cryptoCatalystLine = null,
   stepSlots = null,
   tierBar = null,
   bankrollLine = null,
@@ -96,6 +107,8 @@ export function ParentGrid({
   /** XRP and SUI day changes from the same spot quotes the crypto faces already use. */
   cryptoMoves?: readonly HomeMove[];
   catalystLine?: string | null;
+  /** Next crypto calendar or catalyst line. Null when none is upcoming. */
+  cryptoCatalystLine?: string | null;
   stepSlots?: readonly StepSlot[] | null;
   tierBar?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
@@ -121,7 +134,9 @@ export function ParentGrid({
           hiddenIds,
           asOf: asOfDate,
           moves,
+          cryptoMoves,
           catalystLine,
+          cryptoCatalystLine,
           fitnessWeek,
           fitnessLine,
           predictions,
