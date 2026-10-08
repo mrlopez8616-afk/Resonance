@@ -3,9 +3,10 @@ import { NodeSquare } from "@/components/node-square";
 import { FITNESS_EMPTY, type FitnessCard } from "@/lib/fitness-board";
 
 export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
+  const visible = cards.filter((card) => card.id !== "runs" || card.headline !== null);
   return (
-    <section className="node-grid" aria-label="Fitness nodes">
-      {cards.map((card) => {
+    <section className="node-grid fitness-grid" aria-label="Fitness nodes">
+      {visible.map((card) => {
         const live = card.headline !== null;
         return (
           <NodeSquare

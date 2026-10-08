@@ -210,6 +210,14 @@ export function isShortcutsPayload(body: unknown): boolean {
   return collectSeries(root).length > 0;
 }
 
+/** Daily series, or a shortcuts post that only carries the workouts array. */
+export function acceptsShortcutWorkouts(body: unknown): boolean {
+  if (isShortcutsPayload(body)) return true;
+  const root = asRecord(body);
+  const source = root ? field(root, "source") : undefined;
+  return typeof source === "string" && source.trim().toLowerCase() === "shortcuts";
+}
+
 function metricKind(name: string): MetricKind | null {
   const key = name.trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (key === "steps" || key === "step" || key === "step_count") {

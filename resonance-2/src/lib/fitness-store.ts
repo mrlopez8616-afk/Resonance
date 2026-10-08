@@ -19,7 +19,11 @@ import {
 import { fitnessLocalFile, readLocalFitness, upsertLocalFitness } from "@/lib/fitness-local";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites } from "@/lib/fitness-types";
-import { FITNESS_SCHEMA_SQL } from "@/lib/pg/embedded-migrations";
+import { FITNESS_SCHEMA_SQL, FITNESS_WORKOUTS_SQL } from "@/lib/pg/embedded-migrations";
+import {
+  shortcutWorkoutsAsWrites,
+  type ShortcutWorkoutWrite,
+} from "@/lib/fitness-workouts";
 import { postgresFailureReason, sqlQuery } from "@/lib/pg/client";
 import { splitSqlStatements } from "@/lib/pg/migrate";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
@@ -30,6 +34,7 @@ export type FitnessRead = {
   availability: FitnessAvailability;
   metrics: FitnessMetricWrite[];
   workouts: FitnessWorkoutWrite[];
+  shortcutWorkouts: ShortcutWorkoutWrite[];
   today: string;
 };
 
@@ -75,7 +80,10 @@ function missingFitnessTable(error: unknown): boolean {
     : error instanceof Error
       ? error.message
       : "";
-  return /fitness_metrics|fitness_workouts/i.test(reason) && /does not exist|no such/i.test(reason);
+  return (
+    /fitness_metrics|fitness_workouts|fitness_shortcut_workouts/i.test(reason) &&
+    /does not exist|no such/i.test(reason)
+  );
 }
 
 async function tablesPresent(): Promise<boolean> {
@@ -101,13 +109,23 @@ async function manualSeedPresent(): Promise<boolean> {
 }
 
 async function ensureFitnessTables(): Promise<void> {
-  for (const statement of splitSqlStatements(FITNESS_SCHEMA_SQL)) {
+  for (const statement of splitSqlStatements(`${FITNESS_SCHEMA_SQL}\n${FITNESS_WORKOUTS_SQL}`)) {
     await sqlQuery(statement);
   }
 }
 
+async function shortcutTablePresent(): Promise<boolean> {
+  try {
+    await sqlQuery(`SELECT 1 AS ok FROM fitness_shortcut_workouts LIMIT 1`);
+    return true;
+  } catch (error) {
+    if (missingFitnessTable(error)) return false;
+    throw error;
+  }
+}
+
 async function ensureFitnessStoreOnce(): Promise<void> {
-  if (!(await tablesPresent())) await ensureFitnessTables();
+  if (!(await tablesPresent()) || !(await shortcutTablePresent())) await ensureFitnessTables();
   if (!(await manualSeedPresent())) await upsertFitnessRows(manualFitnessSeed());
 }
 
@@ -126,7 +144,9 @@ export async function ensureFitnessStore(): Promise<void> {
   await ready;
 }
 
-export async function upsertFitnessRows(rows: FitnessWrites): Promise<{ metrics: number; workouts: number }> {
+export async function upsertFitnessRows(
+  rows: FitnessWrites,
+): Promise<{ metrics: number; workouts: number; runs: number }> {
   if (fitnessLocalFile()) return upsertLocalFitness(rows);
   for (const metric of rows.metrics) {
     await sqlQuery(
@@ -205,7 +225,81 @@ export async function upsertFitnessRows(rows: FitnessWrites): Promise<{ metrics:
       ],
     );
   }
-  return { metrics: rows.metrics.length, workouts: rows.workouts.length };
+  for (const run of rows.shortcutWorkouts ?? []) {
+    await sqlQuery(
+      `INSERT INTO fitness_shortcut_workouts (
+         start_time, type, source_name, duration_sec, distance_m, distance_source, energy_kcal,
+         pace_sec_per_km, pace_sec_per_mi
+       ) VALUES (
+         $1::timestamptz, $2, $3, $4, $5, $6, $7, $8, $9
+       )
+       ON CONFLICT (start_time, type) DO UPDATE SET
+         source_name = COALESCE(EXCLUDED.source_name, fitness_shortcut_workouts.source_name),
+         duration_sec = EXCLUDED.duration_sec,
+         distance_m = CASE
+           WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+           WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+           ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+         END,
+         distance_source = CASE
+           WHEN EXCLUDED.distance_source = 'workout' THEN 'workout'
+           WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN 'workout'
+           ELSE COALESCE(EXCLUDED.distance_source, fitness_shortcut_workouts.distance_source)
+         END,
+         energy_kcal = COALESCE(EXCLUDED.energy_kcal, fitness_shortcut_workouts.energy_kcal),
+         pace_sec_per_km = CASE
+           WHEN (
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) > 0 AND EXCLUDED.duration_sec > 0
+           THEN EXCLUDED.duration_sec / ((
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) / 1000.0)
+           ELSE NULL
+         END,
+         pace_sec_per_mi = CASE
+           WHEN (
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) > 0 AND EXCLUDED.duration_sec > 0
+           THEN EXCLUDED.duration_sec / ((
+             CASE
+               WHEN EXCLUDED.distance_source = 'workout' THEN EXCLUDED.distance_m
+               WHEN fitness_shortcut_workouts.distance_source = 'workout' THEN fitness_shortcut_workouts.distance_m
+               ELSE COALESCE(EXCLUDED.distance_m, fitness_shortcut_workouts.distance_m)
+             END
+           ) / 1609.344)
+           ELSE NULL
+         END,
+         updated_at = now()`,
+      [
+        run.startTime,
+        run.type,
+        run.sourceName,
+        run.durationSec,
+        run.distanceM,
+        run.distanceSource,
+        run.energyKcal,
+        run.paceSecPerKm,
+        run.paceSecPerMi,
+      ],
+    );
+  }
+  return {
+    metrics: rows.metrics.length,
+    workouts: rows.workouts.length,
+    runs: rows.shortcutWorkouts?.length ?? 0,
+  };
 }
 
 async function readMetrics(): Promise<FitnessMetricWrite[]> {
@@ -285,23 +379,85 @@ async function readWorkouts(): Promise<FitnessWorkoutWrite[]> {
   });
 }
 
+async function readShortcutWorkouts(): Promise<ShortcutWorkoutWrite[]> {
+  const rows = await sqlQuery<{
+    start_time: unknown;
+    type: string;
+    source_name: string | null;
+    duration_sec: unknown;
+    distance_m: unknown;
+    distance_source: string | null;
+    energy_kcal: unknown;
+    pace_sec_per_km: unknown;
+    pace_sec_per_mi: unknown;
+  }>(
+    `SELECT start_time, type, source_name, duration_sec, distance_m, distance_source, energy_kcal,
+            pace_sec_per_km, pace_sec_per_mi
+     FROM fitness_shortcut_workouts`,
+  );
+  return rows.flatMap((row) => {
+    const startTime = text(row.start_time);
+    if (!startTime) return [];
+    if (row.type !== "Running" && row.type !== "Walking") return [];
+    const durationSec = text(row.duration_sec);
+    if (!durationSec) return [];
+    const distanceSource =
+      row.distance_source === "workout" || row.distance_source === "derived" ? row.distance_source : null;
+    return [
+      {
+        startTime,
+        type: row.type === "Running" ? "Running" : "Walking",
+        sourceName: row.source_name?.trim() || null,
+        durationSec,
+        distanceSource,
+        distanceM: text(row.distance_m),
+        energyKcal: text(row.energy_kcal),
+        paceSecPerKm: text(row.pace_sec_per_km),
+        paceSecPerMi: text(row.pace_sec_per_mi),
+      },
+    ];
+  });
+}
+
 export async function readFitness(today = chicagoToday()): Promise<FitnessRead> {
   if (fitnessLocalFile()) {
     const rows = readLocalFitness();
-    return { availability: "live", metrics: rows.metrics, workouts: rows.workouts, today };
+    return {
+      availability: "live",
+      metrics: rows.metrics,
+      workouts: rows.workouts,
+      shortcutWorkouts: rows.shortcutWorkouts ?? [],
+      today,
+    };
   }
   if (!process.env.DATABASE_URL?.trim()) {
     const seed = manualFitnessSeed();
-    return { availability: "seed-only", metrics: seed.metrics, workouts: seed.workouts, today };
+    return {
+      availability: "seed-only",
+      metrics: seed.metrics,
+      workouts: seed.workouts,
+      shortcutWorkouts: [],
+      today,
+    };
   }
   try {
     await ensureFitnessStore();
-    const [metrics, workouts] = await Promise.all([readMetrics(), readWorkouts()]);
-    return { availability: "live", metrics, workouts, today };
+    const [metrics, workouts, shortcutWorkouts] = await Promise.all([
+      readMetrics(),
+      readWorkouts(),
+      readShortcutWorkouts(),
+    ]);
+    return { availability: "live", metrics, workouts, shortcutWorkouts, today };
   } catch (error) {
     console.error("fitness read failed", fitnessFailureText(error));
     const seed = manualFitnessSeed();
-    return { availability: "unavailable", metrics: seed.metrics, workouts: seed.workouts, today };
+    return {
+      availability: "unavailable",
+      metrics: seed.metrics,
+      workouts: seed.workouts,
+      shortcutWorkouts: [],
+      today,
+    };
   }
 }
 
@@ -309,7 +465,10 @@ function present(read: FitnessRead) {
   return {
     availability: read.availability,
     metrics: metricSamples(read.metrics),
-    workouts: workoutSamples(read.workouts),
+    workouts: workoutSamples([
+      ...read.workouts,
+      ...shortcutWorkoutsAsWrites(read.shortcutWorkouts),
+    ]),
     today: read.today,
   };
 }

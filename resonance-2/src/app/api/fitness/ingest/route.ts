@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { fitnessLocalFile } from "@/lib/fitness-local";
 import { sanitizeFitnessSource } from "@/lib/fitness-parse";
-import { parseFitnessIngest } from "@/lib/fitness-shortcuts";
+import { acceptsShortcutWorkouts, parseFitnessIngest } from "@/lib/fitness-shortcuts";
+import { readShortcutWorkouts } from "@/lib/fitness-workouts";
 import { ensureFitnessStore, upsertFitnessRows } from "@/lib/fitness-store";
 import { authorizeFitnessRequest } from "@/lib/sync-auth";
 import { isStorageUnavailable, storageErrorJson } from "@/lib/storage-unavailable";
@@ -58,7 +59,11 @@ export async function POST(request: Request) {
   const parsed = parseFitnessIngest(body, {
     source: sanitizeFitnessSource(request.headers.get("automation-name")),
   });
-  if (parsed.metrics.length === 0 && parsed.workouts.length === 0) {
+  const runs = readShortcutWorkouts(body, acceptsShortcutWorkouts(body));
+  if (!runs.ok) {
+    return NextResponse.json({ ok: false, error: runs.error }, { status: 400 });
+  }
+  if (parsed.metrics.length === 0 && parsed.workouts.length === 0 && runs.workouts.length === 0) {
     return NextResponse.json(
       { ok: false, error: "No metrics or workouts in the body." },
       { status: 400 },
@@ -67,10 +72,12 @@ export async function POST(request: Request) {
 
   try {
     await ensureFitnessStore();
-    const written = await upsertFitnessRows(parsed);
+    const written = await upsertFitnessRows({ ...parsed, shortcutWorkouts: runs.workouts });
     return NextResponse.json({
       ok: true,
-      ...written,
+      metrics: written.metrics,
+      workouts: written.workouts,
+      runs: written.runs,
       totals: parsed.metrics.map((row) => ({
         metric: row.metric,
         day: row.day,

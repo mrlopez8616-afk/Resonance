@@ -1,8 +1,16 @@
-import { addCivilDays, chicagoDay, civilWeek, formatCivilDate } from "@/lib/calendar-time";
+import {
+  addCivilDays,
+  chicagoDay,
+  civilMonthKey,
+  civilWeek,
+  formatCivilDate,
+  formatCivilMonth,
+} from "@/lib/calendar-time";
 import { energyKcal } from "@/lib/fitness-parse";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite } from "@/lib/fitness-types";
 
 export const FITNESS_EMPTY = "Data appears once the phone sync runs.";
+export const FITNESS_RUNS_EMPTY = "No runs yet.";
 
 export const FITNESS_NODES = [
   { id: "steps", title: "Steps" },
@@ -42,12 +50,27 @@ export type FitnessRow = {
   secondary: string | null;
 };
 
+export type FitnessDistanceTotal = {
+  id: string;
+  label: string;
+  distance: string;
+};
+
+export type FitnessPacePoint = {
+  id: string;
+  label: string;
+  secPerMile: number;
+};
+
 export type FitnessNodeDetail = {
   id: FitnessNodeId;
   title: string;
   headline: string | null;
   detail: string | null;
   rows: FitnessRow[];
+  weeks: FitnessDistanceTotal[];
+  months: FitnessDistanceTotal[];
+  pace: FitnessPacePoint[];
 };
 
 type MetricSample = {
@@ -78,6 +101,7 @@ type WorkoutSample = {
 export function workoutKind(name: string): WorkoutKind {
   const value = name.trim().toLowerCase();
   if (value.includes("run")) return "run";
+  if (value.includes("walk")) return "run";
   if (
     value.includes("strength") ||
     value.includes("weight") ||
@@ -200,7 +224,10 @@ export function workoutSamples(rows: readonly FitnessWorkoutWrite[]): WorkoutSam
       day,
       startedAt: row.startedAt,
       durationSec: finite(row.durationSec),
-      miles: distance === null || !row.distanceUnits ? null : milesFrom(distance, row.distanceUnits),
+      miles:
+        distance === null || !row.distanceUnits
+          ? null
+          : visibleMiles(milesFrom(distance, row.distanceUnits)),
       energyKcal: finite(row.energyKcal),
       heartRateAvg: finite(row.heartRateAvg),
       origin: row.origin,
@@ -246,6 +273,12 @@ function stepsOn(metrics: readonly MetricSample[], day: string): number | null {
 function shown(value: number | null): number | null {
   if (value === null || !Number.isFinite(value) || value <= 0) return null;
   return value;
+}
+
+/** Below a tenth of a mile the label would read 0.0 mi. Keep it off the page. */
+function visibleMiles(miles: number | null): number | null {
+  if (miles === null || !Number.isFinite(miles) || miles < 0.05) return null;
+  return miles;
 }
 
 function energyOn(metrics: readonly MetricSample[], day: string): number | null {
@@ -341,7 +374,7 @@ function runsFacts(workouts: readonly WorkoutSample[], today: string): { headlin
   }
   const older = workouts.filter((workout) => workout.kind === "run" && workout.day <= today);
   const last = older[0];
-  if (!last) return { headline: null, detail: FITNESS_EMPTY };
+  if (!last) return { headline: null, detail: FITNESS_RUNS_EMPTY };
   return {
     headline: last.miles === null ? last.name : formatMiles(last.miles),
     detail: `last run · ${shortDay(last.day)}`,
@@ -566,21 +599,73 @@ function stepsRows(metrics: readonly MetricSample[], today: string): FitnessRow[
   });
 }
 
+function shownSource(label: string): string | null {
+  const value = label.trim();
+  if (!value || value === "shortcuts" || value === "health-auto-export" || value === "Manual") return null;
+  return value;
+}
+
 function workoutSecondary(workout: WorkoutSample): string {
   const pace =
     workout.miles !== null && workout.durationSec !== null
       ? formatPace(workout.miles, workout.durationSec)
       : null;
+  const type = workout.name === "Running" || workout.name === "Walking" ? workout.name : null;
   return [
+    type,
     formatCivilDate(workout.day),
     pace,
     workout.heartRateAvg === null ? null : `${formatCount(workout.heartRateAvg)} bpm`,
     workout.energyKcal === null ? null : `${formatCount(workout.energyKcal)} kcal`,
-    workout.sourceLabel,
+    shownSource(workout.sourceLabel),
     originLabel(workout.origin),
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+function weekSpan(monday: string): string {
+  const sunday = addCivilDays(monday, 6);
+  return `${shortDay(monday)}–${shortDay(sunday)}`;
+}
+
+function distanceTotals(
+  runs: readonly WorkoutSample[],
+  keyOf: (day: string) => string,
+  labelOf: (key: string) => string,
+): FitnessDistanceTotal[] {
+  const totals = new Map<string, number>();
+  for (const run of runs) {
+    const miles = visibleMiles(run.miles);
+    if (miles === null) continue;
+    const key = keyOf(run.day);
+    if (!key) continue;
+    totals.set(key, (totals.get(key) ?? 0) + miles);
+  }
+  return [...totals.entries()]
+    .filter(([, miles]) => visibleMiles(miles) !== null)
+    .sort((left, right) => (left[0] < right[0] ? 1 : -1))
+    .map(([key, miles]) => ({
+      id: key,
+      label: labelOf(key),
+      distance: formatMiles(miles),
+    }));
+}
+
+function pacePoints(runs: readonly WorkoutSample[]): FitnessPacePoint[] {
+  return [...runs]
+    .filter(
+      (run) => visibleMiles(run.miles) !== null && run.durationSec !== null && run.durationSec > 0,
+    )
+    .sort((left, right) => {
+      if (left.startedAt !== right.startedAt) return left.startedAt < right.startedAt ? -1 : 1;
+      return left.id < right.id ? -1 : 1;
+    })
+    .map((run) => ({
+      id: run.id,
+      label: shortDay(run.day),
+      secPerMile: (run.durationSec as number) / (visibleMiles(run.miles) as number),
+    }));
 }
 
 function runRows(workouts: readonly WorkoutSample[], today: string): FitnessRow[] {
@@ -656,12 +741,23 @@ export function fitnessNode(
         : node.id === "lifting"
           ? liftRows(workouts, today)
           : heartRows(metrics, today);
+  const runList =
+    node.id === "runs"
+      ? workouts.filter((workout) => workout.kind === "run" && workout.day <= today)
+      : [];
   return {
     id: node.id,
     title: node.title,
     headline: card?.headline ?? null,
     detail: card?.detail ?? null,
     rows,
+    weeks: distanceTotals(runList, (day) => civilWeek(day)[0] ?? "", weekSpan),
+    months: distanceTotals(
+      runList,
+      (day) => civilMonthKey(day),
+      (key) => formatCivilMonth(`${key}-01`),
+    ),
+    pace: pacePoints(runList),
   };
 }
 

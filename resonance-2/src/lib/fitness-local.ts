@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
-import type { FitnessWrites } from "@/lib/fitness-types";
+import { mergeShortcutWorkout } from "@/lib/fitness-workouts";
+import type { FitnessWrites, ShortcutWorkoutWrite } from "@/lib/fitness-types";
 
 /**
  * Dev-only file store so a local ingest can be screenshotted without Neon.
@@ -26,6 +27,7 @@ function readSnapshot(file: string): FitnessWrites {
     return {
       metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [],
       workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+      shortcutWorkouts: Array.isArray(parsed.shortcutWorkouts) ? parsed.shortcutWorkouts : [],
     };
   } catch {
     return empty();
@@ -59,7 +61,19 @@ function merge(current: FitnessWrites, rows: FitnessWrites): FitnessWrites {
   }
   const workouts = new Map(current.workouts.map((row) => [`${row.source}:${row.externalId}`, row]));
   for (const row of rows.workouts) workouts.set(`${row.source}:${row.externalId}`, row);
-  return { metrics: [...metrics.values()], workouts: [...workouts.values()] };
+  const runs = new Map<string, ShortcutWorkoutWrite>(
+    (current.shortcutWorkouts ?? []).map((row) => [`${row.startTime}|${row.type}`, row]),
+  );
+  for (const row of rows.shortcutWorkouts ?? []) {
+    const key = `${row.startTime}|${row.type}`;
+    const existing = runs.get(key);
+    runs.set(key, existing ? mergeShortcutWorkout(existing, row) : row);
+  }
+  return {
+    metrics: [...metrics.values()],
+    workouts: [...workouts.values()],
+    shortcutWorkouts: [...runs.values()],
+  };
 }
 
 function withSeed(rows: FitnessWrites): FitnessWrites {
@@ -84,9 +98,15 @@ export function readLocalFitness(): FitnessWrites {
   return seeded;
 }
 
-export function upsertLocalFitness(rows: FitnessWrites): { metrics: number; workouts: number } {
+export function upsertLocalFitness(
+  rows: FitnessWrites,
+): { metrics: number; workouts: number; runs: number } {
   const file = fitnessLocalFile();
-  if (!file) return { metrics: 0, workouts: 0 };
+  if (!file) return { metrics: 0, workouts: 0, runs: 0 };
   writeSnapshot(file, merge(readLocalFitness(), rows));
-  return { metrics: rows.metrics.length, workouts: rows.workouts.length };
+  return {
+    metrics: rows.metrics.length,
+    workouts: rows.workouts.length,
+    runs: rows.shortcutWorkouts?.length ?? 0,
+  };
 }
