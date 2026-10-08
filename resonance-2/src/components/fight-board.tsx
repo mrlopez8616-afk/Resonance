@@ -5,6 +5,7 @@ import type { Bet } from "@/lib/bets";
 import { betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd } from "@/lib/bets";
 import type { CalendarEvent } from "@/data/calendar";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
+import { detailTimeLabel, fightDetailVisibility } from "@/lib/fight-breakdowns";
 import {
   eventBoutSections,
   fightPromotions,
@@ -112,6 +113,16 @@ function FightSections({
   );
 }
 
+function analysisLine(fight: DeskFight): string | null {
+  if (!fight.lean && !fight.conf && !fight.tier) return null;
+  const parts = [
+    fight.lean ? `Lean ${fight.lean}` : null,
+    fight.conf ?? null,
+    fight.tier ?? null,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length ? parts.join(" · ") : null;
+}
+
 function DeskFightCard({
   fight,
   resultLine,
@@ -119,11 +130,14 @@ function DeskFightCard({
   fight: DeskFight;
   resultLine: string;
 }) {
+  const lean = analysisLine(fight);
   const body = (
     <>
       {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
       <h3>{fight.title}</h3>
       {fight.detail ? <p>{fight.detail}</p> : null}
+      {lean ? <p>{lean}</p> : null}
+      {fight.why ? <p>{fight.why}</p> : null}
       <p className="fight-result">{resultLine}</p>
       <FightStakeList bets={fight.bets} />
     </>
@@ -436,15 +450,30 @@ function SideHead({ side }: { side: FighterSide }) {
   );
 }
 
-function OddsColumn({ side, bets }: { side: FighterSide; bets: readonly Bet[] }) {
+function OddsColumn({
+  side,
+  bets,
+  hideEmpty = false,
+}: {
+  side: FighterSide;
+  bets: readonly Bet[];
+  hideEmpty?: boolean;
+}) {
+  const books = hideEmpty ? side.books.filter((row) => row.moneyline != null) : side.books;
   return (
     <div>
       <h3>{side.name}</h3>
       <dl>
-        <Field label="Coinbase" value={percent(side.coinbasePct)} />
-        <Field label="No-vig" value={percent(side.noVigPct)} />
-        <Field label="Median ML" value={moneyline(side.medianMoneyline)} />
-        {side.books.map((row) => (
+        {!hideEmpty || side.coinbasePct != null ? (
+          <Field label="Coinbase" value={percent(side.coinbasePct)} />
+        ) : null}
+        {!hideEmpty || side.noVigPct != null ? (
+          <Field label="No-vig" value={percent(side.noVigPct)} />
+        ) : null}
+        {!hideEmpty || side.medianMoneyline != null ? (
+          <Field label="Median ML" value={moneyline(side.medianMoneyline)} />
+        ) : null}
+        {books.map((row) => (
           <Field key={row.book} label={row.book} value={moneyline(row.moneyline)} />
         ))}
         {bets.map((bet) => (
@@ -460,6 +489,8 @@ export function FightDetail({
   bets,
   result,
   backHref = `/fights/${UFC_332_EVENT.id}`,
+  backLabel = UFC_332_EVENT.name,
+  hideEmpty = false,
   availability = "live",
   resultsAvailability = "live",
 }: {
@@ -467,6 +498,8 @@ export function FightDetail({
   bets: readonly Bet[];
   result?: FightResult | null;
   backHref?: string;
+  backLabel?: string;
+  hideEmpty?: boolean;
   availability?: BookAvailability;
   resultsAvailability?: BookAvailability;
 }) {
@@ -474,15 +507,23 @@ export function FightDetail({
   const ticketsFor = (name: string) =>
     stakes.filter((bet) => bet.pick === name || bet.pick.includes(name));
   const labels = fight.A.stats.map((row) => row.label);
+  const visibility = hideEmpty ? fightDetailVisibility(fight, bets, result) : null;
+  const kicker = hideEmpty
+    ? [detailTimeLabel(fight.time), fight.division].filter(Boolean).join(" · ")
+    : `${fight.time} CT · ${fight.division}`;
+  const show = (name: keyof NonNullable<typeof visibility>) => !visibility || visibility[name];
+  const bookPrices = [...fight.A.books, ...fight.B.books].some((row) => row.moneyline != null);
   return (
     <div className="log-canvas">
       <header className="log-header">
         <Link href={backHref} className="calendar-back">
-          {UFC_332_EVENT.name}
+          {backLabel}
         </Link>
-        <p className="log-kicker">
-          {fight.time} CT · {fight.division}
-        </p>
+        {kicker ? (
+          <p className="log-kicker">
+            {kicker}
+          </p>
+        ) : null}
         <h2 className="log-title">
           {fight.A.name} vs {fight.B.name}
         </h2>
@@ -498,6 +539,7 @@ export function FightDetail({
         ) : null}
       </header>
 
+      {show("result") ? (
       <section className="calendar-day-section" aria-label="Result">
         <h3>Result</h3>
         {resultsAvailability === "unavailable" ? (
@@ -514,7 +556,9 @@ export function FightDetail({
           <p>{boutLine(result, stakes)}</p>
         )}
       </section>
+      ) : null}
 
+      {show("matchup") ? (
       <section className="calendar-day-section" aria-label="Matchup">
         <h3>Matchup</h3>
         <div className="fight-split">
@@ -522,9 +566,12 @@ export function FightDetail({
           <SideHead side={fight.B} />
         </div>
       </section>
+      ) : null}
 
+      {show("stats") ? (
       <section className="calendar-day-section" aria-label="Stats">
         <h3>Stats</h3>
+        {labels.length > 0 ? (
         <div className="fight-table-wrap">
           <table className="fight-table">
             <thead>
@@ -545,8 +592,9 @@ export function FightDetail({
             </tbody>
           </table>
         </div>
+        ) : null}
         <div className="fight-split">
-          {[fight.A, fight.B].map((side) => (
+          {[fight.A, fight.B].filter((side) => !hideEmpty || side.last5.length > 0).map((side) => (
             <div key={side.slug}>
               <h3>Last 5 · {side.name}</h3>
               {side.last5.length === 0 ? (
@@ -562,13 +610,17 @@ export function FightDetail({
           ))}
         </div>
       </section>
+      ) : null}
 
+      {show("lean") ? (
       <section className="calendar-day-section" aria-label="Lean">
         <h3>Lean</h3>
         <dl>
-          <Field label="Lean" value={fight.lean ?? "—"} />
-          <Field label="Confidence" value={fight.confidence ?? "—"} />
-          <Field label="Why" value={fight.why ?? "—"} />
+          {!hideEmpty || fight.lean ? <Field label="Lean" value={fight.lean ?? "—"} /> : null}
+          {!hideEmpty || fight.confidence ? (
+            <Field label="Confidence" value={fight.confidence ?? "—"} />
+          ) : null}
+          {!hideEmpty || fight.why ? <Field label="Why" value={fight.why ?? "—"} /> : null}
           {fight.xFactor ? <Field label="X-factor" value={fight.xFactor} /> : null}
         </dl>
         {fight.edges.length > 0 ? (
@@ -579,23 +631,29 @@ export function FightDetail({
           </ul>
         ) : null}
       </section>
+      ) : null}
 
+      {show("odds") ? (
       <section className="calendar-day-section" aria-label="Odds">
         <h3>Odds check</h3>
+        {!hideEmpty || bookPrices ? (
         <p className="calendar-section-note">
           Book prices are BestFightOdds moneylines. Coinbase and no-vig percents are the card file.
           Your ticket is the founder Coinbase Predict price.
         </p>
+        ) : null}
         <div className="fight-split">
-          <OddsColumn side={fight.A} bets={ticketsFor(fight.A.name)} />
-          <OddsColumn side={fight.B} bets={ticketsFor(fight.B.name)} />
+          <OddsColumn side={fight.A} bets={ticketsFor(fight.A.name)} hideEmpty={hideEmpty} />
+          <OddsColumn side={fight.B} bets={ticketsFor(fight.B.name)} hideEmpty={hideEmpty} />
         </div>
       </section>
+      ) : null}
 
+      {show("highlights") ? (
       <section className="calendar-day-section" aria-label="Highlights">
         <h3>Highlights</h3>
         <ul className="fight-last5">
-          {[fight.A, fight.B].map((side) => (
+          {[fight.A, fight.B].filter((side) => !hideEmpty || side.highlight).map((side) => (
             <li key={side.slug}>
               {side.highlight ? (
                 <a href={side.highlight.url} rel="noreferrer">
@@ -611,7 +669,9 @@ export function FightDetail({
           ))}
         </ul>
       </section>
+      ) : null}
 
+      {show("stake") ? (
       <section className="calendar-day-section" aria-label="Stake">
         <h3>Founder stake</h3>
         {stakes.length === 0 ? (
@@ -648,6 +708,7 @@ export function FightDetail({
           </ol>
         )}
       </section>
+      ) : null}
     </div>
   );
 }

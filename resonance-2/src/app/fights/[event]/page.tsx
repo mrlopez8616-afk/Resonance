@@ -1,9 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { FightEvent, ListedFightEvent } from "@/components/fight-board";
 import { OperatorShell } from "@/components/operator-shell";
+import { annotateDeskFights, fightsFromBreakdowns } from "@/lib/fight-breakdowns";
 import { eventBackHref, legacyFightNodeHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "@/lib/store-page";
+import {
+  loadBetsForPage,
+  loadBreakdownsForPage,
+  loadCalendarForPage,
+  loadFightResultsForPage,
+} from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -37,32 +43,43 @@ export default async function FightEventPage({
   if (legacy) redirect(legacy);
   const requestedNode = oneQuery((await searchParams).node);
   if (requestedNode) redirect(`/fights/${event}`);
-  const [book, card, calendar] = await Promise.all([
+  const [book, card, calendar, breakdownPage] = await Promise.all([
     loadBetsForPage(),
     loadFightResultsForPage(),
     loadCalendarForPage(),
+    loadBreakdownsForPage(),
   ]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const results = card.status === "unavailable" ? [] : card.results;
+  const breakdowns = breakdownPage.status === "unavailable" ? [] : breakdownPage.breakdowns;
   const resolved = resolveFightEventPage(event, bets, calendar.events);
-  if (!resolved) notFound();
-  const back = eventBackHref(resolved.slug, { title: resolved.title });
+  const listedFights =
+    resolved?.kind === "listed"
+      ? annotateDeskFights(resolved.fights, resolved.slug, breakdowns)
+      : fightsFromBreakdowns(event, breakdowns);
+  if (!resolved && listedFights.length === 0) notFound();
+  const back = eventBackHref(resolved?.slug ?? event, { title: resolved?.title ?? event });
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const resultsAvailability =
     card.status === "unavailable" ? "unavailable" : card.status === "unconfigured" ? "seed-only" : "live";
   const storageMessage =
-    book.status === "unavailable" || card.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
+    book.status === "unavailable" ||
+    card.status === "unavailable" ||
+    breakdownPage.status === "unavailable"
+      ? STORAGE_UNAVAILABLE_BANNER
+      : null;
   const storageDetail = [
     book.status === "unavailable" ? "Bet book is unavailable." : null,
     card.status === "unavailable" ? "Fight results are unavailable." : null,
+    breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
   ]
     .filter((line): line is string => line !== null)
     .join(" ");
 
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail || null}>
-      {resolved.kind === "ufc-332" ? (
+      {resolved?.kind === "ufc-332" ? (
         <FightEvent
           bets={resolved.bets}
           results={results}
@@ -73,12 +90,12 @@ export default async function FightEventPage({
         />
       ) : (
         <ListedFightEvent
-          title={resolved.title}
-          meta={resolved.meta}
-          fights={resolved.fights}
-          bets={resolved.bets}
+          title={resolved?.kind === "listed" ? resolved.title : event}
+          meta={resolved?.kind === "listed" ? resolved.meta : ""}
+          fights={listedFights}
+          bets={resolved?.kind === "listed" ? resolved.bets : []}
           results={results}
-          eventSlug={resolved.slug}
+          eventSlug={event}
           backHref={back.href}
           backLabel={back.label}
           availability={availability}

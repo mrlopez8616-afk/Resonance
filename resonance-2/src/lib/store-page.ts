@@ -6,6 +6,8 @@ import { loadBetsStore } from "@/lib/bets-store";
 import { ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
 import { loadCalendarStore, type CalendarStoreBackend } from "@/lib/calendar-store";
 import type { CalendarEvent } from "@/data/calendar";
+import type { FightBreakdown } from "@/lib/fight-breakdowns";
+import { loadFightBreakdownsStore } from "@/lib/fight-breakdowns-store";
 import type { FightResult } from "@/lib/fight-results";
 import { loadFightResultsStore } from "@/lib/fight-results-store";
 import {
@@ -25,6 +27,11 @@ export type FightResultsPage =
   | { status: "unconfigured"; results: FightResult[] }
   | { status: "unavailable"; reason: string };
 
+export type BreakdownsPage =
+  | { status: "live"; breakdowns: FightBreakdown[]; backend: DurableBackend; updatedAt: string }
+  | { status: "unconfigured"; breakdowns: FightBreakdown[]; updatedAt: string }
+  | { status: "unavailable"; reason: string };
+
 function liveBackend(backend: string): DurableBackend {
   if (backend === "postgres" || backend === "blob") return backend;
   return "file";
@@ -40,6 +47,28 @@ export const loadFightResultsForPage = cache(async (): Promise<FightResultsPage>
       status: "live",
       results: loaded.envelope.results,
       backend: liveBackend(loaded.backend),
+    };
+  } catch (error) {
+    if (!isStorageUnavailable(error)) throw error;
+    return { status: "unavailable", reason: error.reason };
+  }
+});
+
+export const loadBreakdownsForPage = cache(async (): Promise<BreakdownsPage> => {
+  try {
+    const loaded = await loadFightBreakdownsStore();
+    if (!loaded.configured) {
+      return {
+        status: "unconfigured",
+        breakdowns: loaded.envelope.breakdowns,
+        updatedAt: loaded.envelope.updatedAt,
+      };
+    }
+    return {
+      status: "live",
+      breakdowns: loaded.envelope.breakdowns,
+      backend: liveBackend(loaded.backend),
+      updatedAt: loaded.envelope.updatedAt,
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
