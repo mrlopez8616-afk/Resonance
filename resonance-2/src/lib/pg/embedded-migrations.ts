@@ -11,8 +11,11 @@ export const FITNESS_SCHEMA_SQL = "-- Fitness streams from Health Auto Export an
 export const BET_TIER_SQL =
   "-- Optional conviction on a ticket. Nullable. Existing rows stay NULL.\n-- Values used by the desk are STRONG and LEAN. Apply by hand in Neon\n-- if this environment shares the production database and skips prebuild migrate.\n\nALTER TABLE bets ADD COLUMN IF NOT EXISTS tier text;\n";
 
+export const FIGHT_BREAKDOWNS_SQL = "-- Per-fight breakdowns for any event slug. UFC 332 stays on its static files.\n-- Idempotent. Production prebuild applies this the same way as 003_bet_tier.sql.\n\nCREATE TABLE IF NOT EXISTS fight_breakdowns (\n  event_slug text NOT NULL,\n  fight_slug text NOT NULL,\n  fight_n integer,\n  card text,\n  slot text,\n  division text,\n  rounds integer,\n  a_name text,\n  b_name text,\n  lean text,\n  conf text,\n  tier text,\n  method text,\n  why text,\n  x_factor text,\n  edges jsonb,\n  odds jsonb,\n  stats jsonb,\n  links jsonb,\n  updated_at timestamptz NOT NULL DEFAULT now(),\n  PRIMARY KEY (event_slug, fight_slug)\n);\n";
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
   { id: "003_bet_tier", sql: BET_TIER_SQL },
+  { id: "004_fight_breakdowns", sql: FIGHT_BREAKDOWNS_SQL },
 ];

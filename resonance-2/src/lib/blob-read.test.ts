@@ -222,5 +222,6 @@ describe("blob reads", () => {
     assert.equal(BLOB_TAGS.fills, "resonance-blob-fills");
     assert.equal(BLOB_TAGS.calendar, "resonance-blob-calendar");
     assert.equal(BLOB_TAGS.fightResults, "resonance-blob-fight-results");
+    assert.equal(BLOB_TAGS.fightBreakdowns, "resonance-blob-fight-breakdowns");
   });
 });

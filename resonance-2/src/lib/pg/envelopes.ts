@@ -17,6 +17,12 @@ import {
   parseFillsEnvelope,
   type FillsStoreEnvelope,
 } from "@/lib/fills-store-core";
+import { breakdownFromColumns, type FightBreakdown } from "@/lib/fight-breakdowns";
+import {
+  BREAKDOWNS_STORE_VERSION,
+  createEmptyBreakdownsEnvelope,
+  type FightBreakdownsEnvelope,
+} from "@/lib/fight-breakdowns-store-core";
 import { sqlQuery } from "@/lib/pg/client";
 import type { SleevePrints } from "@/lib/sleeve-apply";
 
@@ -545,4 +551,121 @@ export async function saveFightResults(
     );
   }
   return counts;
+}
+
+function breakdownInstant(value: unknown): string | null {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString();
+  }
+  return null;
+}
+
+function jsonOrNull(value: unknown): string | null {
+  return value == null ? null : JSON.stringify(value);
+}
+
+type BreakdownSqlRow = {
+  event_slug: string;
+  fight_slug: string;
+  fight_n: unknown;
+  card: unknown;
+  slot: unknown;
+  division: unknown;
+  rounds: unknown;
+  a_name: unknown;
+  b_name: unknown;
+  lean: unknown;
+  conf: unknown;
+  tier: unknown;
+  method: unknown;
+  why: unknown;
+  x_factor: unknown;
+  edges: unknown;
+  odds: unknown;
+  stats: unknown;
+  links: unknown;
+  updated_at: unknown;
+};
+
+export async function loadFightBreakdowns(): Promise<FightBreakdownsEnvelope> {
+  const rows = await sqlQuery<BreakdownSqlRow>(
+    `SELECT event_slug, fight_slug, fight_n, card, slot, division, rounds,
+            a_name, b_name, lean, conf, tier, method, why, x_factor,
+            edges, odds, stats, links, updated_at
+       FROM fight_breakdowns
+      ORDER BY event_slug ASC, fight_slug ASC`,
+  );
+  const breakdowns: FightBreakdown[] = [];
+  let updatedAt = "";
+  for (const row of rows) {
+    const breakdown = breakdownFromColumns(row);
+    if (breakdown) breakdowns.push(breakdown);
+    const instant = breakdownInstant(row.updated_at);
+    if (instant && instant > updatedAt) updatedAt = instant;
+  }
+  if (breakdowns.length === 0) return createEmptyBreakdownsEnvelope();
+  return {
+    version: BREAKDOWNS_STORE_VERSION,
+    updatedAt: updatedAt || createEmptyBreakdownsEnvelope().updatedAt,
+    breakdowns,
+  };
+}
+
+export async function saveFightBreakdowns(envelope: FightBreakdownsEnvelope): Promise<void> {
+  for (const row of envelope.breakdowns) {
+    await sqlQuery(
+      `INSERT INTO fight_breakdowns (
+         event_slug, fight_slug, fight_n, card, slot, division, rounds,
+         a_name, b_name, lean, conf, tier, method, why, x_factor,
+         edges, odds, stats, links, updated_at
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $7,
+         $8, $9, $10, $11, $12, $13, $14, $15,
+         $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb, $20
+       )
+       ON CONFLICT (event_slug, fight_slug) DO UPDATE SET
+         fight_n = EXCLUDED.fight_n,
+         card = EXCLUDED.card,
+         slot = EXCLUDED.slot,
+         division = EXCLUDED.division,
+         rounds = EXCLUDED.rounds,
+         a_name = EXCLUDED.a_name,
+         b_name = EXCLUDED.b_name,
+         lean = EXCLUDED.lean,
+         conf = EXCLUDED.conf,
+         tier = EXCLUDED.tier,
+         method = EXCLUDED.method,
+         why = EXCLUDED.why,
+         x_factor = EXCLUDED.x_factor,
+         edges = EXCLUDED.edges,
+         odds = EXCLUDED.odds,
+         stats = EXCLUDED.stats,
+         links = EXCLUDED.links,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        row.eventSlug,
+        row.fightSlug,
+        row.fightN,
+        row.card,
+        row.slot,
+        row.division,
+        row.rounds,
+        row.aName,
+        row.bName,
+        row.lean,
+        row.conf,
+        row.tier,
+        row.method,
+        row.why,
+        row.xFactor,
+        JSON.stringify(row.edges),
+        jsonOrNull(row.odds),
+        jsonOrNull(row.stats),
+        jsonOrNull(row.links),
+        envelope.updatedAt,
+      ],
+    );
+  }
 }

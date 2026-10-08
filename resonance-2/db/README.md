@@ -46,6 +46,7 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `settlements` | `external_id` unique | History. The bet row still has the current status, payout, and realized P&L. |
 | `calendar_entries` | `id` | Lanes, catalysts, and fights (`kind = fight`, `lane` null). |
 | `fight_results` | `fight_slug` | Empty until PR #50. Bout clock is column `clock` and payload `time`. |
+| `fight_breakdowns` | `(event_slug, fight_slug)` | Per-fight lean, why, edges, stats, and odds. Any event slug. UFC 332 stays on its static files. |
 | `bet_corrections` | `(bet_id, version)` | Empty until a bet payload carries `correctionVersion`. |
 | `store_meta` | `domain` | Envelope `updated_at` and `seeded_at`. |
 | `fitness_metrics` | `(source, external_id)` unique | Daily health metrics. One row per source, metric, Chicago day, and unit. A re-sent day updates `qty`. |

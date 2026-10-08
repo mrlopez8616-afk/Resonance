@@ -105,6 +105,10 @@ export type DeskFight = {
   href?: string;
   segment: BoutSegment | null;
   bets: Bet[];
+  lean?: string;
+  conf?: string;
+  tier?: Bet["tier"] | null;
+  why?: string;
 };
 
 export type DeskEvent = {
