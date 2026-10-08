@@ -408,8 +408,56 @@ describe("login core", { concurrency: false }, () => {
       planAccess({ ...base, pathname: "/api/fitness/ingest", method: "POST", nextPath: "/api/fitness/ingest" }).kind,
       "allow",
     );
+    assert.equal(
+      planAccess({
+        ...base,
+        pathname: "/api/finance/snapshot",
+        method: "GET",
+        nextPath: "/api/finance/snapshot",
+        bearerOk: true,
+      }).kind,
+      "deny",
+    );
+    assert.equal(
+      planAccess({
+        ...base,
+        pathname: "/api/finance/snapshot",
+        method: "HEAD",
+        nextPath: "/api/finance/snapshot",
+        bearerOk: true,
+      }).kind,
+      "deny",
+    );
+    assert.equal(
+      planAccess({
+        ...base,
+        pathname: "/api/finance/snapshot",
+        method: "POST",
+        nextPath: "/api/finance/snapshot",
+      }).kind,
+      "allow",
+    );
+    assert.deepEqual(
+      planAccess({ ...base, pathname: "/n/finance", method: "GET", nextPath: "/n/finance" }),
+      { kind: "redirect", next: "/n/finance" },
+    );
+    assert.deepEqual(
+      planAccess({ ...base, pathname: "/n/finance/debt", method: "GET", nextPath: "/n/finance/debt" }),
+      { kind: "redirect", next: "/n/finance/debt" },
+    );
 
     const token = newSessionToken();
+    assert.equal(
+      planAccess({
+        ...base,
+        pathname: "/api/finance/snapshot",
+        method: "GET",
+        nextPath: "/api/finance/snapshot",
+        bearerOk: true,
+        sessionToken: token,
+      }).kind,
+      "allow-session",
+    );
     assert.equal(
       planAccess({
         ...base,
@@ -447,7 +495,7 @@ describe("login core", { concurrency: false }, () => {
     assert.equal(safeNextPath("/fights"), "/fights");
   });
 
-  it("applies 001 through 005 and 009 in order and still fills a gap", async () => {
+  it("applies 001 through 005, 008, and 009 in order and still fills a gap", async () => {
     assert.deepEqual(
       EMBEDDED_MIGRATIONS.map((migration) => migration.id),
       [
@@ -456,6 +504,7 @@ describe("login core", { concurrency: false }, () => {
         "003_bet_tier",
         "004_fight_breakdowns",
         "005_auth",
+        "008_finance",
         "009_reset_rh_agentic_sleeves",
       ],
     );
@@ -473,6 +522,28 @@ describe("login core", { concurrency: false }, () => {
     );
     const filled = await applyMigrations(EMBEDDED_MIGRATIONS);
     assert.deepEqual(filled.applied, ["004_fight_breakdowns"]);
+    assert.equal(filled.skipped.includes("005_auth"), true);
+    assert.equal(filled.skipped.includes("009_reset_rh_agentic_sleeves"), true);
+  });
+
+  it("applies 008 when 009 is already recorded", async () => {
+    setSqlClientForTests(memorySql());
+    const recorded = EMBEDDED_MIGRATIONS.filter((migration) => migration.id !== "008_finance");
+    const first = await applyMigrations(recorded);
+    assert.deepEqual(
+      first.applied,
+      [
+        "001_domain_tables",
+        "002_fitness",
+        "003_bet_tier",
+        "004_fight_breakdowns",
+        "005_auth",
+        "009_reset_rh_agentic_sleeves",
+      ],
+    );
+    const filled = await applyMigrations(EMBEDDED_MIGRATIONS);
+    assert.deepEqual(filled.applied, ["008_finance"]);
+    assert.equal(filled.skipped.includes("009_reset_rh_agentic_sleeves"), true);
     assert.equal(filled.skipped.includes("005_auth"), true);
   });
 

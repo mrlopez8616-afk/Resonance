@@ -71,6 +71,24 @@ CREATE TABLE IF NOT EXISTS auth_global_lockout (
 );
 `
 
+export const FINANCE_SCHEMA_SQL = `-- Encrypted finance snapshots. Aggregates only.
+-- Number 008 leaves 006 and 007 for other in-flight branches.
+-- The migrator applies this id when those numbers are absent.
+-- payload_enc, iv, and tag are AES-256-GCM (base64 text). Plaintext is not stored.
+
+CREATE TABLE IF NOT EXISTS finance_snapshots (
+  as_of date PRIMARY KEY,
+  schema_version integer NOT NULL,
+  sha256 text NOT NULL,
+  payload_enc text NOT NULL,
+  iv text NOT NULL,
+  tag text NOT NULL,
+  stored_at timestamptz NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS finance_snapshots_sha256_idx ON finance_snapshots (sha256);
+`;
+
 export const RESET_RH_AGENTIC_SLEEVES_SQL = `-- One-off data correction (2026-10-08): reset rh-agentic sleeve prints to
 -- Robinhood actual holdings after the 24-fill historical backfill stacked
 -- quantities onto sleeves that already matched. Fills are untouched.
@@ -94,5 +112,6 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "003_bet_tier", sql: BET_TIER_SQL },
   { id: "004_fight_breakdowns", sql: FIGHT_BREAKDOWNS_SQL },
   { id: "005_auth", sql: AUTH_SCHEMA_SQL },
+  { id: "008_finance", sql: FINANCE_SCHEMA_SQL },
   { id: "009_reset_rh_agentic_sleeves", sql: RESET_RH_AGENTIC_SLEEVES_SQL },
 ];

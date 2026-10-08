@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { FitnessGrid } from "@/components/fitness-grid";
 import { NodeGrid } from "@/components/node-grid";
 import { OperatorShell } from "@/components/operator-shell";
 import { PredictionsFloor } from "@/components/predictions-floor";
+import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
+import { loadFinancePage } from "@/lib/finance/store";
+import { financeCards } from "@/lib/finance/view";
 import { loadFitnessCards } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
@@ -50,6 +54,29 @@ export default async function ParentNodePage({
         storageDetail={floor.storageDetail ?? bankroll.storageDetail}
       >
         <PredictionsFloor ledger={bankroll.ledger} />
+      </OperatorShell>
+    );
+  }
+
+  if (parent.id === "finance") {
+    await requireRole("owner");
+    const finance = await loadFinancePage();
+    return (
+      <OperatorShell
+        storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
+      >
+        <Link href="/" className="calendar-back">
+          Floor
+        </Link>
+        {finance.status === "live" ? (
+          <FinanceFloor
+            asOf={finance.snapshot.asOf}
+            stale={finance.stale}
+            cards={financeCards(finance.snapshot)}
+          />
+        ) : finance.status === "waiting" ? (
+          <FinanceWaiting />
+        ) : null}
       </OperatorShell>
     );
   }

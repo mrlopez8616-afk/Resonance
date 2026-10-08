@@ -154,6 +154,132 @@ export function PredictionsVisual({
   );
 }
 
+export function CashFlowBars({
+  months,
+  wide = false,
+}: {
+  months: readonly { label: string; income: number; spend: number }[];
+  wide?: boolean;
+}) {
+  if (months.length === 0) return null;
+  const width = wide ? 320 : 168;
+  const height = wide ? 72 : 52;
+  const labelY = height - 4;
+  const baseline = wide ? 48 : 32;
+  const room = wide ? 40 : 26;
+  const max = Math.max(1, ...months.flatMap((month) => [month.income, month.spend]));
+  const slot = width / months.length;
+  return (
+    <div className="home-visual">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Income and spend by month">
+        {months.map((month, index) => {
+          const incomeH = Math.max((month.income / max) * room, month.income === 0 ? 1.5 : 2);
+          const spendH = Math.max((month.spend / max) * room, month.spend === 0 ? 1.5 : 2);
+          const group = index * slot;
+          const barW = slot * 0.28;
+          return (
+            <g key={`${month.label}-${index}`}>
+              <title>{month.label}</title>
+              <rect
+                x={group + slot * 0.16}
+                y={baseline - incomeH}
+                width={barW}
+                height={incomeH}
+                rx="1.2"
+                className="home-income"
+              />
+              <rect
+                x={group + slot * 0.52}
+                y={baseline - spendH}
+                width={barW}
+                height={spendH}
+                rx="1.2"
+                className="home-spend"
+              />
+              <text x={group + slot / 2} y={labelY} textAnchor="middle" className="home-tick">
+                {month.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+export function AmountBars({
+  points,
+  label,
+}: {
+  points: readonly { label: string; amount: number }[];
+  label: string;
+}) {
+  if (points.length === 0) return null;
+  const width = 320;
+  const height = 72;
+  const max = Math.max(1, ...points.map((point) => Math.abs(point.amount)));
+  const slot = width / points.length;
+  const room = 40;
+  return (
+    <div className="home-visual">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
+        {points.map((point, index) => {
+          const heightPx = Math.max((Math.abs(point.amount) / max) * room, point.amount === 0 ? 1.5 : 2);
+          const x = index * slot + slot * 0.28;
+          return (
+            <g key={`${point.label}-${index}`}>
+              <title>{point.label}</title>
+              <rect
+                x={x}
+                y={48 - heightPx}
+                width={slot * 0.44}
+                height={heightPx}
+                rx="1.2"
+                className="home-spend"
+              />
+              <text x={index * slot + slot / 2} y={68} textAnchor="middle" className="home-tick">
+                {point.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+export function AmountLine({
+  points,
+  label,
+}: {
+  points: readonly { label: string; amount: number }[];
+  label: string;
+}) {
+  if (points.length < 2) return null;
+  const width = 320;
+  const height = 72;
+  const values = points.map((point) => point.amount);
+  const { min, max } = scale(values, values[0] ?? 0);
+  const span = max - min || 1;
+  const xAt = (index: number) => (index / (points.length - 1)) * width;
+  const yAt = (value: number) => 48 - ((value - min) / span) * 40;
+  const line = points
+    .map((point, index) => `${index === 0 ? "M" : "L"}${xAt(index).toFixed(2)} ${yAt(point.amount).toFixed(2)}`)
+    .join(" ");
+  return (
+    <div className="home-visual">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
+        <path d={line} className="home-bankroll-line" />
+        {points.map((point, index) => (
+          <text key={`${point.label}-${index}`} x={xAt(index)} y={68} textAnchor="middle" className="home-tick">
+            {point.label}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function BankrollLine({ points }: { points: readonly number[] }) {
   const width = 160;
   const height = 28;

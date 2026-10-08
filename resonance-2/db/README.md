@@ -16,7 +16,7 @@ npm run db:replay -- --file outage.json --dry-run
 npm run db:replay -- --file outage.json
 ```
 
-`db:migrate` applies the embedded migration list in array order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips ids already listed in `schema_migrations`. The id is the file name without `.sql`. A gap is allowed: `005_auth` applies when `004` is not in the list, and a later deploy that adds `004` applies only that missing id. Applied rows are not reordered.
+`db:migrate` applies the embedded migration list in array order. Each file uses `IF NOT EXISTS` (the operator-log view is created only when it is missing). A second run skips ids already listed in `schema_migrations`. The id is the file name without `.sql`. A gap is allowed: `005_auth` applies when `004` is not in the list, `008_finance` applies when `006` and `007` are absent, and `008_finance` still applies when `009_reset_rh_agentic_sleeves` is already recorded. A later deploy that adds a missing id applies only that id. Applied rows are not reordered.
 
 Production builds run that same migrator before `next build` (`npm run prebuild`) when `VERCEL_ENV` is `production` and `DATABASE_URL` is set. Preview and local builds skip it, because preview deployments share the production database. `POST /api/storage/migrate` with `Authorization: Bearer $RESONANCE_SYNC_SECRET` runs it on demand. The SQL lives in the server bundle (`src/lib/pg/embedded-migrations.ts`). Runtime does not read `db/migrations` from disk. The files stay the reviewed source, and a test checks the constants match them. The first fitness read runs the embedded fitness DDL when `fitness_metrics` is missing, then upserts the manual day, so a preview can show that day before the production deploy. A failed fitness read is logged and the page still renders.
 
@@ -56,6 +56,7 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `auth_passkeys` | `credential_id` | Optional WebAuthn credentials. |
 | `auth_login_attempts` | `ip_hash`, `failed_at` | Failed sign-in attempts. The address is hashed. |
 | `auth_global_lockout` | `id` = 1 | Shared backoff after repeated failures. |
+| `finance_snapshots` | `as_of` date | Encrypted aggregate snapshot. AES-256-GCM in `payload_enc`, `iv`, and `tag`. Last 30 rows. No Blob copy. |
 
 Seeds still merge on read: missing seed ids are inserted, and a row already stored under that id or order id is left alone.
 
@@ -67,7 +68,7 @@ Money (bank and card transactions) and fitness (runs, steps, lifts) are new tabl
 
 Copy this shape:
 
-- One table per stream. Fitness is two streams, because Health Auto Export posts metrics and workouts separately: `fitness_metrics` (steps, active energy, heart rate, resting heart rate, walking + running distance) and `fitness_workouts` (runs and strength, distinguished by workout name). Money stays a later table: `money_transactions`.
+- One table per stream. Fitness is two streams, because Health Auto Export posts metrics and workouts separately: `fitness_metrics` (steps, active energy, heart rate, resting heart rate, walking + running distance) and `fitness_workouts` (runs and strength, distinguished by workout name). Finance is one encrypted snapshot table, `finance_snapshots`, not a transaction stream.
 - `source text not null` and `external_id text not null`, unique together. That pair is the idempotent ingest key. Re-posting the same source and external id is a no-op.
 - `timestamptz` for when it happened. `numeric` for amounts. Never `float`.
 - `payload jsonb` for the rest of the row.

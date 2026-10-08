@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { FinanceDetail } from "@/components/finance-detail";
+import { FinanceWaiting } from "@/components/finance-floor";
 import { FitnessDetail } from "@/components/fitness-detail";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
 import { BankrollLedgerView } from "@/components/predictions-floor";
 import { ValueCard } from "@/components/value-card";
 import { OperatorShell } from "@/components/operator-shell";
+import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
+import { loadFinancePage, readFinanceNetWorthSeries } from "@/lib/finance/store";
+import { financeDetail, financeNode } from "@/lib/finance/view";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
@@ -34,6 +39,11 @@ export async function generateMetadata({
     if (moved) permanentRedirect(moved);
   }
   const parent = parentById(parentId);
+  if (parent?.id === "finance") {
+    const node = financeNode(nodeId);
+    const title = node ? `${node.title} · ${parent.label}` : "Node";
+    return { title: `${title} · Resonance 2.0` };
+  }
   if (parent?.id === "fitness") {
     const node = FITNESS_NODES.find((item) => item.id === nodeId);
     const title = node ? `${node.title} · ${parent.label}` : "Node";
@@ -63,6 +73,27 @@ export default async function NodeDetailPage({
     if (moved) permanentRedirect(moved);
   }
   const parent = parentById(parentId);
+  if (parent?.id === "finance") {
+    await requireRole("owner");
+    if (!financeNode(nodeId)) notFound();
+    const finance = await loadFinancePage();
+    const series = finance.status === "live" ? await readFinanceNetWorthSeries() : [];
+    const detail = finance.status === "live" ? financeDetail(finance.snapshot, nodeId, series) : null;
+    return (
+      <OperatorShell
+        storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
+      >
+        <Link href={`/n/${parent.id}`} className="calendar-back">
+          {parent.label}
+        </Link>
+        {finance.status === "live" && detail ? (
+          <FinanceDetail detail={detail} asOf={finance.snapshot.asOf} stale={finance.stale} />
+        ) : finance.status === "waiting" ? (
+          <FinanceWaiting />
+        ) : null}
+      </OperatorShell>
+    );
+  }
   if (parent?.id === "fitness") {
     const [floor, fitness] = await Promise.all([
       loadOperatorFloor(),

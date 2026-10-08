@@ -28,6 +28,7 @@ import {
   type HomeQuote,
   type PredictionsHomeFacts,
 } from "@/lib/home-lines";
+import type { FinanceHomeFace } from "@/lib/finance/view";
 import type { StepSlot, TierSegment } from "@/lib/home-visuals";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
 
@@ -84,6 +85,7 @@ export function ParentGrid({
   stepSlots = null,
   tierBar = null,
   bankrollLine = null,
+  financeHome = null,
   asOf,
 }: {
   faceTotals: FaceTotals;
@@ -103,6 +105,8 @@ export function ParentGrid({
   stepSlots?: readonly StepSlot[] | null;
   tierBar?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
+  /** Owner snapshot only. Null keeps the static private label. */
+  financeHome?: FinanceHomeFace | null;
   /** Render instant. Quote age is measured from this, so server and client agree. */
   asOf: string;
 }) {
@@ -131,16 +135,31 @@ export function ParentGrid({
         });
         if (parent.id === "finance") {
           return (
-            <NodeSquare key={parent.id} parent home live label={parent.label}>
+            <NodeSquare
+              key={parent.id}
+              parent
+              home
+              live={financeHome !== null}
+              dashed={financeHome === null}
+              label={parent.label}
+            >
               <Link
                 href={parentCardHref(parent.id)}
                 className="node-log-link"
                 title={`Open ${parent.label}`}
               >
-                <div className="live-face parent-face">
-                  <h2 className="node-ticker">{parent.label}</h2>
-                  <p className="live-units finance-status">{FINANCE_HOME_LABEL}</p>
-                </div>
+                {financeHome ? (
+                  <ValueCard
+                    ticker={parent.label}
+                    compact
+                    model={{ headline: financeHome.headline, priceLine: financeHome.asOfLine, label: null }}
+                  />
+                ) : (
+                  <div className="live-face parent-face">
+                    <h2 className="node-ticker">{parent.label}</h2>
+                    <p className="live-units finance-status">{FINANCE_HOME_LABEL}</p>
+                  </div>
+                )}
               </Link>
             </NodeSquare>
           );
