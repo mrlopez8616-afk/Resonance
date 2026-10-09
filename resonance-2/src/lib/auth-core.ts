@@ -35,6 +35,7 @@ export const READ_ROUTES = [
   "GET /api/portfolio-mood",
   "GET /api/fights/breakdown?event=",
   "GET /api/build/items",
+  "GET /api/lessons",
 ] as const;
 
 export const MACHINE_ROUTES = [
@@ -49,6 +50,8 @@ export const MACHINE_ROUTES = [
   "POST /api/fights/breakdown",
   "POST /api/build/items",
   "PATCH /api/build/items",
+  "POST /api/lessons",
+  "PATCH /api/lessons",
 ] as const;
 
 const SESSION_TOKEN = /^[A-Za-z0-9_-]{43}$/;

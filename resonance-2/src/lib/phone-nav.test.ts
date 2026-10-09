@@ -103,6 +103,15 @@ describe("phone back targets", () => {
       href: "/n/fight-desk",
       label: "Fight Desk",
     });
+
+    assert.deepEqual(phoneTrail("/n/lessons"), {
+      back: { href: "/", label: "Home" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/lessons", label: "Lessons" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/lessons/extra").back, { href: "/", label: "Home" });
   });
 
   it("sends an unknown route home", () => {
@@ -164,6 +173,8 @@ describe("phone tabs", () => {
     );
     assert.equal(phoneTabActive("/", "/"), true);
     assert.equal(phoneTabActive("/", "/n/ai-stocks/nvda"), true);
+    assert.equal(phoneTabActive("/", "/n/lessons"), true);
+    assert.equal(phoneTabActive("/n/build", "/n/lessons"), false);
     assert.equal(phoneTabActive("/", "/fights/ufc"), true);
     assert.equal(phoneTabActive("/", "/n/build"), false);
     assert.equal(phoneTabActive("/n/build", "/n/build"), true);

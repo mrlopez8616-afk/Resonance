@@ -1,0 +1,654 @@
+[
+  {
+    "id": "LL-001",
+    "date": "2026-09-11",
+    "title": "Decisions get recorded, never backfilled",
+    "category": "build process",
+    "what_changed": "A decision log started on day one. Every entry carries the question, the options, the founder's decision, the rationale, the evidence, and a review trigger. Anything Andres hasn't decided stays marked Pending.",
+    "why": "The log template says: 'Never backfill a decision he did not make.' No other reason is recorded.",
+    "lesson": "A system is only as trustworthy as its record of who decided what. Recording 'pending' honestly beats filling the gap.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/resonance/day1/03_decision_log.md"
+    ]
+  },
+  {
+    "id": "LL-002",
+    "date": "2026-09-11",
+    "title": "XRP is the treasury, and the principal is untouchable",
+    "category": "money rules",
+    "what_changed": "The XRP held in the Xaman wallet / Flare vault was set as the Resonance treasury. The principal stays put, and only the rewards it earns fund the other nodes and the builds.",
+    "why": "Andres stated it as founder intent on day one, and the log notes it 'aligns with the principal-retention rule'.",
+    "lesson": "Decide which money is the engine and which is the fuel. Protecting the engine keeps the whole system alive.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/resonance/day1/03_decision_log.md",
+      "/workspace/resonance/from-scratch/00_founder_vision.md"
+    ]
+  },
+  {
+    "id": "LL-003",
+    "date": "2026-09-11",
+    "title": "Agentic charter locked: confirm first, with risk caps",
+    "category": "approvals/autonomy",
+    "what_changed": "The first rules for the Robinhood Agentic account were locked as written: confirm every trade first, cap any single name and the AI cluster, limit risk per entry and daily loss, keep a cash buffer, and no options or shorts. A weekly review runs with the hub.",
+    "why": "Andres accepted Robinhood Ops' draft defaults for the Phase Zero risk sleeve.",
+    "lesson": "Start with tight guardrails, then loosen them only once there's evidence.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/resonance/decisions/2026-09-11_lock_agentic_charter.md"
+    ]
+  },
+  {
+    "id": "LL-004",
+    "date": "2026-09-11",
+    "title": "Same day: full autonomy on Agentic, with hard boundaries",
+    "category": "approvals/autonomy",
+    "what_changed": "Robinhood Ops was unlocked to trade the Agentic account without per-trade approval, and the charter caps were suspended. These stayed absolute: trading on Agentic only, the Main account read-only, and the Xaman/Flare treasury principal untouchable. The hub can revoke it.",
+    "why": "The decision file records an 'aggressive mandate; not scared; willing to let agent execute without approve loop'.",
+    "lesson": "Autonomy came before trust was earned. The 9/15 reversal and the 9/29 rotation later pulled it back to 'nothing trades without Andres's yes'.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/resonance/decisions/2026-09-11_unlock_agentic_full_autonomy.md",
+      "/workspace/resonance/playbooks/2026-09-12_resonance_operating_playbook.md"
+    ]
+  },
+  {
+    "id": "LL-005",
+    "date": "2026-09-11",
+    "title": "First lock on the site: a password gate",
+    "category": "security/privacy",
+    "what_changed": "The site got its first lock, a password gate added as a direct change with no PR.",
+    "why": "Founder's call.",
+    "lesson": "Security started on day one, then got upgraded as the site began holding more (see the Oct 8 login).",
+    "public_safe": true,
+    "sources": [
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-006",
+    "date": "2026-09-12",
+    "title": "Chain-mimic recording: act as if it's already on-chain",
+    "category": "build process",
+    "what_changed": "Every serious entry records the proposal, why, who authorized it, the outcome, and a receipt with timestamps. 'Queued is not filled.' Key decisions got testnet stamps (Hedera, mirrored to XRPL).",
+    "why": "The playbook rule is to 'treat Web2 Resonance as if already on-chain: same fields, same receipts, same rules', because 'software can be copied, the living trail cannot.'",
+    "lesson": "Build the record model first in plain Web2, so moving on-chain later is a copy and not a redesign.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/resonance/playbooks/2026-09-12_resonance_operating_playbook.md",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-007",
+    "date": "2026-09-12",
+    "title": "Public shows the system, private keeps the amounts",
+    "category": "content",
+    "what_changed": "The media node exists to teach the OS. Public content shows the architecture, the nodes, and the receipts that prove the system, not position sizes. Treasury detail stays private, and amounts are private by default.",
+    "why": "The playbook models the channel on transparency about the build, not the bag.",
+    "lesson": "Decide early what's content and what's private. That decision later shaped Public mode.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/resonance/playbooks/2026-09-12_resonance_operating_playbook.md"
+    ]
+  },
+  {
+    "id": "LL-008",
+    "date": "2026-09-13",
+    "title": "A dedicated builder agent takes over site builds",
+    "category": "build process",
+    "what_changed": "Architect, the site builder, came online along with the Resonance Factory build chat. The 8:00 AM weekday build routine has been failing since mid-September, and builds now go through Architect.",
+    "why": "Founder's call.",
+    "lesson": "Give building its own specialist instead of a scheduled script.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-009",
+    "date": "2026-09-15",
+    "title": "The agent's buys were undone by hand, and the approval lesson came from it",
+    "category": "approvals/autonomy",
+    "what_changed": "The agent's first stock buys (filled 9/14) were sold by Andres by hand the next day. Robinhood Ops later recorded the lesson: don't trade without his explicit yes.",
+    "why": "Andres's reason for reversing the buys is not recorded. Lesson recorded in learnings.md on 2026-10-08.",
+    "lesson": "When the founder overrides the agent, that's a signal to tighten approvals, not to argue the trade.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/robinhood-ops/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-010",
+    "date": "2026-09-18",
+    "title": "Phone control room, with no invisible approvals",
+    "category": "approvals/autonomy",
+    "what_changed": "Andres described Resonance as a phone control room. Approvals keep coming while he's away, a trusted human operator can clear real-world steps, and he sees the same approval queue, so nothing is invisible.",
+    "why": "His stated goal: bots do the work, and he sees everything and approves the real moves in one place.",
+    "lesson": "Design approvals around where the founder actually is, which is on his phone.",
+    "public_safe": true,
+    "sources": [
+      "hub memory (user-memory log / hub memory notes)",
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)"
+    ]
+  },
+  {
+    "id": "LL-011",
+    "date": "2026-09-19",
+    "title": "Every value transfer updates Resonance",
+    "category": "data integrity",
+    "what_changed": "A standing rule went in: every value transfer on Robinhood and Coinbase updates Resonance (an operator log entry plus the position face), not just one-off trades. Idempotent RH + Coinbase fill ingest shipped (#26), so trades log themselves and never double-count. Manual DeFi/Flare stays founder-reported.",
+    "why": "Andres locked it so the record covers every move, not only planned Monday trades. A more detailed reason is not recorded.",
+    "lesson": "If logging is manual, it gets skipped. Make it automatic and idempotent.",
+    "public_safe": true,
+    "sources": [
+      "hub memory (user-memory log / hub memory notes)",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md",
+      "/workspace/briefs/2026-09-29/build-map.md"
+    ]
+  },
+  {
+    "id": "LL-012",
+    "date": "2026-09-19",
+    "title": "Build doctrine: safety first, cabinet first",
+    "category": "build process",
+    "what_changed": "For the auto-logging brick, Andres reaffirmed: safety first, cabinet first. Reuse proven scripts and patterns, and don't start from scratch or thin-cut for speed. Each brick gets a cabinet note in the repo with what it does, what it doesn't touch, and what's forbidden.",
+    "why": "Founder's call.",
+    "lesson": "Speed comes from reuse, not shortcuts. Written 'does not touch' lists keep bricks from colliding.",
+    "public_safe": true,
+    "sources": [
+      "hub memory (user-memory log / hub memory notes)",
+      "repo resonance-2/cabinet/*.md"
+    ]
+  },
+  {
+    "id": "LL-013",
+    "date": "2026-09-19",
+    "title": "Delete means hide, never wipe",
+    "category": "data integrity",
+    "what_changed": "Every floor node asks for confirmation before it's removed (#28). Delete only hides the square, the + button restores it, and no data files, sleeves, or broker positions are touched.",
+    "why": "The cabinet note says 'No one-click wipe' and 'Do not start deleting data files when a square is hidden.' No incident is recorded.",
+    "lesson": "Separate display actions from data actions, so a UI tap can never destroy records.",
+    "public_safe": true,
+    "sources": [
+      "repo resonance-2/cabinet/floor-nodes.md",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-014",
+    "date": "2026-09-19",
+    "title": "Node faces: tokens first, price primary (later reversed)",
+    "category": "design",
+    "what_changed": "The live node face doctrine (#27): label units as 'tokens' and show the live price as the main number, not the total.",
+    "why": "Founder's call.",
+    "lesson": "This was the first take on the node face. It was flipped to value-first by Oct 7, which shows design rules can evolve as needs get clearer.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/briefs/2026-09-29/build-map.md"
+    ]
+  },
+  {
+    "id": "LL-015",
+    "date": "2026-09-25",
+    "title": "Drill-deeper doctrine",
+    "category": "design",
+    "what_changed": "Locked: every lit node drills deeper on click. This later became the rule that the home page shows only the parent nodes (Crypto, AI Stocks, Fitness, Finance, Fight Desk, live Oct 6, #54), and each page shows only its child nodes as cards.",
+    "why": "Founder's call.",
+    "lesson": "One level at a time keeps a growing system readable on a phone.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/briefs/2026-10-01/build-map.md",
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "repo resonance-2/AGENTS.md",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-016",
+    "date": "2026-09-25",
+    "title": "The Daily Brief gets a rhythm and writes itself onto the calendar",
+    "category": "build process",
+    "what_changed": "The Daily Brief moved to its 7:02 AM format starting Sep 28. A 7:40 AM cadence routine was added, and from Sep 30 the brief writes itself onto the operating calendar.",
+    "why": "Founder's call.",
+    "lesson": "Routines should leave a trace in the system, not just in chat.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-017",
+    "date": "2026-09-29",
+    "title": "Doctrine locks: the vault stays manual, and the house style is set",
+    "category": "security/privacy",
+    "what_changed": "Recorded as 'do not propose' locks: the Flare vault stays fully manual, with no live chain read and no wallet address on Resonance. The one-time Monday SUI to six-AI split is not re-armed. Calendar lanes scale by adding types, not by redesigning. The site style is white with Coinbase-like Inter, with Resonance red where Coinbase uses blue.",
+    "why": "Founder's call.",
+    "lesson": "Writing down what not to propose saves every future build from relitigating settled questions.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/briefs/2026-09-29/build-map.md"
+    ]
+  },
+  {
+    "id": "LL-018",
+    "date": "2026-10-07",
+    "title": "The team gets a chain of command, and every approval runs through the hub",
+    "category": "approvals/autonomy",
+    "what_changed": "A team briefing set the structure. Sophia Luna (the hub) routes every approval, trade yes, merge, and publish. Robinhood Ops is the only trader, with Crypto Desk and AI Stocks Desk reporting to it, and Fight Desk, Fitness Coach, Finance Desk, YouTube Studio, and Architect each own a node. Rule: no money moves, trades, bets, posts, or merges without Andres's yes. The one planned exception, Full Discretion mode, is not active.",
+    "why": "The goal is a phone control room where bots do the work and he approves the real moves in one place.",
+    "lesson": "One door for approvals means one place to look, and no bot acting on its own.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-019",
+    "date": "2026-10-07",
+    "title": "Live, real data only",
+    "category": "data integrity",
+    "what_changed": "Codified for every bot: never invent numbers, quotes, links, or results, and label guesses as guesses. Gaps get shown as gaps.",
+    "why": "It's a briefing rule for all bots, and the research briefs already carried it by Oct 1 ('No invented numbers/incidents'). No specific incident is recorded.",
+    "lesson": "An honest gap is worth more than a confident guess. This rule later drove 'entry unknown' on the lots tables.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "/workspace/briefs/2026-10-01/systems-thesis.md"
+    ]
+  },
+  {
+    "id": "LL-020",
+    "date": "2026-10-07",
+    "title": "Value first on value nodes",
+    "category": "design",
+    "what_changed": "The design rule flipped: on value nodes, the dollar value goes on top, with the live price smaller underneath. A parent's number is the sum of its children's real values, and a missing child is called out (for example 'value of 4 of 6').",
+    "why": "Founder's call.",
+    "lesson": "This reversed the Sep 19 tokens-first face. What you own matters more than the ticker price.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "repo resonance-2/AGENTS.md"
+    ]
+  },
+  {
+    "id": "LL-021",
+    "date": "2026-10-07",
+    "title": "Copy rules for anything public",
+    "category": "content",
+    "what_changed": "Public copy never mentions his military or law-enforcement background, never uses 'building in public' phrasing, has no money talk unless he asks, and carries 'Not financial advice' on market content.",
+    "why": "Founder's call.",
+    "lesson": "Set the public voice before the first episode, not after.",
+    "public_safe": false,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)"
+    ]
+  },
+  {
+    "id": "LL-022",
+    "date": "2026-10-07",
+    "title": "Fights: stick with the original picks",
+    "category": "Fight Desk",
+    "what_changed": "Briefing rule: stick with the original picks, with no padding and no late swaps.",
+    "why": "No reason is recorded in the briefing. Fight Desk's Oct 8 review later backed it up: add-ons and late swaps went 0-3 and drove most of the all-time loss.",
+    "lesson": "Second-guessing mid-card is where the losses came from, not the picks.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "/workspace/fight-desk/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-023",
+    "date": "2026-10-07",
+    "title": "Andres doesn't do hands-on setup",
+    "category": "build process",
+    "what_changed": "Andres doesn't paste SQL or work in dashboards. If something needs a manual step, the hub handles it.",
+    "why": "Founder's call.",
+    "lesson": "The system should absorb the setup work, so the founder only makes decisions.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)"
+    ]
+  },
+  {
+    "id": "LL-024",
+    "date": "2026-10-07",
+    "title": "Private data stays private, and secrets stay secret",
+    "category": "security/privacy",
+    "what_changed": "Finance numbers go only to the hub in a DM, never to group chats or public pages. Tokens are never printed, pasted, or logged, and write tokens are read fresh from a protected file because an environment copy can go stale.",
+    "why": "Founder's call.",
+    "lesson": "Privacy and secret handling are rules every bot inherits, not per-task choices.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)"
+    ]
+  },
+  {
+    "id": "LL-025",
+    "date": "2026-10-08",
+    "title": "Rule 9: know the whole picture before making anything new",
+    "category": "build process",
+    "what_changed": "Before any new pick, report, plan, or build, every bot reviews all the prior data in its area and keeps a running learnings.md, updated after each outcome with what worked, what didn't, and the adjustment.",
+    "why": "Andres added it on Oct 8. The first learnings reviews showed repeated patterns (a trading chase, stake-size losses, guessed page structures) that a look back would have caught.",
+    "lesson": "A system gets smarter only if each pass reads the last one. This node itself grows out of Rule 9.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "/workspace/robinhood-ops/learnings.md",
+      "/workspace/fight-desk/learnings.md",
+      "/workspace/architect/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-026",
+    "date": "2026-10-08",
+    "title": "No chasing, and fewer, bigger-reason trades",
+    "category": "money rules",
+    "what_changed": "After reviewing every Agentic trade: no buying any coin after a 20%+ day, no rotating between peer coins, limit orders only, and any rotation's expected edge has to clear the round-trip cost. New deposits sit in cash until a plan entry triggers.",
+    "why": "The 9/29 rotation into HBAR and XLM came the day after a big HBAR jump. That was chasing, and it produced all of the realized loss. 16 market-order trades in 22 days also gave up spread on every round trip.",
+    "lesson": "Momentum isn't a plan, and turnover has a cost before the price even moves.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/robinhood-ops/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-027",
+    "date": "2026-10-08",
+    "title": "Founder hold",
+    "category": "money rules",
+    "what_changed": "At 12:08 PM CT: nothing sells, no risk cuts, no rotations until Andres orders it. On Oct 9 it was lifted only for the ordered 8-ticker rebuild and stays in force otherwise.",
+    "why": "No reason is recorded. Context from that morning: the account had crossed the draft plan's drawdown review line, and Robinhood Ops was flagging risk-cut proposals.",
+    "lesson": "The founder can freeze the machine with one word, and the freeze outranks every plan line.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/robinhood-ops/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-028",
+    "date": "2026-10-08",
+    "title": "Build budget: one build per change",
+    "category": "build process",
+    "what_changed": "Vercel's free plan allows 100 deployments a day, and Oct 8 hit the cap. Now only production builds run, previews are off, and the two unused copies shouldn't auto-build. Each PR is verified with local tests and next build, then pushed once at the end. No upgrade, no spend.",
+    "why": "Every push was building three projects, previews included, and the cap was hit at #67, which delayed the fitness sync token going live.",
+    "lesson": "Treat compute like money. Verify locally and ship once.",
+    "public_safe": true,
+    "sources": [
+      "/home/box/agent-data/shared/RESONANCE_BRIEFING.md (Oct 7 team briefing)",
+      "/workspace/architect/learnings.md",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-029",
+    "date": "2026-10-08",
+    "title": "Historical fills carry a backfill flag",
+    "category": "data integrity",
+    "what_changed": "Any historical fill posted to the site must include backfill: true, so it's logged without touching the position books. Only live new fills move positions. Never run the storage import route casually.",
+    "why": "A backfill of old fills re-applied position changes on top of already-correct books and overstated the Agentic positions. Migration 009 reset them to the broker's actuals.",
+    "lesson": "Logging history and changing positions are two different actions. Make them two different switches.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/robinhood-ops/learnings.md",
+      "/workspace/architect/learnings.md",
+      "repo resonance-2/cabinet/fill-ingest.md"
+    ]
+  },
+  {
+    "id": "LL-030",
+    "date": "2026-10-08",
+    "title": "Login: password plus a 6-digit code",
+    "category": "security/privacy",
+    "what_changed": "A password plus a 6-digit authenticator code now locks the whole site, with a 30-day session (#60). Only the owner can sign in, and a second person would be a database row, not a new screen.",
+    "why": "Founder's call.",
+    "lesson": "Lock the door before you put the valuables in.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/build-history/resonance-build-history-2026-10-08.md",
+      "repo resonance-2/AGENTS.md",
+      "/workspace/architect/finance-node-plan.md"
+    ]
+  },
+  {
+    "id": "LL-031",
+    "date": "2026-10-08",
+    "title": "Private Finance node: encrypted, owner-only, aggregates only",
+    "category": "security/privacy",
+    "what_changed": "Five Finance cards shipped (#64). Data arrives as one daily encrypted snapshot of aggregates only, through its own write token. Reads work only with a logged-in session, never a bot token, and the full transaction history stays on the box.",
+    "why": "The plan: a separate token 'so a leaked bot token can't overwrite finances', and keeping bank-connection keys off the website so it's not a second integration to maintain.",
+    "lesson": "Design so a single leak can't expose or overwrite the most sensitive data.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/architect/finance-node-plan.md",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-032",
+    "date": "2026-10-08",
+    "title": "Architect's brief standard: exact page tree and screenshots",
+    "category": "build process",
+    "what_changed": "Every build brief now restates the exact page tree and requires screenshots of every level, value-first and drill-down, with empty lines hidden, no zero-dollar placeholders, and a 390px phone screenshot. Architect self-reviews screenshots and the diff before reporting.",
+    "why": "On #56 the first pass guessed the structure, and Andres had to click-test and correct it. Self-review caught bugs on #57 and #58 before the hub saw them.",
+    "lesson": "Don't make the founder be QA. Show every level before asking for a yes.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/architect/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-033",
+    "date": "2026-10-08",
+    "title": "Fight Desk betting doctrine: stake discipline over picks",
+    "category": "Fight Desk",
+    "what_changed": "Current weighting: flat, minimal stakes and one ticket per fight, with no add-ons or doubling down. Favorites the plan rates 65%+ are the core. Underdogs need a written reason and the smallest stake. Respect the hub lean. No Contender Series bets without a breakdown. Vegas 122 (Oct 10) starts a data-only track record of minimum-size tickets.",
+    "why": "The review of every settled ticket showed the picks won more often than the prices implied, but losses came from big stakes, underdogs, add-ons, and going against the hub lean. Earlier history showed the same pattern.",
+    "lesson": "The money was lost on stake size, not on bad picks. Bankroll management beats handicapping.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/fight-desk/learnings.md",
+      "/workspace/ufc-oct10/breakdowns.md"
+    ]
+  },
+  {
+    "id": "LL-034",
+    "date": "2026-10-08",
+    "title": "Fight cards run in bout order",
+    "category": "Fight Desk",
+    "what_changed": "Fight cards now run from the opener to the main event (#62). Every breakdown must carry its bout order, and the posting script refuses without it. Predictions was renamed back to Fight Desk.",
+    "why": "Founder's call.",
+    "lesson": "Match the order viewers actually experience the card in.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/build-history/resonance-build-history-2026-10-08.md",
+      "/workspace/fight-desk/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-035",
+    "date": "2026-10-08",
+    "title": "Fitness: the larger daily total wins",
+    "category": "fitness",
+    "what_changed": "For the iPhone Shortcuts fitness feed, the larger daily total wins when the same day is sent twice. Steps, distance, and calories sync nightly, and Activity was renamed Steps (#61).",
+    "why": "Founder's call.",
+    "lesson": "Re-sends shouldn't be able to shrink a day's real activity.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/architect/learnings.md",
+      "/workspace/build-history/resonance-build-history-2026-10-08.md"
+    ]
+  },
+  {
+    "id": "LL-036",
+    "date": "2026-10-09",
+    "title": "Core AI node goes to 8 equal tickers",
+    "category": "money rules",
+    "what_changed": "The AI node was rebuilt from 6 to 8 at about equal weight: PWR, VRT, GEV, CEG, NVDA, TSM, TSLA, SPCX. ETN and HUBB were dropped, NVDA and TSM were funded by a small XRP trim, and TSLA and SPCX by the ETN/HUBB proceeds. These were one-time exceptions to the hold, ordered by Andres in chat.",
+    "why": "He added NVDA and TSM to the AI infrastructure core, and swapped ETN and HUBB (which overlap the electrical gear PWR and GEV already cover) for the 'who wins' pair, TSLA and SPCX.",
+    "lesson": "Cut overlap, add coverage, and keep the weights equal so no single name dominates.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/robinhood-ops/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-037",
+    "date": "2026-10-09",
+    "title": "XRP is the engine, and payouts split evenly across 9 nodes",
+    "category": "money rules",
+    "what_changed": "Capital plan: XRP is the treasury and engine. Any future treasury payout for new investing splits evenly across 9 nodes, SUI plus the 8 AI tickers. Every move still needs Andres's go.",
+    "why": "Andres set it via the hub on Oct 9. A further reason is not recorded.",
+    "lesson": "A fixed split rule turns every payout into a decision that's already made.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/robinhood-ops/learnings.md",
+      "/workspace/architect/system-map-spec.md"
+    ]
+  },
+  {
+    "id": "LL-038",
+    "date": "2026-10-09",
+    "title": "The money-flow architecture",
+    "category": "money rules",
+    "what_changed": "Checking buys XRP on Coinbase, and the XRP goes to the Xaman wallet as the treasury (transfers in and out stay manual). Payouts come back to Coinbase, where the SUI share is bought and the rest goes wallet to wallet to Robinhood Agentic for the 8 AI nodes.",
+    "why": "Each venue does what it's best at: Robinhood is the one that can buy the stocks, and SUI on Coinbase can earn staking rewards. Having both also allows price shopping and a backup if one venue goes down.",
+    "lesson": "Map the money path before automating it, and keep the vault step manual.",
+    "public_safe": true,
+    "sources": [
+      "hub chat with Andres, Oct 9",
+      "/workspace/architect/system-map-spec.md"
+    ]
+  },
+  {
+    "id": "LL-039",
+    "date": "2026-10-09",
+    "title": "Coinbase Agentic becomes its own tracked account",
+    "category": "data integrity",
+    "what_changed": "A cb-agentic book was added (#75): Coinbase-only, XRP and SUI, and its own line on the XRP and SUI pages. It was seeded with the transferred XRP at entry unknown. The two Coinbase Default SUI buys were backfilled as real lots, and the Default portfolio's XRP is not a line.",
+    "why": "A read-only Coinbase audit found an Agentic portfolio already existed, funded by transfer with no fills, and that SUI's real buys had never been logged.",
+    "lesson": "Audit what exists before building, and give each account its own clean book.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/coinbase/audit-2026-10-09.md",
+      "repo resonance-2/cabinet/fill-ingest.md",
+      "hub chat with Andres, Oct 9"
+    ]
+  },
+  {
+    "id": "LL-040",
+    "date": "2026-10-09",
+    "title": "FIFO lots, and 'entry unknown' instead of a guessed cost",
+    "category": "data integrity",
+    "what_changed": "Each buy is a lot, and sells reduce lots first-in, first-out (#74). If the fills explain less than the holding, an 'entry unknown' row covers the gap. If they don't match, the position says so. A total with no known cost shows shares and value only, never a zero-dollar cost (#75 fix).",
+    "why": "This applies the live-real-data rule to cost basis. Transferred coins and staking rewards have no fill to price them, and the audit said 'don't guess'.",
+    "lesson": "An unknown entry is information. A made-up one is a bug.",
+    "public_safe": true,
+    "sources": [
+      "PR #74",
+      "PR #75",
+      "hub chat with Andres, Oct 9",
+      "/workspace/coinbase/audit-2026-10-09.md"
+    ]
+  },
+  {
+    "id": "LL-041",
+    "date": "2026-10-09",
+    "title": "Legacy fills get fixed by naming the order id",
+    "category": "data integrity",
+    "what_changed": "A stored fill with no account tag is fixed by a migration that names that exact order id, never by a blanket 'untagged means Agentic' rule. Migrations 011 and 012 did this for the 9/18 XRP and SUI rows.",
+    "why": "The 9/18 swap fills were logged before account tags existed, so the lots didn't match the holdings.",
+    "lesson": "Fix the specific record and prove it with a test, rather than inventing a rule that could misfile others.",
+    "public_safe": true,
+    "sources": [
+      "repo resonance-2/AGENTS.md",
+      "/workspace/architect/learnings.md",
+      "PR #74"
+    ]
+  },
+  {
+    "id": "LL-042",
+    "date": "2026-10-09",
+    "title": "The dedupe bug: key fills by order id",
+    "category": "data integrity",
+    "what_changed": "The fills save routine now matches fills by order id across every key format, so it can't insert a second row for an existing order (#78). The first cleanup (015) missed the duplicates because they were stored under a different key format. A guarded follow-up (019, #80) backed up and removed the two stale copies, verified on prod (53 rows).",
+    "why": "The re-tag migrations changed the venue on two legacy rows but left their stored source as 'seed'. The save routine keyed on source plus order id, so the next full save inserted duplicates. The totals stayed right, but the lots tables read off. Sleeve totals were never affected.",
+    "lesson": "An order id is the identity of a trade. Every other field can change, so never key on it.",
+    "public_safe": true,
+    "sources": [
+      "hub chat with Andres, Oct 9"
+    ]
+  },
+  {
+    "id": "LL-043",
+    "date": "2026-10-09",
+    "title": "Trades log themselves, with no merge",
+    "category": "approvals/autonomy",
+    "what_changed": "Already-approved trades post to the site's fill log automatically, with no merge ask. Only code changes go to Andres.",
+    "why": "Andres: anything that moves value should log itself, and 'I don't need to approve those.' The #75 merge was only needed because the site had to learn the new account first.",
+    "lesson": "Approve the decision once. Recording it shouldn't need a second yes.",
+    "public_safe": true,
+    "sources": [
+      "hub chat with Andres, Oct 9",
+      "/workspace/architect/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-044",
+    "date": "2026-10-09",
+    "title": "Tap-button approvals",
+    "category": "approvals/autonomy",
+    "what_changed": "Approvals now come to Andres as tap buttons in the hub chat (for example 'Merge the Coinbase update (#75)?' answered with one tap).",
+    "why": "Founder's call.",
+    "lesson": "Make a yes take one tap on a phone.",
+    "public_safe": true,
+    "sources": [
+      "hub chat with Andres, Oct 9"
+    ]
+  },
+  {
+    "id": "LL-045",
+    "date": "2026-10-09",
+    "title": "Builds queue continuously",
+    "category": "build process",
+    "what_changed": "Every new brick goes into a queue, and as soon as one finishes, Architect starts the next on its own, with up to 3 draft PRs in parallel and one push each. The Build Tracker shows the queue with real step-based percentages. Current order: trade-log fix, the app, Build Tracker, System Map, Public mode, Lessons Learned.",
+    "why": "Andres wanted to be 'running continuously' instead of waiting on each hand-off.",
+    "lesson": "A queue turns a long wish list into a steady factory line.",
+    "public_safe": true,
+    "sources": [
+      "hub chat with Andres, Oct 9",
+      "/workspace/architect/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-046",
+    "date": "2026-10-09",
+    "title": "Merges pre-authorized, with a nightly recap",
+    "category": "approvals/autonomy",
+    "what_changed": "Builds Andres asked for are merged as soon as they pass tests and checks, with no merge button. A list of what merged, with links, arrives nightly at 8:47 PM CT, and nothing is sent on days with no merges. Out-of-scope work, money movement, secrets, the hold order, and risky migrations still need his explicit yes.",
+    "why": "Andres said he wasn't previewing before saying merge anyway, and wanted the build to keep moving with a review at the end of the day.",
+    "lesson": "Trust grew from approving everything to pre-authorizing what he asked for. Autonomy expands when the track record supports it, and the money rules don't move.",
+    "public_safe": true,
+    "sources": [
+      "hub chat with Andres, Oct 9",
+      "/workspace/architect/learnings.md"
+    ]
+  },
+  {
+    "id": "LL-047",
+    "date": "2026-10-09",
+    "title": "Public mode, with the treasury kept apart",
+    "category": "design",
+    "what_changed": "Spec approved: an owner-only toggle for YouTube screen-sharing. The server strips every dollar amount before the page renders. Each node shows its % of the 9-node portfolio and its % gain, charts show indexed growth with a step for each buy, and private pages are hidden. The treasury is excluded from the split and shown only as 'Powered by a digital asset treasury'.",
+    "why": "Andres wants viewers to see how the system grows with each add without seeing any money. The treasury sits apart because it's understood that it powers the system.",
+    "lesson": "Privacy belongs on the server, not in CSS. Show the mechanics, hide the money.",
+    "public_safe": true,
+    "sources": [
+      "/workspace/architect/public-mode-spec.md",
+      "hub chat with Andres, Oct 9"
+    ]
+  }
+]
