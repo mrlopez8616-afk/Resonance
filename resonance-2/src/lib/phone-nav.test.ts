@@ -116,8 +116,24 @@ describe("phone back targets", () => {
   });
 
   it("sends an unknown route home", () => {
+    assert.deepEqual(phoneTrail("/n/system"), {
+      back: { href: "/", label: "Floor" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/system", label: "System Map" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/system/live"), {
+      back: { href: "/n/system", label: "System Map" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/system", label: "System Map" },
+        { href: "/n/system/live", label: "Live" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/system/extra").back, { href: "/", label: "Home" });
+
     for (const path of [
-      "/n/system",
       "/n/not-a-parent",
       "/n/not-a-parent/foo",
       "/n/ai-stocks/nvda/extra",

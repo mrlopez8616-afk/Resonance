@@ -283,6 +283,44 @@ export const DATA_SOURCES = [
   },
 ] as const;
 
+/**
+ * Sleeves a posted fill can cross. Ids match the books the map already names.
+ * `coinbase` is the Coinbase book, distinct from the Coinbase data source.
+ */
+export const SYSTEM_SLEEVES = [
+  {
+    id: "rh-agentic",
+    label: "Robinhood Agentic",
+    sourceId: "robinhood",
+    nodes: ["crypto", "ai-stocks"],
+  },
+  {
+    id: "cb-agentic",
+    label: "Coinbase Agentic",
+    sourceId: "coinbase",
+    nodes: ["crypto"],
+  },
+  {
+    id: "coinbase",
+    label: "Coinbase book",
+    sourceId: "coinbase",
+    nodes: ["crypto"],
+  },
+] as const;
+
+/** Floor-node ids each data source reaches. */
+export const SOURCE_REACH = {
+  robinhood: ["crypto", "ai-stocks"],
+  coinbase: ["crypto"],
+  plaid: ["finance"],
+  health: ["fitness"],
+  prices: ["crypto", "ai-stocks"],
+  github: ["build"],
+  "github-actions": ["build"],
+  "build-api": ["build"],
+  calendar: ["fight-desk", "crypto", "ai-stocks", "build"],
+} as const satisfies Record<(typeof DATA_SOURCES)[number]["id"], readonly string[]>;
+
 export const GOVERNANCE = [
   {
     id: "login",

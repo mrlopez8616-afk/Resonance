@@ -44,6 +44,8 @@ const markers = [
   "9 agents",
   "/n/crypto/xrp",
   "/n/build",
+  "/n/system/live",
+  ">Live<",
 ];
 for (const marker of markers) {
   if (!html.includes(marker)) fail(`missing ${marker}`);
