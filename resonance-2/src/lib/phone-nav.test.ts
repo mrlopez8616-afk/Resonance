@@ -53,6 +53,15 @@ describe("phone back targets", () => {
     const build = phoneTrail("/n/build");
     assert.deepEqual(build.back, { href: "/", label: "Floor" });
     assert.equal(build.crumbs.at(-1)?.label, "Build");
+    assert.deepEqual(phoneTrail("/n/build/platform").back, { href: "/n/build", label: "Build" });
+    assert.deepEqual(phoneTrail("/n/build/platform").crumbs, [
+      { href: "/", label: "Home" },
+      { href: "/n/build", label: "Build" },
+      { href: "/n/build/platform", label: "Platform" },
+    ]);
+    assert.equal(phoneTrail("/n/build/ai-stocks").crumbs.at(-1)?.label, "AI Stocks");
+    assert.equal(phoneTrail("/n/build/queue").crumbs.at(-1)?.label, "Queue");
+    assert.equal(phoneTrail("/n/build/fight-desk").back?.href, "/n/build");
   });
 
   it("sends a child page up to its parent", () => {
@@ -158,6 +167,7 @@ describe("phone tabs", () => {
     assert.equal(phoneTabActive("/", "/fights/ufc"), true);
     assert.equal(phoneTabActive("/", "/n/build"), false);
     assert.equal(phoneTabActive("/n/build", "/n/build"), true);
+    assert.equal(phoneTabActive("/n/build", "/n/build/queue"), true);
     assert.equal(phoneTabActive("/calendar", "/calendar/2026-10-09"), true);
     assert.equal(phoneTabActive("/log", "/log"), true);
     assert.equal(phoneTabActive("/settings/security", "/settings/security"), true);

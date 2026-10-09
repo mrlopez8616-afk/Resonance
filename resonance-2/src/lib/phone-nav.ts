@@ -1,5 +1,6 @@
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import { NODE_PARENT, PARENTS } from "@/data/node-parents";
+import { buildSectionLabel } from "@/lib/build-tracker";
 
 /**
  * Phone drill-down. Back goes up exactly one level.
@@ -121,7 +122,8 @@ function nodeHref(ticker: string): string | null {
   return `/n/${parentId}/${node.id}`;
 }
 
-function childLabel(nodeId: string): string {
+function childLabel(nodeId: string, parentId?: string): string {
+  if (parentId === "build") return buildSectionLabel(nodeId);
   const titled = CHILD_TITLES[nodeId];
   if (titled) return titled;
   const floor = FLOOR_NODES.find((node) => node.id === nodeId && node.status !== "empty");
@@ -181,7 +183,7 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     if (!nodeId) return { back: FLOOR, crumbs: [HOME, parent] };
     return {
       back: parent,
-      crumbs: [HOME, parent, { href: `/n/${parentId}/${nodeId}`, label: childLabel(nodeId) }],
+      crumbs: [HOME, parent, { href: `/n/${parentId}/${nodeId}`, label: childLabel(nodeId, parentId) }],
     };
   }
 
