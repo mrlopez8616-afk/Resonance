@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { isValidElement, type ReactNode } from "react";
 import { describe, it } from "node:test";
 import { PositionBook, PositionChartView, LotsTable, PositionRollupView } from "@/components/position-book";
+import { formatTotalUnits, totalSleeveQuantity } from "@/lib/live-face";
 import { bookTotals, positionBookTotals } from "./position-lots";
 import {
   assembleNodePosition,
@@ -9,6 +10,7 @@ import {
   buildPositionChart,
   cbAgenticLotLines,
   coinbaseAgenticUnknownLine,
+  displayLotBooks,
   rollupHoldingBooks,
   vaultUnknownLine,
   xrpAgenticUnknownLine,
@@ -204,7 +206,7 @@ describe("FIFO lots", () => {
     });
     assert.equal(rollup.partial, true);
     assert.equal(rollup.rows[0]?.partial, true);
-    assert.equal(rollup.rows[0]?.valueUsd, 123.2);
+    assert.equal(rollup.rows[0]?.valueUsd, 56685.2);
     assert.equal(rollup.rows[0]?.costUsd, 72.24);
     assert.equal(JSON.stringify(rollup).includes("628"), false);
   });
@@ -503,6 +505,134 @@ describe("FIFO lots", () => {
     ).join(" ");
     assert.match(text, /entry unknown · 9 of 10/);
     assert.equal(text.includes("$0.00"), false);
+  });
+
+  it("counts every sleeve in the total so the shares match the header", () => {
+    const suiSleeves = [
+      { id: "rh-agentic", quantity: "0" },
+      { id: "coinbase", quantity: "33.7" },
+      { id: "cb-agentic", quantity: "1.2" },
+    ];
+    const suiFills: LedgerFill[] = [
+      fill({
+        time: "2026-09-18T17:49:23Z",
+        symbol: "SUI",
+        side: "buy",
+        quantity: "16.8",
+        price: "0.8020710385",
+        sleeve: "coinbase",
+      }),
+      fill({
+        time: "2026-09-18T17:51:58Z",
+        symbol: "SUI",
+        side: "buy",
+        quantity: "16.9",
+        price: "0.8019",
+        sleeve: "coinbase",
+      }),
+      fill({
+        time: "2026-10-09T20:21:33Z",
+        symbol: "SUI",
+        side: "buy",
+        quantity: "1.2",
+        price: "1.0601340274",
+        sleeve: "cb-agentic",
+      }),
+    ];
+    const sui = assembleNodePosition({
+      fills: suiFills,
+      ticker: "SUI",
+      sleeves: suiSleeves,
+      priceUsd: 1.058,
+      closes: [],
+      today: "2026-10-09",
+    });
+    assert.ok(sui);
+    const suiHeader = formatTotalUnits(totalSleeveQuantity(suiSleeves));
+    assert.equal(suiHeader, "34.900");
+    assert.equal(formatTotalUnits(sui.holdingUnits), suiHeader);
+    const suiText = collectText(
+      PositionBook({
+        ledger: sui.ledger,
+        chart: null,
+        quantity: sui.quantity,
+        livePrice: 1.058,
+        vaultLine: sui.vaultLine,
+        unknownShares: sui.unknownShares,
+        vaultShares: sui.vaultShares,
+        agenticLines: sui.agenticLines,
+        books: displayLotBooks(sui.books, sui.agenticLines.length > 0),
+        holdingUnits: sui.holdingUnits,
+        addedCostUsd: sui.addedCostUsd,
+        unexplained: sui.unexplained,
+      }),
+    ).join(" ");
+    assert.match(suiText, /34\.900/);
+    assert.match(suiText, /16\.8/);
+    assert.match(suiText, /16\.9/);
+    assert.match(suiText, /Coinbase Agentic/);
+    assert.match(suiText, /1\.2 @/);
+    assert.equal(suiText.includes("Total · partial"), false);
+
+    const xrpSleeves = [
+      { id: "rh-agentic", quantity: "51.601" },
+      { id: "cb-agentic", quantity: "10" },
+      { id: "flare-vault", quantity: "28281" },
+    ];
+    const xrp = assembleNodePosition({
+      fills: [
+        fill({
+          time: "2026-09-01T15:00:00Z",
+          symbol: "XRP",
+          side: "buy",
+          quantity: "51.601",
+          price: "1.40",
+          sleeve: "rh-agentic",
+        }),
+      ],
+      ticker: "XRP",
+      sleeves: xrpSleeves,
+      priceUsd: 1.4,
+      closes: [],
+      today: "2026-10-09",
+      vaultQuantity: "28281",
+    });
+    assert.ok(xrp);
+    const xrpHeader = formatTotalUnits(totalSleeveQuantity(xrpSleeves));
+    assert.equal(xrpHeader, "28,342.601");
+    assert.equal(formatTotalUnits(xrp.holdingUnits), xrpHeader);
+    const xrpText = collectText(
+      PositionBook({
+        ledger: xrp.ledger,
+        chart: null,
+        quantity: xrp.quantity,
+        livePrice: 1.4,
+        vaultLine: xrp.vaultLine,
+        unknownShares: xrp.unknownShares,
+        vaultShares: xrp.vaultShares,
+        agenticLines: xrp.agenticLines,
+        books: displayLotBooks(xrp.books, xrp.agenticLines.length > 0),
+        holdingUnits: xrp.holdingUnits,
+        addedCostUsd: xrp.addedCostUsd,
+        unexplained: xrp.unexplained,
+      }),
+    ).join(" ");
+    assert.match(xrpText, /28,342\.601/);
+    assert.match(xrpText, /RH Agentic/);
+    assert.match(xrpText, /Coinbase Agentic/);
+    assert.match(xrpText, /Flare \/ Xaman vault · manual · entry unknown/);
+    assert.match(xrpText, /Total · partial/);
+    const suiRollup = rollupHoldingBooks({
+      tickers: ["SUI"],
+      fills: suiFills,
+      sleeves: { SUI: suiSleeves },
+      prices: { SUI: 2 },
+      closes: {},
+      today: "2026-10-09",
+    });
+    assert.equal(suiRollup.partial, false);
+    assert.equal(suiRollup.rows[0]?.valueUsd, 69.8);
+    assert.equal(suiRollup.rows[0]?.partial, false);
   });
 });
 

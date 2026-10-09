@@ -1,5 +1,6 @@
 import { sqlQuery } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
+import { patchRetaggedFillPayloads } from "@/lib/pg/fill-source-dedupe";
 import { SUI_AGENTIC_BUY_ORDER, patchSuiAgenticBuyPayload } from "@/lib/pg/sui-sleeve-fix";
 import { XRP_AGENTIC_SELL_ORDER, patchXrpAgenticSellPayload } from "@/lib/pg/xrp-sleeve-fix";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
@@ -13,6 +14,25 @@ const SUI_COINBASE_BACKFILL_ORDERS = [
 function errorText(error: unknown): string {
   if (isStorageUnavailable(error)) return error.reason;
   return error instanceof Error ? error.message : "";
+}
+
+function logRetaggedFillStatement(statement: string, rows: Record<string, unknown>[]): void {
+  if (/^DELETE\b/i.test(statement)) {
+    console.log(`015_dedupe_retagged_fills: deleted ${rows.length} seed row(s)`);
+    return;
+  }
+  if (/SET source = 'robinhood'/i.test(statement)) {
+    console.log(`015_dedupe_retagged_fills: retagged ${rows.length} seed row(s)`);
+    return;
+  }
+  if (/SET sleeve = 'rh-agentic'/i.test(statement)) {
+    console.log(`015_dedupe_retagged_fills: repaired ${rows.length} robinhood row(s)`);
+    return;
+  }
+  if (statement.includes("multi_source_external_ids")) {
+    const count = rows[0]?.multi_source_external_ids ?? rows.length;
+    console.log(`015_dedupe_retagged_fills: multi-source external_ids ${count}`);
+  }
 }
 
 export function splitSqlStatements(source: string): string[] {
@@ -88,17 +108,23 @@ export async function applyMigrations(
       if (view?.[1] && (await viewExists(view[1]).catch(() => false))) continue;
       try {
         const rows = await sqlQuery(statement);
-        if (statement.includes(XRP_AGENTIC_SELL_ORDER)) {
+        if (id === "011_xrp_agentic_sleeve" && statement.includes(XRP_AGENTIC_SELL_ORDER)) {
           console.log(`011_xrp_agentic_sleeve: updated ${rows.length} fill row(s)`);
         }
-        if (statement.includes(SUI_AGENTIC_BUY_ORDER)) {
+        if (id === "012_sui_agentic_sleeve" && statement.includes(SUI_AGENTIC_BUY_ORDER)) {
           console.log(`012_sui_agentic_sleeve: updated ${rows.length} fill row(s)`);
         }
-        if (SUI_COINBASE_BACKFILL_ORDERS.some((orderId) => statement.includes(orderId))) {
+        if (
+          id === "013_sui_coinbase_backfill" &&
+          SUI_COINBASE_BACKFILL_ORDERS.some((orderId) => statement.includes(orderId))
+        ) {
           console.log(`013_sui_coinbase_backfill: inserted ${rows.length} fill row(s)`);
         }
-        if (statement.includes("'cb-agentic'")) {
+        if (id === "014_cb_agentic_xrp" && statement.includes("'cb-agentic'")) {
           console.log(`014_cb_agentic_xrp: inserted ${rows.length} sleeve row(s)`);
+        }
+        if (id === "015_dedupe_retagged_fills") {
+          logRetaggedFillStatement(statement, rows);
         }
       } catch (error) {
         if (view && /already exists/i.test(errorText(error))) continue;
@@ -110,6 +136,9 @@ export async function applyMigrations(
     }
     if (id === "012_sui_agentic_sleeve") {
       await patchSuiAgenticBuyPayload();
+    }
+    if (id === "015_dedupe_retagged_fills") {
+      await patchRetaggedFillPayloads();
     }
     await sqlQuery(`INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [
       id,

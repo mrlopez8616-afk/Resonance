@@ -743,6 +743,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "012_sui_agentic_sleeve",
         "013_sui_coinbase_backfill",
         "014_cb_agentic_xrp",
+        "015_dedupe_retagged_fills",
         "016_build_items",
       ],
     );
