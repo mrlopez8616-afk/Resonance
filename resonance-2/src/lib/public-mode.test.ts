@@ -11,7 +11,7 @@ import { ChildValueCard } from "@/components/child-value-card";
 import type { CalendarEvent } from "@/data/calendar";
 import { SESSION_COOKIE, setAuthClockForTests } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
-import type { BuildBoard, BuildHomeCard } from "@/lib/build-tracker";
+import type { BuildHomeCard, BuildSectionView } from "@/lib/build-tracker";
 import { holdingChildModel } from "@/lib/child-card";
 import type { FitnessCard, FitnessNodeDetail } from "@/lib/fitness-board";
 import { assembleLiveFace } from "@/lib/live-face";
@@ -155,33 +155,27 @@ function stepsDetail(): FitnessNodeDetail {
   };
 }
 
-function buildBoard(): BuildBoard {
+function buildSection(): BuildSectionView {
   return {
-    totalPercent: 40,
-    githubFresh: true,
-    groups: [
+    id: "platform",
+    label: "Platform",
+    percent: 40,
+    counts: { live: 0, inProgress: 1, queued: 0 },
+    items: [
       {
+        id: "platform-public",
+        title: "Public mode",
         node: "platform",
-        label: "Platform",
-        percent: 40,
-        active: [
-          {
-            id: "platform-public",
-            title: "Public mode",
-            node: "platform",
-            prNumber: 80,
-            status: "in_progress",
-            steps: [
-              { id: "spec", label: "spec written", done: true },
-              { id: "pr-open", label: "PR open", done: true },
-              { id: "tests-build", label: "local tests and build pass", done: false },
-            ],
-            nextStep: "Verify on a phone",
-            sortOrder: 0,
-            updatedAt: "2026-10-09T15:00:00.000Z",
-          },
+        prNumber: 80,
+        status: "in_progress",
+        steps: [
+          { id: "spec", label: "spec written", done: true },
+          { id: "pr-open", label: "PR open", done: true },
+          { id: "tests-build", label: "local tests and build pass", done: false },
         ],
-        shipped: [],
+        nextStep: "Verify on a phone",
+        sortOrder: 0,
+        updatedAt: "2026-10-09T15:00:00.000Z",
       },
     ],
   };
@@ -216,7 +210,7 @@ function deskQuery() {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildFloor }, floor, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses] =
+  const [{ BuildParent, BuildSectionBody }, floor, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -255,7 +249,17 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   const suiNode = render(createElement(PublicNodePage, { ticker: "SUI", holding: sui }));
   const treasury = render(createElement(TreasuryCard));
   const fight = render(createElement(PublicFightRecord, { record: "4-1" }));
-  const build = render(createElement(BuildFloor, { board: buildBoard() }));
+  const section = buildSection();
+  const build = render(
+    createElement(BuildParent, {
+      totalPercent: 40,
+      githubFresh: true,
+      sections: [section],
+    }),
+  );
+  const buildSectionHtml = render(
+    createElement(BuildSectionBody, { section, now: NOW, showPr: false }),
+  );
   const fitness = render(createElement(FitnessGrid, { cards: fitnessCards() }));
   const steps = render(createElement(FitnessDetail, { detail: stepsDetail() }));
   const calendar = render(
@@ -302,6 +306,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/fitness/steps", html: steps },
     { path: "/n/fight-desk", html: fight },
     { path: "/n/build", html: build },
+    { path: "/n/build/platform", html: buildSectionHtml },
     ...lenses.SYSTEM_LENSES.map((lens) => ({
       path: lens.id === "nodes" ? "/n/system" : `/n/system?lens=${lens.id}`,
       html: render(createElement(system.SystemMap, { lens: lens.id })),
@@ -434,6 +439,7 @@ describe("public render scan", () => {
       "/login/page.tsx",
       "/log/page.tsx",
       "/n/build/page.tsx",
+      "/n/build/[section]/page.tsx",
       "/n/system/page.tsx",
       "/n/[parent]/page.tsx",
       "/n/[parent]/[node]/page.tsx",
@@ -452,6 +458,7 @@ describe("public render scan", () => {
       "/n/fitness/steps",
       "/n/fight-desk",
       "/n/build",
+      "/n/build/platform",
       "/n/system",
       "/calendar",
       "/calendar/2026-10-08",
@@ -485,6 +492,9 @@ describe("public render scan", () => {
     const systemPage = pages.find((page) => page.path === "/n/system");
     assert.match(systemPage?.html ?? "", /System/);
     assert.equal(systemPage?.html.includes("$"), false);
+    const buildSectionPage = pages.find((page) => page.path === "/n/build/platform");
+    assert.equal(buildSectionPage?.html.includes("pull/80"), false);
+    assert.equal(buildSectionPage?.html.includes("#80"), false);
   });
 
   it("hides finance, the bankroll, the log, security, and fights", () => {

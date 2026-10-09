@@ -5,6 +5,8 @@ import { OperatorShell } from "@/components/operator-shell";
 import { buildSectionLabel, resolveBuildSection } from "@/lib/build-tracker";
 import { loadBuildView } from "@/lib/build-store";
 import { loadLessonLinks } from "@/lib/lessons-store";
+import { stripMoneyText } from "@/lib/public-mode";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,7 @@ export default async function BuildSectionPage({
   params: Promise<{ section: string }>;
 }) {
   const { section: slug } = await params;
+  const pub = await isPublicMode();
   let view = null;
   let lessonHrefs: Record<string, string> = {};
   let unavailable = false;
@@ -51,15 +54,25 @@ export default async function BuildSectionPage({
     );
   }
 
-  const section = resolveBuildSection(slug, view.items);
-  if (!section) notFound();
+  const resolved = resolveBuildSection(slug, view.items);
+  if (!resolved) notFound();
+  const section = pub
+    ? {
+        ...resolved,
+        items: resolved.items.map((item) => ({
+          ...item,
+          title: stripMoneyText(item.title),
+          nextStep: item.nextStep ? stripMoneyText(item.nextStep) : item.nextStep,
+        })),
+      }
+    : resolved;
 
   return (
     <OperatorShell>
       <Link href="/n/build" className="calendar-back">
         Build
       </Link>
-      <BuildSectionBody section={section} now={new Date()} lessonHrefs={lessonHrefs} />
+      <BuildSectionBody section={section} now={new Date()} showPr={!pub} lessonHrefs={lessonHrefs} />
     </OperatorShell>
   );
 }
