@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { ChildValueCard } from "@/components/child-value-card";
+import { PositionBook } from "@/components/position-book";
 import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { FitnessDetail } from "@/components/fitness-detail";
@@ -20,6 +21,7 @@ import { FITNESS_NODES, fitnessLegacyHref } from "@/lib/fitness-board";
 import { loadFitnessNode } from "@/lib/fitness-store";
 import { aiStockRole } from "@/data/ai-stock-roles";
 import { retiredAiNodeHref } from "@/lib/ai-stocks";
+import { retiredCryptoNodeHref } from "@/lib/crypto-nodes";
 import { holdingChildModel, positionLines, priceSpark, type ChildCardModel } from "@/lib/child-card";
 import { isDecimalString } from "@/lib/decimal";
 import { isEquityTicker } from "@/lib/equity-price";
@@ -27,7 +29,9 @@ import { nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
 import { positionCostFromFills } from "@/lib/position-cost";
-import { loadEquityHistory } from "@/lib/price-history";
+import { assembleNodePosition } from "@/lib/position-lots";
+import { yahooSessionDay } from "@/lib/equity-chart";
+import { loadCryptoCloses, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -45,7 +49,7 @@ export async function generateMetadata({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
-  const retired = retiredAiNodeHref(parentId, nodeId);
+  const retired = retiredAiNodeHref(parentId, nodeId) ?? retiredCryptoNodeHref(parentId, nodeId);
   if (retired) redirect(retired);
   if (parentId === "fitness") {
     const moved = fitnessLegacyHref(nodeId);
@@ -76,7 +80,7 @@ export default async function NodeDetailPage({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
-  const retired = retiredAiNodeHref(parentId, nodeId);
+  const retired = retiredAiNodeHref(parentId, nodeId) ?? retiredCryptoNodeHref(parentId, nodeId);
   if (retired) redirect(retired);
   const legacy = legacyParentHref(parentId, nodeId);
   if (legacy) {
@@ -160,11 +164,12 @@ export default async function NodeDetailPage({
 
   if (parent.id === "ai-stocks" && isEquityTicker(node.ticker)) {
     const ticker = node.ticker;
-    const [floor, calendar, history, book] = await Promise.all([
+    const [floor, calendar, history, book, dated] = await Promise.all([
       loadOperatorFloor(),
       loadCalendarForPage(),
       loadEquityHistory([ticker]),
       loadOperatorFills(),
+      loadEquityCloses([ticker]),
     ]);
     const face = floor.faces[ticker];
     const sleeves = sleevesFor(floor, ticker) ?? [];
@@ -220,12 +225,26 @@ export default async function NodeDetailPage({
         </Link>
         <div className="child-page">
           <ChildValueCard model={model} wide />
+          {quantity ? (
+            <NodePosition
+              fills={book.fills}
+              ticker={ticker}
+              sleeves={sleeves}
+              priceUsd={face?.priceUsd ?? null}
+              closes={dated[ticker] ?? []}
+            />
+          ) : null}
         </div>
       </OperatorShell>
     );
   }
 
-  const floor = await loadOperatorFloor();
+  const cryptoChild = node.ticker === "XRP" || node.ticker === "SUI";
+  const [floor, book, dated] = await Promise.all([
+    loadOperatorFloor(),
+    cryptoChild ? loadOperatorFills() : Promise.resolve(null),
+    cryptoChild ? loadCryptoCloses([node.ticker as "XRP" | "SUI"]) : Promise.resolve(null),
+  ]);
   const sleeves = sleevesFor(floor, node.ticker);
   const face = floor.faces[node.ticker];
   const ready = Boolean(face && sleeves);
@@ -261,6 +280,53 @@ export default async function NodeDetailPage({
           )}
         </NodeSquare>
       </section>
+      {cryptoChild && book ? (
+        <NodePosition
+          fills={book.fills}
+          ticker={node.ticker}
+          sleeves={sleeves}
+          priceUsd={face?.priceUsd ?? null}
+          closes={dated?.[node.ticker] ?? []}
+          vaultQuantity={sleeves?.find((row) => row.id === "flare-vault")?.quantity ?? null}
+        />
+      ) : null}
     </OperatorShell>
+  );
+}
+
+function NodePosition({
+  fills,
+  ticker,
+  sleeves,
+  priceUsd,
+  closes,
+  vaultQuantity = null,
+}: {
+  fills: Parameters<typeof assembleNodePosition>[0]["fills"];
+  ticker: string;
+  sleeves: readonly { id: string; quantity: string }[] | undefined;
+  priceUsd: number | null;
+  closes: { day: string; close: number }[];
+  vaultQuantity?: string | null;
+}) {
+  const today = yahooSessionDay(Date.now() / 1000) ?? "";
+  const position = assembleNodePosition({
+    fills,
+    ticker,
+    sleeves,
+    priceUsd,
+    closes,
+    today,
+    vaultQuantity,
+  });
+  if (!position) return null;
+  return (
+    <PositionBook
+      ledger={position.ledger}
+      chart={position.chart}
+      quantity={position.quantity}
+      livePrice={priceUsd}
+      vaultLine={position.vaultLine}
+    />
   );
 }

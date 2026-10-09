@@ -5,6 +5,7 @@ import { civilWeekdayShort } from "@/lib/calendar-time";
 import { money, realizedPnl, type Bet } from "@/lib/bets";
 import { fightPromotions } from "@/lib/fight-desk";
 import type { FitnessStepDay } from "@/lib/fitness-board";
+import { yahooSessionDay } from "@/lib/equity-chart";
 import { XRP_DAILY_CLOSE_USD } from "@/lib/home-lines";
 
 const SPARK_POINTS = 48;
@@ -72,6 +73,17 @@ function marketChartPoints(body: unknown): MarketPoint[] {
 /** CoinGecko `market_chart` prices, oldest first. Invalid rows are dropped. */
 export function xrpPricesFromMarketChart(body: unknown): number[] {
   return marketChartPoints(body).map((point) => point.usd);
+}
+
+/** One close per US session day, oldest first. The last print of that day wins. */
+export function datedClosesFromMarketChart(body: unknown): { day: string; close: number }[] {
+  const byDay = new Map<string, number>();
+  for (const point of marketChartPoints(body)) {
+    const day = yahooSessionDay(point.t / 1000);
+    if (!day) continue;
+    byDay.set(day, point.usd);
+  }
+  return [...byDay.entries()].map(([day, close]) => ({ day, close }));
 }
 
 /** Seven-day close path plus the $1.55 reference. Hidden until two real prices exist. */

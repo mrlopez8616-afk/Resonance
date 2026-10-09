@@ -157,10 +157,10 @@ describe("live face units", () => {
     assert.equal(hbar.unitsWord, "tokens");
     assert.equal(hbar.sleeves.length, 1);
     assert.equal(hbar.sleeves[0]?.id, "rh-agentic");
-    assert.equal(hbar.sleeves[0]?.quantity, "7847.91");
-    assert.equal(hbar.sleeves[0]?.quantityLabel, "7,847.91");
-    assert.equal(hbar.totalUnits, 7847.91);
-    assert.equal(hbar.totalUnitsLabel, "7,847.91");
+    assert.equal(hbar.sleeves[0]?.quantity, "0");
+    assert.equal(hbar.sleeves[0]?.quantityLabel, "0");
+    assert.equal(hbar.totalUnits, 0);
+    assert.equal(hbar.totalUnitsLabel, "0");
     assert.equal(hbar.priceLabel, "$0.120");
     assert.equal(hbar.totalUnitsLabel.includes("NaN"), false);
   });

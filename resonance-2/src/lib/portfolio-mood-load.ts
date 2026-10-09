@@ -17,7 +17,7 @@ import { loadSpotQuotes } from "@/lib/spot-price";
 export async function loadPortfolioMood(): Promise<PortfolioMood> {
   try {
     const [crypto, equity, sleeves] = await Promise.all([
-      loadSpotQuotes(["XRP", "SUI", "HBAR"]),
+      loadSpotQuotes(["XRP", "SUI"]),
       loadEquityQuotes(EQUITY_FACE_TICKERS),
       loadLiveSleeveBooks(),
     ]);

@@ -21,7 +21,6 @@ export const FIGHT_DESK_ID = "fight-desk";
 export const NODE_PARENT = {
   xrp: "crypto",
   sui: "crypto",
-  hbar: "crypto",
   btc: "crypto",
   eth: "crypto",
   sol: "crypto",

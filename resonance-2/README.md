@@ -1,6 +1,6 @@
 # Resonance 2.0
 
-Operator floor for Resonance 2.0. **XRP, SUI, PWR, VRT, GEV, CEG, NVDA, TSM, TSLA, SPCX, and HBAR are live.** ETN and HUBB are retired from the AI Stocks children; their fills and sleeve books stay so a closing sell can post. The homepage paints parent cards. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. XLM is not a floor node; its three historical fills stay on `/log`. The Xaman gas wallet is never shown.
+Operator floor for Resonance 2.0. **XRP, SUI, PWR, VRT, GEV, CEG, NVDA, TSM, TSLA, and SPCX are live.** HBAR left the crypto children; `/n/crypto/hbar` redirects to Crypto, and the HBAR log rows stay. ETN and HUBB are retired from the AI Stocks children; their fills and sleeve books stay so a closing sell can post. The homepage paints parent cards. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. XLM is not a floor node; its three historical fills stay on `/log`. The Xaman gas wallet is never shown.
 
 This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
@@ -26,7 +26,7 @@ Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POS
 - SPCX — [`src/data/spcx-sleeves.ts`](src/data/spcx-sleeves.ts) (RH Agentic `0` until a fill posts)
 - ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (retired child; RH Agentic book stays for a closing sell)
 - HUBB — [`src/data/hubb-sleeves.ts`](src/data/hubb-sleeves.ts) (retired child; RH Agentic book stays for a closing sell)
-- HBAR — [`src/data/hbar-sleeves.ts`](src/data/hbar-sleeves.ts) (RH Agentic `7847.91` **tokens** only)
+- HBAR — [`src/data/hbar-sleeves.ts`](src/data/hbar-sleeves.ts) (not a floor node; RH Agentic seed `0`; history stays on `/log`)
 
 Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). The eight AI Stocks use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. ETN and HUBB are not quoted. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 

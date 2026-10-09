@@ -133,6 +133,27 @@ CREATE INDEX IF NOT EXISTS fitness_shortcut_workouts_start_idx
   ON fitness_shortcut_workouts (start_time);
 `;
 
+export const XRP_AGENTIC_SLEEVE_SQL = `-- One-off data correction: the 2026-09-18 sell of 10 XRP
+-- (order 6aad6b7a-415a-4895-b43c-72c0eca79a55) was stored with a null
+-- sleeve and no venue, so per-sleeve sums skipped those 10 tokens.
+-- Sets that one row to rh-agentic / robinhood. A second run updates 0 rows.
+-- Does not write sleeve_prints and does not re-apply sleeve math.
+-- The migrate step also writes sleeve and venue into this row's payload,
+-- because the operator log reads the payload. Other null-sleeve rows stay null.
+
+UPDATE fills
+SET sleeve = 'rh-agentic',
+    venue = 'robinhood'
+WHERE symbol = 'XRP'
+  AND sleeve IS NULL
+  AND (
+    external_id = '6aad6b7a-415a-4895-b43c-72c0eca79a55'
+    OR external_id LIKE '%6aad6b7a-415a-4895-b43c-72c0eca79a55'
+    OR payload->>'orderId' = '6aad6b7a-415a-4895-b43c-72c0eca79a55'
+  )
+RETURNING external_id;
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -142,4 +163,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "008_finance", sql: FINANCE_SCHEMA_SQL },
   { id: "009_reset_rh_agentic_sleeves", sql: RESET_RH_AGENTIC_SLEEVES_SQL },
   { id: "010_fitness_workouts", sql: FITNESS_WORKOUTS_SQL },
+  { id: "011_xrp_agentic_sleeve", sql: XRP_AGENTIC_SLEEVE_SQL },
 ];
