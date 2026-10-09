@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { ChildValueCard } from "@/components/child-value-card";
 import { PositionBook } from "@/components/position-book";
+import { PublicNodePage, TreasuryCard } from "@/components/public-floor";
+import { PrivatePage } from "@/components/private-notice";
 import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { FitnessDetail } from "@/components/fitness-detail";
@@ -28,6 +30,8 @@ import { isEquityTicker } from "@/lib/equity-price";
 import { nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
+import { loadPublicFloor } from "@/lib/public-load";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { positionCostFromFills } from "@/lib/position-cost";
 import { assembleNodePosition, displayLotBooks } from "@/lib/position-lots";
 import { yahooSessionDay } from "@/lib/equity-chart";
@@ -92,6 +96,34 @@ export default async function NodeDetailPage({
     if (moved) permanentRedirect(moved);
   }
   const parent = parentById(parentId);
+  if (await isPublicMode()) {
+    if (parent?.id === "finance" || parent?.id === "fight-desk") return <PrivatePage />;
+    if (parent?.id === "crypto" || parent?.id === "ai-stocks") {
+      const node = FLOOR_NODES.find((item) => item.id === nodeId && item.status !== "empty");
+      if (!node || nodeParent(node.id) !== parent.id) notFound();
+      if (node.ticker === "XRP") {
+        return (
+          <OperatorShell>
+            <Link href={`/n/${parent.id}`} className="calendar-back">
+              {parent.label}
+            </Link>
+            <TreasuryCard />
+          </OperatorShell>
+        );
+      }
+      const floor = await loadPublicFloor();
+      const group = parent.id === "crypto" ? floor.model.crypto : floor.model.aiStocks;
+      const holding = group.holdings.find((item) => item.id === node.id) ?? null;
+      return (
+        <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
+          <Link href={`/n/${parent.id}`} className="calendar-back">
+            {parent.label}
+          </Link>
+          <PublicNodePage ticker={node.ticker} holding={holding} />
+        </OperatorShell>
+      );
+    }
+  }
   if (parent?.id === "finance") {
     await requireRole("owner");
     if (!financeNode(nodeId)) notFound();

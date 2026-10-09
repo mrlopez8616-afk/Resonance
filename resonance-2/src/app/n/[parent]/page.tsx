@@ -4,10 +4,15 @@ import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { FitnessGrid } from "@/components/fitness-grid";
 import { NodeGrid } from "@/components/node-grid";
 import { PositionRollupView } from "@/components/position-book";
+import { PublicFightRecord, PublicGroupFloor } from "@/components/public-floor";
+import { PrivatePage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { PredictionsFloor } from "@/components/predictions-floor";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
+import { loadPublicFloor } from "@/lib/public-load";
+import { publicRecordLabel } from "@/lib/public-mode";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessCards } from "@/lib/fitness-store";
@@ -51,6 +56,36 @@ export default async function ParentNodePage({
   }
   const parent = parentById(id);
   if (!parent) notFound();
+
+  if (await isPublicMode()) {
+    if (parent.id === "finance") return <PrivatePage />;
+    if (parent.id === "fight-desk") {
+      const bankroll = await loadBankroll();
+      return (
+        <OperatorShell
+          storageMessage={bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
+          storageDetail={bankroll.storageDetail}
+        >
+          <Link href="/" className="calendar-back">
+            Floor
+          </Link>
+          <PublicFightRecord record={publicRecordLabel(bankroll.ledger?.recordLabel)} />
+        </OperatorShell>
+      );
+    }
+    if (parent.id === "crypto" || parent.id === "ai-stocks") {
+      const floor = await loadPublicFloor();
+      const group = parent.id === "crypto" ? floor.model.crypto : floor.model.aiStocks;
+      return (
+        <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
+          <Link href="/" className="calendar-back">
+            Floor
+          </Link>
+          <PublicGroupFloor group={group} treasury={parent.id === "crypto"} />
+        </OperatorShell>
+      );
+    }
+  }
 
   if (parent.id === "fight-desk") {
     const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);

@@ -1,4 +1,5 @@
 import { FightIndex } from "@/components/fight-board";
+import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
@@ -10,6 +11,8 @@ export const metadata = {
 };
 
 export default async function FightsPage() {
+  const blocked = await blockedPublicPage();
+  if (blocked) return blocked;
   const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const availability =

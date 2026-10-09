@@ -312,6 +312,148 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
 }
 
+.operator-floor:has(.public-banner) {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.public-banner {
+  position: sticky;
+  top: 0;
+  z-index: 26;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.62rem 0.75rem;
+  background: #9a3412;
+  color: #fff;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.public-lock {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 45;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  background: #7f1d1d;
+  color: #fff;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.public-lock.is-under-banner {
+  top: 2.2rem;
+}
+
+.public-mode-tool {
+  width: auto;
+  min-width: 2.75rem;
+  padding: 0 0.4rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.public-mode-tool[aria-pressed="true"] {
+  background: #9a3412;
+  color: #fff;
+}
+
+.public-switch-button {
+  min-height: 2.75rem;
+  min-width: 5.5rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.public-switch-button[aria-pressed="true"] {
+  border-color: #9a3412;
+  background: #9a3412;
+  color: #fff;
+}
+
+.pin-dialog-backdrop {
+  z-index: 70;
+}
+
+.pin-dialog .auth-label {
+  margin-top: 0.85rem;
+}
+
+.pin-dialog .auth-input,
+.pin-dialog .floor-dialog-cancel,
+.pin-dialog .floor-dialog-confirm {
+  min-height: 2.75rem;
+}
+
+.pin-dialog .floor-dialog-actions {
+  align-items: center;
+}
+
+.public-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: #9a3412;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.public-switch {
+  margin: 0;
+}
+
+.public-switch button {
+  min-height: 2.75rem;
+  min-width: 4.5rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.public-switch button[aria-pressed="true"] {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.public-settings {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  max-width: 28rem;
+}
+
+.public-settings h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
 .operator-main {
   display: flex;
   flex: 1;

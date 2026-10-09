@@ -12,7 +12,7 @@ The hub keeps the Lessons node current without a deploy. Resonance stores the lo
 
 `sources` is an array of strings. It is owner-only. Public mode never returns it.
 
-`isPublicMode()` in `src/lib/public-mode.ts` returns false until the public-mode branch lands. Swap that one function for the real check. When it is true, GET and the page keep only `public_safe` rows, drop any row whose text contains a dollar amount, and omit `sources`. LL-021 stays `public_safe: false` and must not render in public mode.
+Lessons uses `isPublicMode()` in `src/lib/public-mode-server.ts`, the same server check as the rest of the floor. When it is true, GET and the page keep only `public_safe` rows, drop any row whose text contains a dollar amount, and omit `sources`. LL-021 stays `public_safe: false` and must not render in public mode.
 
 A blank `why` is stored as `Founder's call.` Categories are stored as given, capped at 40 characters. Unknown categories are not rejected.
 

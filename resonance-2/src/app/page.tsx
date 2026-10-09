@@ -1,5 +1,6 @@
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ParentGrid } from "@/components/parent-grid";
+import { PublicHomePage } from "@/components/public-home-page";
 import { SystemHomeCard } from "@/components/system-map";
 import { OperatorShell } from "@/components/operator-shell";
 import { ThisWeek } from "@/components/this-week";
@@ -21,6 +22,7 @@ import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { thisWeekItems } from "@/lib/this-week";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +52,7 @@ const lessonsHomeFallback: LessonsHomeModel = {
 };
 
 export default async function Home() {
+  if (await isPublicMode()) return <PublicHomePage />;
   const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),

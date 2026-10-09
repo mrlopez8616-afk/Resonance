@@ -8,6 +8,7 @@ import {
   isStandaloneMode,
   notifyPullRefresh,
   phoneTrail,
+  publicTrailLabel,
   pullDecision,
   pullShouldAnimate,
   swipeDecision,
@@ -67,12 +68,23 @@ function pageScrollTop(): number {
   return Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop, mainTop);
 }
 
-export function PhoneNav() {
+export function PhoneNav({ publicMode = false }: { publicMode?: boolean }) {
   const pathname = usePathname() || "/";
   const searchParams = useSearchParams();
   const router = useRouter();
   const search = searchParams.toString();
-  const trail = phoneTrail(pathname, search ? `?${search}` : "");
+  const rawTrail = phoneTrail(pathname, search ? `?${search}` : "");
+  const trail = publicMode
+    ? {
+        back: rawTrail.back
+          ? { ...rawTrail.back, label: publicTrailLabel(rawTrail.back.href, rawTrail.back.label) }
+          : null,
+        crumbs: rawTrail.crumbs.map((crumb) => ({
+          ...crumb,
+          label: publicTrailLabel(crumb.href, crumb.label),
+        })),
+      }
+    : rawTrail;
   const backHref = trail.back?.href ?? null;
   const [installed, setInstalled] = useState(false);
   const [pulling, setPulling] = useState(false);

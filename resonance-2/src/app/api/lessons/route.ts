@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (!access.ok) return access.response;
   try {
     return finishAuthorizedRead(
-      NextResponse.json(await loadLessonsPayload(), {
+      NextResponse.json(await loadLessonsPayload(request), {
         headers: { "cache-control": "no-store" },
       }),
       access,

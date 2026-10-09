@@ -221,6 +221,7 @@ export function CalendarDayView({
   today,
   storeLabel,
   fightTargets = [],
+  hideFills = false,
 }: {
   day: string;
   events: readonly CalendarEvent[];
@@ -229,6 +230,8 @@ export function CalendarDayView({
   today: string;
   storeLabel: string;
   fightTargets?: readonly FightLinkTarget[];
+  /** Public mode leaves the fill list off this page. */
+  hideFills?: boolean;
 }) {
   const links: FightLinkContext = { events, targets: fightTargets };
   const visible = occurrencesOnDay(events, day, search.lane, search.node);
@@ -252,7 +255,7 @@ export function CalendarDayView({
     : search.lane
       ? [search.lane as CalendarLane]
       : CALENDAR_LANES.filter((lane) => lane !== "fights");
-  const showFills = search.lane === "" || search.lane === "capital";
+  const showFills = !hideFills && (search.lane === "" || search.lane === "capital");
   const printed = showFills ? fillsOnPrintedDay(fills, day) : [];
   const dayFills = search.node
     ? printed.filter((fill) => fill.symbol.toUpperCase() === search.node)

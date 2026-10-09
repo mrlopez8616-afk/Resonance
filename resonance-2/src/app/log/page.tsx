@@ -1,4 +1,5 @@
 import { FillDesk } from "@/components/fill-desk";
+import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { betToFill } from "@/lib/bets";
 import { parseFillDeskQuery, type FillDeskSearch } from "@/lib/fill-desk";
@@ -15,6 +16,8 @@ export default async function OperatorLogPage({
 }: {
   searchParams: Promise<FillDeskSearch>;
 }) {
+  const blocked = await blockedPublicPage();
+  if (blocked) return blocked;
   const query = parseFillDeskQuery(await searchParams);
   const [fillsLoaded, sleeves, betsLoaded] = await Promise.all([
     loadOperatorFills(),

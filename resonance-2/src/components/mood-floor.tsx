@@ -26,8 +26,10 @@ const POLL_MS = 45_000;
 const DEADBAND_HINT =
   "Flat when the absolute 24h portfolio change is under 0.05%. Partial means at least one live holding was excluded because its feed had no 24h price.";
 
+type MoodDisplay = Pick<PortfolioMood, "tone" | "changePct" | "partial">;
+
 type MoodState = {
-  mood: PortfolioMood;
+  mood: MoodDisplay;
   preview: MoodTone | null;
   setPreview: (tone: MoodTone | null) => void;
 };
@@ -38,7 +40,7 @@ export function MoodFloor({
   initialMood,
   children,
 }: {
-  initialMood: PortfolioMood;
+  initialMood: MoodDisplay;
   children: ReactNode;
 }) {
   const [mood, setMood] = useState(initialMood);

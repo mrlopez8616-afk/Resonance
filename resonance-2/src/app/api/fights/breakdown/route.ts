@@ -7,6 +7,7 @@ import {
   postFightBreakdowns,
 } from "@/lib/fight-breakdowns-store";
 import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
+import { privateModeResponse, requestIsPublicMode } from "@/lib/public-mode-server";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
@@ -39,6 +40,7 @@ function notConfigured() {
 export async function GET(request: Request) {
   const access = await authorizeReadRequest(request);
   if (!access.ok) return access.response;
+  if (await requestIsPublicMode(request)) return privateModeResponse();
   const event = new URL(request.url).searchParams.get("event")?.trim() ?? "";
   if (!SLUG.test(event)) {
     return finishAuthorizedRead(

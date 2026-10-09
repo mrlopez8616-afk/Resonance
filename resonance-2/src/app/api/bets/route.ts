@@ -4,6 +4,7 @@ import { asBetWriteError, isBetsStoreConfigured, postStoredBets, settleStoredBet
 import { loadBetsForPage } from "@/lib/store-page";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
+import { privateModeResponse, requestIsPublicMode } from "@/lib/public-mode-server";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,7 @@ function writtenJson(written: {
 export async function GET(request: Request) {
   const access = await authorizeReadRequest(request);
   if (!access.ok) return access.response;
+  if (await requestIsPublicMode(request)) return privateModeResponse();
   const book = await loadBetsForPage();
   if (book.status === "unavailable") {
     return finishAuthorizedRead(

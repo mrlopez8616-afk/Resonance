@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { FightEvent, ListedFightEvent } from "@/components/fight-board";
+import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { applyStaticCard, staticFightCard } from "@/data/dwcs-cards";
 import { deskFightsForEvent } from "@/lib/fight-breakdowns";
@@ -39,6 +40,8 @@ export default async function FightEventPage({
   params: Promise<{ event: string }>;
   searchParams: Promise<{ node?: string | string[] }>;
 }) {
+  const blocked = await blockedPublicPage();
+  if (blocked) return blocked;
   const { event } = await params;
   const legacy = legacyFightNodeHref(event);
   if (legacy) redirect(legacy);
