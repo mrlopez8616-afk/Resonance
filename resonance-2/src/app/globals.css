@@ -873,6 +873,14 @@ body {
   font-weight: 600;
 }
 
+.lot-total.is-holding {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lot-total.is-holding .lot-main {
+  flex-wrap: wrap;
+}
+
 .lot-more summary,
 .lot-closed summary {
   cursor: pointer;

@@ -442,6 +442,35 @@ describe("fills store core", () => {
     );
   });
 
+  it("accepts a Coinbase SUI backfill without moving the sleeve", () => {
+    const seeded = createSeededFillsEnvelope("2026-09-19T00:00:00.000Z");
+    const before = mergeSleeveBook("SUI", seeded.sleevePrints);
+    const coinbase = before.find((row) => row.id === "coinbase")?.quantity;
+    const written = ingestFillIntoEnvelope(
+      seeded,
+      parseFillEvent({
+        venue: "coinbase",
+        orderId: "6bab89a3-fdbb-4768-92f4-dbb5654bf1f3",
+        ticker: "SUI",
+        side: "buy",
+        qty: "16.8",
+        price: "0.8020710385",
+        sleeve: "coinbase",
+        filledAt: "2026-09-18T12:49:23-05:00",
+        backfill: true,
+      }),
+    );
+    assert.equal(written.applied, false);
+    assert.equal(written.backfill, true);
+    assert.equal(written.fill.venue, "coinbase");
+    assert.equal(written.fill.sleeve, "coinbase");
+    assert.deepEqual(written.envelope.sleevePrints, {});
+    assert.equal(
+      mergeSleeveBook("SUI", written.envelope.sleevePrints).find((row) => row.id === "coinbase")?.quantity,
+      coinbase,
+    );
+  });
+
   it("still refuses a backfill aimed at a sleeve that is not on the face", () => {
     const seeded = createSeededFillsEnvelope();
     assert.throws(

@@ -36,12 +36,12 @@ export type HistoricalFillTicker = Exclude<
 export type FillSymbol = AcceptedFillTicker | HistoricalFillTicker;
 
 export const FILL_VENUES = ["robinhood", "coinbase"] as const;
-export const WRITABLE_SLEEVE_IDS = ["rh-main", "rh-agentic", "coinbase"] as const;
+export const WRITABLE_SLEEVE_IDS = ["rh-main", "rh-agentic", "coinbase", "cb-agentic"] as const;
 export const FLARE_VAULT_SLEEVE_ID = "flare-vault";
 
 export const VENUE_SLEEVES: Record<FillVenue, readonly FillSleeveId[]> = {
   robinhood: ["rh-main", "rh-agentic"],
-  coinbase: ["coinbase"],
+  coinbase: ["coinbase", "cb-agentic"],
 };
 
 export class FillIngestError extends Error {
@@ -66,6 +66,8 @@ export type NormalizedFillEvent = {
   filledAt: string;
   result: string;
   note?: string;
+  /** USD fee from the POST body. The fills table has no fee column, so this stays on the payload. */
+  feeUsd?: string;
   /** Set when the POST body sent `backfill: true` or `historical: true`. */
   backfill?: boolean;
   idempotencyKey: string;
@@ -144,7 +146,17 @@ function readSleeve(raw: Record<string, unknown>): string {
   return asTrimmed(raw.sleeve || raw.sleeveTarget || raw.sleeveId).toLowerCase();
 }
 
-/** JSON boolean true only. `historical` is an alias for `backfill`. */
+/** `fee` or `feeUsd`, as a non-negative decimal string. Absent means no fee was sent. */
+function readFeeUsd(raw: Record<string, unknown>): string | undefined {
+  const fee = raw.feeUsd ?? raw.fee;
+  if (fee == null || fee === "") return undefined;
+  const text = typeof fee === "string" ? fee.trim() : "";
+  if (!isDecimalString(text) || text.startsWith("-")) {
+    throw new FillIngestError("fee must be a non-negative decimal string.");
+  }
+  return text;
+}
+
 function readBackfill(
   raw: Record<string, unknown>,
   outer: Record<string, unknown> | null,
@@ -213,7 +225,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     );
   }
   if (!isWritableSleeveId(sleeveRaw)) {
-    throw new FillIngestError("sleeve must be rh-main, rh-agentic, or coinbase.");
+    throw new FillIngestError("sleeve must be rh-main, rh-agentic, coinbase, or cb-agentic.");
   }
   if (!VENUE_SLEEVES[venueRaw].includes(sleeveRaw)) {
     throw new FillIngestError(
@@ -228,6 +240,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
 
   const result = asTrimmed(raw.result) || "filled";
   const note = asTrimmed(raw.note) || undefined;
+  const feeUsd = readFeeUsd(raw);
   const backfill = readBackfill(raw, outer);
 
   return {
@@ -242,6 +255,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     filledAt,
     result,
     note,
+    ...(feeUsd ? { feeUsd } : {}),
     ...(backfill ? { backfill: true as const } : {}),
     idempotencyKey: fillIdempotencyKey(venueRaw, tradeKey),
   };
@@ -261,6 +275,7 @@ export function eventToFill(event: NormalizedFillEvent): TradeFill {
     sleeve: event.sleeve,
     idempotencyKey: event.idempotencyKey,
     note: event.note,
+    ...(event.feeUsd ? { feeUsd: event.feeUsd } : {}),
     ...(event.backfill ? { backfill: true as const } : {}),
   };
 }

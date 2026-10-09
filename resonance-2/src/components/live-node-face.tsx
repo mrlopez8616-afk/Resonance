@@ -6,6 +6,7 @@ import { ValueCard } from "@/components/value-card";
 import type { NodeSleeve } from "@/data/sleeves";
 import {
   assembleLiveFace,
+  shownSleeves,
   type LiveFaceData,
   type SpotQuote,
 } from "@/lib/live-face";
@@ -115,7 +116,7 @@ export function LiveNodeFace({
         <span> {face.unitsWord}</span>
       </p>
       <ul className="live-sleeves">
-        {face.sleeves.map((sleeve) => (
+        {shownSleeves(face.sleeves).map((sleeve) => (
           <li key={sleeve.id}>
             <span className="sleeve-mark" aria-hidden />
             <span className="sleeve-label">

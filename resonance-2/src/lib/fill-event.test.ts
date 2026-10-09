@@ -82,6 +82,28 @@ describe("fill event parse + idempotency", () => {
       /not valid for venue/,
     );
     assert.throws(
+      () =>
+        parseFillEvent({
+          ...mondayPacket,
+          ticker: "XRP",
+          sleeve: "cb-agentic",
+        }),
+      /not valid for venue/,
+    );
+    const agentic = parseFillEvent({
+      venue: "coinbase",
+      orderId: "cb-agentic-xrp-1",
+      ticker: "XRP",
+      side: "buy",
+      qty: "1",
+      price: "1.40",
+      sleeve: "cb-agentic",
+      filledAt: "2026-10-09T12:00:00-05:00",
+    });
+    assert.equal(agentic.venue, "coinbase");
+    assert.equal(agentic.sleeve, "cb-agentic");
+    assert.equal(agentic.idempotencyKey, "coinbase:cb-agentic-xrp-1");
+    assert.throws(
       () => parseFillEvent({ ...mondayPacket, ticker: "DOGE" }),
       /locked nodes \(BTC ETH SOL XRP SUI FLR PWR VRT GEV CEG NVDA TSM TSLA SPCX HBAR\)/,
     );

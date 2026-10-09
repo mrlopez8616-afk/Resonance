@@ -132,6 +132,12 @@ export function formatCompactUsd(usd: number | null): string {
   return `~$${usd.toFixed(2)}`;
 }
 
+/** Hide a zero sleeve when the book already has a positive one. A book of only zeros stays visible. */
+export function shownSleeves<T extends { quantity: string }>(sleeves: readonly T[]): T[] {
+  const positive = sleeves.filter((row) => isDecimalString(row.quantity) && Number(row.quantity) > 0);
+  return positive.length > 0 ? positive : [...sleeves];
+}
+
 export function assembleLiveFace(
   ticker: string,
   sleeves: readonly NodeSleeve[],

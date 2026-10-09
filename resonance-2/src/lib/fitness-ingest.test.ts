@@ -740,6 +740,9 @@ describe("fitness ingest", { concurrency: false }, () => {
         "009_reset_rh_agentic_sleeves",
         "010_fitness_workouts",
         "011_xrp_agentic_sleeve",
+        "012_sui_agentic_sleeve",
+        "013_sui_coinbase_backfill",
+        "014_cb_agentic_xrp",
       ],
     );
     assert.equal(

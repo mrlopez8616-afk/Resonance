@@ -142,7 +142,8 @@ function coerceStoredFill(raw: unknown): Fill | null {
   if (
     raw.sleeve === "rh-main" ||
     raw.sleeve === "rh-agentic" ||
-    raw.sleeve === "coinbase"
+    raw.sleeve === "coinbase" ||
+    raw.sleeve === "cb-agentic"
   ) {
     fill.sleeve = raw.sleeve;
   }
@@ -151,6 +152,9 @@ function coerceStoredFill(raw: unknown): Fill | null {
   }
   if (typeof raw.note === "string" && raw.note.trim()) {
     fill.note = raw.note.trim();
+  }
+  if (typeof raw.feeUsd === "string" && raw.feeUsd.trim()) {
+    fill.feeUsd = raw.feeUsd.trim();
   }
   if (raw.logOnly === true) fill.logOnly = true;
   if (raw.backfill === true) fill.backfill = true;

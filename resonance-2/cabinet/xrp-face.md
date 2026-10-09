@@ -56,8 +56,9 @@ Sleeve quantities: `src/data/xrp-sleeves.ts` (seed / fallback). Hub writes go th
 
 - RH Agentic — `51.601` (2026-09-30 read-only pull). Cost basis `$72.99` is not a sleeve field.
 - RH Main — removed. The founder confirmed `587.718` moved into Agentic and was used to buy the XLM and HBAR. An RH Main fill aimed at XRP is **400**.
-- Coinbase — removed. The founder no longer holds the old `778.178708` lot. A Coinbase fill aimed at XRP is **400**.
-- Flare vault — `FLARE_VAULT_XRP = "28281"`, `manual: true`. Do not edit this constant from a broker pull. Face total is `28,332.601` (`28281` + `51.601`).
+- Coinbase Default — removed. The founder no longer holds the old `778.178708` lot, and the later Default-portfolio XRP balance is not a line. A `coinbase` sleeve fill aimed at XRP is **400**.
+- Coinbase Agentic — `cb-agentic` quantity `10`. Transfer in, no trades, so the lots row is entry unknown and the XRP book is partial. Venue `coinbase` only. It is included in the face total.
+- Flare vault — `FLARE_VAULT_XRP = "28281"`, `manual: true`. Do not edit this constant from a broker pull. Face total is `28,342.601` (`28281` + `51.601` + `10`).
 
 Never put the Xaman gas wallet address on a face.
 

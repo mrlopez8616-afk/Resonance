@@ -185,6 +185,7 @@ describe("XRP agentic sleeve correction", { concurrency: false }, () => {
     assert.equal(other?.sleeve, null);
     assert.equal(other?.venue, null);
     assert.equal(sui?.sleeve, null);
+    assert.equal(sui?.venue, null);
     assert.equal(buy?.sleeve, "rh-agentic");
 
     const printsAfter = await sqlQuery<{ ticker: string; sleeve_id: string; quantity: string }>(

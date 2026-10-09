@@ -75,12 +75,15 @@ describe("rh-agentic sleeve reset", { concurrency: false }, () => {
 
     const loaded = async () =>
       sqlQuery<{ ticker: string; sleeve_id: string; quantity: string }>(
-        `SELECT ticker, sleeve_id, quantity FROM sleeve_prints ORDER BY ticker`,
+        `SELECT ticker, sleeve_id, quantity FROM sleeve_prints ORDER BY ticker, sleeve_id`,
       );
     const afterFirst = await loaded();
     assert.deepEqual(
       afterFirst.map((row) => [row.ticker, row.sleeve_id, row.quantity]),
-      [...EXPECTED_ROWS].sort((a, b) => a[0].localeCompare(b[0])),
+      [
+        ...EXPECTED_ROWS.map((row) => [...row]),
+        ["XRP", "cb-agentic", "10"],
+      ].sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1])),
     );
 
     const second = await migrate();

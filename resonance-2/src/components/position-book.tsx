@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
+import { formatCompactUsd } from "@/lib/live-face";
 import {
   LOT_PREVIEW,
-  bookTotals,
   formatLotPct,
+  positionBookTotals,
   formatLotUsd,
   formatSignedUsd,
+  type AgenticLotLine,
   type BookTotals,
   type ClosedLot,
   type FillMarker,
@@ -128,19 +130,34 @@ export function PositionChartView({
   );
 }
 
+function shownUsd(usd: number | null): string | null {
+  if (usd === null || !Number.isFinite(usd) || usd === 0) return null;
+  const label = formatLotUsd(usd);
+  if (!label || label === "$0.00" || label === "-$0.00") return null;
+  return label;
+}
+
+function shownSignedUsd(usd: number | null): string | null {
+  const label = formatSignedUsd(usd);
+  if (!label || label === "$0.00" || label === "-$0.00") return null;
+  return label;
+}
+
 function TotalsLine({ totals }: { totals: BookTotals }) {
+  const cost = shownUsd(totals.costUsd);
+  const value = shownUsd(totals.valueUsd);
   return (
     <p className="position-totals">
       {totals.partialLabel ? <span>{totals.partialLabel}</span> : null}
-      {totals.costUsd !== null ? <span>cost {formatLotUsd(totals.costUsd)}</span> : null}
-      {totals.valueUsd !== null ? <span>value {formatLotUsd(totals.valueUsd)}</span> : null}
+      {cost ? <span>cost {cost}</span> : null}
+      {value ? <span>value {value}</span> : null}
       <Pnl usd={totals.pnlUsd} pct={totals.pnlPct} />
     </p>
   );
 }
 
 function Pnl({ usd, pct }: { usd: number | null; pct: number | null }) {
-  if (usd === null && pct === null) return null;
+  if (usd === null || usd === 0) return null;
   const tone = toneOf(usd);
   return <span className={tone ? `is-${tone}` : undefined}>{pnlText(usd, pct)}</span>;
 }
@@ -156,7 +173,7 @@ function lotRow(lot: OpenLot): ReactNode {
         </span>
       </span>
       <span className="lot-side">
-        {lot.valueUsd !== null ? <span>{formatLotUsd(lot.valueUsd)}</span> : null}
+        {shownUsd(lot.valueUsd) ? <span>{shownUsd(lot.valueUsd)}</span> : null}
         <span className={tone ? `is-${tone}` : undefined}>
           {arrow(tone)} {formatLotPct(lot.pnlPct) ?? ""}
         </span>
@@ -175,9 +192,22 @@ function closedRow(lot: ClosedLot): ReactNode {
           {lot.originalQty} @ {formatLotUsd(Number(lot.price))}
         </span>
       </span>
-      <span className={`lot-side${tone ? ` is-${tone}` : ""}`}>{formatSignedUsd(lot.realizedPnlUsd)}</span>
+      <span className={`lot-side${tone ? ` is-${tone}` : ""}`}>{shownSignedUsd(lot.realizedPnlUsd)}</span>
     </li>
   );
+}
+
+function holdingTotalLine(totals: BookTotals): string {
+  const value = formatCompactUsd(totals.valueUsd);
+  const money = value === "—" || value === "~$0.00" ? null : value;
+  return ["Total", "partial", totals.sharesLabel, money, "entry unknown"].filter((part) => part && part.trim()).join(" · ");
+}
+
+function knownShareText(totals: BookTotals): string | null {
+  const shares = totals.sharesLabel.trim();
+  if (!shares || shares === "0" || Number(shares) === 0) return null;
+  const average = totals.averageUsd !== null && totals.averageUsd > 0 ? shownUsd(totals.averageUsd) : null;
+  return average ? `${shares} @ ${average}` : shares;
 }
 
 export function LotsTable({
@@ -185,14 +215,22 @@ export function LotsTable({
   totals,
   liveLabel,
   vaultLine,
+  unknownHolding = null,
+  agenticLines = null,
 }: {
   ledger: LotsLedger;
   totals: BookTotals;
   liveLabel: string | null;
   vaultLine: string | null;
+  unknownHolding?: { name: string; shares: string; valueLabel: string | null } | null;
+  agenticLines?: readonly AgenticLotLine[] | null;
 }) {
   const preview = ledger.openLots.slice(0, LOT_PREVIEW);
   const rest = ledger.openLots.slice(LOT_PREVIEW);
+  const cost = shownUsd(totals.costUsd);
+  const value = shownUsd(totals.valueUsd);
+  const shares = knownShareText(totals);
+  const gapValue = liveLabel === "$0.00" || liveLabel === "-$0.00" ? null : liveLabel;
   return (
     <section className="lot-book" aria-label="Lots">
       {ledger.status === "over" ? (
@@ -210,30 +248,57 @@ export function LotsTable({
             </details>
           </li>
         ) : null}
+        {agenticLines
+          ? agenticLines.map((line) => (
+              <li className="lot-row lot-gap" key={`${line.primary}-${line.secondary}`}>
+                <span className="lot-main">
+                  <span>{line.primary}</span>
+                  <span>{line.secondary}</span>
+                </span>
+                <span className="lot-side">
+                  {shownUsd(line.valueUsd) ? <span>{shownUsd(line.valueUsd)}</span> : null}
+                  <Pnl usd={line.pnlUsd} pct={line.pnlPct} />
+                </span>
+              </li>
+            ))
+          : unknownHolding ? (
+          <li className="lot-row lot-gap">
+            <span className="lot-main">
+              <span>{`${unknownHolding.name} · entry unknown`}</span>
+              <span>{`${unknownHolding.shares} shares`}</span>
+            </span>
+            {unknownHolding.valueLabel ? <span className="lot-side">{unknownHolding.valueLabel}</span> : null}
+          </li>
+        ) : null}
         {ledger.gapShares ? (
           <li className="lot-row lot-gap">
             <span className="lot-main">
               <span>entry unknown</span>
               <span>{ledger.gapShares} shares</span>
             </span>
-            <span className="lot-side">{liveLabel}</span>
+            {gapValue ? <span className="lot-side">{gapValue}</span> : null}
           </li>
         ) : null}
       </ul>
-      <div className="lot-total">
-        <span className="lot-main">
-          <span>{totals.partialLabel ? `Total · ${totals.partialLabel}` : "Total"}</span>
-          <span>
-            {totals.sharesLabel}
-            {totals.averageUsd !== null ? ` @ ${formatLotUsd(totals.averageUsd)}` : ""}
+      {totals.presentation === "holding" ? (
+        <div className="lot-total is-holding">
+          <span className="lot-main">
+            <span>{holdingTotalLine(totals)}</span>
           </span>
-        </span>
-        <span className="lot-side">
-          {totals.costUsd !== null ? <span>cost {formatLotUsd(totals.costUsd)}</span> : null}
-          {totals.valueUsd !== null ? <span>{formatLotUsd(totals.valueUsd)}</span> : null}
-          <Pnl usd={totals.pnlUsd} pct={totals.pnlPct} />
-        </span>
-      </div>
+        </div>
+      ) : (
+        <div className="lot-total">
+          <span className="lot-main">
+            <span>{totals.partialLabel ? `Total · ${totals.partialLabel}` : "Total"}</span>
+            {shares ? <span>{shares}</span> : null}
+          </span>
+          <span className="lot-side">
+            {cost ? <span>cost {cost}</span> : null}
+            {value ? <span>{value}</span> : null}
+            <Pnl usd={totals.pnlUsd} pct={totals.pnlPct} />
+          </span>
+        </div>
+      )}
       {ledger.closedLots.length > 0 ? (
         <details className="lot-closed">
           <summary>Closed lots</summary>
@@ -251,28 +316,49 @@ export function PositionBook({
   quantity,
   livePrice,
   vaultLine,
+  unknownShares = null,
+  vaultShares = null,
+  agenticLines = null,
 }: {
   ledger: LotsLedger;
   chart: PositionChart | null;
   quantity: string;
   livePrice: number | null;
   vaultLine: string | null;
+  unknownShares?: string | null;
+  vaultShares?: string | null;
+  agenticLines?: readonly AgenticLotLine[] | null;
 }) {
-  const totals = bookTotals(ledger, livePrice, quantity);
+  const totals = positionBookTotals({
+    ledger,
+    livePrice,
+    sleeveShares: quantity,
+    unknownShares,
+    vaultShares,
+  });
   const gapValue =
     ledger.gapShares && livePrice && livePrice > 0
-      ? formatLotUsd(Number(ledger.gapShares) * livePrice)
+      ? shownUsd(Number(ledger.gapShares) * livePrice)
       : null;
+  const unknownValue =
+    unknownShares && livePrice && livePrice > 0 ? shownUsd(Number(unknownShares) * livePrice) : null;
   return (
     <div className="position-book">
       {chart ? <PositionChartView chart={chart} totals={chart.mode === "matched" ? totals : null} /> : null}
-      {chart?.mode === "holdings" ? (
-        <p className="position-totals">
-          <span>{chart.caption}</span>
-          <span>{chart.entry}</span>
-        </p>
-      ) : null}
-      <LotsTable ledger={ledger} totals={totals} liveLabel={gapValue} vaultLine={vaultLine} />
+      <LotsTable
+        ledger={ledger}
+        totals={totals}
+        liveLabel={gapValue}
+        vaultLine={vaultLine}
+        unknownHolding={
+          agenticLines
+            ? null
+            : unknownShares
+              ? { name: "Coinbase Agentic", shares: unknownShares, valueLabel: unknownValue }
+              : null
+        }
+        agenticLines={agenticLines}
+      />
     </div>
   );
 }
@@ -298,7 +384,7 @@ export function PositionRollupView({ rollup }: { rollup: PositionRollup }) {
             key: row.ticker,
             label: row.ticker,
             note: row.partial ? "entry unknown" : costNote(row.costUsd),
-            value: formatLotUsd(row.valueUsd),
+            value: shownUsd(row.valueUsd),
             usd: row.pnlUsd,
             pct: row.pnlPct,
           }),
@@ -306,8 +392,13 @@ export function PositionRollupView({ rollup }: { rollup: PositionRollup }) {
         {rollupLine({
           total: true,
           label: rollup.partial ? "Total · partial" : "Total",
-          note: costNote(rollup.costUsd),
-          value: formatLotUsd(rollup.valueUsd),
+          note:
+            rollup.costUsd === null || rollup.costUsd === 0
+              ? rollup.partial
+                ? "entry unknown"
+                : null
+              : costNote(rollup.costUsd),
+          value: shownUsd(rollup.valueUsd),
           usd: rollup.pnlUsd,
           pct: rollup.pnlPct,
         })}
@@ -317,7 +408,7 @@ export function PositionRollupView({ rollup }: { rollup: PositionRollup }) {
 }
 
 function costNote(usd: number | null): string | null {
-  const label = formatLotUsd(usd);
+  const label = shownUsd(usd);
   return label ? `cost ${label}` : null;
 }
 
@@ -338,8 +429,9 @@ function rollupLine({
   pct: number | null;
   total?: boolean;
 }): ReactNode {
-  const tone = toneOf(usd);
-  const percent = formatLotPct(pct);
+  const priced = usd !== null && usd !== 0;
+  const tone = priced ? toneOf(usd) : null;
+  const percent = priced ? formatLotPct(pct) : null;
   const mark = arrow(tone);
   return (
     <div key={key} className={total ? "rollup-line is-total" : "rollup-line"}>
