@@ -9,7 +9,7 @@ This brick does **not** sync Google. It does **not** push a phone. It does **not
 | Store | `resonance-2/calendar.json` / `.data/calendar.json` | Sibling of the fill envelope in the **same** Blob cabinet |
 | Auth | `RESONANCE_SYNC_SECRET` | Same Bearer as `POST /api/fills`. No second secret |
 | Lane seed | `src/data/calendar.ts` | Daily Brief rhythm + Monday Agentic SUI→6 AI |
-| Catalyst seed | `src/data/catalyst-events.json` | 34 verified catalysts. Mapped by `src/data/catalyst-seed.ts` |
+| Catalyst seed | `src/data/catalyst-events.json` | 36 catalysts. Mapped by `src/data/catalyst-seed.ts`. ETN and HUBB stay as history and drop out of upcoming weeks. |
 | Desk | `src/components/calendar-desk.tsx` | `/calendar`. Day default. Week board. Month grid |
 | Day node | `src/app/calendar/[day]/page.tsx` | `/calendar/YYYY-MM-DD`. Month square drill-down. Back returns to the month map |
 | Route | `GET` + `POST /api/calendar` | Read is public. Write is Bearer |
@@ -60,7 +60,7 @@ Catalyst row (`kind: "catalyst"`). No `lane`.
 {
   id,
   kind: "catalyst",
-  node,            // XRP | SUI | FLR | PWR | ETN | VRT | GEV | CEG | HUBB | MACRO
+  node,            // XRP | SUI | FLR | PWR | VRT | GEV | CEG | NVDA | TSM | TSLA | SPCX | ETN | HUBB | MACRO
   start,           // ISO-8601. Midnight Chicago when the source has no clock (`allDay`)
   end?,            // inclusive civil YYYY-MM-DD
   title,
@@ -88,7 +88,7 @@ A month square is a day node. It links to `/calendar/YYYY-MM-DD` (a real route, 
 | Capital | agent | Monday 2026-09-21 Agentic SUI→6 AI, status `history`, link `/log?ticker=SUI&from=2026-09-21&to=2026-09-21`. New RH / Coinbase fills upsert another Capital row |
 | Build | agent | empty until a pull request posts |
 | Gates | founder | empty. `writer: "agent"` is **400** |
-| Catalyst | agent | 34 rows from `catalyst-events.json`. Node is one of the ten above |
+| Catalyst | agent | 36 rows from `catalyst-events.json`. Node is one of the list above. NVDA and SPCX have no earnings row until the company names a date. |
 
 The founder may also write cadence, capital, build, or a catalyst (`writer: "founder"`). An agent may not write gates.
 

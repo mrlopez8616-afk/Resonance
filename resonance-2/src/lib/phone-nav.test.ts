@@ -132,6 +132,33 @@ describe("phone back targets", () => {
     });
     assert.equal(phoneTrail("/n/approvals/done").crumbs.at(-1)?.label, "Done");
     assert.deepEqual(phoneTrail("/n/approvals/other").back, { href: "/", label: "Home" });
+
+    assert.deepEqual(phoneTrail("/n/ai-stocks/catalysts"), {
+      back: { href: "/n/ai-stocks", label: "AI Stocks" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/ai-stocks", label: "AI Stocks" },
+        { href: "/n/ai-stocks/catalysts", label: "Catalysts" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/ai-stocks/catalysts/next-week"), {
+      back: { href: "/n/ai-stocks/catalysts", label: "Catalysts" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/ai-stocks", label: "AI Stocks" },
+        { href: "/n/ai-stocks/catalysts", label: "Catalysts" },
+        { href: "/n/ai-stocks/catalysts/next-week", label: "Next week" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/ai-stocks/catalysts/next-week/tsm-q3-2026-earnings").back, {
+      href: "/n/ai-stocks/catalysts/next-week",
+      label: "Next week",
+    });
+    assert.equal(
+      phoneTrail("/n/ai-stocks/catalysts/next-week/tsm-q3-2026-earnings").crumbs.at(-1)?.label,
+      "Tsm Q3 2026 Earnings",
+    );
+    assert.deepEqual(phoneTrail("/n/ai-stocks/catalysts/nope").back, { href: "/", label: "Home" });
   });
 
   it("sends an unknown route home", () => {

@@ -30,7 +30,7 @@ describe("calendar store core", () => {
     assert.equal(seeded.envelope.events[1]?.id, "capital-monday-agentic-sui-6ai");
     assert.equal(
       seeded.envelope.events.filter((event) => event.kind === "catalyst").length,
-      34,
+      catalystSeed.length,
     );
     assert.equal(
       seeded.envelope.events.some((event) => event.lane === "build"),

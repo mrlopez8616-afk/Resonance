@@ -29,6 +29,7 @@ import {
 } from "@/lib/home-lines";
 import type { FinanceHomeFace } from "@/lib/finance/view";
 import type { StepSlot, TierSegment } from "@/lib/home-visuals";
+import { CATALYST_CALENDAR_HREF } from "@/lib/catalyst-calendar";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
 
 function ParentLines({ lines }: { lines: readonly string[] }) {
@@ -240,31 +241,71 @@ export function ParentGrid({
         ) : parent.id === "fitness" && stepSlots ? (
           <FitnessStepVisual slots={stepSlots} />
         ) : null;
+        const href = parentCardHref(parent.id);
+        const headline = (
+          <>
+            <h2 className="node-ticker">{parent.label}</h2>
+            {summary ? (
+              <p className={`live-units${summary.coverage ? " is-coverage" : ""}`}>
+                {summary.value}
+                {summary.unit ? <span> {summary.unit}</span> : null}
+              </p>
+            ) : showNote ? (
+              <p className="node-note">not connected yet</p>
+            ) : null}
+          </>
+        );
+        if (parent.id === "ai-stocks") {
+          const catalyst = catalystLine?.trim() ? catalystLine : null;
+          const index = catalyst ? lines.indexOf(catalyst) : -1;
+          const before = index >= 0 ? lines.slice(0, index) : lines;
+          const after = index >= 0 ? lines.slice(index + 1) : [];
+          return (
+            <NodeSquare
+              key={parent.id}
+              parent
+              home
+              wide
+              live={connected}
+              dashed={!connected}
+              label={parent.label}
+            >
+              <div className="live-face parent-face">
+                <Link href={href} className="node-log-link" title={`Open ${parent.label}`}>
+                  {headline}
+                  <ParentLines lines={before} />
+                </Link>
+                {catalyst ? (
+                  <ul className="parent-lines">
+                    <li>
+                      <Link href={CATALYST_CALENDAR_HREF} className="parent-line-link">
+                        {catalyst}
+                      </Link>
+                    </li>
+                  </ul>
+                ) : null}
+                {after.length > 0 || visual ? (
+                  <Link href={href} className="node-log-link" title={`Open ${parent.label}`}>
+                    <ParentLines lines={after} />
+                    {visual}
+                  </Link>
+                ) : null}
+              </div>
+            </NodeSquare>
+          );
+        }
         return (
           <NodeSquare
             key={parent.id}
             parent
             home
-            wide={parent.id === "ai-stocks"}
             live={connected}
             dashed={!connected}
             label={parent.label}
           >
-            <Link
-              href={parentCardHref(parent.id)}
-              className="node-log-link"
-              title={`Open ${parent.label}`}
-            >
+            <Link href={href} className="node-log-link" title={`Open ${parent.label}`}>
               <div className="live-face parent-face">
-                <h2 className="node-ticker">{parent.label}</h2>
-                {summary ? (
-                  <p className={`live-units${summary.coverage ? " is-coverage" : ""}`}>
-                    {summary.value}
-                    {summary.unit ? <span> {summary.unit}</span> : null}
-                  </p>
-                ) : showNote ? (
-                  <p className="node-note">not connected yet</p>
-                ) : null}
+                {headline}
                 <ParentLines lines={lines} />
                 {visual}
               </div>

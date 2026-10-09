@@ -176,6 +176,42 @@ function homeTrail(): PhoneTrail {
   return { back: HOME, crumbs: [HOME] };
 }
 
+const CATALYST_BUCKET_LABELS: Record<string, string> = {
+  "this-week": "This week",
+  "next-week": "Next week",
+  later: "Later",
+};
+
+/** Catalyst calendar sits under AI Stocks and drills one more level than a ticker. */
+function catalystPhoneTrail(parts: string[]): PhoneTrail {
+  const parent: PhoneTarget = { href: "/n/ai-stocks", label: "AI Stocks" };
+  const catalysts: PhoneTarget = { href: "/n/ai-stocks/catalysts", label: "Catalysts" };
+  if (parts.length === 3) return { back: parent, crumbs: [HOME, parent, catalysts] };
+  const bucketId = parts[3] ?? "";
+  const bucketLabel = CATALYST_BUCKET_LABELS[bucketId];
+  if (!bucketLabel || parts.length > 5) return homeTrail();
+  const week: PhoneTarget = {
+    href: `/n/ai-stocks/catalysts/${bucketId}`,
+    label: bucketLabel,
+  };
+  if (parts.length === 4) return { back: catalysts, crumbs: [HOME, parent, catalysts, week] };
+  const eventId = parts[4] ?? "";
+  if (!eventId) return homeTrail();
+  return {
+    back: week,
+    crumbs: [
+      HOME,
+      parent,
+      catalysts,
+      week,
+      {
+        href: `/n/ai-stocks/catalysts/${bucketId}/${eventId}`,
+        label: slugLabel(eventId),
+      },
+    ],
+  };
+}
+
 /**
  * One-level trail for a pathname.
  * `search` may be `?ticker=NVDA` or `ticker=NVDA`. It only changes `/log`.
@@ -198,6 +234,7 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       }
       return homeTrail();
     }
+    if (parts[1] === "ai-stocks" && parts[2] === "catalysts") return catalystPhoneTrail(parts);
     const parentId = parts[1];
     if (!parentId || parts.length > 3) return homeTrail();
     if (parentId === "lessons" && parts.length === 2) {

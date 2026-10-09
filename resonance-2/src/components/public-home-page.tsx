@@ -6,7 +6,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
-import { fitnessSecondaryLines } from "@/lib/home-lines";
+import { fitnessSecondaryLines, nextAiCatalystLine } from "@/lib/home-lines";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
@@ -77,6 +77,7 @@ export async function PublicHomePage() {
       <PublicHome
         crypto={floor.model.crypto}
         aiStocks={floor.model.aiStocks}
+        aiCatalystLine={safeLine(nextAiCatalystLine(calendar.events, new Date()) ?? "")}
         fitness={{
           headline: headline?.value ?? null,
           unit: headline?.unit ?? null,
