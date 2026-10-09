@@ -886,34 +886,89 @@ body {
   height: auto;
 }
 
-.lot-bars svg {
-  width: auto;
-  max-width: none;
-  height: 196px;
-  aspect-ratio: auto;
+.lot-bars {
+  width: 100%;
 }
 
 .lot-bars-scroll {
   overflow-x: auto;
+  width: 100%;
   max-width: 100%;
 }
 
-.lot-bars-track {
+.lot-bars-cols {
   position: relative;
-  min-width: 100%;
+  display: flex;
+  width: 100%;
+  align-items: stretch;
 }
 
-.lot-bars-hits {
-  position: absolute;
-  inset: 0 0 18px 0;
+.lot-bar-col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 44px;
   display: flex;
+  flex-direction: column;
   align-items: stretch;
+}
+
+.lot-bar-head {
+  min-height: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+}
+
+.lot-bar-plot {
+  position: relative;
+  height: 140px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.lot-bar-plot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--lot-zero, 70px);
+  border-top: 1px solid var(--border);
+}
+
+.lot-bar-fill {
+  position: absolute;
+  left: 50%;
+  width: 70%;
+  max-width: 48px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.lot-bar-value {
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  height: 13px;
+  transform: translateX(-50%);
+  color: var(--text);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 13px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .lot-bar-hit,
 .lot-bar-hit > summary {
   display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   min-width: 44px;
+  min-height: 44px;
   height: 100%;
   cursor: pointer;
 }
@@ -926,54 +981,53 @@ body {
   display: none;
 }
 
-.lot-bars-zero {
-  stroke: var(--border);
-  stroke-width: 1;
-}
-
 /* Same green and red as the home cards (.home-visual .is-up / .is-down). */
 .lot-bar-fill.is-up {
-  fill: #16c784;
+  background-color: #16c784;
 }
 
 .lot-bar-fill.is-down {
-  fill: var(--live);
+  background-color: var(--live);
 }
 
 .lot-bar-fill.is-flat {
-  fill: var(--muted);
+  background-color: var(--muted);
 }
 
-.lot-bar-outline {
-  fill: none;
-  stroke: var(--text);
-  stroke-width: 1.75;
+.lot-bar-fill.is-first {
+  box-shadow: 0 0 0 1.75px var(--text);
 }
 
-.lot-bar.is-sold .lot-bar-fill {
+.lot-bar-fill.is-sold {
   opacity: 0.55;
 }
 
-.lot-bar-partial {
-  fill: url(#lot-bar-hatch);
-}
-
-.lot-bar-hatch-line {
-  stroke: var(--text);
-  stroke-width: 1.5;
+.lot-bar-fill.is-marked {
+  background-image: repeating-linear-gradient(
+    -40deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--text) 28%, transparent) 3px 4.5px
+  );
 }
 
 .lot-bar-date,
 .lot-bar-tick,
 .lot-bar-badge {
-  fill: var(--muted);
+  color: var(--muted);
   font-size: 11px;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
+  text-align: center;
+}
+
+.lot-bar-date {
+  margin-top: 6px;
+  min-height: 16px;
+  line-height: 16px;
 }
 
 .lot-bar-badge,
 .lot-bar.is-first .lot-bar-badge {
-  fill: var(--text);
+  color: var(--text);
   font-size: 10px;
 }
 

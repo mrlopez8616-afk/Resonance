@@ -9,6 +9,7 @@ import {
   barsFromOpenLots,
   barsFromRollup,
   lotBarPopoverLines,
+  lotBarValueLabel,
   lotDateLabel,
   unknownEntryCaption,
   type ClosedLotBarInput,
@@ -38,6 +39,78 @@ function row(partial: Partial<RollupRow> & Pick<RollupRow, "ticker">): RollupRow
     partial: false,
     ...partial,
   };
+}
+
+function classNameOf(node: ReactNode): string {
+  if (!isValidElement(node)) return "";
+  const props = node.props as { className?: string };
+  return props.className ?? "";
+}
+
+function styleOf(node: ReactNode): { top?: number; maxWidth?: number; minWidth?: string } {
+  if (!isValidElement(node)) return {};
+  const props = node.props as { style?: { top?: number; maxWidth?: number; minWidth?: string } };
+  return props.style ?? {};
+}
+
+function elementChildren(node: ReactNode): ReactNode[] {
+  if (!isValidElement(node)) return [];
+  const props = node.props as { children?: ReactNode };
+  const children = props.children;
+  if (children == null) return [];
+  return Array.isArray(children) ? children : [children];
+}
+
+/** Dates sit in a row after the plot, and a value label stays out of that row. */
+function assertDateRowBelowPlot(node: ReactNode) {
+  const cols = findByClass(node, "lot-bars-cols");
+  assert.ok(cols);
+  assert.match(styleOf(cols).minWidth ?? "", /^max\(100%, \d+px\)$/);
+  const columns = elementChildren(cols).filter((child) => classNameOf(child).includes("lot-bar-col"));
+  assert.ok(columns.length >= 2);
+  for (const column of columns) {
+    const kids = elementChildren(column);
+    const plotAt = kids.findIndex((child) => classNameOf(child).includes("lot-bar-plot"));
+    const dateAt = kids.findIndex((child) => classNameOf(child).includes("lot-bar-date"));
+    assert.ok(plotAt >= 0);
+    assert.ok(dateAt > plotAt);
+    const plot = kids[plotAt];
+    assert.equal(findByClass(plot!, "lot-bar-date"), null);
+    const fill = findByClass(plot!, "lot-bar-fill");
+    const value = findByClass(plot!, "lot-bar-value");
+    assert.ok(fill);
+    assert.equal(styleOf(fill).maxWidth, 48);
+    assert.ok(value);
+    const tone = classNameOf(column);
+    const barTop = styleOf(fill).top ?? 0;
+    const labelTop = styleOf(value).top ?? 0;
+    if (tone.includes("is-up")) assert.ok(labelTop < barTop);
+    if (tone.includes("is-down")) {
+      const height = (fill && isValidElement(fill) ? (fill.props as { style?: { height?: number } }).style?.height : 0) ?? 0;
+      const labelBottom = labelTop + 13;
+      assert.ok(labelBottom < 140);
+      if (height >= 15) assert.ok(labelTop >= barTop);
+    }
+  }
+}
+
+function findByClass(node: ReactNode, className: string): ReactNode | null {
+  if (node == null || typeof node === "boolean") return null;
+  if (typeof node === "string" || typeof node === "number") return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findByClass(child, className);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!isValidElement(node)) return null;
+  if (classNameOf(node).split(" ").includes(className)) return node;
+  const type = node.type;
+  if (typeof type === "function") {
+    return findByClass((type as (props: unknown) => ReactNode)(node.props), className);
+  }
+  return findByClass((node.props as { children?: ReactNode }).children, className);
 }
 
 function collectText(node: ReactNode, found: string[] = []): string[] {
@@ -105,6 +178,11 @@ describe("lot bars", () => {
     assert.match(text, /Sep 18/);
     assert.match(text, /Oct 9/);
     assert.match(text, /First buy/);
+    assert.match(text, /\+\$6\.00/);
+    assert.match(text, /−\$4\.00/);
+    assert.equal(lotBarValueLabel(bars[0]!, false), "+$6.00");
+    assert.equal(lotBarValueLabel(bars[1]!, false), "−$4.00");
+    assertDateRowBelowPlot(LotBarChart({ model: { bars, caption: null }, label: "lots" }));
   });
 
   it("leaves unknown entries and closed-uncomputable lots off the chart", () => {
@@ -164,6 +242,8 @@ describe("lot bars", () => {
       LotBarChart({ model: { bars, caption: null }, publicMode: true, label: "lots" }),
     ).join(" ");
     assert.equal(text.includes("$"), false);
+    assert.match(text, /%/);
+    assert.equal(lotBarValueLabel(bars[0]!, true)?.includes("$"), false);
   });
 
   it("charts a clean sale as a sold bar and hides dollars in public mode", () => {

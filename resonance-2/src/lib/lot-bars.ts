@@ -243,6 +243,13 @@ function badgeLabel(bar: LotBar): string | null {
   return bar.first ? "First buy" : `#${bar.sequence}`;
 }
 
+/** Signed dollars in private mode, percent in public mode. No dollar sign when public. */
+export function lotBarValueLabel(bar: LotBar, publicMode: boolean): string | null {
+  const label = publicMode ? formatLotPct(bar.pnlPct) : formatSignedUsd(bar.pnlUsd);
+  if (!label) return null;
+  return label.replace("-", "−");
+}
+
 /** Popover lines. Public mode is the percent only, with no dollar text. */
 export function lotBarPopoverLines(bar: LotBar, publicMode: boolean): string[] {
   const percent = formatLotPct(bar.pnlPct);
