@@ -331,25 +331,38 @@ export async function saveFillsEnvelope(
   const existing = await sqlQuery<{ source: string; external_id: string; payload: unknown }>(
     `SELECT source, external_id, payload FROM fills`,
   );
-  const byKey = new Map(
-    existing.map((row) => [`${row.source}\u0000${row.external_id}`, readJson(row.payload)]),
-  );
+  // external_id is the fill's identity. source used to be part of the
+  // lookup, so a re-tag that changed venue (and therefore the derived
+  // source) inserted a second row for the same order. Match the stored
+  // external_id no matter which source it sits under, and rewrite that
+  // row — including source — instead of inserting another one.
+  const byExternalId = new Map<string, { source: string; payload: unknown }[]>();
+  for (const row of existing) {
+    const list = byExternalId.get(row.external_id) ?? [];
+    list.push({ source: row.source, payload: readJson(row.payload) });
+    byExternalId.set(row.external_id, list);
+  }
   const counts = emptyCounts(envelope.fills.length);
-  const pending: { fill: Fill; source: string; externalId: string }[] = [];
+  const pending: { fill: Fill; source: string; externalId: string; previousSource: string | null }[] = [];
 
   for (const fill of envelope.fills) {
     const source = fill.venue ?? "seed";
     const externalId = fillRowKey(fill).trim().toLowerCase();
-    const current = byKey.get(`${source}\u0000${externalId}`);
+    const stored = byExternalId.get(externalId) ?? [];
+    const current = stored.find((row) => row.source === source) ?? stored[0];
     if (!current) {
       counts.inserted += 1;
-      pending.push({ fill, source, externalId });
+      pending.push({ fill, source, externalId, previousSource: null });
+      byExternalId.set(externalId, [{ source, payload: fill }]);
       continue;
     }
-    if (canonical(current) === canonical(fill)) counts.unchanged += 1;
+    const samePayload = canonical(current.payload) === canonical(fill);
+    if (samePayload && current.source === source) counts.unchanged += 1;
     else {
       counts.updated += 1;
-      pending.push({ fill, source, externalId });
+      pending.push({ fill, source, externalId, previousSource: current.source });
+      current.source = source;
+      current.payload = fill;
     }
   }
 
@@ -357,40 +370,62 @@ export async function saveFillsEnvelope(
 
   for (const row of pending) {
     const trade = isTradeFill(row.fill);
+    const values = [
+      row.source,
+      row.externalId,
+      row.fill.time,
+      row.fill.symbol,
+      trade ? row.fill.side : null,
+      trade ? row.fill.quantity : null,
+      trade ? row.fill.price : null,
+      row.fill.venue ?? null,
+      trade ? (row.fill.sleeve ?? null) : null,
+      row.fill.result,
+      row.fill.logOnly === true,
+      row.fill.note ?? null,
+      JSON.stringify(row.fill),
+    ];
+    if (row.previousSource === null) {
+      await sqlQuery(
+        `INSERT INTO fills (
+           source, external_id, filled_at, symbol, side, quantity, price, venue, sleeve,
+           result, log_only, note, payload
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb
+         )
+         ON CONFLICT (source, external_id) DO UPDATE SET
+           filled_at = EXCLUDED.filled_at,
+           symbol = EXCLUDED.symbol,
+           side = EXCLUDED.side,
+           quantity = EXCLUDED.quantity,
+           price = EXCLUDED.price,
+           venue = EXCLUDED.venue,
+           sleeve = EXCLUDED.sleeve,
+           result = EXCLUDED.result,
+           log_only = EXCLUDED.log_only,
+           note = EXCLUDED.note,
+           payload = EXCLUDED.payload`,
+        values,
+      );
+      continue;
+    }
     await sqlQuery(
-      `INSERT INTO fills (
-         source, external_id, filled_at, symbol, side, quantity, price, venue, sleeve,
-         result, log_only, note, payload
-       ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb
-       )
-       ON CONFLICT (source, external_id) DO UPDATE SET
-         filled_at = EXCLUDED.filled_at,
-         symbol = EXCLUDED.symbol,
-         side = EXCLUDED.side,
-         quantity = EXCLUDED.quantity,
-         price = EXCLUDED.price,
-         venue = EXCLUDED.venue,
-         sleeve = EXCLUDED.sleeve,
-         result = EXCLUDED.result,
-         log_only = EXCLUDED.log_only,
-         note = EXCLUDED.note,
-         payload = EXCLUDED.payload`,
-      [
-        row.source,
-        row.externalId,
-        row.fill.time,
-        row.fill.symbol,
-        trade ? row.fill.side : null,
-        trade ? row.fill.quantity : null,
-        trade ? row.fill.price : null,
-        row.fill.venue ?? null,
-        trade ? (row.fill.sleeve ?? null) : null,
-        row.fill.result,
-        row.fill.logOnly === true,
-        row.fill.note ?? null,
-        JSON.stringify(row.fill),
-      ],
+      `UPDATE fills SET
+         source = $1,
+         filled_at = $3,
+         symbol = $4,
+         side = $5,
+         quantity = $6,
+         price = $7,
+         venue = $8,
+         sleeve = $9,
+         result = $10,
+         log_only = $11,
+         note = $12,
+         payload = $13::jsonb
+       WHERE source = $14
+         AND external_id = $2`,
+      [...values, row.previousSource],
     );
   }
 

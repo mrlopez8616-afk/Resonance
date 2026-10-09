@@ -60,7 +60,7 @@ export function sleeveQuantityNumber(quantity: string): number {
   return Number.isFinite(value) ? value : 0;
 }
 
-export function totalSleeveQuantity(sleeves: readonly NodeSleeve[]): number {
+export function totalSleeveQuantity(sleeves: readonly { quantity: string }[]): number {
   return sleeves.reduce(
     (sum, sleeve) => sum + sleeveQuantityNumber(sleeve.quantity),
     0,

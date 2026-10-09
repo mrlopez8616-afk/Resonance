@@ -162,12 +162,12 @@ function Pnl({ usd, pct }: { usd: number | null; pct: number | null }) {
   return <span className={tone ? `is-${tone}` : undefined}>{pnlText(usd, pct)}</span>;
 }
 
-function lotRow(lot: OpenLot): ReactNode {
+function lotRow(lot: OpenLot, name: string | null): ReactNode {
   const tone = toneOf(lot.pnlUsd);
   return (
-    <li className="lot-row" key={`${lot.time}-${lot.price}`}>
+    <li className="lot-row" key={`${name ?? ""}-${lot.time}-${lot.price}`}>
       <span className="lot-main">
-        <span className="lot-date">{lot.day}</span>
+        <span className="lot-date">{name ? `${name} · ${lot.day}` : lot.day}</span>
         <span>
           {lot.sharesLabel} @ {formatLotUsd(lot.entryUsd)}
         </span>
@@ -205,7 +205,10 @@ function holdingTotalLine(totals: BookTotals): string {
 
 function knownShareText(totals: BookTotals): string | null {
   const shares = totals.sharesLabel.trim();
-  if (!shares || shares === "0" || Number(shares) === 0) return null;
+  if (!shares || shares === "0") return null;
+  const numeric = Number(shares.replace(/,/g, ""));
+  if (Number.isFinite(numeric) && numeric === 0) return null;
+  if (totals.partial) return shares;
   const average = totals.averageUsd !== null && totals.averageUsd > 0 ? shownUsd(totals.averageUsd) : null;
   return average ? `${shares} @ ${average}` : shares;
 }
@@ -217,6 +220,7 @@ export function LotsTable({
   vaultLine,
   unknownHolding = null,
   agenticLines = null,
+  books = null,
 }: {
   ledger: LotsLedger;
   totals: BookTotals;
@@ -224,27 +228,37 @@ export function LotsTable({
   vaultLine: string | null;
   unknownHolding?: { name: string; shares: string; valueLabel: string | null } | null;
   agenticLines?: readonly AgenticLotLine[] | null;
+  books?: readonly { name: string | null; ledger: LotsLedger }[] | null;
 }) {
-  const preview = ledger.openLots.slice(0, LOT_PREVIEW);
-  const rest = ledger.openLots.slice(LOT_PREVIEW);
+  const listed = books && books.length > 0 ? books : [{ name: null, ledger }];
+  const openRows = listed.flatMap((book) =>
+    book.ledger.openLots.map((lot) => ({ name: book.name, lot })),
+  );
+  const gaps = listed.flatMap((book) =>
+    book.ledger.gapShares ? [{ name: book.name, shares: book.ledger.gapShares }] : [],
+  );
+  const closed = listed.flatMap((book) => book.ledger.closedLots);
+  const preview = openRows.slice(0, LOT_PREVIEW);
+  const rest = openRows.slice(LOT_PREVIEW);
   const cost = shownUsd(totals.costUsd);
   const value = shownUsd(totals.valueUsd);
   const shares = knownShareText(totals);
   const gapValue = liveLabel === "$0.00" || liveLabel === "-$0.00" ? null : liveLabel;
+  const over = listed.find((book) => book.ledger.status === "over");
   return (
     <section className="lot-book" aria-label="Lots">
-      {ledger.status === "over" ? (
+      {over ? (
         <p className="lot-note">
-          entry unknown · {ledger.note}
+          entry unknown · {over.ledger.note}
         </p>
       ) : null}
       <ul className="lot-list">
-        {preview.map((lot) => lotRow(lot))}
+        {preview.map((row) => lotRow(row.lot, row.name))}
         {rest.length > 0 ? (
           <li className="lot-more">
             <details>
-              <summary>Show all {ledger.openLots.length} open lots</summary>
-              <ul className="lot-list">{rest.map((lot) => lotRow(lot))}</ul>
+              <summary>Show all {openRows.length} open lots</summary>
+              <ul className="lot-list">{rest.map((row) => lotRow(row.lot, row.name))}</ul>
             </details>
           </li>
         ) : null}
@@ -270,15 +284,15 @@ export function LotsTable({
             {unknownHolding.valueLabel ? <span className="lot-side">{unknownHolding.valueLabel}</span> : null}
           </li>
         ) : null}
-        {ledger.gapShares ? (
-          <li className="lot-row lot-gap">
+        {gaps.map((gap) => (
+          <li className="lot-row lot-gap" key={`${gap.name ?? "gap"}-${gap.shares}`}>
             <span className="lot-main">
-              <span>entry unknown</span>
-              <span>{ledger.gapShares} shares</span>
+              <span>{gap.name ? `${gap.name} · entry unknown` : "entry unknown"}</span>
+              <span>{gap.shares} shares</span>
             </span>
-            {gapValue ? <span className="lot-side">{gapValue}</span> : null}
+            {gapValue && gaps.length === 1 ? <span className="lot-side">{gapValue}</span> : null}
           </li>
-        ) : null}
+        ))}
       </ul>
       {totals.presentation === "holding" ? (
         <div className="lot-total is-holding">
@@ -299,10 +313,10 @@ export function LotsTable({
           </span>
         </div>
       )}
-      {ledger.closedLots.length > 0 ? (
+      {closed.length > 0 ? (
         <details className="lot-closed">
           <summary>Closed lots</summary>
-          <ul className="lot-list">{ledger.closedLots.map((lot) => closedRow(lot))}</ul>
+          <ul className="lot-list">{closed.map((lot) => closedRow(lot))}</ul>
         </details>
       ) : null}
       {vaultLine ? <p className="lot-vault">{vaultLine}</p> : null}
@@ -319,6 +333,10 @@ export function PositionBook({
   unknownShares = null,
   vaultShares = null,
   agenticLines = null,
+  books = null,
+  holdingUnits = null,
+  addedCostUsd = null,
+  unexplained = false,
 }: {
   ledger: LotsLedger;
   chart: PositionChart | null;
@@ -328,6 +346,10 @@ export function PositionBook({
   unknownShares?: string | null;
   vaultShares?: string | null;
   agenticLines?: readonly AgenticLotLine[] | null;
+  books?: readonly { name: string | null; ledger: LotsLedger }[] | null;
+  holdingUnits?: number | null;
+  addedCostUsd?: number | null;
+  unexplained?: boolean;
 }) {
   const totals = positionBookTotals({
     ledger,
@@ -335,6 +357,9 @@ export function PositionBook({
     sleeveShares: quantity,
     unknownShares,
     vaultShares,
+    holdingUnits,
+    addedCostUsd,
+    unexplained,
   });
   const gapValue =
     ledger.gapShares && livePrice && livePrice > 0
@@ -358,6 +383,7 @@ export function PositionBook({
               : null
         }
         agenticLines={agenticLines}
+        books={books}
       />
     </div>
   );

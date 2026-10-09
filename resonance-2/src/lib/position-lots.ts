@@ -2,13 +2,24 @@ import { AI_STOCK_TICKERS, RETIRED_AI_TICKERS } from "@/lib/ai-stocks";
 import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { formatHomePct } from "@/lib/home-lines";
-import { formatTotalUnits } from "@/lib/live-face";
+import { formatTotalUnits, totalSleeveQuantity } from "@/lib/live-face";
 
 /** Open lots shown before the rest sit behind "show all". */
 export const LOT_PREVIEW = 10;
 
 const RETIRED = new Set<string>(RETIRED_AI_TICKERS);
 const EQUITY = new Set<string>(AI_STOCK_TICKERS);
+
+/** Sleeves whose fills are lots. The vault is a manual note, not one of these. */
+export const LOT_SLEEVES = ["rh-agentic", "coinbase", "cb-agentic"] as const;
+
+export type LotSleeveId = (typeof LOT_SLEEVES)[number];
+
+export const LOT_SLEEVE_LABEL: Record<LotSleeveId, string> = {
+  "rh-agentic": "RH Agentic",
+  coinbase: "Coinbase",
+  "cb-agentic": "Coinbase Agentic",
+};
 
 /** Sleeve whose fills explain the position. The XRP vault is not one of these. */
 export function positionSleeve(ticker: string): "rh-agentic" | "coinbase" | null {
@@ -525,8 +536,28 @@ function positiveMoney(usd: number | null): number | null {
  * prints as shares and value. A costed book keeps that cost and P/L, and
  * stays partial while another sleeve is uncosted. A zero share count and a
  * zero dollar amount are omitted.
+ *
+ * `holdingUnits` is the header token count (every sleeve, including the vault).
+ * When it is set, the total shares and value use that count. Cost stays on
+ * the explained lots. A vault or an uncosted sleeve keeps the total partial
+ * and drops the blended P/L.
  */
 export function positionBookTotals(input: {
+  ledger: LotsLedger;
+  livePrice: number | null;
+  sleeveShares: string;
+  unknownShares?: string | null;
+  vaultShares?: string | null;
+  holdingUnits?: number | null;
+  addedCostUsd?: number | null;
+  unexplained?: boolean;
+}): BookTotals {
+  const base = rawPositionBookTotals(input);
+  if (typeof input.holdingUnits !== "number" || !(input.holdingUnits > 0)) return base;
+  return overlayHoldingTotals(base, input.holdingUnits, input);
+}
+
+function rawPositionBookTotals(input: {
   ledger: LotsLedger;
   livePrice: number | null;
   sleeveShares: string;
@@ -567,6 +598,50 @@ export function positionBookTotals(input: {
   };
 }
 
+function overlayHoldingTotals(
+  base: BookTotals,
+  holdingUnits: number,
+  input: {
+    livePrice: number | null;
+    addedCostUsd?: number | null;
+    unexplained?: boolean;
+  },
+): BookTotals {
+  const live = typeof input.livePrice === "number" && input.livePrice > 0 ? input.livePrice : null;
+  const added = typeof input.addedCostUsd === "number" && input.addedCostUsd > 0 ? input.addedCostUsd : 0;
+  const cost =
+    base.costUsd !== null || added > 0 ? money((base.costUsd ?? 0) + added) : null;
+  const unexplained = base.partial || input.unexplained === true;
+  const value = live ? money(holdingUnits * live) : base.valueUsd;
+  const sharesLabel = formatTotalUnits(holdingUnits);
+  if (cost === null) {
+    return {
+      sharesLabel,
+      averageUsd: null,
+      costUsd: null,
+      valueUsd: positiveMoney(value),
+      pnlUsd: null,
+      pnlPct: null,
+      partial: true,
+      partialLabel: "entry unknown",
+      presentation: "holding",
+    };
+  }
+  const full = !unexplained;
+  const pnlUsd = full && value !== null ? money(value - cost) : null;
+  return {
+    sharesLabel,
+    averageUsd: full ? cost / holdingUnits : null,
+    costUsd: positiveMoney(cost),
+    valueUsd: positiveMoney(value),
+    pnlUsd: positiveMoney(pnlUsd),
+    pnlPct: full && cost > 0 && value !== null ? ((value - cost) / cost) * 100 : null,
+    partial: !full,
+    partialLabel: full ? null : "partial",
+    presentation: "known",
+  };
+}
+
 export function rollupPositions(
   rows: readonly {
     ticker: string;
@@ -577,6 +652,8 @@ export function rollupPositions(
     unknownValueUsd?: number | null;
     /** Cost of an extra matched sleeve already included in valueUsd. */
     addedCostUsd?: number | null;
+    /** Matched-sleeve cost. When set (including null), it replaces the ledger cost. */
+    costUsd?: number | null;
   }[],
 ): PositionRollup {
   let cost = 0;
@@ -592,20 +669,26 @@ export function rollupPositions(
     const matched = row.ledger.status === "matched" && row.ledger.costUsd !== null && row.valueUsd !== null;
     const displayValue =
       row.valueUsd === null ? (extra > 0 ? money(extra) : null) : money(row.valueUsd + extra);
-    if (!matched || extra > 0) partial = true;
+    const rowCost =
+      row.costUsd !== undefined
+        ? row.costUsd
+        : matched && row.ledger.costUsd !== null
+          ? row.ledger.costUsd + addedCost
+          : null;
+    const known = rowCost !== null && row.valueUsd !== null;
+    if (!known || extra > 0) partial = true;
     if (displayValue !== null) {
       value += displayValue;
       valueCount += 1;
     }
-    const rowCost = matched && row.ledger.costUsd !== null ? row.ledger.costUsd + addedCost : null;
-    if (matched && rowCost !== null && row.valueUsd !== null) {
+    if (known && rowCost !== null && row.valueUsd !== null) {
       cost += rowCost;
       costCount += 1;
       knownValue += row.valueUsd;
     }
-    const pnlUsd = rowCost !== null && row.valueUsd !== null ? money(row.valueUsd - rowCost) : null;
+    const pnlUsd = known && rowCost !== null && row.valueUsd !== null ? money(row.valueUsd - rowCost) : null;
     const pnlPct =
-      rowCost !== null && rowCost > 0 && row.valueUsd !== null
+      known && rowCost !== null && rowCost > 0 && row.valueUsd !== null
         ? ((row.valueUsd - rowCost) / rowCost) * 100
         : null;
     out.push({
@@ -614,7 +697,7 @@ export function rollupPositions(
       valueUsd: displayValue,
       pnlUsd,
       pnlPct,
-      partial: !matched || extra > 0,
+      partial: !known || extra > 0,
     });
   }
   const byDay = new Map<string, { value: number; cost: number; costParts: number }>();
@@ -788,6 +871,53 @@ export function cbAgenticLotLines(input: {
   return lines;
 }
 
+export type SleeveLotBook = {
+  id: LotSleeveId;
+  name: string;
+  ledger: LotsLedger;
+  quantity: string;
+};
+
+function lotBooksFor(input: {
+  fills: readonly LedgerFill[];
+  ticker: string;
+  sleeves: readonly { id: string; quantity: string }[] | undefined;
+  livePrice: number | null;
+}): SleeveLotBook[] {
+  const books: SleeveLotBook[] = [];
+  for (const id of LOT_SLEEVES) {
+    const quantity = sleeveQuantity(input.sleeves, id);
+    if (!quantity) continue;
+    books.push({
+      id,
+      name: LOT_SLEEVE_LABEL[id],
+      quantity,
+      ledger: buildLotsLedger({
+        fills: input.fills,
+        ticker: input.ticker,
+        sleeve: id,
+        quantity,
+        livePrice: input.livePrice,
+      }),
+    });
+  }
+  return books;
+}
+
+function bookExplained(ledger: LotsLedger): boolean {
+  return ledger.status === "matched" && ledger.costUsd !== null && Number(ledger.openShares) > 0;
+}
+
+/** FIFO rows for the lots table. Coinbase Agentic stays on its own lines. */
+export function displayLotBooks(
+  books: readonly SleeveLotBook[],
+  agenticVisible: boolean,
+): { name: string | null; ledger: LotsLedger }[] {
+  const listed = books.filter((book) => book.id !== "cb-agentic");
+  const named = listed.length + (agenticVisible ? 1 : 0) > 1;
+  return listed.map((book) => ({ name: named ? book.name : null, ledger: book.ledger }));
+}
+
 /** Chart, lots, and vault line for one child. A zero book has no position. */
 export function assembleNodePosition(input: {
   fills: readonly LedgerFill[];
@@ -807,19 +937,27 @@ export function assembleNodePosition(input: {
   unknownShares: string | null;
   vaultShares: string | null;
   agenticLines: AgenticLotLine[];
+  /** Positive rh-agentic, coinbase, and cb-agentic books. The vault is not a book. */
+  books: SleeveLotBook[];
+  /** Header token count: every sleeve quantity, including the vault. */
+  holdingUnits: number;
+  /** Cost of matched sleeves other than the chart sleeve. */
+  addedCostUsd: number | null;
+  /** A positive sleeve or the vault has no cost. */
+  unexplained: boolean;
 } | null {
   const sleeve = positionSleeve(input.ticker);
   if (!sleeve) return null;
-  const quantity = sleeveQuantity(input.sleeves, sleeve);
-  if (!quantity) return null;
   const live = typeof input.priceUsd === "number" && input.priceUsd > 0 ? input.priceUsd : null;
-  const ledger = buildLotsLedger({
+  const books = lotBooksFor({
     fills: input.fills,
     ticker: input.ticker,
-    sleeve,
-    quantity,
+    sleeves: input.sleeves,
     livePrice: live,
   });
+  const primary = books.find((book) => book.id === sleeve);
+  if (!primary) return null;
+  const { ledger, quantity } = primary;
   const chart = buildPositionChart({
     ticker: input.ticker,
     ledger,
@@ -827,23 +965,40 @@ export function assembleNodePosition(input: {
     quantity,
     today: input.today,
   });
+  const vaultShares = positiveShares(
+    input.vaultQuantity ?? input.sleeves?.find((row) => row.id === "flare-vault")?.quantity,
+  );
+  const agentic = books.find((book) => book.id === "cb-agentic");
+  const agenticExplained = agentic ? bookExplained(agentic.ledger) : false;
+  const unknownShares = agentic && !agenticExplained ? agentic.quantity : null;
+  let added = 0;
+  let unexplained = vaultShares !== null;
+  for (const book of books) {
+    if (bookExplained(book.ledger)) {
+      if (book.id !== sleeve && book.ledger.costUsd !== null) added += book.ledger.costUsd;
+      continue;
+    }
+    unexplained = true;
+  }
   const xrp = input.ticker.trim().toUpperCase() === "XRP";
-  const unknownShares = xrp ? sleeveQuantity(input.sleeves, "cb-agentic") : null;
-  const vaultShares = xrp ? positiveShares(input.vaultQuantity) : null;
   return {
     ledger,
     chart,
     quantity,
-    vaultLine: xrp ? vaultUnknownLine(input.vaultQuantity) : null,
-    unknownLine: xrpAgenticUnknownLine(input.ticker, input.sleeves),
+    vaultLine: vaultUnknownLine(vaultShares),
+    unknownLine: unknownShares && xrp ? xrpAgenticUnknownLine(input.ticker, input.sleeves) : null,
     unknownShares,
     vaultShares,
     agenticLines: cbAgenticLotLines({
       ticker: input.ticker,
       fills: input.fills,
-      quantity: unknownShares ?? (input.ticker.trim().toUpperCase() === "SUI" ? sleeveQuantity(input.sleeves, "cb-agentic") : null),
+      quantity: agentic?.quantity ?? null,
       livePrice: live,
     }),
+    books,
+    holdingUnits: totalSleeveQuantity(input.sleeves ?? []),
+    addedCostUsd: added > 0 ? money(added) : null,
+    unexplained,
   };
 }
 
@@ -862,56 +1017,54 @@ export function rollupHoldingBooks(input: {
     valueUsd: number | null;
     chart: PositionChart | null;
     unknownValueUsd: number | null;
-    addedCostUsd: number | null;
+    costUsd: number | null;
   }[] = [];
   for (const ticker of input.tickers) {
     const sleeve = positionSleeve(ticker);
     if (!sleeve) continue;
-    const quantity = sleeveQuantity(input.sleeves[ticker], sleeve);
+    const sleeves = input.sleeves[ticker];
+    const quantity = sleeveQuantity(sleeves, sleeve);
     if (!quantity) continue;
     const price = input.prices[ticker];
     const live = typeof price === "number" && price > 0 ? price : null;
-    const ledger = buildLotsLedger({
+    const books = lotBooksFor({
       fills: input.fills,
       ticker,
-      sleeve,
-      quantity,
+      sleeves,
       livePrice: live,
     });
+    const primary = books.find((book) => book.id === sleeve);
+    if (!primary) continue;
     const chart = buildPositionChart({
       ticker,
-      ledger,
+      ledger: primary.ledger,
       closes: input.closes[ticker] ?? [],
       quantity,
       today: input.today,
     });
-    let knownValue = live ? money(Number(quantity) * live) : null;
-    let addedCostUsd: number | null = null;
-    const upper = ticker.trim().toUpperCase();
-    const agenticQty = sleeveQuantity(input.sleeves[ticker], "cb-agentic");
-    if (upper === "SUI" && agenticQty && live && knownValue !== null && ledger.status === "matched" && ledger.costUsd !== null) {
-      const agentic = buildLotsLedger({
-        fills: input.fills,
-        ticker,
-        sleeve: "cb-agentic",
-        quantity: agenticQty,
-        livePrice: live,
-      });
-      const agenticValue = money(Number(agenticQty) * live);
-      if (agentic.status === "matched" && agentic.costUsd !== null) {
-        knownValue = money(knownValue + agenticValue);
-        addedCostUsd = agentic.costUsd;
+    let knownValue = 0;
+    let knownCost = 0;
+    let knownParts = 0;
+    let unknownValue = 0;
+    for (const book of books) {
+      const market = live ? money(Number(book.quantity) * live) : null;
+      if (bookExplained(book.ledger) && market !== null && book.ledger.costUsd !== null) {
+        knownValue += market;
+        knownCost += book.ledger.costUsd;
+        knownParts += 1;
+      } else if (market !== null) {
+        unknownValue += market;
       }
     }
-    const unknownQty = upper === "XRP" ? agenticQty : upper === "SUI" && agenticQty && addedCostUsd === null ? agenticQty : null;
-    const unknownValueUsd = unknownQty && live ? money(Number(unknownQty) * live) : null;
+    const vaultQty = sleeveQuantity(sleeves, "flare-vault");
+    if (vaultQty && live) unknownValue += money(Number(vaultQty) * live);
     rows.push({
       ticker,
-      ledger,
-      valueUsd: knownValue,
+      ledger: primary.ledger,
+      valueUsd: knownParts > 0 ? money(knownValue) : null,
       chart,
-      unknownValueUsd,
-      addedCostUsd,
+      unknownValueUsd: unknownValue > 0 ? money(unknownValue) : null,
+      costUsd: knownParts > 0 ? money(knownCost) : null,
     });
   }
   return rollupPositions(rows);

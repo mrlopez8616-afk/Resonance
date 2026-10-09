@@ -29,7 +29,7 @@ import { nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
 import { positionCostFromFills } from "@/lib/position-cost";
-import { assembleNodePosition } from "@/lib/position-lots";
+import { assembleNodePosition, displayLotBooks } from "@/lib/position-lots";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { loadCryptoCloses, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
@@ -335,6 +335,10 @@ function NodePosition({
       unknownShares={position.unknownShares}
       vaultShares={position.vaultShares}
       agenticLines={position.agenticLines}
+      books={displayLotBooks(position.books, position.agenticLines.length > 0)}
+      holdingUnits={position.holdingUnits}
+      addedCostUsd={position.addedCostUsd}
+      unexplained={position.unexplained}
     />
   );
 }
