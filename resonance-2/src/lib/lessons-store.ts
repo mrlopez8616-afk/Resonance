@@ -18,7 +18,7 @@ import {
 } from "@/lib/lessons";
 import { loadBuildView } from "@/lib/build-store";
 import { sqlQuery } from "@/lib/pg/client";
-import { isPublicMode } from "@/lib/public-mode";
+import { isPublicMode, requestIsPublicMode } from "@/lib/public-mode-server";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 type LessonRow = {
@@ -234,7 +234,7 @@ async function buildSectionByItem(): Promise<Map<string, string>> {
 }
 
 export async function loadLessonPage() {
-  const publicMode = isPublicMode();
+  const publicMode = await isPublicMode();
   const [lessons, sections] = await Promise.all([
     readLessons().then((rows) => visibleLessons(rows, publicMode)),
     buildSectionByItem(),
@@ -249,17 +249,17 @@ export async function loadLessonPage() {
 }
 
 export async function loadLessonsHome(): Promise<LessonsHomeModel> {
-  const publicMode = isPublicMode();
+  const publicMode = await isPublicMode();
   const lessons = visibleLessons(await readLessons(), publicMode);
   return { unavailable: false, ...lessonsHomeCard(lessons) };
 }
 
 export async function loadLessonLinks(): Promise<Record<string, string>> {
-  const publicMode = isPublicMode();
+  const publicMode = await isPublicMode();
   return lessonLinksByBuildItem(visibleLessons(await readLessons(), publicMode));
 }
 
-export async function loadLessonsPayload() {
-  const publicMode = isPublicMode();
+export async function loadLessonsPayload(request: Request) {
+  const publicMode = await requestIsPublicMode(request);
   return lessonsPayload(await readLessons(), publicMode);
 }

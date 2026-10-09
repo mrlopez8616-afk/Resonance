@@ -1,3 +1,4 @@
+import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ThisWeek } from "@/components/this-week";
 import { PublicHome } from "@/components/public-floor";
 import { SystemHomeCard } from "@/components/system-map";
@@ -7,6 +8,8 @@ import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
 import { fitnessSecondaryLines } from "@/lib/home-lines";
 import { loadFitnessHome } from "@/lib/fitness-store";
+import { loadLessonsHome } from "@/lib/lessons-store";
+import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
 import { hasMoneyText, publicHref, publicRecordLabel, stripMoneyText } from "@/lib/public-mode";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
@@ -20,6 +23,12 @@ const buildHomeFallback: BuildHomeCard = {
   lines: [],
 };
 
+const lessonsHomeFallback: LessonsHomeModel = {
+  unavailable: true,
+  count: 0,
+  latestTitle: null,
+};
+
 function safeLine(line: string): string | null {
   if (hasMoneyText(line)) return null;
   const next = stripMoneyText(line);
@@ -27,7 +36,7 @@ function safeLine(line: string): string | null {
 }
 
 export async function PublicHomePage() {
-  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome] = await Promise.all([
     loadPublicFloor(),
     loadFitnessHome(),
     loadBankroll(),
@@ -36,6 +45,10 @@ export async function PublicHomePage() {
     loadBuildHomeCard().catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return buildHomeFallback;
+    }),
+    loadLessonsHome().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return lessonsHomeFallback;
     }),
   ]);
   const bets = betsLoaded.status === "unavailable" ? [] : betsLoaded.bets;
@@ -83,6 +96,15 @@ export async function PublicHomePage() {
         }}
       />
       <SystemHomeCard />
+      <LessonsHomeCard
+        card={{
+          ...lessonsHome,
+          latestTitle:
+            lessonsHome.latestTitle && hasMoneyText(lessonsHome.latestTitle)
+              ? null
+              : lessonsHome.latestTitle,
+        }}
+      />
     </OperatorShell>
   );
 }

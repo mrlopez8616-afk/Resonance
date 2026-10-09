@@ -19,7 +19,6 @@ import {
   visibleLessons,
   type Lesson,
 } from "@/lib/lessons";
-import { isPublicMode } from "@/lib/public-mode";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
 
@@ -165,7 +164,11 @@ describe("lessons public filter", () => {
   });
 
   it("hides private rows, dollar amounts, and sources when public mode is on", () => {
-    assert.equal(isPublicMode(), false);
+    const store = readFileSync(path.join(root, "src/lib/lessons-store.ts"), "utf8");
+    assert.match(store, /from "@\/lib\/public-mode-server"/);
+    assert.match(store, /await isPublicMode\(\)/);
+    assert.match(store, /await requestIsPublicMode\(request\)/);
+    assert.doesNotMatch(store, /from "@\/lib\/public-mode"/);
     assert.equal(containsDollarAmount("Founder's call."), false);
     assert.equal(containsDollarAmount("$argon2id$v=19"), false);
     assert.equal(containsDollarAmount("moved by $1,240"), true);

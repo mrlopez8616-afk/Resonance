@@ -12,6 +12,7 @@ import type { CalendarEvent } from "@/data/calendar";
 import { SESSION_COOKIE, setAuthClockForTests } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
 import type { BuildHomeCard, BuildSectionView } from "@/lib/build-tracker";
+import { visibleLessons, type Lesson } from "@/lib/lessons";
 import { holdingChildModel } from "@/lib/child-card";
 import type { FitnessCard, FitnessNodeDetail } from "@/lib/fitness-board";
 import { assembleLiveFace } from "@/lib/live-face";
@@ -209,6 +210,34 @@ function deskQuery() {
   };
 }
 
+function publicLessonsHtml(): string {
+  const row = (id: string, publicSafe: boolean, lesson: string): Lesson => ({
+    id,
+    date: "2026-10-08",
+    title: id,
+    category: "build",
+    whatChanged: "Shipped the screen.",
+    why: "Founder's call.",
+    lesson,
+    publicSafe,
+    sources: ["owner notebook"],
+    buildItemId: null,
+    prNumber: null,
+    createdAt: "2026-10-08T15:00:00.000Z",
+    updatedAt: "2026-10-08T15:00:00.000Z",
+  });
+  return visibleLessons(
+    [
+      row("LL-021", false, "Keep this off the shared screen."),
+      row("LL-030", true, "Moved by $1,240."),
+      row("LL-023", true, "Group by month."),
+    ],
+    true,
+  )
+    .map((lesson) => `${lesson.id} ${lesson.title} ${lesson.whatChanged} ${lesson.why} ${lesson.lesson}`)
+    .join(" ");
+}
+
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
   const [{ BuildParent, BuildSectionBody }, floor, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses] =
     await Promise.all([
@@ -307,6 +336,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/fight-desk", html: fight },
     { path: "/n/build", html: build },
     { path: "/n/build/platform", html: buildSectionHtml },
+    { path: "/n/lessons", html: publicLessonsHtml() },
     ...lenses.SYSTEM_LENSES.map((lens) => ({
       path: lens.id === "nodes" ? "/n/system" : `/n/system?lens=${lens.id}`,
       html: render(createElement(system.SystemMap, { lens: lens.id })),
@@ -440,6 +470,7 @@ describe("public render scan", () => {
       "/log/page.tsx",
       "/n/build/page.tsx",
       "/n/build/[section]/page.tsx",
+      "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/[parent]/page.tsx",
       "/n/[parent]/[node]/page.tsx",
@@ -459,6 +490,7 @@ describe("public render scan", () => {
       "/n/fight-desk",
       "/n/build",
       "/n/build/platform",
+      "/n/lessons",
       "/n/system",
       "/calendar",
       "/calendar/2026-10-08",
@@ -495,6 +527,10 @@ describe("public render scan", () => {
     const buildSectionPage = pages.find((page) => page.path === "/n/build/platform");
     assert.equal(buildSectionPage?.html.includes("pull/80"), false);
     assert.equal(buildSectionPage?.html.includes("#80"), false);
+    const lessonsPage = pages.find((page) => page.path === "/n/lessons");
+    assert.match(lessonsPage?.html ?? "", /LL-023/);
+    assert.equal(lessonsPage?.html.includes("LL-021"), false);
+    assert.equal(lessonsPage?.html.includes("LL-030"), false);
   });
 
   it("hides finance, the bankroll, the log, security, and fights", () => {
@@ -514,7 +550,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/build", "/n/system", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/build", "/n/lessons", "/n/system", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
