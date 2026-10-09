@@ -176,6 +176,10 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
   if (parts[0] === "n") {
     const parentId = parts[1];
     if (!parentId || parts.length > 3) return homeTrail();
+    if (parentId === "lessons" && parts.length === 2) {
+      const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
+      return { back: HOME, crumbs: [HOME, lessons] };
+    }
     const parentLabel = PARENT_LABELS[parentId];
     if (!parentLabel) return homeTrail();
     const parent: PhoneTarget = { href: `/n/${parentId}`, label: parentLabel };

@@ -1,3 +1,4 @@
+import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ParentGrid } from "@/components/parent-grid";
 import { SystemHomeCard } from "@/components/system-map";
 import { OperatorShell } from "@/components/operator-shell";
@@ -18,6 +19,8 @@ import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-
 import { fightLinkTargets } from "@/lib/fight-desk";
 import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
+import { loadLessonsHome } from "@/lib/lessons-store";
+import type { LessonsHomeModel } from "@/lib/lessons";
 import { thisWeekItems } from "@/lib/this-week";
 
 export const dynamic = "force-dynamic";
@@ -40,8 +43,14 @@ const buildHomeFallback: BuildHomeCard = {
   lines: [],
 };
 
+const lessonsHomeFallback: LessonsHomeModel = {
+  unavailable: true,
+  count: 0,
+  latestTitle: null,
+};
+
 export default async function Home() {
-  const [floor, fitness, bankroll, calendar, book, session, buildHome] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
@@ -51,6 +60,10 @@ export default async function Home() {
     loadBuildHomeCard().catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return buildHomeFallback;
+    }),
+    loadLessonsHome().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return lessonsHomeFallback;
     }),
   ]);
   let financeHome: FinanceHomeFace | null = null;
@@ -114,6 +127,7 @@ export default async function Home() {
         buildHome={buildHome}
       />
       <SystemHomeCard />
+      <LessonsHomeCard card={lessonsHome} />
     </OperatorShell>
   );
 }

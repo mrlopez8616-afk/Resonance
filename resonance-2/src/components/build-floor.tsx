@@ -21,16 +21,18 @@ function BuildItemCard({
   item,
   showPr,
   sectionLabel,
+  lessonHref,
 }: {
   item: BuildItem;
   showPr: boolean;
   sectionLabel?: string;
+  lessonHref?: string | null;
 }) {
   const percent = stepPercent(item.steps);
   const width = percent ?? 0;
   const updated = formatUpdatedCt(item.updatedAt);
   return (
-    <article className={styles.item}>
+    <article className={styles.item} id={item.id}>
       <div className={styles.top}>
         <h3 className={styles.title}>{item.title}</h3>
         <span className={styles.chip} data-status={item.status}>
@@ -53,6 +55,7 @@ function BuildItemCard({
         {showPr && item.prNumber != null ? (
           <a href={pullHref(item.prNumber)}>#{item.prNumber}</a>
         ) : null}
+        {lessonHref ? <Link href={lessonHref}>Lesson</Link> : null}
         {updated ? <span>Updated {updated}</span> : null}
       </p>
       {item.nextStep ? <p className={styles.next}>{item.nextStep}</p> : null}
@@ -64,10 +67,12 @@ function ItemList({
   items,
   showPr,
   showSection,
+  lessonHrefs = {},
 }: {
   items: readonly BuildItem[];
   showPr: boolean;
   showSection: boolean;
+  lessonHrefs?: Readonly<Record<string, string>>;
 }) {
   return (
     <div className={styles.items}>
@@ -77,6 +82,7 @@ function ItemList({
           item={item}
           showPr={showPr}
           sectionLabel={showSection ? buildSectionLabel(item.node) : undefined}
+          lessonHref={lessonHrefs[item.id] ?? null}
         />
       ))}
     </div>
@@ -153,10 +159,12 @@ export function BuildSectionBody({
   section,
   now,
   showPr = buildShowsPrivateText(false),
+  lessonHrefs = {},
 }: {
   section: BuildSectionView;
   now: Date;
   showPr?: boolean;
+  lessonHrefs?: Readonly<Record<string, string>>;
 }) {
   const queue = section.id === "queue";
   const active = queue ? section.items : section.items.filter((item) => !isShippedLive(item, now));
@@ -168,14 +176,14 @@ export function BuildSectionBody({
         <p className={styles.total}>{section.percent === null ? "—" : `${section.percent}%`}</p>
       </header>
       {active.length > 0 ? (
-        <ItemList items={active} showPr={showPr} showSection={queue} />
+        <ItemList items={active} showPr={showPr} showSection={queue} lessonHrefs={lessonHrefs} />
       ) : shipped.length === 0 ? (
         <p className={styles.note}>{queue ? "Nothing queued." : "No items in this section."}</p>
       ) : null}
       {shipped.length > 0 ? (
         <details className={styles.shipped}>
           <summary>Shipped</summary>
-          <ItemList items={shipped} showPr={showPr} showSection={false} />
+          <ItemList items={shipped} showPr={showPr} showSection={false} lessonHrefs={lessonHrefs} />
         </details>
       ) : null}
     </div>

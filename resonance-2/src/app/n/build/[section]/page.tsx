@@ -4,6 +4,7 @@ import { BuildSectionBody } from "@/components/build-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { buildSectionLabel, resolveBuildSection } from "@/lib/build-tracker";
 import { loadBuildView } from "@/lib/build-store";
+import { loadLessonLinks } from "@/lib/lessons-store";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,16 @@ export default async function BuildSectionPage({
 }) {
   const { section: slug } = await params;
   let view = null;
+  let lessonHrefs: Record<string, string> = {};
   let unavailable = false;
   try {
-    view = await loadBuildView();
+    [view, lessonHrefs] = await Promise.all([
+      loadBuildView(),
+      loadLessonLinks().catch((error: unknown) => {
+        if (!isStorageUnavailable(error)) throw error;
+        return {};
+      }),
+    ]);
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
     unavailable = true;
@@ -51,7 +59,7 @@ export default async function BuildSectionPage({
       <Link href="/n/build" className="calendar-back">
         Build
       </Link>
-      <BuildSectionBody section={section} now={new Date()} />
+      <BuildSectionBody section={section} now={new Date()} lessonHrefs={lessonHrefs} />
     </OperatorShell>
   );
 }

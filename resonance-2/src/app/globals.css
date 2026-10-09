@@ -3359,3 +3359,28 @@ body {
   letter-spacing: -0.01em;
   line-height: 1.35;
 }
+
+.lessons-home {
+  display: flex;
+  margin-top: 0.55rem;
+}
+
+.lessons-home article.node-square.is-home.is-parent,
+.lessons-home article.node-square.is-home.is-parent.is-live {
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  grid-column: auto;
+}
+
+.lessons-homeLatest {
+  margin: 0.28rem 0 0;
+  max-width: 18rem;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
