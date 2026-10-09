@@ -1,5 +1,6 @@
 import "server-only";
 
+import { quoteFromYahooChart } from "@/lib/equity-chart";
 import {
   EQUITY_FACE_TICKERS,
   type SpotQuote,
@@ -110,43 +111,15 @@ async function fetchYahooChart(ticker: EquityFaceTicker): Promise<SpotQuote> {
   if (!response.ok) {
     throw new Error(`Yahoo chart HTTP ${response.status}`);
   }
-  const data = (await response.json()) as {
-    chart?: {
-      result?: Array<{
-        meta?: {
-          regularMarketPrice?: number;
-          chartPreviousClose?: number;
-          previousClose?: number;
-        };
-        indicators?: { quote?: Array<{ close?: Array<number | null> }> };
-      }>;
-    };
-  };
-  const result = data.chart?.result?.[0];
-  const closes = result?.indicators?.quote?.[0]?.close ?? [];
-  const numeric = closes.filter(
-    (value): value is number => typeof value === "number",
-  );
-  const last = numeric.at(-1);
-  const prev = numeric.at(-2);
-  const usd =
-    typeof last === "number" ? last : result?.meta?.regularMarketPrice;
-  if (typeof usd !== "number") {
+  const data = (await response.json()) as unknown;
+  // range=5d: chartPreviousClose is the close before the window, not yesterday.
+  const parsed = quoteFromYahooChart(data, "5d");
+  if (!parsed) {
     throw new Error("Yahoo chart returned no close");
   }
-  const metaAgo =
-    result?.meta?.chartPreviousClose ?? result?.meta?.previousClose;
-  const ago =
-    typeof prev === "number" && prev > 0
-      ? prev
-      : typeof metaAgo === "number" && metaAgo > 0
-        ? metaAgo
-        : null;
-  const change =
-    ago !== null && ago > 0 ? ((usd - ago) / ago) * 100 : null;
-  return asQuote(usd, "Yahoo Finance (unofficial chart)", {
-    change24hPct: change,
-    price24hAgoUsd: ago,
+  return asQuote(parsed.usd, "Yahoo Finance (unofficial chart)", {
+    change24hPct: parsed.change24hPct,
+    price24hAgoUsd: parsed.price24hAgoUsd,
   });
 }
 

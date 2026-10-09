@@ -254,6 +254,41 @@ export function nextCryptoCatalystLine(events: readonly CalendarEvent[], now: Da
   return nextHomeCatalystLine(events, now, isCryptoHomeItem, cryptoCatalystLabel);
 }
 
+function mentionsTicker(event: CalendarEvent, ticker: string): boolean {
+  if (event.node) return event.node.toUpperCase() === ticker;
+  return new RegExp(`\\b${ticker}\\b`, "i").test(`${event.title} ${event.link ?? ""}`);
+}
+
+/**
+ * Next upcoming calendar or catalyst row for one coin or one AI name.
+ * Same calendar the home cards read. A row for another name stays off this line.
+ */
+export function nextTickerCatalystLine(
+  events: readonly CalendarEvent[],
+  ticker: string,
+  now: Date,
+): string | null {
+  const upper = ticker.trim().toUpperCase();
+  if (!upper) return null;
+  if (AI_TICKERS.has(upper)) {
+    return nextHomeCatalystLine(
+      events,
+      now,
+      (event) => event.kind === "catalyst" && event.node === upper,
+      () => upper,
+    );
+  }
+  if ((CRYPTO_CATALYST_TICKERS as readonly string[]).includes(upper)) {
+    return nextHomeCatalystLine(
+      events,
+      now,
+      (event) => mentionsTicker(event, upper) && isCryptoHomeItem(event),
+      () => upper,
+    );
+  }
+  return null;
+}
+
 function moverCatalystLines(
   moves: readonly HomeMove[],
   catalyst: string | null,

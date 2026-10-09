@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { ChildValueCard } from "@/components/child-value-card";
 import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { FitnessDetail } from "@/components/fitness-detail";
@@ -17,9 +18,18 @@ import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
 import { FITNESS_NODES, fitnessLegacyHref } from "@/lib/fitness-board";
 import { loadFitnessNode } from "@/lib/fitness-store";
+import { aiStockRole } from "@/data/ai-stock-roles";
 import { retiredAiNodeHref } from "@/lib/ai-stocks";
+import { holdingChildModel, positionLines, priceSpark, type ChildCardModel } from "@/lib/child-card";
+import { isDecimalString } from "@/lib/decimal";
+import { isEquityTicker } from "@/lib/equity-price";
+import { nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
+import { positionCostFromFills } from "@/lib/position-cost";
+import { loadEquityHistory } from "@/lib/price-history";
+import { loadOperatorFills } from "@/lib/sleeve-prints";
+import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -147,6 +157,73 @@ export default async function NodeDetailPage({
 
   const node = FLOOR_NODES.find((item) => item.id === nodeId && item.status !== "empty");
   if (!parent || !node || nodeParent(node.id) !== parent.id) notFound();
+
+  if (parent.id === "ai-stocks" && isEquityTicker(node.ticker)) {
+    const ticker = node.ticker;
+    const [floor, calendar, history, book] = await Promise.all([
+      loadOperatorFloor(),
+      loadCalendarForPage(),
+      loadEquityHistory([ticker]),
+      loadOperatorFills(),
+    ]);
+    const face = floor.faces[ticker];
+    const sleeves = sleevesFor(floor, ticker) ?? [];
+    const agentic = sleeves.find((row) => row.id === "rh-agentic");
+    const quantity =
+      agentic && isDecimalString(agentic.quantity) && Number(agentic.quantity) > 0
+        ? agentic.quantity
+        : null;
+    const quote = floor.equityQuotes[ticker];
+    const now = new Date();
+    const catalyst = nextTickerCatalystLine(calendar.events, ticker, now);
+    const series = history[ticker] ?? null;
+    const cost = quantity
+      ? positionCostFromFills({
+          fills: book.fills,
+          ticker,
+          quantity,
+          priceUsd: face?.priceUsd ?? null,
+        })
+      : null;
+    const model: ChildCardModel = face
+      ? holdingChildModel({
+          face,
+          changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
+          fetchedAt: quote?.fetchedAt ?? null,
+          now,
+          catalyst,
+          history: series,
+          role: aiStockRole(ticker),
+          position: positionLines(
+            quantity,
+            cost ? { averageLabel: cost.averageLabel, pnl: cost.pnl } : null,
+          ),
+          catalystAfterChart: true,
+        })
+      : {
+          ticker,
+          headline: null,
+          priceLine: null,
+          label: "not connected",
+          lines: [],
+          footerLines: catalyst ? [{ text: catalyst }] : [],
+          spark: priceSpark(series),
+          role: aiStockRole(ticker),
+        };
+    return (
+      <OperatorShell
+        storageMessage={floor.storageMessage}
+        storageDetail={floor.storageDetail}
+      >
+        <Link href={`/n/${parent.id}`} className="calendar-back">
+          {parent.label}
+        </Link>
+        <div className="child-page">
+          <ChildValueCard model={model} wide />
+        </div>
+      </OperatorShell>
+    );
+  }
 
   const floor = await loadOperatorFloor();
   const sleeves = sleevesFor(floor, node.ticker);
