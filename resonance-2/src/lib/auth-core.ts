@@ -173,6 +173,7 @@ export function isPublicAsset(pathname: string): boolean {
   if (pathname.startsWith("/_next/")) return true;
   if (pathname === "/favicon.ico" || pathname === "/robots.txt") return true;
   if (pathname === "/manifest.webmanifest" || pathname === "/manifest.json") return true;
+  if (pathname === "/sw.js" || pathname === "/offline.html") return true;
   if (pathname === "/icon" || pathname.startsWith("/icon.")) return true;
   if (pathname === "/apple-icon" || pathname.startsWith("/apple-icon.")) return true;
   if (pathname.startsWith("/icons/")) return true;

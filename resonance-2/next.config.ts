@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
     // This buffer applies only when proxy is enabled. Week-sized chunks stay smaller.
     proxyClientMaxBodySize: "32mb",
   },
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       ...FIGHT_DESK_REDIRECTS.map((redirect) => ({ ...redirect })),

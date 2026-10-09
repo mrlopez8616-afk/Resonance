@@ -3,6 +3,14 @@
 import { startAuthentication } from "@simplewebauthn/browser";
 import { useState, type FormEvent } from "react";
 
+/** Relative path only, so a home-screen launch never hands the browser to Safari. */
+function inAppPath(value: string): string {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://") || value.includes("\\")) {
+    return "/";
+  }
+  return value;
+}
+
 export function LoginForm({
   passkeyReady,
   nextPath,
@@ -34,7 +42,7 @@ export function LoginForm({
         setPending(false);
         return;
       }
-      window.location.assign(nextPath);
+      window.location.assign(inAppPath(nextPath));
     } catch {
       setError("Sign-in is unavailable.");
       setPending(false);
@@ -65,7 +73,7 @@ export function LoginForm({
         setPending(false);
         return;
       }
-      window.location.assign(nextPath);
+      window.location.assign(inAppPath(nextPath));
     } catch {
       setError("Passkey was not accepted.");
       setPending(false);
