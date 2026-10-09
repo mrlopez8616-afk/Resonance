@@ -13,8 +13,10 @@ import { CRYPTO_HOME_TICKERS, nextAiCatalystLine, nextCryptoCatalystLine, type H
 import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
-import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { fightLinkTargets } from "@/lib/fight-desk";
+import { loadBuildHomeCard } from "@/lib/build-store";
+import type { BuildHomeCard } from "@/lib/build-tracker";
 import { thisWeekItems } from "@/lib/this-week";
 
 export const dynamic = "force-dynamic";
@@ -31,14 +33,24 @@ function moveFromQuote(
   };
 }
 
+const buildHomeFallback: BuildHomeCard = {
+  unavailable: true,
+  percentLabel: null,
+  lines: [],
+};
+
 export default async function Home() {
-  const [floor, fitness, bankroll, calendar, book, session] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, session, buildHome] = await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
     loadCalendarForPage(),
     loadBetsForPage(),
     getSession(),
+    loadBuildHomeCard().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return buildHomeFallback;
+    }),
   ]);
   let financeHome: FinanceHomeFace | null = null;
   if (session?.role === "owner") {
@@ -98,6 +110,7 @@ export default async function Home() {
         bankrollLine={inScopeBankrollPoints(bets, calendar.events)}
         financeHome={financeHome}
         asOf={asOf.toISOString()}
+        buildHome={buildHome}
       />
     </OperatorShell>
   );

@@ -511,6 +511,7 @@ describe("login core", { concurrency: false }, () => {
         "012_sui_agentic_sleeve",
         "013_sui_coinbase_backfill",
         "014_cb_agentic_xrp",
+        "016_build_items",
       ],
     );
     const ids = (await sqlQuery<{ id: string }>(`SELECT id FROM schema_migrations ORDER BY id`)).map(
@@ -549,6 +550,7 @@ describe("login core", { concurrency: false }, () => {
         "012_sui_agentic_sleeve",
         "013_sui_coinbase_backfill",
         "014_cb_agentic_xrp",
+        "016_build_items",
       ],
     );
     const filled = await applyMigrations(EMBEDDED_MIGRATIONS);

@@ -96,6 +96,7 @@ export function ParentGrid({
   bankrollLine = null,
   financeHome = null,
   asOf,
+  buildHome = null,
 }: {
   faceTotals: FaceTotals;
   fightDesk: FightDeskSummary | null;
@@ -121,6 +122,8 @@ export function ParentGrid({
   financeHome?: FinanceHomeFace | null;
   /** Render instant. Quote age is measured from this, so server and client agree. */
   asOf: string;
+  /** Build tracker headline. Null percent means the checklist could not be read. */
+  buildHome?: { unavailable: boolean; percentLabel: string | null; lines: readonly string[] } | null;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -269,6 +272,27 @@ export function ParentGrid({
           </NodeSquare>
         );
       })}
+      {buildHome ? (
+        <NodeSquare
+          parent
+          home
+          live={!buildHome.unavailable && buildHome.percentLabel !== null}
+          dashed={buildHome.unavailable || buildHome.percentLabel === null}
+          label="Build"
+        >
+          <Link href="/n/build" className="node-log-link" title="Open Build">
+            <div className="live-face parent-face">
+              <h2 className="node-ticker">Build</h2>
+              {buildHome.unavailable || buildHome.percentLabel === null ? (
+                <p className="node-note">unavailable</p>
+              ) : (
+                <p className="live-units">{buildHome.percentLabel}</p>
+              )}
+              <ParentLines lines={buildHome.lines} />
+            </div>
+          </Link>
+        </NodeSquare>
+      ) : null}
     </section>
   );
 }
