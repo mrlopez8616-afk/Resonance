@@ -1,4 +1,5 @@
 import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
+import { privateModeResponse, requestIsPublicMode } from "@/lib/public-mode-server";
 import { fetchSpotUsd } from "@/lib/spot-price";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const access = await authorizeReadRequest(request);
   if (!access.ok) return access.response;
+  if (await requestIsPublicMode(request)) return privateModeResponse();
   try {
     const quote = await fetchSpotUsd("XRP");
     return finishAuthorizedRead(

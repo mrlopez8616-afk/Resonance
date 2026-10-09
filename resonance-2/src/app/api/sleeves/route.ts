@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
+import { privateModeResponse, requestIsPublicMode } from "@/lib/public-mode-server";
 import { asFillWriteError, liveSleevesFromEnvelope, loadFillsStore } from "@/lib/fills-store";
 import { seedBookForTicker } from "@/lib/sleeve-apply";
 import { storageErrorJson } from "@/lib/storage-unavailable";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const access = await authorizeReadRequest(request);
   if (!access.ok) return access.response;
+  if (await requestIsPublicMode(request)) return privateModeResponse();
   const ticker = (
     new URL(request.url).searchParams.get("ticker") ?? ""
   ).trim().toUpperCase();

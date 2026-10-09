@@ -55,6 +55,8 @@ export async function GET(request: Request) {
   if (!session || session.role !== "owner") {
     return json({ ok: false, error: "Unauthorized." }, 401);
   }
+  const { requestIsPublicMode, privateModeResponse } = await import("@/lib/public-mode-server");
+  if (await requestIsPublicMode(request)) return privateModeResponse();
   const read = await readOwnerFinanceSnapshot();
   if (!read.ok) return json({ ok: false, error: read.error }, read.status);
   return json({ ok: true, snapshot: read.snapshot }, 200);

@@ -3,7 +3,11 @@ import { LockIcon } from "@/components/icons";
 import { MoodFloor, MoodLegend, MoodPreviewSync } from "@/components/mood-floor";
 import { OperatorToolbar } from "@/components/operator-toolbar";
 import { PhoneNav } from "@/components/phone-nav";
+import { getSession } from "@/lib/auth-session";
+import type { PublicModeClientStatus } from "@/lib/owner-pin";
+import { loadModeSwitchStatus } from "@/lib/owner-pin-store";
 import { loadPortfolioMood } from "@/lib/portfolio-mood-load";
+import { isPublicMode } from "@/lib/public-mode-server";
 
 export async function OperatorShell({
   children,
@@ -14,13 +18,34 @@ export async function OperatorShell({
   storageMessage?: string | null;
   storageDetail?: string | null;
 }) {
-  const mood = await loadPortfolioMood();
+  const [mood, session, pub] = await Promise.all([
+    loadPortfolioMood(),
+    getSession(),
+    isPublicMode(),
+  ]);
+  const initialMood = pub
+    ? { tone: mood.tone, changePct: mood.changePct, partial: mood.partial }
+    : mood;
+  const owner = session?.role === "owner";
+  let modeStatus: PublicModeClientStatus | null = null;
+  if (owner) {
+    try {
+      modeStatus = await loadModeSwitchStatus();
+    } catch {
+      modeStatus = { pinSet: false, lockedUntil: null, unavailable: true };
+    }
+  }
   return (
-    <MoodFloor initialMood={mood}>
+    <MoodFloor initialMood={initialMood}>
+      {pub ? (
+        <p className="public-banner" role="status" data-public-banner>
+          PUBLIC
+        </p>
+      ) : null}
       <Suspense fallback={null}>
         <MoodPreviewSync />
       </Suspense>
-      <OperatorToolbar />
+      <OperatorToolbar publicMode={pub} modeStatus={modeStatus} />
       <div className="operator-canvas">
         <header className="operator-header">
           <h1 className="operator-title">RESONANCE 2.0</h1>

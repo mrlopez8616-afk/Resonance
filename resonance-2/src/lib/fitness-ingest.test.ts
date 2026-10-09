@@ -745,6 +745,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "014_cb_agentic_xrp",
         "015_dedupe_retagged_fills",
         "016_build_items",
+        "017_owner_pin",
         "018_lessons",
         "019_dedupe_fill_keys",
       ],

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { FightDetail } from "@/components/fight-board";
+import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { resolveFightView } from "@/lib/fight-breakdowns";
 import { resultForFight } from "@/lib/fight-results";
@@ -43,6 +44,8 @@ export default async function FightPage({
   params: Promise<{ event: string; fight: string }>;
   searchParams: Promise<{ node?: string | string[] }>;
 }) {
+  const blocked = await blockedPublicPage();
+  if (blocked) return blocked;
   const { event, fight: slug } = await params;
   const requestedNode = oneQuery((await searchParams).node);
   if (requestedNode) redirect(`/fights/${event}/${slug}`);

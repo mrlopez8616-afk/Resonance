@@ -9,6 +9,8 @@ import { chicagoToday, formatCivilDate, isCivilDay } from "@/lib/calendar-time";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
 import { fightLinkTargets } from "@/lib/fight-desk";
+import { scrubTextFields } from "@/lib/public-mode";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
@@ -30,20 +32,22 @@ export default async function CalendarDayRoute({
   params: Promise<{ day: string }>;
   searchParams: Promise<CalendarDaySearch>;
 }) {
+  const pub = await isPublicMode();
   const [{ day }, rawSearch, store, fillsLoaded, book] = await Promise.all([
     params,
     searchParams,
     loadCalendarForPage(),
-    loadOperatorFills(),
-    loadBetsForPage(),
+    pub ? Promise.resolve(null) : loadOperatorFills(),
+    pub ? Promise.resolve(null) : loadBetsForPage(),
   ]);
   if (!isCivilDay(day)) notFound();
 
   const today = chicagoToday();
   const search = parseCalendarDaySearch(rawSearch);
+  const events = pub ? store.events.map((event) => scrubTextFields(event)) : store.events;
   const storageMessage = storageBanner([
     store.status === "unconfigured" ? "live" : store.status,
-    fillsLoaded.status,
+    pub ? "live" : (fillsLoaded?.status ?? "live"),
   ]);
 
   return (
@@ -52,7 +56,7 @@ export default async function CalendarDayRoute({
       storageDetail={
         [
           store.status === "seed-only" ? "Calendar events are seed-only." : null,
-          fillsLoaded.status === "seed-only" ? "Fills are seed-only." : null,
+          !pub && fillsLoaded?.status === "seed-only" ? "Fills are seed-only." : null,
         ]
           .filter((line): line is string => line !== null)
           .join(" ") || null
@@ -60,12 +64,17 @@ export default async function CalendarDayRoute({
     >
       <CalendarDayView
         day={day}
-        events={store.events}
-        fills={fillsLoaded.fills}
+        events={events}
+        fills={pub || !fillsLoaded ? [] : fillsLoaded.fills}
         search={search}
         today={today}
         storeLabel={store.storeLabel}
-        fightTargets={fightLinkTargets(book.status === "unavailable" ? [] : book.bets, store.events)}
+        fightTargets={
+          pub || !book
+            ? []
+            : fightLinkTargets(book.status === "unavailable" ? [] : book.bets, events)
+        }
+        hideFills={pub}
       />
     </OperatorShell>
   );

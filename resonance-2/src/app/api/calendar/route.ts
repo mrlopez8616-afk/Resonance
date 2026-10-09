@@ -10,6 +10,8 @@ import { occurrencesOnDay } from "@/lib/calendar-desk";
 import { listCalendarEvents } from "@/lib/calendar-store-core";
 import { isCivilDay } from "@/lib/calendar-time";
 import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
+import { scrubTextFields } from "@/lib/public-mode";
+import { requestIsPublicMode } from "@/lib/public-mode-server";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 
@@ -47,7 +49,10 @@ export async function GET(request: Request) {
 
   try {
     const loaded = await loadCalendarStore();
-    const events = listCalendarEvents(loaded.envelope.events);
+    const stored = listCalendarEvents(loaded.envelope.events);
+    const events = (await requestIsPublicMode(request))
+      ? stored.map((event) => scrubTextFields(event))
+      : stored;
     return finishAuthorizedRead(NextResponse.json({
       ok: true,
       configured: loaded.configured,

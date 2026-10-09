@@ -11,6 +11,8 @@ import {
   LogIcon,
   SettingsIcon,
 } from "@/components/icons";
+import { PublicModeToggle } from "@/components/public-mode-toggle";
+import type { PublicModeClientStatus } from "@/lib/owner-pin";
 import { PHONE_TABS, phoneTabActive } from "@/lib/phone-nav";
 
 const PRIMARY = [
@@ -78,8 +80,17 @@ function RailButton({
   );
 }
 
-export function OperatorToolbar() {
+export function OperatorToolbar({
+  publicMode = false,
+  modeStatus = null,
+}: {
+  publicMode?: boolean;
+  modeStatus?: PublicModeClientStatus | null;
+}) {
   const pathname = usePathname();
+  const primary = publicMode ? PRIMARY.filter((item) => item.href !== "/log") : PRIMARY;
+  const settingsHref = publicMode ? "/settings" : "/settings/security";
+  const settingsLabel = publicMode ? "Settings" : "Security";
 
   return (
     <aside className="operator-toolbar">
@@ -87,7 +98,7 @@ export function OperatorToolbar() {
         R
       </div>
       <nav className="operator-nav" aria-label="Operator toolbar">
-        {PRIMARY.map((item) => {
+        {primary.map((item) => {
           const active =
             item.href === "/"
               ? pathname === "/" || pathname.startsWith("/n/")
@@ -112,10 +123,11 @@ export function OperatorToolbar() {
             </RailButton>
           );
         })}
+        {modeStatus ? <PublicModeToggle on={publicMode} status={modeStatus} compact /> : null}
       </nav>
       <RailButton
-        href="/settings/security"
-        label="Security"
+        href={settingsHref}
+        label={settingsLabel}
         footer
         active={pathname.startsWith("/settings")}
       >
@@ -123,12 +135,14 @@ export function OperatorToolbar() {
       </RailButton>
       <nav className="phone-tabbar" aria-label="Phone">
         {PHONE_TABS.map((tab) => {
+          if (publicMode && tab.href === "/log") return null;
+          const href = publicMode && tab.href === "/settings/security" ? "/settings" : tab.href;
           const Icon = PHONE_ICONS[tab.href];
           const active = phoneTabActive(tab.href, pathname);
           return (
             <Link
               key={tab.href}
-              href={tab.href}
+              href={href}
               className={active ? "phone-tab is-active" : "phone-tab"}
               aria-current={active ? "page" : undefined}
             >
@@ -137,6 +151,9 @@ export function OperatorToolbar() {
             </Link>
           );
         })}
+        {modeStatus ? (
+          <PublicModeToggle on={publicMode} status={modeStatus} compact className="phone-tab" />
+        ) : null}
       </nav>
     </aside>
   );

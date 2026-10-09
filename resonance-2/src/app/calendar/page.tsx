@@ -7,6 +7,8 @@ import {
 import { chicagoToday } from "@/lib/calendar-time";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { fightLinkTargets } from "@/lib/fight-desk";
+import { scrubTextFields } from "@/lib/public-mode";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +29,9 @@ export default async function CalendarPage({
     loadBetsForPage(),
   ]);
   const query = parseCalendarDeskQuery(params, today);
-  const bets = book.status === "unavailable" ? [] : book.bets;
+  const pub = await isPublicMode();
+  const events = pub ? store.events.map((event) => scrubTextFields(event)) : store.events;
+  const bets = pub || book.status === "unavailable" ? [] : book.bets;
 
   return (
     <OperatorShell
@@ -35,11 +39,11 @@ export default async function CalendarPage({
       storageDetail={store.status === "seed-only" ? "Calendar events are seed-only." : null}
     >
       <CalendarDesk
-        events={store.events}
+        events={events}
         query={query}
         today={today}
         storeLabel={store.storeLabel}
-        fightTargets={fightLinkTargets(bets, store.events)}
+        fightTargets={pub ? [] : fightLinkTargets(bets, events)}
       />
     </OperatorShell>
   );

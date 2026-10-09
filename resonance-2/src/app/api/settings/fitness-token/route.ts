@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authNow, isSameOriginRequest } from "@/lib/auth-core";
 import { requireRole } from "@/lib/auth-session";
+import { requestIsPublicMode } from "@/lib/public-mode-server";
 import { totpMatches } from "@/lib/auth-totp";
 import {
   FITNESS_TOKEN_HEADER,
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
 
   const gate = await requireRole("owner", request);
   if (gate instanceof NextResponse) return gate;
+  if (await requestIsPublicMode(request)) return json(404, { ok: false, error: "Private." });
 
   let code = "";
   try {

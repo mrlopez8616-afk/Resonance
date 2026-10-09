@@ -294,8 +294,61 @@ ON CONFLICT (id) DO NOTHING;
 `;
 
 export const DEDUPE_FILL_KEYS_SQL = "-- 015 matched only the bare order id and the seed: key. The old save\n-- wrote the duplicate under fillRowKey. With no idempotencyKey that key\n-- is robinhood:<orderId>, and source comes from the venue. 015 deleted\n-- nothing, then set the seed row's source to robinhood. Both copies remain.\n-- 017 and 018 are reserved. This id is 019.\n--\n-- For exactly these two order ids, when the group has exactly 2 rows:\n-- copy the loser into fills_dedupe_backup, then delete that id.\n-- The migrator runs these statements in one transaction.\n-- Keep the robinhood:<orderId> row when its source is robinhood and its\n-- sleeve is rh-agentic; otherwise keep the earliest row.\n-- One row: do nothing. Three or more: do nothing, and the review select\n-- names the order id. A second run changes 0 rows and does not copy again.\n-- Sleeve quantities are not written.\n\nCREATE TABLE IF NOT EXISTS fills_dedupe_backup (\n  migration_id text NOT NULL,\n  backed_up_at timestamptz NOT NULL DEFAULT now(),\n  id bigint NOT NULL,\n  source text NOT NULL,\n  external_id text NOT NULL,\n  filled_at timestamptz NOT NULL,\n  symbol text NOT NULL,\n  side text,\n  quantity numeric,\n  price numeric,\n  venue text,\n  sleeve text,\n  result text NOT NULL,\n  log_only boolean NOT NULL,\n  note text,\n  payload jsonb NOT NULL,\n  created_at timestamptz NOT NULL,\n  PRIMARY KEY (migration_id, id)\n);\n\nWITH members AS (\n  SELECT\n    id, source, external_id, filled_at, symbol, side, quantity, price,\n    venue, sleeve, result, log_only, note, payload, created_at\n  FROM fills\n  WHERE external_id IN (\n      '6aad6b7a-415a-4895-b43c-72c0eca79a55',\n      'seed:6aad6b7a-415a-4895-b43c-72c0eca79a55',\n      'robinhood:6aad6b7a-415a-4895-b43c-72c0eca79a55'\n    )\n    OR payload->>'orderId' = '6aad6b7a-415a-4895-b43c-72c0eca79a55'\n),\nsized AS (\n  SELECT count(*) AS n FROM members\n),\nkeeper AS (\n  SELECT id\n  FROM members\n  ORDER BY\n    CASE\n      WHEN external_id = 'robinhood:6aad6b7a-415a-4895-b43c-72c0eca79a55'\n       AND source = 'robinhood'\n       AND sleeve = 'rh-agentic' THEN 0\n      WHEN source = 'robinhood' AND sleeve = 'rh-agentic' THEN 1\n      ELSE 2\n    END,\n    created_at ASC,\n    id ASC\n  LIMIT 1\n),\ncopied AS (\n  INSERT INTO fills_dedupe_backup (\n    migration_id, backed_up_at,\n    id, source, external_id, filled_at, symbol, side, quantity, price,\n    venue, sleeve, result, log_only, note, payload, created_at\n  )\n  SELECT\n    '019_dedupe_fill_keys', now(),\n    m.id, m.source, m.external_id, m.filled_at, m.symbol,\n    m.side, m.quantity, m.price, m.venue, m.sleeve,\n    m.result, m.log_only, m.note, m.payload, m.created_at\n  FROM members AS m\n  JOIN sized ON sized.n = 2\n  JOIN keeper ON m.id <> keeper.id\n  ON CONFLICT (migration_id, id) DO NOTHING\n  RETURNING id, source, external_id\n)\nSELECT id, source, external_id FROM copied;\n\nDELETE FROM fills\nWHERE id = (\n  SELECT backup.id\n  FROM fills_dedupe_backup AS backup\n  JOIN (\n    SELECT count(*) AS n\n    FROM fills\n    WHERE external_id IN (\n        '6aad6b7a-415a-4895-b43c-72c0eca79a55',\n        'seed:6aad6b7a-415a-4895-b43c-72c0eca79a55',\n        'robinhood:6aad6b7a-415a-4895-b43c-72c0eca79a55'\n      )\n      OR payload->>'orderId' = '6aad6b7a-415a-4895-b43c-72c0eca79a55'\n  ) AS sized ON sized.n = 2\n  WHERE backup.migration_id = '019_dedupe_fill_keys'\n    AND (\n      backup.external_id IN (\n        '6aad6b7a-415a-4895-b43c-72c0eca79a55',\n        'seed:6aad6b7a-415a-4895-b43c-72c0eca79a55',\n        'robinhood:6aad6b7a-415a-4895-b43c-72c0eca79a55'\n      )\n      OR backup.payload->>'orderId' = '6aad6b7a-415a-4895-b43c-72c0eca79a55'\n    )\n  ORDER BY backup.id\n  LIMIT 1\n)\nRETURNING id, source, external_id;\n\nWITH members AS (\n  SELECT\n    id, source, external_id, filled_at, symbol, side, quantity, price,\n    venue, sleeve, result, log_only, note, payload, created_at\n  FROM fills\n  WHERE external_id IN (\n      '6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n      'seed:6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n      'robinhood:6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n    )\n    OR payload->>'orderId' = '6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n),\nsized AS (\n  SELECT count(*) AS n FROM members\n),\nkeeper AS (\n  SELECT id\n  FROM members\n  ORDER BY\n    CASE\n      WHEN external_id = 'robinhood:6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n       AND source = 'robinhood'\n       AND sleeve = 'rh-agentic' THEN 0\n      WHEN source = 'robinhood' AND sleeve = 'rh-agentic' THEN 1\n      ELSE 2\n    END,\n    created_at ASC,\n    id ASC\n  LIMIT 1\n),\ncopied AS (\n  INSERT INTO fills_dedupe_backup (\n    migration_id, backed_up_at,\n    id, source, external_id, filled_at, symbol, side, quantity, price,\n    venue, sleeve, result, log_only, note, payload, created_at\n  )\n  SELECT\n    '019_dedupe_fill_keys', now(),\n    m.id, m.source, m.external_id, m.filled_at, m.symbol,\n    m.side, m.quantity, m.price, m.venue, m.sleeve,\n    m.result, m.log_only, m.note, m.payload, m.created_at\n  FROM members AS m\n  JOIN sized ON sized.n = 2\n  JOIN keeper ON m.id <> keeper.id\n  ON CONFLICT (migration_id, id) DO NOTHING\n  RETURNING id, source, external_id\n)\nSELECT id, source, external_id FROM copied;\n\nDELETE FROM fills\nWHERE id = (\n  SELECT backup.id\n  FROM fills_dedupe_backup AS backup\n  JOIN (\n    SELECT count(*) AS n\n    FROM fills\n    WHERE external_id IN (\n        '6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n        'seed:6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n        'robinhood:6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n      )\n      OR payload->>'orderId' = '6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n  ) AS sized ON sized.n = 2\n  WHERE backup.migration_id = '019_dedupe_fill_keys'\n    AND (\n      backup.external_id IN (\n        '6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n        'seed:6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n        'robinhood:6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n      )\n      OR backup.payload->>'orderId' = '6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n    )\n  ORDER BY backup.id\n  LIMIT 1\n)\nRETURNING id, source, external_id;\n\nSELECT order_id AS manual_review_order_id, row_count\nFROM (\n  SELECT '6aad6b7a-415a-4895-b43c-72c0eca79a55' AS order_id, count(*)::int AS row_count\n  FROM fills\n  WHERE external_id IN (\n      '6aad6b7a-415a-4895-b43c-72c0eca79a55',\n      'seed:6aad6b7a-415a-4895-b43c-72c0eca79a55',\n      'robinhood:6aad6b7a-415a-4895-b43c-72c0eca79a55'\n    )\n    OR payload->>'orderId' = '6aad6b7a-415a-4895-b43c-72c0eca79a55'\n) AS grouped\nWHERE row_count >= 3\nUNION ALL\nSELECT order_id, row_count\nFROM (\n  SELECT '6aad6b8e-f2a6-4be3-a803-65940a748d8d' AS order_id, count(*)::int AS row_count\n  FROM fills\n  WHERE external_id IN (\n      '6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n      'seed:6aad6b8e-f2a6-4be3-a803-65940a748d8d',\n      'robinhood:6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n    )\n    OR payload->>'orderId' = '6aad6b8e-f2a6-4be3-a803-65940a748d8d'\n) AS grouped\nWHERE row_count >= 3;\n";
+export const OWNER_PIN_SQL = `-- Owner PIN for the public/private switch, the lockout, and the mode log.
+-- Number 017 leaves 015 for the in-flight fills dedupe migration.
+-- The migrator applies this id when 015 is absent.
+-- The PIN is stored only as an argon2id PHC string. A second run changes nothing.
 
-export const LESSONS_SQL = "-- Lessons learned. Number 018 leaves 017 for the public-mode PIN tables.\n-- Migration 019 (fill-dedupe follow-up) already shipped; this id sits before it.\n-- sources is owner-only and is never returned in public mode.\n-- This file inserts no rows. The hub posts LL-001 through LL-047\n-- from cabinet/lessons-seed.json.\n\nCREATE TABLE IF NOT EXISTS lessons (\n  id text PRIMARY KEY,\n  date date NOT NULL,\n  title text NOT NULL,\n  category text NOT NULL,\n  what_changed text NOT NULL,\n  why text NOT NULL,\n  lesson text NOT NULL,\n  public_safe boolean NOT NULL DEFAULT false,\n  sources jsonb NOT NULL DEFAULT '[]'::jsonb,\n  build_item_id text REFERENCES build_items (id) ON DELETE SET NULL,\n  pr_number integer,\n  created_at timestamptz NOT NULL DEFAULT now(),\n  updated_at timestamptz NOT NULL DEFAULT now()\n);\n\nCREATE INDEX IF NOT EXISTS lessons_date_idx ON lessons (date);\n\nCREATE INDEX IF NOT EXISTS lessons_build_item_idx ON lessons (build_item_id);\n";
+CREATE TABLE IF NOT EXISTS owner_pin (
+  id integer PRIMARY KEY CHECK (id = 1),
+  pin_hash text NOT NULL CHECK (pin_hash LIKE '$argon2id$%'),
+  updated_at timestamptz NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mode_switch_lockout (
+  id integer PRIMARY KEY CHECK (id = 1),
+  failures integer NOT NULL CHECK (failures >= 0),
+  locked_until timestamptz,
+  updated_at timestamptz NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mode_change_log (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  changed_at timestamptz NOT NULL,
+  direction text NOT NULL CHECK (direction IN ('public', 'private')),
+  outcome text NOT NULL CHECK (outcome IN ('success', 'failure')),
+  user_agent text NOT NULL CHECK (user_agent IN ('iPhone', 'iPad', 'Android', 'Mobile', 'Mac', 'Windows', 'Linux', 'Other'))
+);
+
+CREATE INDEX IF NOT EXISTS mode_change_log_changed_idx ON mode_change_log (changed_at);
+`;
+
+export const LESSONS_SQL = `-- Lessons learned. Number 018 leaves 017 for the public-mode PIN tables.
+-- Migration 019 (fill-dedupe follow-up) already shipped; this id sits before it.
+-- sources is owner-only and is never returned in public mode.
+-- This file inserts no rows. The hub posts LL-001 through LL-047
+-- from cabinet/lessons-seed.json.
+
+CREATE TABLE IF NOT EXISTS lessons (
+  id text PRIMARY KEY,
+  date date NOT NULL,
+  title text NOT NULL,
+  category text NOT NULL,
+  what_changed text NOT NULL,
+  why text NOT NULL,
+  lesson text NOT NULL,
+  public_safe boolean NOT NULL DEFAULT false,
+  sources jsonb NOT NULL DEFAULT '[]'::jsonb,
+  build_item_id text REFERENCES build_items (id) ON DELETE SET NULL,
+  pr_number integer,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS lessons_date_idx ON lessons (date);
+
+CREATE INDEX IF NOT EXISTS lessons_build_item_idx ON lessons (build_item_id);
+`;
 
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
@@ -312,6 +365,7 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "014_cb_agentic_xrp", sql: CB_AGENTIC_XRP_SQL },
   { id: "015_dedupe_retagged_fills", sql: DEDUPE_RETAGGED_FILLS_SQL },
   { id: "016_build_items", sql: BUILD_ITEMS_SQL },
+  { id: "017_owner_pin", sql: OWNER_PIN_SQL },
   { id: "018_lessons", sql: LESSONS_SQL },
   { id: "019_dedupe_fill_keys", sql: DEDUPE_FILL_KEYS_SQL },
 ];
