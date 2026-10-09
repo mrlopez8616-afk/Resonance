@@ -180,6 +180,17 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
   if (parts.length === 0) return { back: null, crumbs: [HOME] };
 
   if (parts[0] === "n") {
+    if (parts[1] === "system") {
+      const system: PhoneTarget = { href: "/n/system", label: "System Map" };
+      if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, system] };
+      if (parts.length === 3 && parts[2] === "live") {
+        return {
+          back: system,
+          crumbs: [HOME, system, { href: "/n/system/live", label: "Live" }],
+        };
+      }
+      return homeTrail();
+    }
     const parentId = parts[1];
     if (!parentId || parts.length > 3) return homeTrail();
     if (parentId === "lessons" && parts.length === 2) {

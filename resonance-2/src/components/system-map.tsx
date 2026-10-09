@@ -66,7 +66,7 @@ function FlowArrow() {
   );
 }
 
-function NodeLinks({ lens }: { lens: SystemLensId }) {
+function NodeLinks({ lens, live = false }: { lens: SystemLensId | null; live?: boolean }) {
   return (
     <nav className={styles.lenses} aria-label="System lenses">
       {SYSTEM_LENSES.map((item) => (
@@ -78,8 +78,15 @@ function NodeLinks({ lens }: { lens: SystemLensId }) {
           {item.label}
         </Link>
       ))}
+      <Link href="/n/system/live" aria-current={live ? "page" : undefined}>
+        Live
+      </Link>
     </nav>
   );
+}
+
+export function SystemLensNav({ live = false }: { live?: boolean }) {
+  return <NodeLinks lens={null} live={live} />;
 }
 
 function NodesLens() {
