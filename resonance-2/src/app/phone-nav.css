@@ -1,0 +1,322 @@
+/*
+ * Phone navigation. Desktop rules live in globals.css and stay untouched.
+ * Everything below the hide block is inside max-width: 640px.
+ * The × remove control is hidden here: a full-card link makes that corner
+ * too easy to hit. Wider screens keep the button.
+ */
+
+.phone-back,
+.phone-crumbs,
+.phone-tabbar,
+.phone-refresh {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 17px;
+  }
+
+  .phone-refresh {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.35rem;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .phone-refresh-spin {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--live);
+    border-radius: 999px;
+    animation: phone-refresh-spin 0.7s linear infinite;
+  }
+
+  .phone-refresh-spin.is-still {
+    animation: none;
+  }
+
+  @keyframes phone-refresh-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .phone-back {
+    position: sticky;
+    top: env(safe-area-inset-top);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    box-sizing: border-box;
+    width: auto;
+    min-height: 48px;
+    margin: 0 calc(-0.9rem - env(safe-area-inset-right)) 0.35rem calc(-0.9rem - env(safe-area-inset-left));
+    padding: 0 calc(1rem + env(safe-area-inset-right)) 0 calc(1rem + env(safe-area-inset-left));
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-decoration: none;
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--text) 12%, transparent);
+  }
+
+  .phone-back:active {
+    background: var(--hover);
+  }
+
+  .phone-back:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: -2px;
+  }
+
+  .phone-crumbs {
+    display: block;
+    margin: 0 0 0.35rem;
+  }
+
+  .phone-crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .phone-crumbs li {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .phone-crumbs a,
+  .phone-crumbs [aria-current="page"] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.35rem;
+    color: var(--live);
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-decoration: none;
+  }
+
+  .phone-crumbs [aria-current="page"] {
+    color: var(--text);
+  }
+
+  .phone-crumbs a:active {
+    background: var(--hover);
+  }
+
+  .phone-sep {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  .calendar-back {
+    display: none;
+  }
+
+  .operator-mark,
+  .operator-nav,
+  .operator-toolbar > .operator-tool-footer {
+    display: none;
+  }
+
+  .operator-toolbar {
+    box-sizing: border-box;
+    align-items: stretch;
+    min-height: calc(56px + env(safe-area-inset-bottom));
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .phone-tabbar {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    justify-content: space-between;
+    min-height: 56px;
+    margin: 0;
+    gap: 0;
+  }
+
+  .phone-tab {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12rem;
+    min-width: 44px;
+    min-height: 56px;
+    padding: 0.2rem 0.05rem 0.15rem;
+    border-radius: 0.65rem;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    text-decoration: none;
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--text) 12%, transparent);
+  }
+
+  .phone-tab.is-active {
+    background: var(--hover);
+    color: var(--live);
+  }
+
+  .phone-tab:active {
+    background: var(--hover);
+  }
+
+  .phone-tab:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: -2px;
+  }
+
+  .operator-canvas {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom) + 16px);
+  }
+
+  .node-square:has(> .node-log-link),
+  .home-floor .node-square:has(> .node-log-link),
+  .child-floor .node-square.is-home.is-parent.is-live:has(> .node-log-link),
+  .finance-floor .node-square.is-home.is-parent.is-live:has(> .node-log-link),
+  .fitness-grid .node-square.is-parent.is-live:has(> .node-log-link) {
+    padding: 0;
+  }
+
+  .node-square > .node-log-link,
+  .home-floor .node-square > .node-log-link,
+  .child-floor .node-square > .node-log-link {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    padding: 0.9rem 1rem 0.8rem;
+    border-radius: 1rem;
+  }
+
+  .node-square > .node-log-link:active,
+  .fight-card:active,
+  .phone-crumbs a:active {
+    background: var(--hover);
+  }
+
+  .node-delete {
+    display: none;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+
+  .parent-lines li,
+  .log-meta,
+  .log-kicker,
+  .node-note,
+  .parent-retiring,
+  .parent-empty,
+  .value-price,
+  .live-units span,
+  .live-value span,
+  .live-sleeves li,
+  .sleeve-manual,
+  .calendar-section-note,
+  .calendar-chip,
+  .calendar-chip-more,
+  .calendar-month-date,
+  .calendar-lane-counts,
+  .calendar-month th,
+  .lot-row,
+  .lot-total,
+  .lot-note,
+  .lot-vault,
+  .rollup-line,
+  .fitness-log p,
+  .fitness-totals h3,
+  .auth-kicker,
+  .auth-label,
+  .security-block h3,
+  .security-current,
+  .operator-status,
+  .mood-legend,
+  .this-week h2,
+  .this-week-when,
+  .this-week-title,
+  .storage-inline,
+  .floor-dialog-copy,
+  .floor-restore span,
+  .fight-table,
+  .fight-table thead th,
+  .fight-card p,
+  .bankroll-stats dt,
+  .finance-asof,
+  .calendar-source {
+    font-size: 14px;
+  }
+
+  .calendar-month-open,
+  .calendar-lane-counts,
+  .calendar-views a,
+  .calendar-nodes a,
+  .calendar-lanes a,
+  .calendar-week-nav a,
+  .calendar-source,
+  .log-nodes a,
+  .log-search,
+  .log-clear,
+  .this-week a,
+  .auth-button,
+  .floor-dialog-cancel,
+  .floor-dialog-confirm,
+  .floor-restore,
+  .node-add,
+  .lot-more summary,
+  .lot-closed summary {
+    min-height: 44px;
+  }
+
+  .calendar-month-open,
+  .node-add,
+  .lot-more summary,
+  .lot-closed summary {
+    display: flex;
+    align-items: center;
+  }
+
+  .node-add {
+    justify-content: center;
+    min-width: 44px;
+  }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .operator-main {
+    transition: none;
+  }
+
+  .phone-refresh-spin {
+    animation: none;
+  }
+}

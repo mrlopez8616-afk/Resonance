@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -18,6 +19,7 @@ import {
   type MoodTone,
   type PortfolioMood,
 } from "@/lib/portfolio-mood";
+import { subscribePullRefresh } from "@/lib/phone-nav";
 
 const POLL_MS = 45_000;
 
@@ -45,29 +47,32 @@ export function MoodFloor({
     setPreview(tone);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const generation = useRef(0);
 
-    async function refresh() {
-      try {
-        const response = await fetch("/api/portfolio-mood", { cache: "no-store" });
-        if (!response.ok || cancelled) return;
-        const payload: unknown = await response.json();
-        if (!cancelled && isPortfolioMood(payload)) setMood(payload);
-      } catch {
-        // Keep the last mood. A failed poll is not a flat book.
-      }
+  const refresh = useCallback(async () => {
+    const generationAtStart = generation.current;
+    try {
+      const response = await fetch("/api/portfolio-mood", { cache: "no-store" });
+      if (!response.ok || generation.current !== generationAtStart) return;
+      const payload: unknown = await response.json();
+      if (generation.current !== generationAtStart) return;
+      if (isPortfolioMood(payload)) setMood(payload);
+    } catch {
+      // Keep the last mood. A failed poll is not a flat book.
     }
+  }, []);
 
+  useEffect(() => {
     const timer = window.setInterval(() => {
       void refresh();
     }, POLL_MS);
-
     return () => {
-      cancelled = true;
+      generation.current += 1;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [refresh]);
+
+  useEffect(() => subscribePullRefresh(() => refresh()), [refresh]);
 
   const tone = preview ?? mood.tone;
   const value = useMemo(

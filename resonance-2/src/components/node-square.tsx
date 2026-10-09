@@ -34,7 +34,11 @@ export function NodeSquare({
           type="button"
           className="node-delete"
           aria-label="Delete node"
-          onClick={onDelete}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
         >
           <span aria-hidden>×</span>
         </button>
