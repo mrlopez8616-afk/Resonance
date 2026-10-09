@@ -29,6 +29,8 @@ export type TradeFill = FillBase & {
   /** Present on hub-ingested rows. Seed samples may omit venue / sleeve. */
   venue?: FillVenue;
   sleeve?: FillSleeveId;
+  /** Trading fee in USD. Stored on the fill payload. The fills table has no fee column. */
+  feeUsd?: string;
   /**
    * The row is on the operator log only. The typed position seed already
    * includes this fill, so sleeve math must not run again.

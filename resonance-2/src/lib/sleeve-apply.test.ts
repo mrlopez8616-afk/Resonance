@@ -105,6 +105,38 @@ describe("sleeve apply", () => {
     assert.equal(merged.some((row) => row.id === "coinbase"), false);
   });
 
+  it("starts a cb-agentic SUI book at 0 and sells the XRP seed down to 9", () => {
+    const bought = applyFillToSleevePrints(
+      {},
+      event({
+        venue: "coinbase",
+        sleeve: "cb-agentic",
+        ticker: "SUI",
+        side: "buy",
+        qty: "1.2",
+        orderId: "sui-agentic-buy",
+      }),
+    );
+    assert.equal(bought.applied, true);
+    assert.equal(bought.nextQuantity, "1.2");
+    assert.equal(bought.prints.SUI?.["cb-agentic"], "1.2");
+    assert.equal(bought.prints.SUI?.coinbase, undefined);
+    const sold = applyFillToSleevePrints(
+      {},
+      event({
+        venue: "coinbase",
+        sleeve: "cb-agentic",
+        ticker: "XRP",
+        side: "sell",
+        qty: "1",
+        orderId: "xrp-agentic-sell",
+      }),
+    );
+    assert.equal(sold.nextQuantity, "9");
+    assert.equal(sold.prints.XRP?.["cb-agentic"], "9");
+    assert.equal(sold.prints.XRP?.["rh-agentic"], undefined);
+  });
+
   it("updates Coinbase from a Coinbase fill", () => {
     const result = applyFillToSleevePrints(
       {},

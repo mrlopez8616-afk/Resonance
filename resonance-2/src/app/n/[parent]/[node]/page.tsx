@@ -332,7 +332,9 @@ function NodePosition({
       quantity={position.quantity}
       livePrice={priceUsd}
       vaultLine={position.vaultLine}
-      unknownLine={position.unknownLine}
+      unknownShares={position.unknownShares}
+      vaultShares={position.vaultShares}
+      agenticLines={position.agenticLines}
     />
   );
 }

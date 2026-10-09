@@ -181,7 +181,7 @@ The two Coinbase SUI buys that sum to the `33.7` sleeve (16.8 at `0.8020710385`,
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `rh-main` | **no** (founder closed the XRP Main lot) | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | ingest, venue `robinhood` only |
 | `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`7847.91` seed, tokens) | ingest, venue `robinhood` only |
-| `cb-agentic` | yes (`10` seed, transfer, no cost) | **no** | **no** | **no** | **no** | **no** | **no** | **no** | **no** | ingest, venue `coinbase` only |
+| `cb-agentic` | yes (`10` seed, transfer, no cost; a live sell reduces that lot) | yes (`0` seed; the first buy is the print) | **no** | **no** | **no** | **no** | **no** | **no** | **no** | ingest, venue `coinbase` only |
 | `coinbase` | **no** (founder closed the XRP Coinbase lot; the Default portfolio's XRP is not a line) | yes (`33.7` seed) | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | ingest, venue `coinbase` only |
 | `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
 
@@ -192,18 +192,36 @@ Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print
 - `robinhood` → `rh-main` or `rh-agentic`
 - `coinbase` → `coinbase` or `cb-agentic`
 
-`cb-agentic` with venue `robinhood` is a 400. Nothing in this app places a trade. A `cb-agentic` fill is a tracking row.
+`cb-agentic` with venue `robinhood` is a 400. Nothing in this app places a trade. A `cb-agentic` fill is a tracking row. `cb-agentic` accepts XRP and SUI. SUI has no print until a fill; the seed quantity is `0`, so the first buy is the whole position. Do not send `backfill: true` for a live trade, or the sleeve will not move.
+
+The fills table has no fee column. A `fee` decimal string is stored on the row payload as `feeUsd`.
 
 ```json
 {
   "venue": "coinbase",
-  "orderId": "REPLACE-WITH-COINBASE-ORDER-ID",
+  "orderId": "7ebf6708-5ed7-48fc-baa3-14f1eed95f11",
   "ticker": "XRP",
-  "side": "buy",
+  "side": "sell",
   "qty": "1",
-  "price": "1.40",
+  "price": "1.3896",
   "sleeve": "cb-agentic",
-  "filledAt": "2026-10-09T12:00:00-05:00",
+  "filledAt": "2026-10-09T15:21:28-05:00",
+  "fee": "0.0125",
+  "result": "filled"
+}
+```
+
+```json
+{
+  "venue": "coinbase",
+  "orderId": "4f8720ee-fd80-4a8e-b7f2-ec4c9f8c1f79",
+  "ticker": "SUI",
+  "side": "buy",
+  "qty": "1.2",
+  "price": "1.0601340274",
+  "sleeve": "cb-agentic",
+  "filledAt": "2026-10-09T15:21:33-05:00",
+  "fee": "0.0114",
   "result": "filled"
 }
 ```

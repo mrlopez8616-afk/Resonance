@@ -15,6 +15,9 @@ import type { NodeSleeve } from "@/data/sleeves";
  * this book: none. Keep 33.7. Do not replace it from the Robinhood pull.
  * Flag that Coinbase line for hub confirmation.
  *
+ * Coinbase Agentic (`cb-agentic`) starts at 0. A live buy is the first
+ * print. A zero sleeve is hidden on the face while another sleeve is positive.
+ *
  * No Flare vault line. Never show an Xaman / gas wallet address.
  */
 
@@ -32,6 +35,13 @@ export const SUI_SLEEVES: SuiSleeve[] = [
     id: "coinbase",
     label: "Coinbase",
     quantity: "33.7",
+    source: "coinbase-config",
+    manual: false,
+  },
+  {
+    id: "cb-agentic",
+    label: "Coinbase Agentic",
+    quantity: "0",
     source: "coinbase-config",
     manual: false,
   },

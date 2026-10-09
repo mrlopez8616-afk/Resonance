@@ -14,6 +14,7 @@ import {
   faceUnitWord,
   formatSleeveQuantity,
   formatTotalUnits,
+  shownSleeves,
 } from "./live-face";
 
 describe("live face units", () => {
@@ -145,7 +146,20 @@ describe("live face units", () => {
     assert.equal(face.sleeves[0]?.quantityLabel, "0");
     assert.equal(face.sleeves[1]?.id, "coinbase");
     assert.equal(face.sleeves[1]?.quantity, "33.7");
+    assert.equal(face.sleeves.find((row) => row.id === "cb-agentic")?.quantity, "0");
     assert.equal(face.totalUnitsLabel, "33.700");
+    const visible = shownSleeves(face.sleeves);
+    assert.deepEqual(
+      visible.map((row) => row.id),
+      ["coinbase"],
+    );
+    const held = shownSleeves(
+      face.sleeves.map((row) => (row.id === "cb-agentic" ? { ...row, quantity: "1.2" } : row)),
+    );
+    assert.deepEqual(
+      held.map((row) => row.id),
+      ["coinbase", "cb-agentic"],
+    );
   });
 
   it("paints the HBAR Agentic token print without rounding it away", () => {

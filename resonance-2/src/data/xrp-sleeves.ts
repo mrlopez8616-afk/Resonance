@@ -16,8 +16,9 @@ import type { NodeSleeve } from "@/data/sleeves";
  *   Do not add a line for the Default portfolio's later XRP balance.
  *
  * Coinbase Agentic (`cb-agentic`) is the Coinbase portfolio named Agentic
- * (portfolio id d757d013-f36b-4e8e-9b50-e1be14a64652). It holds 10 XRP that
- * arrived by transfer. There are no trades, so the lots ledger has no cost.
+ * (portfolio id d757d013-f36b-4e8e-9b50-e1be14a64652). The seed is 10 XRP
+ * that arrived by transfer, with no cost. A live fill moves the print.
+ * The transfer stays the oldest lot, so a sell reduces it without a guessed price.
  *
  * Flare vault is a MANUAL founder entry only (`FLARE_VAULT_XRP`). Do not
  * display the Xaman gas wallet address. Do not treat this as a chain read.
