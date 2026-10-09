@@ -519,4 +519,47 @@ describe("fills store core", () => {
     assert.equal(isFillsStoreConfigured({ VERCEL: "1" }), false);
     assert.equal(isFillsStoreConfigured({ BLOB_READ_WRITE_TOKEN: "x" }), true);
   });
+
+  it("moves both prints on a transfer and dedupes the second post", () => {
+    const seeded = createSeededFillsEnvelope("2026-09-19T00:00:00.000Z");
+    const ready = {
+      ...seeded,
+      sleevePrints: { SUI: { coinbase: "33.7", "cb-agentic": "1.2" } },
+    };
+    const event = parseFillEvent({
+      kind: "transfer",
+      venue: "coinbase",
+      orderId: "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59",
+      idempotencyKey: "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+      ticker: "SUI",
+      quantity: "1.2",
+      fromSleeve: "cb-agentic",
+      toSleeve: "coinbase",
+      filledAt: "2026-10-09T16:59:00-05:00",
+      note: "Coinbase portfolio transfer Agentic d757d013 to Default 5aba0d3b. Not a trade.",
+    });
+    const first = ingestFillIntoEnvelope(ready, event, "2026-10-09T21:59:00.000Z");
+    assert.equal(first.deduped, false);
+    assert.equal(first.applied, true);
+    assert.equal(first.fill.kind, "transfer");
+    assert.equal(first.envelope.sleevePrints.SUI?.coinbase, "34.9");
+    assert.equal(first.envelope.sleevePrints.SUI?.["cb-agentic"], "0");
+    const second = ingestFillIntoEnvelope(first.envelope, event);
+    assert.equal(second.deduped, true);
+    assert.equal(second.applied, false);
+    assert.equal(second.envelope.fills.length, first.envelope.fills.length);
+    assert.equal(second.envelope.sleevePrints.SUI?.coinbase, "34.9");
+    assert.equal(second.envelope.sleevePrints.SUI?.["cb-agentic"], "0");
+
+    const roundTrip = parseFillsEnvelope({
+      updatedAt: first.envelope.updatedAt,
+      fills: [first.fill],
+      sleevePrints: first.envelope.sleevePrints,
+    });
+    assert.deepEqual(roundTrip?.fills[0], first.fill);
+    const withoutKey = { ...first.fill } as Record<string, unknown>;
+    delete withoutKey.idempotencyKey;
+    const dropped = parseFillsEnvelope({ fills: [withoutKey] });
+    assert.equal(dropped?.fills.length, 0);
+  });
 });

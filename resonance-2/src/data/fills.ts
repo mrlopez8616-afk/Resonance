@@ -73,7 +73,25 @@ export type BetFill = FillBase & {
   backfill?: undefined;
 };
 
-export type Fill = TradeFill | BetFill;
+/**
+ * Internal move between two sleeves of one venue. Not a trade: no price,
+ * no realized P/L, and the lot keeps its original date and cost.
+ */
+export type TransferFill = FillBase & {
+  kind: "transfer";
+  side?: undefined;
+  price?: undefined;
+  sleeve?: undefined;
+  quantity: string;
+  venue: FillVenue;
+  fromSleeve: FillSleeveId;
+  toSleeve: FillSleeveId;
+  logOnly?: undefined;
+  backfill?: undefined;
+  feeUsd?: undefined;
+};
+
+export type Fill = TradeFill | BetFill | TransferFill;
 
 /**
  * Seed / local fallback for the operator log.

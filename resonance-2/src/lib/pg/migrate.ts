@@ -142,6 +142,27 @@ export async function applyMigrations(
       continue;
     }
 
+    if (id === "020_sui_cb_agentic_transfer") {
+      const statements = splitSqlStatements(migration.sql);
+      const batches = await sqlTransaction(statements.map((text) => ({ text })));
+      const row = batches[0]?.[0] ?? {};
+      const transferRows = Number(row.transfer_rows ?? 0);
+      const fromRows = Number(row.from_rows ?? 0);
+      const toRows = Number(row.to_rows ?? 0);
+      if (transferRows === 0 && fromRows === 0 && toRows === 0) {
+        console.warn("020_sui_cb_agentic_transfer: guard not met: manual review");
+      } else {
+        console.log(
+          `020_sui_cb_agentic_transfer: transfer ${transferRows} from ${fromRows} to ${toRows}`,
+        );
+      }
+      await sqlQuery(`INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [
+        id,
+      ]);
+      applied.push(id);
+      continue;
+    }
+
     for (const statement of splitSqlStatements(migration.sql)) {
       const view = /^CREATE VIEW\s+([a-z_][a-z0-9_]*)/i.exec(statement);
       if (view?.[1] && (await viewExists(view[1]).catch(() => false))) continue;

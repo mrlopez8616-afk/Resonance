@@ -11,6 +11,9 @@ export type PositionFill = {
   sleeve?: string;
   kind?: string;
   result?: string;
+  /** kind "transfer" only. */
+  fromSleeve?: string;
+  toSleeve?: string;
 };
 
 export type PositionPnl = {

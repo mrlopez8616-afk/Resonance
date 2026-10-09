@@ -287,8 +287,12 @@ export async function saveBetsEnvelope(
   return { bets, settlements };
 }
 
+function isTransferFill(fill: Fill): fill is Fill & { kind: "transfer"; quantity: string } {
+  return fill.kind === "transfer";
+}
+
 function isTradeFill(fill: Fill): fill is Fill & { side: "buy" | "sell"; quantity: string; price: string } {
-  return fill.kind !== "bet" && typeof fill.side === "string";
+  return fill.kind !== "bet" && fill.kind !== "transfer" && typeof fill.side === "string";
 }
 
 type TrackedFill = {
@@ -439,13 +443,14 @@ export async function saveFillsEnvelope(
 
   for (const row of pending) {
     const trade = isTradeFill(row.fill);
+    const transfer = isTransferFill(row.fill);
     const values = [
       row.source,
       row.externalId,
       row.fill.time,
       row.fill.symbol,
-      trade ? row.fill.side : null,
-      trade ? row.fill.quantity : null,
+      transfer ? "transfer" : trade ? row.fill.side : null,
+      transfer ? row.fill.quantity : trade ? row.fill.quantity : null,
       trade ? row.fill.price : null,
       row.fill.venue ?? null,
       trade ? (row.fill.sleeve ?? null) : null,

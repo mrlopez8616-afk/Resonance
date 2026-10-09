@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { isValidElement, type ReactNode } from "react";
 import { describe, it } from "node:test";
 import { PositionBook, PositionChartView, LotsTable, PositionRollupView } from "@/components/position-book";
@@ -724,5 +728,153 @@ describe("position chart geometry", () => {
     assert.match(text, /1 of 2/);
     assert.match(text, /Flare \/ Xaman vault/);
     assert.equal(text.includes("fills don't match holdings"), false);
+  });
+});
+
+const fixtureDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+
+function fixtureJson(name: string): { fills?: LedgerFill[]; sleeves?: { id: string; quantity: string }[] } {
+  return JSON.parse(readFileSync(path.join(fixtureDir, name), "utf8"));
+}
+
+describe("SUI portfolio transfer lots", () => {
+  const liveFills = fixtureJson("fills-before.json").fills ?? [];
+  const suiBefore = fixtureJson("sui-sleeves-before.json").sleeves ?? [];
+  const xrpSleeves = fixtureJson("xrp-sleeves-before.json").sleeves ?? [];
+  const transfer: LedgerFill = {
+    kind: "transfer",
+    time: "2026-10-09T16:59:00-05:00",
+    symbol: "SUI",
+    quantity: "1.2",
+    fromSleeve: "cb-agentic",
+    toSleeve: "coinbase",
+    result: "filled",
+  };
+  const suiAfter = [
+    { id: "rh-agentic", quantity: "0" },
+    { id: "coinbase", quantity: "34.9" },
+    { id: "cb-agentic", quantity: "0" },
+  ];
+
+  function positioned(
+    ticker: string,
+    fills: readonly LedgerFill[],
+    sleeves: readonly { id: string; quantity: string }[],
+  ) {
+    const position = assembleNodePosition({
+      fills,
+      ticker,
+      sleeves,
+      priceUsd: null,
+      closes: [],
+      today: "2026-10-09",
+    });
+    assert.ok(position);
+    const totals = positionBookTotals({
+      ledger: position.ledger,
+      livePrice: null,
+      sleeveShares: position.quantity,
+      unknownShares: position.unknownShares,
+      vaultShares: position.vaultShares,
+      holdingUnits: position.holdingUnits,
+      addedCostUsd: position.addedCostUsd,
+      unexplained: position.unexplained,
+    });
+    return { position, totals };
+  }
+
+  it("keeps the 1.2 lot's date and cost on coinbase with no realized P/L", () => {
+    const before = positioned("SUI", liveFills, suiBefore);
+    const after = positioned("SUI", [...liveFills, transfer], suiAfter);
+    assert.equal(before.totals.costUsd, 28.3);
+    assert.equal(after.totals.costUsd, 28.3);
+    assert.equal(after.position.holdingUnits, 34.9);
+    assert.equal(after.totals.partial, false);
+    assert.deepEqual(after.position.agenticLines, []);
+    const coinbase = after.position.books.find((book) => book.id === "coinbase");
+    assert.ok(coinbase);
+    assert.equal(coinbase.ledger.status, "matched");
+    assert.equal(coinbase.quantity, "34.9");
+    assert.equal(coinbase.ledger.openShares, "34.9");
+    assert.equal(coinbase.ledger.costUsd, 28.3);
+    const realized = coinbase.ledger.closedLots.reduce((sum, lot) => sum + lot.realizedPnlUsd, 0);
+    assert.equal(realized, 0);
+    assert.deepEqual(coinbase.ledger.closedLots, []);
+    assert.deepEqual(
+      coinbase.ledger.openLots.map((lot) => `${lot.sharesLabel} @ ${lot.price}`),
+      ["1.2 @ 1.0601340274", "16.9 @ 0.8019", "16.8 @ 0.8020710385"],
+    );
+    assert.equal(
+      after.position.books.some((book) => book.id === "cb-agentic"),
+      false,
+    );
+  });
+
+  it("sells the September lots before the transferred October lot", () => {
+    const sold = buildLotsLedger({
+      fills: [
+        ...liveFills,
+        transfer,
+        {
+          time: "2026-10-09T18:00:00-05:00",
+          symbol: "SUI",
+          side: "sell",
+          quantity: "16.8",
+          price: "1",
+          sleeve: "coinbase",
+          result: "filled",
+        },
+      ],
+      ticker: "SUI",
+      sleeve: "coinbase",
+      quantity: "18.1",
+    });
+    assert.equal(sold.status, "matched");
+    assert.equal(sold.closedLots[0]?.price, "0.8020710385");
+    assert.equal(sold.closedLots[0]?.originalQty, "16.8");
+    assert.deepEqual(
+      sold.openLots.map((lot) => lot.price),
+      ["1.0601340274", "0.8019"],
+    );
+  });
+
+  it("mismatches a transfer the source lots cannot cover", () => {
+    const ledger = buildLotsLedger({
+      fills: [
+        {
+          time: "2026-10-09T15:21:33-05:00",
+          symbol: "SUI",
+          side: "buy",
+          quantity: "1.2",
+          price: "1.0601340274",
+          sleeve: "cb-agentic",
+          result: "filled",
+        },
+        {
+          kind: "transfer",
+          time: "2026-10-09T16:59:00-05:00",
+          symbol: "SUI",
+          quantity: "2",
+          fromSleeve: "cb-agentic",
+          toSleeve: "coinbase",
+          result: "filled",
+        },
+      ],
+      ticker: "SUI",
+      sleeve: "coinbase",
+      quantity: "2",
+    });
+    assert.equal(ledger.status, "over");
+    assert.equal(ledger.note, "fills don't match holdings");
+  });
+
+  it("leaves the XRP position identical to the pre-transfer book", () => {
+    const before = positioned("XRP", liveFills, xrpSleeves);
+    const after = positioned("XRP", [...liveFills, transfer], xrpSleeves);
+    assert.deepEqual(after, before);
+    const digest = createHash("sha256")
+      .update(JSON.stringify({ position: before.position, totals: before.totals }))
+      .digest("hex");
+    assert.equal(digest, "c7b22ee138811c17f5fee0a067c4a840fd9e37faa31bbe3540fe1eb774775692");
   });
 });

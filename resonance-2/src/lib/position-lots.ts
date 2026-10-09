@@ -75,6 +75,9 @@ export type LedgerFill = {
   sleeve?: string;
   kind?: string;
   result?: string;
+  /** kind "transfer" only. */
+  fromSleeve?: string;
+  toSleeve?: string;
 };
 
 export type LotStatus = "matched" | "short" | "over";
@@ -253,6 +256,101 @@ function lotValue(remaining: string, price: number, live: number | null): {
   return { valueUsd, pnlUsd, pnlPct };
 }
 
+/** Open lots a transfer moves out of `fromSleeve`, FIFO, at original time and cost. */
+export function movedLots(input: {
+  fills: readonly LedgerFill[];
+  ticker: string;
+  fromSleeve: string;
+  before: string;
+  quantity: string;
+}): { time: string; qty: string; priceText: string }[] | null {
+  const cutoff = Date.parse(input.before);
+  const prior = input.fills.filter((fill) => Date.parse(fill.time) < cutoff);
+  const replay = replayOpenLots(prior, input.ticker, input.fromSleeve);
+  if (!replay) return null;
+  let left = input.quantity;
+  const out: { time: string; qty: string; priceText: string }[] = [];
+  for (const lot of replay) {
+    if (qtyCmp(left, "0") === 0) break;
+    const take = qtyCmp(lot.remaining, left) <= 0 ? lot.remaining : left;
+    if (qtyCmp(take, "0") <= 0) continue;
+    out.push({ time: lot.time, qty: take, priceText: lot.priceText });
+    left = subtractDecimal(left, take);
+  }
+  return qtyCmp(left, "0") === 0 ? out : null;
+}
+
+type ReplayRow =
+  | { time: string; side: "buy" | "sell"; qty: string; price: number; priceText: string }
+  | { time: string; side: "out"; qty: string }
+  | { time: string; side: "in"; lots: { time: string; qty: string; priceText: string }[] };
+
+function ledgerRows(fills: readonly LedgerFill[], ticker: string, sleeve: string): ReplayRow[] | null {
+  const rows: ReplayRow[] = [];
+  for (const fill of fills) {
+    if (fill.kind === "bet") continue;
+    if (fill.symbol.trim().toUpperCase() !== ticker) continue;
+    if (fill.result && fill.result.trim().toLowerCase() !== "filled") continue;
+    if (fill.kind === "transfer") {
+      const qty = positiveQty(fill.quantity);
+      if (!qty || !fill.fromSleeve || !fill.toSleeve) return null;
+      if (fill.fromSleeve === sleeve) rows.push({ time: fill.time, side: "out", qty });
+      else if (fill.toSleeve === sleeve) {
+        const lots = movedLots({
+          fills,
+          ticker,
+          fromSleeve: fill.fromSleeve,
+          before: fill.time,
+          quantity: qty,
+        });
+        if (!lots) return null;
+        rows.push({ time: fill.time, side: "in", lots });
+      }
+      continue;
+    }
+    if (fill.sleeve !== sleeve) continue;
+    const qty = positiveQty(fill.quantity);
+    const priceText = fill.price?.trim() ?? "";
+    if ((fill.side !== "buy" && fill.side !== "sell") || !qty || !isDecimalString(priceText) || Number(priceText) <= 0) {
+      return null;
+    }
+    rows.push({ time: fill.time, side: fill.side, qty, price: Number(priceText), priceText });
+  }
+  rows.sort((left, right) => Date.parse(left.time) - Date.parse(right.time));
+  return rows;
+}
+
+function replayOpenLots(
+  fills: readonly LedgerFill[],
+  tickerRaw: string,
+  sleeve: string,
+): { time: string; remaining: string; priceText: string }[] | null {
+  const ticker = tickerRaw.trim().toUpperCase();
+  const rows = ledgerRows(fills, ticker, sleeve);
+  if (!rows) return null;
+  const open: { time: string; remaining: string; priceText: string }[] = [];
+  for (const row of rows) {
+    if (row.side === "buy") {
+      open.push({ time: row.time, remaining: row.qty, priceText: row.priceText });
+      continue;
+    }
+    if (row.side === "in") {
+      for (const lot of row.lots) open.push({ time: lot.time, remaining: lot.qty, priceText: lot.priceText });
+      open.sort((left, right) => Date.parse(left.time) - Date.parse(right.time));
+      continue;
+    }
+    let left = row.qty;
+    for (const lot of open) {
+      if (qtyCmp(left, "0") === 0) break;
+      const take = qtyCmp(lot.remaining, left) <= 0 ? lot.remaining : left;
+      lot.remaining = subtractDecimal(lot.remaining, take);
+      left = subtractDecimal(left, take);
+    }
+    if (qtyCmp(left, "0") !== 0) return null;
+  }
+  return open.filter((lot) => qtyCmp(lot.remaining, "0") > 0);
+}
+
 const MISMATCH = "fills don't match holdings";
 
 function emptyLedger(sleeve: string, status: LotStatus, note: string | null): LotsLedger {
@@ -295,22 +393,14 @@ export function buildLotsLedger(input: {
     return emptyLedger(sleeve, "over", MISMATCH);
   }
 
-  const rows: { time: string; day: string; side: "buy" | "sell"; qty: string; price: number; priceText: string }[] = [];
-  for (const fill of input.fills) {
-    if (fill.kind === "bet") continue;
-    if (fill.symbol.trim().toUpperCase() !== ticker) continue;
-    if (fill.sleeve !== sleeve) continue;
-    if (fill.result && fill.result.trim().toLowerCase() !== "filled") continue;
-    const side = fill.side;
-    const qty = positiveQty(fill.quantity);
-    const priceText = fill.price?.trim() ?? "";
-    const day = sessionDay(fill.time);
-    if ((side !== "buy" && side !== "sell") || !qty || !isDecimalString(priceText) || Number(priceText) <= 0 || !day) {
-      return emptyLedger(sleeve, "over", MISMATCH);
-    }
-    rows.push({ time: fill.time, day, side, qty, price: Number(priceText), priceText });
+  const replay = ledgerRows(input.fills, ticker, sleeve);
+  if (!replay) return emptyLedger(sleeve, "over", MISMATCH);
+  const rows: (ReplayRow & { day: string })[] = [];
+  for (const row of replay) {
+    const day = sessionDay(row.time);
+    if (!day) return emptyLedger(sleeve, "over", MISMATCH);
+    rows.push({ ...row, day });
   }
-  rows.sort((left, right) => Date.parse(left.time) - Date.parse(right.time));
 
   const open: WorkingLot[] = [];
   const closed: WorkingLot[] = [];
@@ -331,8 +421,23 @@ export function buildLotsLedger(input: {
   };
 
   for (const row of rows) {
-    markers.push({ time: row.time, day: row.day, side: row.side, quantity: row.qty, price: row.priceText });
-    if (row.side === "buy") {
+    if (row.side === "buy" || row.side === "sell") {
+      markers.push({ time: row.time, day: row.day, side: row.side, quantity: row.qty, price: row.priceText });
+    }
+    if (row.side === "in") {
+      for (const lot of row.lots) {
+        open.push({
+          time: lot.time,
+          day: sessionDay(lot.time) ?? row.day,
+          original: lot.qty,
+          remaining: lot.qty,
+          price: Number(lot.priceText),
+          priceText: lot.priceText,
+          realized: 0,
+        });
+      }
+      open.sort((left, right) => Date.parse(left.time) - Date.parse(right.time));
+    } else if (row.side === "buy") {
       open.push({
         time: row.time,
         day: row.day,
@@ -348,7 +453,7 @@ export function buildLotsLedger(input: {
         if (qtyCmp(left, "0") === 0) break;
         if (qtyCmp(lot.remaining, "0") === 0) continue;
         const take = qtyCmp(lot.remaining, left) <= 0 ? lot.remaining : left;
-        lot.realized += (row.price - lot.price) * Number(take);
+        if (row.side === "sell") lot.realized += (row.price - lot.price) * Number(take);
         lot.remaining = subtractDecimal(lot.remaining, take);
         left = subtractDecimal(left, take);
       }
@@ -356,7 +461,7 @@ export function buildLotsLedger(input: {
       for (let index = open.length - 1; index >= 0; index -= 1) {
         const lot = open[index];
         if (!lot || qtyCmp(lot.remaining, "0") !== 0) continue;
-        closed.push(lot);
+        if (row.side === "sell") closed.push(lot);
         open.splice(index, 1);
       }
     }
@@ -794,6 +899,33 @@ export function cbAgenticLotLines(input: {
   for (const fill of input.fills) {
     if (fill.kind === "bet") continue;
     if (fill.symbol.trim().toUpperCase() !== ticker) continue;
+    if (fill.kind === "transfer") {
+      const qty = positiveQty(fill.quantity);
+      const day = sessionDay(fill.time);
+      if (!qty || !day) continue;
+      if (fill.fromSleeve === "cb-agentic") {
+        rows.push({ time: fill.time, day, side: "sell", qty, price: "1" });
+      } else if (fill.toSleeve === "cb-agentic") {
+        const lots =
+          movedLots({
+            fills: input.fills,
+            ticker,
+            fromSleeve: fill.fromSleeve ?? "",
+            before: fill.time,
+            quantity: qty,
+          }) ?? [];
+        for (const lot of lots) {
+          rows.push({
+            time: fill.time,
+            day: sessionDay(lot.time) ?? day,
+            side: "buy",
+            qty: lot.qty,
+            price: lot.priceText,
+          });
+        }
+      }
+      continue;
+    }
     if (fill.sleeve !== "cb-agentic") continue;
     if (fill.result && fill.result.trim().toLowerCase() !== "filled") continue;
     const side = fill.side;

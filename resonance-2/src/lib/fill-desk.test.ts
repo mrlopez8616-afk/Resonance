@@ -191,4 +191,54 @@ describe("operator log desk", () => {
     assert.equal(fillsOnPrintedDay(rows, "2026-09-25").length, 0);
     assert.equal(rows.length, 4);
   });
+
+  it("matches a transfer on either sleeve and on the ticker", () => {
+    const transfer: Fill = {
+      kind: "transfer",
+      time: "2026-10-09T16:59:00-05:00",
+      symbol: "SUI",
+      quantity: "1.2",
+      venue: "coinbase",
+      fromSleeve: "cb-agentic",
+      toSleeve: "coinbase",
+      orderId: "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59",
+      idempotencyKey: "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+      result: "filled",
+    };
+    const withTransfer = [...rows, transfer];
+    assert.deepEqual(
+      filterFills(withTransfer, parseFillDeskQuery({ sleeve: "cb-agentic" })).map((fill) => fill.orderId),
+      [transfer.orderId],
+    );
+    assert.deepEqual(
+      filterFills(withTransfer, parseFillDeskQuery({ sleeve: "coinbase", ticker: "SUI" })).map(
+        (fill) => fill.orderId,
+      ),
+      [transfer.orderId],
+    );
+    assert.equal(
+      filterFills(withTransfer, parseFillDeskQuery({ sleeve: "rh-agentic" })).some(
+        (fill) => fill.kind === "transfer",
+      ),
+      false,
+    );
+    assert.equal(
+      filterFills(withTransfer, parseFillDeskQuery({ ticker: "XRP" })).some(
+        (fill) => fill.kind === "transfer",
+      ),
+      false,
+    );
+    assert.equal(
+      filterFills(withTransfer, parseFillDeskQuery({ ticker: "SUI" })).some(
+        (fill) => fill.orderId === transfer.orderId,
+      ),
+      true,
+    );
+    assert.equal(
+      filterFills(withTransfer, parseFillDeskQuery({ sleeve: "unset" })).some(
+        (fill) => fill.kind === "transfer",
+      ),
+      false,
+    );
+  });
 });

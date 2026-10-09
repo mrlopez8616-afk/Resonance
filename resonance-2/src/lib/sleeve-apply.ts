@@ -19,6 +19,7 @@ import {
   FillIngestError,
   type LockedTicker,
   type NormalizedFillEvent,
+  type NormalizedTransferEvent,
 } from "@/lib/fill-event";
 
 export const LIVE_SLEEVE_SEEDS: Record<string, readonly NodeSleeve[]> = {
@@ -62,10 +63,83 @@ export function currentSleeveQuantity(
 
 export function applyQuantityDelta(
   current: string,
-  side: NormalizedFillEvent["side"],
+  side: "buy" | "sell",
   qty: string,
 ): string {
   return side === "buy" ? addDecimal(current, qty) : subtractDecimal(current, qty);
+}
+
+function refuseManualSleeve(ticker: string, sleeveId: string): void {
+  if (sleeveId === (FLARE_VAULT_SLEEVE_ID as unknown as FillSleeveId)) {
+    throw new FillIngestError(
+      "flare-vault is founder-entered only and cannot be written by ingest.",
+    );
+  }
+  const seed = findSeedSleeve(ticker, sleeveId);
+  if (!seed) {
+    throw new FillIngestError(`sleeve ${sleeveId} is not on the ${ticker} face.`);
+  }
+  if (seed.id === FLARE_VAULT_SLEEVE_ID || seed.manual) {
+    throw new FillIngestError(
+      "manual / flare-vault sleeves cannot be written by ingest.",
+    );
+  }
+}
+
+/**
+ * Move quantity from one sleeve to another in one step.
+ * Refuses a source that would go below zero, and refuses manual / flare-vault.
+ */
+export function applyTransferToSleevePrints(
+  prints: SleevePrints,
+  event: NormalizedTransferEvent,
+): { prints: SleevePrints; applied: boolean; fromQuantity: string | null; toQuantity: string | null } {
+  if (
+    event.fromSleeve === (FLARE_VAULT_SLEEVE_ID as unknown as FillSleeveId) ||
+    event.toSleeve === (FLARE_VAULT_SLEEVE_ID as unknown as FillSleeveId)
+  ) {
+    throw new FillIngestError(
+      "flare-vault is founder-entered only and cannot be written by ingest.",
+    );
+  }
+
+  const book = seedBookForTicker(event.ticker);
+  if (!book) {
+    return { prints, applied: false, fromQuantity: null, toQuantity: null };
+  }
+
+  refuseManualSleeve(event.ticker, event.fromSleeve);
+  refuseManualSleeve(event.ticker, event.toSleeve);
+
+  const fromRaw = currentSleeveQuantity(prints, event.ticker, event.fromSleeve);
+  const toRaw = currentSleeveQuantity(prints, event.ticker, event.toSleeve);
+  if (fromRaw == null || toRaw == null) {
+    throw new FillIngestError(
+      `no seed quantity for ${event.ticker} ${fromRaw == null ? event.fromSleeve : event.toSleeve}.`,
+    );
+  }
+  const fromCurrent = isDecimalString(fromRaw) ? fromRaw.trim() : "0";
+  const toCurrent = isDecimalString(toRaw) ? toRaw.trim() : "0";
+  const fromQuantity = subtractDecimal(fromCurrent, event.qty);
+  if (fromQuantity.startsWith("-")) {
+    throw new FillIngestError("transfer would take the source sleeve below zero.", 409);
+  }
+  const toQuantity = addDecimal(toCurrent, event.qty);
+  const nextTicker = {
+    ...(prints[event.ticker] ?? {}),
+    [event.fromSleeve]: fromQuantity,
+    [event.toSleeve]: toQuantity,
+  };
+  delete nextTicker[FLARE_VAULT_SLEEVE_ID];
+  return {
+    prints: {
+      ...prints,
+      [event.ticker]: nextTicker,
+    },
+    applied: true,
+    fromQuantity,
+    toQuantity,
+  };
 }
 
 /**
@@ -77,6 +151,9 @@ export function applyFillToSleevePrints(
   prints: SleevePrints,
   event: NormalizedFillEvent,
 ): { prints: SleevePrints; applied: boolean; nextQuantity: string | null } {
+  if (event.kind === "transfer") {
+    throw new FillIngestError("a transfer is applied with applyTransferToSleevePrints.");
+  }
   if (event.sleeve === (FLARE_VAULT_SLEEVE_ID as unknown as FillSleeveId)) {
     throw new FillIngestError(
       "flare-vault is founder-entered only and cannot be written by ingest.",
