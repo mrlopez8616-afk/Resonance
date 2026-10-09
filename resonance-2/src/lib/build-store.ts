@@ -4,6 +4,7 @@ import { z } from "zod";
 import { loadGithubPulls } from "@/lib/build-github";
 import { sqlQuery } from "@/lib/pg/client";
 import {
+  averageStepPercent,
   buildHomeCard,
   buildItemId,
   groupBuildItems,
@@ -118,13 +119,17 @@ function asIso(value: string | Date): string {
   return date.toISOString();
 }
 
+const STORED_NODE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 function mapRow(row: ItemRow): BuildItem | null {
-  if (!isBuildNode(row.node) || !isBuildStatus(row.status)) return null;
+  const node = row.node.trim().toLowerCase();
+  if (!isBuildStatus(row.status)) return null;
+  if (!isBuildNode(node) && !STORED_NODE.test(node)) return null;
   const prRaw = row.pr_number == null || row.pr_number === "" ? null : Number(row.pr_number);
   return {
     id: row.id,
     title: row.title,
-    node: row.node,
+    node: node as BuildNode,
     prNumber: prRaw != null && Number.isFinite(prRaw) ? prRaw : null,
     status: row.status,
     steps: parseSteps(row.steps),
@@ -174,6 +179,20 @@ export async function loadBuildBoard(now = new Date()): Promise<BuildBoard> {
   const loaded = await loadBuildItems();
   const grouped = groupBuildItems(loaded.items, now);
   return { ...grouped, githubFresh: loaded.githubFresh };
+}
+
+/** Items plus the overall step percent. The parent and child pages share this. */
+export async function loadBuildView(now = new Date()): Promise<{
+  items: BuildItem[];
+  totalPercent: number | null;
+  githubFresh: boolean;
+}> {
+  const loaded = await loadBuildItems();
+  return {
+    items: loaded.items,
+    totalPercent: averageStepPercent(loaded.items),
+    githubFresh: loaded.githubFresh,
+  };
 }
 
 export async function loadBuildHomeCard(): Promise<BuildHomeCard> {

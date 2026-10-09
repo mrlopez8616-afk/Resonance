@@ -9,8 +9,13 @@ import {
   applyPullToSteps,
   averageStepPercent,
   buildHomeCard,
+  buildShowsPrivateText,
+  deriveBuildSections,
   formatUpdatedCt,
   groupBuildItems,
+  queuedInRunOrder,
+  resolveBuildSection,
+  sectionPercent,
   GITHUB_REVALIDATE_SECONDS,
   pullForItem,
   standardSteps,
@@ -250,6 +255,112 @@ describe("build grouping", () => {
     assert.equal(board.groups.some((group) => group.node === "youtube"), false);
     assert.equal(formatUpdatedCt("2026-10-08T17:00:00.000Z"), "Oct 8");
     assert.equal(formatUpdatedCt("2026-10-09T05:00:00.000Z"), "Oct 9");
+  });
+});
+
+describe("build sections", () => {
+  const recent = "2026-10-08T17:00:00.000Z";
+
+  function rows(): BuildItem[] {
+    return [
+      item({
+        id: "platform-live",
+        node: "platform",
+        status: "live",
+        title: "Login",
+        sortOrder: 10,
+        updatedAt: recent,
+        steps: standardSteps({ spec: true, "pr-open": true, "tests-build": true, merged: true, "verified-prod": true }),
+      }),
+      item({
+        id: "platform-later",
+        node: "platform",
+        status: "queued",
+        title: "Public mode",
+        sortOrder: 80,
+        steps: standardSteps(),
+      }),
+      item({
+        id: "platform-sooner",
+        node: "platform",
+        status: "queued",
+        title: "System Map",
+        sortOrder: 70,
+        steps: standardSteps({ spec: true }),
+      }),
+      item({
+        id: "crypto-work",
+        node: "crypto",
+        status: "in_progress",
+        title: "Trigger",
+        sortOrder: 5,
+        steps: standardSteps({ spec: true, "pr-open": true }),
+      }),
+      item({
+        id: "ops-note",
+        node: "ops" as BuildItem["node"],
+        status: "queued",
+        title: "Ops note",
+        sortOrder: 1,
+        steps: standardSteps({ spec: true }),
+      }),
+    ];
+  }
+
+  it("derives section cards, hides empty nodes, and keeps Queue", () => {
+    const sections = deriveBuildSections(rows());
+    assert.deepEqual(
+      sections.map((section) => section.id),
+      ["platform", "queue", "crypto", "ops"],
+    );
+    assert.equal(sections.some((section) => section.id === "youtube"), false);
+    assert.equal(sections.find((section) => section.id === "queue")?.label, "Queue");
+    assert.equal(sections.find((section) => section.id === "ai-stocks"), undefined);
+    const platform = sections.find((section) => section.id === "platform");
+    assert.deepEqual(platform?.counts, { live: 1, inProgress: 0, queued: 2 });
+    const queue = sections.find((section) => section.id === "queue");
+    assert.deepEqual(queue?.counts, { live: 0, inProgress: 0, queued: 3 });
+    assert.equal(deriveBuildSections([]).map((section) => section.id).join(), "queue");
+  });
+
+  it("uses the same step average for a section and for the queue", () => {
+    const data = rows();
+    const platform = data.filter((row) => row.node === "platform");
+    assert.equal(sectionPercent(data, "platform"), averageStepPercent(platform));
+    const queued = queuedInRunOrder(data);
+    assert.equal(sectionPercent(data, "queue"), averageStepPercent(queued));
+    assert.equal(sectionPercent([], "queue"), null);
+  });
+
+  it("orders the queue by sort_order across sections", () => {
+    assert.deepEqual(
+      queuedInRunOrder(rows()).map((row) => row.id),
+      ["ops-note", "platform-sooner", "platform-later"],
+    );
+    const tied = [
+      item({ id: "b-item", node: "platform", status: "queued", title: "Bravo", sortOrder: 4 }),
+      item({ id: "a-item", node: "crypto", status: "queued", title: "Alpha", sortOrder: 4 }),
+    ];
+    assert.deepEqual(
+      queuedInRunOrder(tied).map((row) => row.id),
+      ["a-item", "b-item"],
+    );
+  });
+
+  it("404s an unknown section slug and still opens Queue and a known empty node", () => {
+    const data = rows();
+    assert.equal(resolveBuildSection("nope", data), null);
+    assert.equal(resolveBuildSection("Not A Section", data), null);
+    assert.equal(resolveBuildSection("", data), null);
+    assert.equal(resolveBuildSection("queue", data)?.id, "queue");
+    assert.equal(resolveBuildSection("youtube", [])?.id, "youtube");
+    assert.equal(resolveBuildSection("youtube", [])?.items.length, 0);
+    assert.equal(resolveBuildSection("youtube", data)?.id, "youtube");
+    assert.equal(resolveBuildSection("youtube", data)?.items.length, 0);
+    assert.equal(resolveBuildSection("ops", data)?.label, "Ops");
+    assert.equal(resolveBuildSection("OPS", data)?.id, "ops");
+    assert.equal(buildShowsPrivateText(false), true);
+    assert.equal(buildShowsPrivateText(true), false);
   });
 });
 

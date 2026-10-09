@@ -1,14 +1,31 @@
+import Link from "next/link";
+import { NodeSquare } from "@/components/node-square";
 import {
+  buildSectionLabel,
+  buildShowsPrivateText,
   formatUpdatedCt,
+  isShippedLive,
   pullHref,
   statusLabel,
   stepPercent,
-  type BuildBoard,
   type BuildItem,
+  type BuildSectionView,
 } from "@/lib/build-tracker";
 import styles from "@/components/build-tracker.module.css";
 
-function BuildItemCard({ item }: { item: BuildItem }) {
+function countLine(count: number, label: string): string {
+  return `${count} ${label}`;
+}
+
+function BuildItemCard({
+  item,
+  showPr,
+  sectionLabel,
+}: {
+  item: BuildItem;
+  showPr: boolean;
+  sectionLabel?: string;
+}) {
   const percent = stepPercent(item.steps);
   const width = percent ?? 0;
   const updated = formatUpdatedCt(item.updatedAt);
@@ -32,7 +49,8 @@ function BuildItemCard({ item }: { item: BuildItem }) {
       </div>
       <p className={styles.meta}>
         <span className={styles.percent}>{percent === null ? "no steps" : `${percent}%`}</span>
-        {item.prNumber != null ? (
+        {sectionLabel ? <span>{sectionLabel}</span> : null}
+        {showPr && item.prNumber != null ? (
           <a href={pullHref(item.prNumber)}>#{item.prNumber}</a>
         ) : null}
         {updated ? <span>Updated {updated}</span> : null}
@@ -42,44 +60,124 @@ function BuildItemCard({ item }: { item: BuildItem }) {
   );
 }
 
-export function BuildFloor({ board }: { board: BuildBoard }) {
-  const total = board.totalPercent;
+function ItemList({
+  items,
+  showPr,
+  showSection,
+}: {
+  items: readonly BuildItem[];
+  showPr: boolean;
+  showSection: boolean;
+}) {
+  return (
+    <div className={styles.items}>
+      {items.map((item) => (
+        <BuildItemCard
+          key={item.id}
+          item={item}
+          showPr={showPr}
+          sectionLabel={showSection ? buildSectionLabel(item.node) : undefined}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function BuildParent({
+  totalPercent,
+  githubFresh,
+  sections,
+}: {
+  totalPercent: number | null;
+  githubFresh: boolean;
+  sections: readonly BuildSectionView[];
+}) {
   return (
     <div className={`build-floor ${styles.floor}`}>
       <header className={styles.heading}>
-        <p className={styles.total}>{total === null ? "—" : `${total}%`}</p>
+        <p className={styles.total}>{totalPercent === null ? "—" : `${totalPercent}%`}</p>
         <p className={styles.totalNote}>complete</p>
       </header>
-      {board.githubFresh ? null : (
+      {githubFresh ? null : (
         <p className={styles.note}>GitHub didn&apos;t answer. Showing the last stored steps.</p>
       )}
-      {board.groups.map((group) => (
-        <section key={group.node} className={styles.group} aria-label={group.label}>
-          <div className={styles.groupHead}>
-            <h2>{group.label}</h2>
-            <span className={styles.groupPercent}>
-              {group.percent === null ? "no steps" : `${group.percent}%`}
-            </span>
-          </div>
-          {group.active.length > 0 ? (
-            <div className={styles.items}>
-              {group.active.map((item) => (
-                <BuildItemCard key={item.id} item={item} />
-              ))}
-            </div>
-          ) : null}
-          {group.shipped.length > 0 ? (
-            <details className={styles.shipped}>
-              <summary>Shipped</summary>
-              <div className={styles.items}>
-                {group.shipped.map((item) => (
-                  <BuildItemCard key={item.id} item={item} />
-                ))}
-              </div>
-            </details>
-          ) : null}
-        </section>
-      ))}
+      <section className={`node-grid home-floor ${styles.sections}`} aria-label="Build sections">
+        {sections.map((section) => {
+          const width = section.percent ?? 0;
+          const lines = [
+            countLine(section.counts.live, "live"),
+            countLine(section.counts.inProgress, "in progress"),
+            countLine(section.counts.queued, "queued"),
+          ];
+          return (
+            <NodeSquare
+              key={section.id}
+              parent
+              home
+              live={section.percent !== null}
+              dashed={section.percent === null}
+              label={section.label}
+            >
+              <Link href={`/n/build/${section.id}`} className="node-log-link" title={`Open ${section.label}`}>
+                <div className="live-face parent-face">
+                  <h2 className="node-ticker">{section.label}</h2>
+                  <p className="live-units">
+                    {section.percent === null ? "no steps" : `${section.percent}%`}
+                  </p>
+                  <ul className="parent-lines">
+                    {lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <div
+                    className={styles.mini}
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={width}
+                    aria-label={`${section.label} percent`}
+                  >
+                    <span style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              </Link>
+            </NodeSquare>
+          );
+        })}
+      </section>
+    </div>
+  );
+}
+
+export function BuildSectionBody({
+  section,
+  now,
+  showPr = buildShowsPrivateText(false),
+}: {
+  section: BuildSectionView;
+  now: Date;
+  showPr?: boolean;
+}) {
+  const queue = section.id === "queue";
+  const active = queue ? section.items : section.items.filter((item) => !isShippedLive(item, now));
+  const shipped = queue ? [] : section.items.filter((item) => isShippedLive(item, now));
+  return (
+    <div className={`build-floor ${styles.floor}`}>
+      <header className={styles.heading}>
+        <h2 className={styles.sectionName}>{section.label}</h2>
+        <p className={styles.total}>{section.percent === null ? "—" : `${section.percent}%`}</p>
+      </header>
+      {active.length > 0 ? (
+        <ItemList items={active} showPr={showPr} showSection={queue} />
+      ) : shipped.length === 0 ? (
+        <p className={styles.note}>{queue ? "Nothing queued." : "No items in this section."}</p>
+      ) : null}
+      {shipped.length > 0 ? (
+        <details className={styles.shipped}>
+          <summary>Shipped</summary>
+          <ItemList items={shipped} showPr={showPr} showSection={false} />
+        </details>
+      ) : null}
     </div>
   );
 }

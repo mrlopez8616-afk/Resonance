@@ -233,6 +233,116 @@ function bySort(left: BuildItem, right: BuildItem): number {
   return left.title.localeCompare(right.title);
 }
 
+/**
+ * Parent cards, in floor order. Queue is not a stored node: it lists every
+ * queued item. Any other node string present on an item is appended.
+ */
+export const BUILD_SECTION_ORDER = [
+  "platform",
+  "queue",
+  "crypto",
+  "ai-stocks",
+  "fitness",
+  "finance",
+  "fight-desk",
+  "youtube",
+] as const;
+
+export type BuildSectionCounts = {
+  live: number;
+  inProgress: number;
+  queued: number;
+};
+
+export type BuildSectionView = {
+  id: string;
+  label: string;
+  percent: number | null;
+  counts: BuildSectionCounts;
+  items: BuildItem[];
+};
+
+const SECTION_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function buildSectionLabel(slug: string): string {
+  if (slug === "queue") return "Queue";
+  if (isBuildNode(slug)) return BUILD_NODE_LABELS[slug];
+  return slug
+    .split("-")
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .join(" ");
+}
+
+/** Run order. `sort_order` is the stored field; title breaks a tie. */
+export function queuedInRunOrder(items: readonly BuildItem[]): BuildItem[] {
+  return items.filter((item) => item.status === "queued").slice().sort(bySort);
+}
+
+function rowsForSection(items: readonly BuildItem[], slug: string): BuildItem[] {
+  if (slug === "queue") return queuedInRunOrder(items);
+  return items.filter((item) => item.node === slug).slice().sort(bySort);
+}
+
+export function sectionCounts(items: readonly BuildItem[], slug: string): BuildSectionCounts {
+  const rows = rowsForSection(items, slug);
+  return {
+    live: rows.filter((item) => item.status === "live").length,
+    inProgress: rows.filter((item) => item.status === "in_progress").length,
+    queued: rows.filter((item) => item.status === "queued").length,
+  };
+}
+
+/** Same average as a node group. Queue averages the queued items only. */
+export function sectionPercent(items: readonly BuildItem[], slug: string): number | null {
+  return averageStepPercent(rowsForSection(items, slug));
+}
+
+function sectionView(items: readonly BuildItem[], slug: string): BuildSectionView {
+  const rows = rowsForSection(items, slug);
+  return {
+    id: slug,
+    label: buildSectionLabel(slug),
+    percent: averageStepPercent(rows),
+    counts: {
+      live: rows.filter((item) => item.status === "live").length,
+      inProgress: rows.filter((item) => item.status === "in_progress").length,
+      queued: rows.filter((item) => item.status === "queued").length,
+    },
+    items: rows,
+  };
+}
+
+/** Hide a section with no rows. Queue stays, even when nothing is queued. */
+export function deriveBuildSections(items: readonly BuildItem[]): BuildSectionView[] {
+  const present = new Set(items.map((item) => item.node));
+  const known = BUILD_SECTION_ORDER.filter((id) => id === "queue" || present.has(id));
+  const extras = [...present]
+    .filter((node) => !(BUILD_SECTION_ORDER as readonly string[]).includes(node))
+    .sort((left, right) => left.localeCompare(right));
+  return [...known, ...extras].map((id) => sectionView(items, id));
+}
+
+/**
+ * A known node, Queue, or a node string that is actually on an item.
+ * Anything else is a 404. An empty known node is still a real section.
+ */
+export function resolveBuildSection(slug: string, items: readonly BuildItem[]): BuildSectionView | null {
+  const id = slug.trim().toLowerCase();
+  if (!SECTION_SLUG.test(id)) return null;
+  if (id === "queue" || isBuildNode(id) || items.some((item) => item.node === id)) {
+    return sectionView(items, id);
+  }
+  return null;
+}
+
+/**
+ * Pull-request numbers and links are private text. Percents are not.
+ * Public mode has not merged, so callers pass false and the links stay.
+ */
+export function buildShowsPrivateText(publicMode = false): boolean {
+  return !publicMode;
+}
+
 export function groupBuildItems(items: readonly BuildItem[], now: Date): {
   totalPercent: number | null;
   groups: BuildGroup[];
