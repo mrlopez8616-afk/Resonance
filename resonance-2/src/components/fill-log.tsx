@@ -2,9 +2,9 @@ import Link from "next/link";
 import { fillRowKey, formatFillTime } from "@/lib/fills";
 import type { BetFill, Fill } from "@/data/fills";
 import { betStatusLabel, formatUsd } from "@/lib/bets";
-import { Field, TransferFillCard } from "@/components/transfer-fill-card";
+import { Field, RewardFillCard, TransferFillCard } from "@/components/transfer-fill-card";
 
-export { TransferFillCard } from "@/components/transfer-fill-card";
+export { RewardFillCard, TransferFillCard } from "@/components/transfer-fill-card";
 
 function venueLabel(venue: string): string {
   if (venue === "coinbase-predict") return "Coinbase Predict";
@@ -62,6 +62,7 @@ export function BetFillCard({ fill }: { fill: BetFill }) {
 export function FillCard({ fill }: { fill: Fill }) {
   if (fill.kind === "bet") return <BetFillCard fill={fill} />;
   if (fill.kind === "transfer") return <TransferFillCard fill={fill} />;
+  if (fill.kind === "reward") return <RewardFillCard fill={fill} />;
   return (
     <article className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 sm:px-5">
       <dl>

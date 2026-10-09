@@ -91,7 +91,23 @@ export type TransferFill = FillBase & {
   feeUsd?: undefined;
 };
 
-export type Fill = TradeFill | BetFill | TransferFill;
+/**
+ * Founder-entered income. Quantity in, no price, and no cost basis.
+ * It is not a buy and it does not realize P/L.
+ */
+export type RewardFill = FillBase & {
+  kind: "reward";
+  side?: undefined;
+  price?: undefined;
+  quantity: string;
+  venue: "manual";
+  sleeve: "flare-vault";
+  logOnly?: undefined;
+  backfill?: undefined;
+  feeUsd?: undefined;
+};
+
+export type Fill = TradeFill | BetFill | TransferFill | RewardFill;
 
 /**
  * Seed / local fallback for the operator log.

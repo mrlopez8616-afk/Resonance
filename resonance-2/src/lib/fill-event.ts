@@ -1,4 +1,4 @@
-import type { Fill, FillSide, FillSleeveId, FillVenue, TradeFill, TransferFill } from "@/data/fills";
+import type { Fill, FillSide, FillSleeveId, FillVenue, RewardFill, TradeFill, TransferFill } from "@/data/fills";
 import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
 import { AI_STOCK_TICKERS, RETIRED_AI_TICKERS } from "@/lib/ai-stocks";
 import { isDecimalString } from "@/lib/decimal";
@@ -95,7 +95,32 @@ export type NormalizedTransferEvent = {
   idempotencyKey: string;
 };
 
-export type NormalizedFillEvent = NormalizedTradeEvent | NormalizedTransferEvent;
+/** Founder yield. No price, no cost, and not a buy. */
+export type NormalizedRewardEvent = {
+  kind: "reward";
+  venue: "manual";
+  orderId: string;
+  ticker: "XRP";
+  side?: undefined;
+  qty: string;
+  price?: undefined;
+  sleeve: "flare-vault";
+  filledAt: string;
+  result: string;
+  note?: string;
+  feeUsd?: undefined;
+  backfill?: undefined;
+  idempotencyKey: string;
+};
+
+export type NormalizedFillEvent = NormalizedTradeEvent | NormalizedTransferEvent | NormalizedRewardEvent;
+
+/** `manual:reward:flare-vault:xrp:YYYY-MM-DDThh:mm` lowercased, minute precision. */
+export function rewardIdempotencyKey(filledAt: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/i.exec(filledAt.trim());
+  if (!match) return "";
+  return `manual:reward:flare-vault:xrp:${match[1]}t${match[2]}`.toLowerCase();
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -218,6 +243,17 @@ export function extractFillBody(body: unknown): Record<string, unknown> {
 export function parseFillEvent(body: unknown): NormalizedFillEvent {
   const raw = extractFillBody(body);
   const outer = isRecord(body) ? body : null;
+  const kindRaw = asTrimmed(raw.kind).toLowerCase();
+  const sideRaw = asTrimmed(raw.side).toLowerCase();
+  if (kindRaw === "reward" || sideRaw === "reward") {
+    if (kindRaw && kindRaw !== "reward") {
+      throw new FillIngestError("kind must be reward.");
+    }
+    if (sideRaw && sideRaw !== "reward") {
+      throw new FillIngestError("a reward cannot include a trade side.");
+    }
+    return parseRewardEvent(raw, outer);
+  }
   const venueRaw = asTrimmed(raw.venue).toLowerCase();
   if (!isFillVenue(venueRaw)) {
     throw new FillIngestError("venue must be robinhood or coinbase.");
@@ -242,8 +278,6 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     );
   }
 
-  const kindRaw = asTrimmed(raw.kind).toLowerCase();
-  const sideRaw = asTrimmed(raw.side).toLowerCase();
   if (kindRaw === "transfer" || sideRaw === "transfer") {
     if (kindRaw && kindRaw !== "transfer") {
       throw new FillIngestError("kind must be transfer.");
@@ -294,6 +328,66 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     ...(feeUsd ? { feeUsd } : {}),
     ...(backfill ? { backfill: true as const } : {}),
     idempotencyKey: fillIdempotencyKey(venueRaw, tradeKey),
+  };
+}
+
+function parseRewardEvent(
+  raw: Record<string, unknown>,
+  outer: Record<string, unknown> | null,
+): NormalizedRewardEvent {
+  if (readBackfill(raw, outer)) {
+    throw new FillIngestError("backfill is not valid for a reward.");
+  }
+  const venueRaw = asTrimmed(raw.venue).toLowerCase();
+  if (venueRaw && venueRaw !== "manual") {
+    throw new FillIngestError("a reward venue is manual.");
+  }
+  const price = asTrimmed(raw.price);
+  if (price) {
+    throw new FillIngestError("a reward has no price.");
+  }
+  const sleeveRaw = readSleeve(raw);
+  if (sleeveRaw !== FLARE_VAULT_SLEEVE_ID) {
+    throw new FillIngestError("a reward sleeve is flare-vault.");
+  }
+  const ticker = readTicker(raw);
+  if (ticker !== "XRP") {
+    throw new FillIngestError("a vault reward ticker is XRP.");
+  }
+  const qty = readQty(raw);
+  if (!isDecimalString(qty) || qty.startsWith("-") || Number(qty) <= 0) {
+    throw new FillIngestError("qty must be a positive decimal string.");
+  }
+  const filledAt = readFilledAt(raw);
+  if (!filledAt || Number.isNaN(Date.parse(filledAt))) {
+    throw new FillIngestError("filledAt must be an ISO-8601 timestamp.");
+  }
+  const idempotencyKey = rewardIdempotencyKey(filledAt);
+  if (!idempotencyKey) {
+    throw new FillIngestError("filledAt must include a calendar minute.");
+  }
+  const providedKey = asTrimmed(raw.idempotencyKey);
+  if (!providedKey) {
+    throw new FillIngestError("idempotencyKey is required for a reward.");
+  }
+  if (providedKey.toLowerCase() !== idempotencyKey) {
+    throw new FillIngestError("idempotencyKey must match the vault reward minute.");
+  }
+  const minute = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/i.exec(filledAt.trim());
+  const orderId = asTrimmed(raw.orderId) || `reward:flare-vault:XRP:${minute?.[1]}T${minute?.[2]}`;
+  const result = asTrimmed(raw.result) || "filled";
+  const note = asTrimmed(raw.note) || undefined;
+  return {
+    kind: "reward",
+    venue: "manual",
+    orderId,
+    ticker: "XRP",
+    qty,
+    sleeve: "flare-vault",
+    filledAt,
+    result,
+    note,
+    idempotencyKey,
   };
 }
 
@@ -360,10 +454,25 @@ function parseTransferEvent(
   };
 }
 
+export function eventToFill(event: NormalizedRewardEvent): RewardFill;
 export function eventToFill(event: NormalizedTransferEvent): TransferFill;
 export function eventToFill(event: NormalizedTradeEvent): TradeFill;
 export function eventToFill(event: NormalizedFillEvent): Fill;
 export function eventToFill(event: NormalizedFillEvent): Fill {
+  if (event.kind === "reward") {
+    return {
+      kind: "reward",
+      time: event.filledAt,
+      symbol: event.ticker,
+      quantity: event.qty,
+      orderId: event.orderId,
+      result: event.result,
+      venue: "manual",
+      sleeve: "flare-vault",
+      idempotencyKey: event.idempotencyKey,
+      ...(event.note ? { note: event.note } : {}),
+    };
+  }
   if (event.kind === "transfer") {
     return {
       kind: "transfer",
@@ -405,10 +514,11 @@ export function fillMatchesEvent(fill: Fill, event: NormalizedFillEvent): boolea
   if (fill.orderId && tradeKeysMatch(fill.orderId, event.orderId)) {
     return true;
   }
-  if (event.tradeId && fill.tradeId && tradeKeysMatch(fill.tradeId, event.tradeId)) {
+  const tradeId = "tradeId" in event ? event.tradeId : undefined;
+  if (tradeId && fill.tradeId && tradeKeysMatch(fill.tradeId, tradeId)) {
     return true;
   }
-  if (event.tradeId && fill.orderId && tradeKeysMatch(fill.orderId, event.tradeId)) {
+  if (tradeId && fill.orderId && tradeKeysMatch(fill.orderId, tradeId)) {
     return true;
   }
   return false;

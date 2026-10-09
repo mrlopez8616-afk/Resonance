@@ -25,14 +25,36 @@ export const LOT_SLEEVE_LABEL: Record<LotSleeveId, string> = {
 export function positionSleeve(ticker: string): "rh-agentic" | "coinbase" | null {
   const upper = ticker.trim().toUpperCase();
   if (upper === "SUI") return "coinbase";
-  if (upper === "XRP" || EQUITY.has(upper)) return "rh-agentic";
+  if (upper === "XRP" || EQUITY.has(upper) || RETIRED.has(upper)) return "rh-agentic";
   return null;
 }
 
-export function vaultUnknownLine(quantity: string | null | undefined): string | null {
+export function vaultUnknownLine(
+  quantity: string | null | undefined,
+  rewardQty?: string | null,
+): string | null {
   const qty = quantity?.trim() ?? "";
   if (!isDecimalString(qty) || Number(qty) <= 0) return null;
-  return "Flare / Xaman vault · manual · entry unknown";
+  const reward =
+    rewardQty && isDecimalString(rewardQty) && Number(rewardQty) > 0 ? ` · reward ${rewardQty.trim()}` : "";
+  return `Flare / Xaman vault · manual · as of Oct 9${reward} · entry unknown`;
+}
+
+/** Reward fills are income with no cost. They are not lots and not buys. */
+export function vaultRewardQuantity(fills: readonly { kind?: string; symbol?: string; sleeve?: string; quantity?: string }[], ticker: string): string | null {
+  if (ticker.trim().toUpperCase() !== "XRP") return null;
+  let total = "0";
+  let any = false;
+  for (const fill of fills) {
+    if (fill.kind !== "reward") continue;
+    if ((fill.symbol ?? "").trim().toUpperCase() !== "XRP") continue;
+    if (fill.sleeve !== "flare-vault") continue;
+    const qty = positiveQty(fill.quantity);
+    if (!qty) continue;
+    total = addDecimal(total, qty);
+    any = true;
+  }
+  return any ? total : null;
 }
 
 /**
@@ -102,6 +124,12 @@ export type ClosedLot = {
   originalQty: string;
   price: string;
   realizedPnlUsd: number;
+  /** Session day the lot reached zero. Null when the close is not a clean sale. */
+  soldDay: string | null;
+  /** Quantity-weighted exit from the sells that closed the lot. Null when not clean. */
+  exitUsd: number | null;
+  /** Realized gain as a percent of entry cost. Null when the exit is not clean. */
+  realizedPct: number | null;
 };
 
 export type FillMarker = {
@@ -197,6 +225,12 @@ type WorkingLot = {
   price: number;
   priceText: string;
   realized: number;
+  /** Shares removed by sells. A transfer-out does not count. */
+  soldQty: string;
+  exitNotional: number;
+  /** One sell price text, "" when the lot was sold at more than one price, null before any sell. */
+  exitPriceText: string | null;
+  soldDay: string | null;
 };
 
 function qtyCmp(left: string, right: string): number {
@@ -215,23 +249,6 @@ export function sessionDay(iso: string): string | null {
   const ms = Date.parse(iso);
   if (Number.isNaN(ms)) return null;
   return yahooSessionDay(ms / 1000);
-}
-
-function addDays(day: string, count: number): string {
-  const [year, month, date] = day.split("-").map(Number);
-  const next = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (date ?? 1) + count));
-  return next.toISOString().slice(0, 10);
-}
-
-function eachDay(from: string, to: string): string[] {
-  const days: string[] = [];
-  if (from > to) return days;
-  let day = from;
-  while (day <= to && days.length < 4000) {
-    days.push(day);
-    day = addDays(day, 1);
-  }
-  return days;
 }
 
 function money(usd: number): number {
@@ -288,7 +305,7 @@ type ReplayRow =
 function ledgerRows(fills: readonly LedgerFill[], ticker: string, sleeve: string): ReplayRow[] | null {
   const rows: ReplayRow[] = [];
   for (const fill of fills) {
-    if (fill.kind === "bet") continue;
+    if (fill.kind === "bet" || fill.kind === "reward") continue;
     if (fill.symbol.trim().toUpperCase() !== ticker) continue;
     if (fill.result && fill.result.trim().toLowerCase() !== "filled") continue;
     if (fill.kind === "transfer") {
@@ -389,7 +406,7 @@ export function buildLotsLedger(input: {
     typeof input.livePrice === "number" && Number.isFinite(input.livePrice) && input.livePrice > 0
       ? input.livePrice
       : null;
-  if (!ticker || !sleeve || !isDecimalString(quantity) || Number(quantity) <= 0) {
+  if (!ticker || !sleeve || !isDecimalString(quantity) || Number(quantity) < 0) {
     return emptyLedger(sleeve, "over", MISMATCH);
   }
 
@@ -434,6 +451,10 @@ export function buildLotsLedger(input: {
           price: Number(lot.priceText),
           priceText: lot.priceText,
           realized: 0,
+          soldQty: "0",
+          exitNotional: 0,
+          exitPriceText: null,
+          soldDay: null,
         });
       }
       open.sort((left, right) => Date.parse(left.time) - Date.parse(right.time));
@@ -446,6 +467,10 @@ export function buildLotsLedger(input: {
         price: row.price,
         priceText: row.priceText,
         realized: 0,
+        soldQty: "0",
+        exitNotional: 0,
+        exitPriceText: null,
+        soldDay: null,
       });
     } else {
       let left = row.qty;
@@ -453,8 +478,15 @@ export function buildLotsLedger(input: {
         if (qtyCmp(left, "0") === 0) break;
         if (qtyCmp(lot.remaining, "0") === 0) continue;
         const take = qtyCmp(lot.remaining, left) <= 0 ? lot.remaining : left;
-        if (row.side === "sell") lot.realized += (row.price - lot.price) * Number(take);
+        if (row.side === "sell") {
+          lot.realized += (row.price - lot.price) * Number(take);
+          lot.exitNotional += row.price * Number(take);
+          lot.soldQty = addDecimal(lot.soldQty, take);
+          if (lot.exitPriceText === null) lot.exitPriceText = row.priceText;
+          else if (lot.exitPriceText !== row.priceText) lot.exitPriceText = "";
+        }
         lot.remaining = subtractDecimal(lot.remaining, take);
+        if (row.side === "sell" && qtyCmp(lot.remaining, "0") === 0) lot.soldDay = row.day;
         left = subtractDecimal(left, take);
       }
       if (qtyCmp(left, "0") !== 0) return emptyLedger(sleeve, "over", MISMATCH);
@@ -495,13 +527,27 @@ export function buildLotsLedger(input: {
     .reverse();
 
   const closedLots: ClosedLot[] = closed
-    .map((lot) => ({
-      time: lot.time,
-      day: lot.day,
-      originalQty: lot.original,
-      price: lot.priceText,
-      realizedPnlUsd: money(lot.realized),
-    }))
+    .map((lot) => {
+      const clean =
+        lot.soldDay !== null &&
+        qtyCmp(lot.soldQty, lot.original) === 0 &&
+        lot.price > 0 &&
+        Number(lot.soldQty) > 0 &&
+        Number.isFinite(lot.exitNotional);
+      const exitUsd = clean ? money(lot.exitNotional / Number(lot.soldQty)) : null;
+      const cost = lot.price * Number(lot.original);
+      const realizedPct = clean && cost > 0 ? (lot.realized / cost) * 100 : null;
+      return {
+        time: lot.time,
+        day: lot.day,
+        originalQty: lot.original,
+        price: lot.priceText,
+        realizedPnlUsd: money(lot.realized),
+        soldDay: clean ? lot.soldDay : null,
+        exitUsd,
+        realizedPct,
+      };
+    })
     .reverse();
 
   const gapShares = compared < 0 ? subtractDecimal(quantity, openShares) : null;
@@ -553,65 +599,6 @@ export function bookTotals(ledger: LotsLedger, livePrice: number | null, sleeveS
     pnlPct,
     partial,
     partialLabel: partial ? "known lots" : null,
-  };
-}
-
-function closeOn(closes: readonly DailyClose[], day: string, carried: number | null): number | null {
-  const found = closes.find((row) => row.day === day);
-  if (found) return found.close;
-  return carried;
-}
-
-/** Retired names have no chart. A full FIFO match draws value and cost. Anything else is the last 30 closes at the current quantity. */
-export function buildPositionChart(input: {
-  ticker: string;
-  ledger: LotsLedger;
-  closes: readonly DailyClose[];
-  quantity: string;
-  today: string;
-}): PositionChart | null {
-  const ticker = input.ticker.trim().toUpperCase();
-  if (RETIRED.has(ticker)) return null;
-  const closes = input.closes.filter((row) => row.day <= input.today && row.close > 0);
-  if (closes.length < 2) return null;
-  const quantity = input.quantity.trim();
-  if (!isDecimalString(quantity) || Number(quantity) <= 0) return null;
-
-  if (input.ledger.status === "matched" && input.ledger.days.length > 0) {
-    const first = input.ledger.days[0]?.day;
-    if (!first) return null;
-    let carried: number | null = null;
-    let shares = "0";
-    let cost = 0;
-    let dayIndex = 0;
-    const points: ChartPoint[] = [];
-    for (const day of eachDay(first, input.today)) {
-      while (dayIndex < input.ledger.days.length && (input.ledger.days[dayIndex]?.day ?? "") <= day) {
-        const state = input.ledger.days[dayIndex];
-        if (state) {
-          shares = state.shares;
-          cost = state.costUsd;
-        }
-        dayIndex += 1;
-      }
-      const close = closeOn(closes, day, carried);
-      if (close === null) continue;
-      carried = close;
-      if (Number(shares) <= 0) continue;
-      points.push({ day, valueUsd: money(Number(shares) * close), costUsd: cost });
-    }
-    if (points.length < 2) return null;
-    return { mode: "matched", caption: null, entry: null, points, markers: input.ledger.markers };
-  }
-
-  const recent = closes.slice(-30);
-  if (recent.length < 2) return null;
-  return {
-    mode: "holdings",
-    caption: "Value at current holdings · entry unknown",
-    entry: null,
-    points: recent.map((row) => ({ day: row.day, valueUsd: money(Number(quantity) * row.close), costUsd: null })),
-    markers: [],
   };
 }
 
@@ -897,7 +884,7 @@ export function cbAgenticLotLines(input: {
   const live = typeof input.livePrice === "number" && input.livePrice > 0 ? input.livePrice : null;
   const rows: { time: string; day: string; side: "buy" | "sell"; qty: string; price: string }[] = [];
   for (const fill of input.fills) {
-    if (fill.kind === "bet") continue;
+    if (fill.kind === "bet" || fill.kind === "reward") continue;
     if (fill.symbol.trim().toUpperCase() !== ticker) continue;
     if (fill.kind === "transfer") {
       const qty = positiveQty(fill.quantity);
@@ -1087,16 +1074,28 @@ export function assembleNodePosition(input: {
     sleeves: input.sleeves,
     livePrice: live,
   });
-  const primary = books.find((book) => book.id === sleeve);
-  if (!primary) return null;
+  let primary = books.find((book) => book.id === sleeve);
+  if (!primary) {
+    const flat = buildLotsLedger({
+      fills: input.fills,
+      ticker: input.ticker,
+      sleeve,
+      quantity: "0",
+      livePrice: live,
+    });
+    const sold = flat.closedLots.some((lot) => lot.exitUsd !== null && lot.soldDay !== null);
+    if (flat.status !== "matched" || Number(flat.openShares) !== 0 || !sold) return null;
+    primary = {
+      id: sleeve,
+      name: LOT_SLEEVE_LABEL[sleeve],
+      ledger: flat,
+      quantity: "0",
+    };
+  }
   const { ledger, quantity } = primary;
-  const chart = buildPositionChart({
-    ticker: input.ticker,
-    ledger,
-    closes: input.closes,
-    quantity,
-    today: input.today,
-  });
+  void input.closes;
+  void input.today;
+  const chart = null;
   const vaultShares = positiveShares(
     input.vaultQuantity ?? input.sleeves?.find((row) => row.id === "flare-vault")?.quantity,
   );
@@ -1117,7 +1116,7 @@ export function assembleNodePosition(input: {
     ledger,
     chart,
     quantity,
-    vaultLine: vaultUnknownLine(vaultShares),
+    vaultLine: vaultUnknownLine(vaultShares, vaultRewardQuantity(input.fills, input.ticker)),
     unknownLine: unknownShares && xrp ? xrpAgenticUnknownLine(input.ticker, input.sleeves) : null,
     unknownShares,
     vaultShares,
@@ -1167,13 +1166,9 @@ export function rollupHoldingBooks(input: {
     });
     const primary = books.find((book) => book.id === sleeve);
     if (!primary) continue;
-    const chart = buildPositionChart({
-      ticker,
-      ledger: primary.ledger,
-      closes: input.closes[ticker] ?? [],
-      quantity,
-      today: input.today,
-    });
+    void input.closes;
+    void input.today;
+    const chart = null;
     let knownValue = 0;
     let knownCost = 0;
     let knownParts = 0;

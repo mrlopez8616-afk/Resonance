@@ -749,6 +749,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "018_lessons",
         "019_dedupe_fill_keys",
         "020_sui_cb_agentic_transfer",
+        "021_xrp_vault_reward",
       ],
     );
     assert.equal(

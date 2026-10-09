@@ -1,4 +1,13 @@
 import type { ReactNode } from "react";
+import { LotBarChart } from "@/components/lot-bar-chart";
+import {
+  barsFromClosedLots,
+  barsFromOpenLots,
+  barsFromRollup,
+  unknownEntryCaption,
+  type ClosedLotBarInput,
+  type OpenLotBarInput,
+} from "@/lib/lot-bars";
 import { formatCompactUsd } from "@/lib/live-face";
 import {
   LOT_PREVIEW,
@@ -9,10 +18,8 @@ import {
   type AgenticLotLine,
   type BookTotals,
   type ClosedLot,
-  type FillMarker,
   type LotsLedger,
   type OpenLot,
-  type PositionChart,
   type PositionRollup,
 } from "@/lib/position-lots";
 
@@ -35,99 +42,6 @@ function pnlText(usd: number | null, pct: number | null): string {
   const tone = toneOf(usd);
   const mark = arrow(tone);
   return [money, percent ? `${mark} ${percent}`.trim() : null].filter(Boolean).join(" · ");
-}
-
-function chartPaths(chart: PositionChart): { value: string; area: string; cost: string | null; markers: { x: number; y: number; marker: FillMarker }[] } | null {
-  const points = chart.points;
-  if (points.length < 2) return null;
-  const width = 640;
-  const height = 168;
-  const pad = 8;
-  const values = points.flatMap((point) => [point.valueUsd, point.costUsd ?? point.valueUsd]);
-  let min = Math.min(...values);
-  let max = Math.max(...values);
-  if (min === max) {
-    const room = Math.abs(min) * 0.02 || 1;
-    min -= room;
-    max += room;
-  }
-  const span = max - min || 1;
-  const xAt = (index: number) => pad + (index / (points.length - 1)) * (width - pad * 2);
-  const yAt = (value: number) => height - pad - ((value - min) / span) * (height - pad * 2);
-  const line = points
-    .map((point, index) => `${index === 0 ? "M" : "L"}${xAt(index).toFixed(2)} ${yAt(point.valueUsd).toFixed(2)}`)
-    .join(" ");
-  const baseline = height.toFixed(2);
-  const area = `${line} L${xAt(points.length - 1).toFixed(2)} ${baseline} L${xAt(0).toFixed(2)} ${baseline} Z`;
-  const costPoints = points.flatMap((point, index) =>
-    point.costUsd === null ? [] : [{ index, cost: point.costUsd }],
-  );
-  let cost: string | null = null;
-  const firstCost = costPoints[0];
-  if (firstCost && costPoints.length >= 2) {
-    let path = `M${xAt(firstCost.index).toFixed(2)} ${yAt(firstCost.cost).toFixed(2)}`;
-    for (let index = 1; index < costPoints.length; index += 1) {
-      const prev = costPoints[index - 1];
-      const next = costPoints[index];
-      if (!prev || !next) continue;
-      path += ` L${xAt(next.index).toFixed(2)} ${yAt(prev.cost).toFixed(2)} L${xAt(next.index).toFixed(2)} ${yAt(next.cost).toFixed(2)}`;
-    }
-    cost = path;
-  }
-  const byDay = new Map(points.map((point, index) => [point.day, index]));
-  const markers = chart.markers.flatMap((marker) => {
-    const index = byDay.get(marker.day);
-    const point = index === undefined ? undefined : points[index];
-    if (index === undefined || !point) return [];
-    return [{ x: xAt(index), y: yAt(point.valueUsd), marker }];
-  });
-  return { value: line, area, cost, markers };
-}
-
-export function PositionChartView({
-  chart,
-  totals,
-}: {
-  chart: PositionChart;
-  totals: BookTotals | null;
-}) {
-  const drawn = chartPaths(chart);
-  if (!drawn) return null;
-  const first = chart.points[0]?.valueUsd ?? 0;
-  const last = chart.points.at(-1)?.valueUsd ?? first;
-  const tone = last > first ? "up" : last < first ? "down" : "flat";
-  return (
-    <figure className="position-chart">
-      <div className="home-visual">
-        <svg viewBox="0 0 640 168" role="img" aria-label="Position over time">
-          <path d={drawn.area} className={`position-area is-${tone}`} />
-          <path d={drawn.value} className={`position-value is-${tone}`} />
-          {drawn.cost ? <path d={drawn.cost} className="position-cost" /> : null}
-          {drawn.markers.map((mark, index) => (
-            <circle
-              key={`${mark.marker.time}-${mark.marker.side}-${index}`}
-              cx={mark.x.toFixed(2)}
-              cy={mark.y.toFixed(2)}
-              r="4.5"
-              className={`position-mark is-${mark.marker.side}`}
-              data-day={mark.marker.day}
-              data-side={mark.marker.side}
-            >
-              <title>
-                {`${mark.marker.day} · ${mark.marker.side} · ${mark.marker.quantity} · ${mark.marker.price}`}
-              </title>
-            </circle>
-          ))}
-        </svg>
-      </div>
-      <figcaption className="position-caption">
-        {chart.caption ? <span>{chart.caption}</span> : <span>value</span>}
-        {drawn.cost ? <span>cost basis</span> : null}
-        {chart.entry ? <span>{chart.entry}</span> : null}
-      </figcaption>
-      {totals && chart.mode === "matched" ? <TotalsLine totals={totals} /> : null}
-    </figure>
-  );
 }
 
 function shownUsd(usd: number | null): string | null {
@@ -324,9 +238,55 @@ export function LotsTable({
   );
 }
 
+function listedBooks(
+  books: readonly { name: string | null; ledger: LotsLedger }[] | null,
+  ledger: LotsLedger,
+): readonly { name: string | null; ledger: LotsLedger }[] {
+  const listed = books && books.length > 0 ? books : [{ name: null, ledger }];
+  if (listed.some((book) => book.ledger === ledger)) return listed;
+  return [...listed, { name: null, ledger }];
+}
+
+function openLotInputs(listed: readonly { ledger: LotsLedger }[]): OpenLotBarInput[] {
+  return listed.flatMap((book) =>
+    book.ledger.openLots.map((lot) => ({
+      time: lot.time,
+      day: lot.day,
+      remainingQty: lot.remainingQty,
+      originalQty: lot.originalQty,
+      price: lot.price,
+      entryUsd: lot.entryUsd,
+      valueUsd: lot.valueUsd,
+      pnlUsd: lot.pnlUsd,
+      pnlPct: lot.pnlPct,
+    })),
+  );
+}
+
+function closedLotInputs(listed: readonly { ledger: LotsLedger }[]): ClosedLotBarInput[] {
+  return listed.flatMap((book) =>
+    book.ledger.closedLots.flatMap((lot) => {
+      const entry = Number(lot.price);
+      if (lot.exitUsd === null || lot.soldDay === null || !(entry > 0)) return [];
+      return [
+        {
+          time: lot.time,
+          day: lot.day,
+          soldDay: lot.soldDay,
+          originalQty: lot.originalQty,
+          price: lot.price,
+          entryUsd: entry,
+          exitUsd: lot.exitUsd,
+          realizedPnlUsd: lot.realizedPnlUsd,
+          realizedPct: lot.realizedPct,
+        },
+      ];
+    }),
+  );
+}
+
 export function PositionBook({
   ledger,
-  chart,
   quantity,
   livePrice,
   vaultLine,
@@ -337,9 +297,10 @@ export function PositionBook({
   holdingUnits = null,
   addedCostUsd = null,
   unexplained = false,
+  ticker = "",
+  publicMode = false,
 }: {
   ledger: LotsLedger;
-  chart: PositionChart | null;
   quantity: string;
   livePrice: number | null;
   vaultLine: string | null;
@@ -350,6 +311,8 @@ export function PositionBook({
   holdingUnits?: number | null;
   addedCostUsd?: number | null;
   unexplained?: boolean;
+  ticker?: string;
+  publicMode?: boolean;
 }) {
   const totals = positionBookTotals({
     ledger,
@@ -367,9 +330,18 @@ export function PositionBook({
       : null;
   const unknownValue =
     unknownShares && livePrice && livePrice > 0 ? shownUsd(Number(unknownShares) * livePrice) : null;
+  const listed = listedBooks(books, ledger);
+  const openCount = listed.reduce((count, book) => count + book.ledger.openLots.length, 0);
+  const lotModel = {
+    bars:
+      openCount > 0
+        ? barsFromOpenLots(openLotInputs(listed), publicMode)
+        : barsFromClosedLots(closedLotInputs(listed), publicMode),
+    caption: unknownEntryCaption(ticker, [ledger.gapShares, unknownShares, vaultShares]),
+  };
   return (
     <div className="position-book">
-      {chart ? <PositionChartView chart={chart} totals={chart.mode === "matched" ? totals : null} /> : null}
+      <LotBarChart model={lotModel} publicMode={publicMode} label={`${ticker || "Position"} lots`} />
       <LotsTable
         ledger={ledger}
         totals={totals}
@@ -389,21 +361,20 @@ export function PositionBook({
   );
 }
 
-export function PositionRollupView({ rollup }: { rollup: PositionRollup }) {
+export function PositionRollupView({
+  rollup,
+  parentId = "node",
+  publicMode = false,
+}: {
+  rollup: PositionRollup;
+  parentId?: string;
+  publicMode?: boolean;
+}) {
   if (rollup.rows.length === 0) return null;
-  const chart: PositionChart | null =
-    rollup.points.length >= 2
-      ? {
-          mode: rollup.partial ? "holdings" : "matched",
-          caption: rollup.partial ? "partial" : null,
-          entry: null,
-          points: rollup.points,
-          markers: [],
-        }
-      : null;
+  const lotModel = barsFromRollup(rollup.rows, parentId, publicMode);
   return (
     <section className="position-rollup" aria-label="Holdings roll-up">
-      {chart ? <PositionChartView chart={chart} totals={null} /> : null}
+      <LotBarChart model={lotModel} publicMode={publicMode} label="Holdings" />
       <div className="rollup-list">
         {rollup.rows.map((row) =>
           rollupLine({

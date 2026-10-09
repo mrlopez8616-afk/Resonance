@@ -154,6 +154,9 @@ export function applyFillToSleevePrints(
   if (event.kind === "transfer") {
     throw new FillIngestError("a transfer is applied with applyTransferToSleevePrints.");
   }
+  if (event.kind === "reward") {
+    throw new FillIngestError("a reward is not a trade and does not move a sleeve print.");
+  }
   if (event.sleeve === (FLARE_VAULT_SLEEVE_ID as unknown as FillSleeveId)) {
     throw new FillIngestError(
       "flare-vault is founder-entered only and cannot be written by ingest.",

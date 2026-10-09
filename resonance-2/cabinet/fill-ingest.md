@@ -218,6 +218,29 @@ A portfolio move inside one venue is `kind: "transfer"` (alias `side: "transfer"
 
 That body moves 1.2 SUI from Coinbase Agentic to Default. Migration `020_sui_cb_agentic_transfer` inserts this row and sets the SUI prints (`cb-agentic` 0, `coinbase` 34.9) in one statement when the guard matches. It does not change buy `4f8720ee-fd80-4a8e-b7f2-ec4c9f8c1f79` and it does not insert a buy or a sell. A later POST of the same body dedupes against that row.
 
+## Vault reward
+
+Yield on the manual Flare vault is `kind: "reward"` (alias `side: "reward"`). It is not a trade. There is no price, no cost basis, and no realized P/L. The lots ledger does not open a buy lot and does not guess a cost. The vault line shows `reward` and stays entry unknown. `backfill` is rejected. A price on the body is rejected. The sleeve is `flare-vault` and the ticker is `XRP`. Venue is `manual`.
+
+`idempotencyKey` is required. It is `manual:reward:flare-vault:xrp:` plus the fill minute, lowercased (`2026-10-09T17:25:00-05:00` → `manual:reward:flare-vault:xrp:2026-10-09t17:25`). A POST without that key is rejected. The POST logs the row and does not move the typed vault quantity.
+
+```json
+{
+  "kind": "reward",
+  "venue": "manual",
+  "orderId": "reward:flare-vault:XRP:2026-10-09T17:25",
+  "idempotencyKey": "manual:reward:flare-vault:xrp:2026-10-09t17:25",
+  "ticker": "XRP",
+  "quantity": "6",
+  "sleeve": "flare-vault",
+  "filledAt": "2026-10-09T17:25:00-05:00",
+  "result": "filled",
+  "note": "Vault yield/rewards, manual update"
+}
+```
+
+Migration `021_xrp_vault_reward` inserts this row and sets the `flare-vault` print to `28287` when the row is absent and that print is missing or exactly `28281`. A missing print is the founder seed. Any other print changes nothing. The face quantity stays the typed constant `FLARE_VAULT_XRP` (`28287`, manual, as of Oct 9). A stored print does not override that constant.
+
 The fills table has no fee column. A `fee` decimal string is stored on the row payload as `feeUsd`.
 
 ```json

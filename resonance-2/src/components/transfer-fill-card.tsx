@@ -1,5 +1,5 @@
 import { formatFillTime } from "@/lib/fills";
-import type { TransferFill } from "@/data/fills";
+import type { RewardFill, TransferFill } from "@/data/fills";
 
 export function Field({
   label,
@@ -33,6 +33,22 @@ export function Field({
         {value}
       </dd>
     </div>
+  );
+}
+
+export function RewardFillCard({ fill }: { fill: RewardFill }) {
+  return (
+    <article className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 sm:px-5">
+      <dl>
+        <Field label="time" value={formatFillTime(fill.time)} />
+        <Field label="symbol" value={fill.symbol} />
+        <Field label="kind" value="reward" tone="ok" />
+        <Field label="quantity" value={fill.quantity} />
+        <Field label="sleeve" value={fill.sleeve} />
+        <Field label="id" value={fill.orderId} wrap="id" />
+        {fill.note ? <Field label="note" value={fill.note} /> : null}
+      </dl>
+    </article>
   );
 }
 

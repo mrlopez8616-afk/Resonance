@@ -22,7 +22,7 @@ function event(overrides: Record<string, unknown> = {}): NormalizedTradeEvent {
     filledAt: "2026-09-21T08:30:00-05:00",
     ...overrides,
   });
-  if (parsed.kind === "transfer") {
+  if (parsed.kind === "transfer" || parsed.kind === "reward") {
     throw new Error("expected a trade fill");
   }
   return parsed;
@@ -106,7 +106,7 @@ describe("sleeve apply", () => {
     const merged = mergeSleeveBook("XRP", result.prints, XRP_SLEEVES);
     assert.equal(merged.find((row) => row.id === "cb-agentic")?.quantity, "11");
     assert.equal(merged.find((row) => row.id === "rh-agentic")?.quantity, "51.601");
-    assert.equal(merged.find((row) => row.id === "flare-vault")?.quantity, "28281");
+    assert.equal(merged.find((row) => row.id === "flare-vault")?.quantity, "28287");
     assert.equal(merged.some((row) => row.id === "coinbase"), false);
   });
 
@@ -453,7 +453,7 @@ describe("sleeve apply", () => {
     );
     const vault = merged.find((row) => row.id === "flare-vault");
     const agentic = merged.find((row) => row.id === "rh-agentic");
-    assert.equal(vault?.quantity, "28281");
+    assert.equal(vault?.quantity, "28287");
     assert.equal(vault?.manual, true);
     assert.equal(agentic?.quantity, "60");
 

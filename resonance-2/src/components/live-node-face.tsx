@@ -127,6 +127,7 @@ export function LiveNodeFace({
                 <span className="sleeve-manual">
                   <LockIcon size={11} />
                   manual
+                  {sleeve.note ? ` · ${sleeve.note}` : ""}
                 </span>
               ) : null}
             </span>

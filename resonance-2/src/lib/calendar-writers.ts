@@ -44,7 +44,9 @@ export function capitalCalendarBody(fill: Fill): Record<string, unknown> {
   const title = (
     fill.kind === "transfer"
       ? `${ticker} transfer ${fill.quantity}`
-      : `${ticker} ${fill.side} ${fill.quantity}`
+      : fill.kind === "reward"
+        ? `${ticker} reward ${fill.quantity}`
+        : `${ticker} ${fill.side} ${fill.quantity}`
   )
     .replace(/\s+/g, " ")
     .trim()
