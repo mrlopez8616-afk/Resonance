@@ -14,7 +14,7 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 
 Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POSTs a fill:
 
-- XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (RH Agentic `51.601`; Flare vault `28287` as of Oct 9; no RH Main sleeve; no Coinbase sleeve)
+- XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (RH Agentic `51.601`; Flare vault `28287`; no RH Main sleeve; no Coinbase sleeve). The vault date is the latest flare-vault reward or print time.
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic `0` sold; Coinbase 33.7)
 - PWR — [`src/data/pwr-sleeves.ts`](src/data/pwr-sleeves.ts) (RH Agentic `0.003917` **shares** only)
 - VRT — [`src/data/vrt-sleeves.ts`](src/data/vrt-sleeves.ts) (RH Agentic `0.009991` **shares** only)
@@ -32,7 +32,7 @@ Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, 
 
 The floor background is a mood wash from that same live book versus 24 hours ago ([`src/lib/portfolio-mood.ts`](src/lib/portfolio-mood.ts)). Each live holding is current value versus `quantity × price24hAgo` (or the feed’s own 24h percent when it did not send a prior price). **Flat** means the absolute portfolio change is under **0.05%**. If coverage of priced value is under half, or every 24h price is missing, the wash stays neutral and the chip reads unavailable. When some holdings are excluded but the rest still clear that bar, the chip says **partial**. Fight Desk bets are not holdings. Node squares stay white. In development only, `?mood=up|down|flat|unknown` forces the wash for screenshots; production ignores it.
 
-Flare vault is a **manual** founder constant (`28287` XRP, as of Oct 9) on the XRP face only. The +6 on that date is a reward, not a buy. Ingest cannot write the vault quantity. The other live books have no vault line.
+Flare vault is a **manual** founder constant (`28287` XRP) on the XRP face only. The face date is the latest flare-vault reward or print time, not a fixed label. The +6 is a reward, not a buy. Ingest cannot write the vault quantity. The other live books have no vault line.
 
 Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), [`cabinet/pwr-face.md`](cabinet/pwr-face.md), [`cabinet/etn-face.md`](cabinet/etn-face.md), [`cabinet/vrt-face.md`](cabinet/vrt-face.md), [`cabinet/gev-face.md`](cabinet/gev-face.md), [`cabinet/ceg-face.md`](cabinet/ceg-face.md), [`cabinet/hubb-face.md`](cabinet/hubb-face.md), [`cabinet/hbar-face.md`](cabinet/hbar-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md). XLM left the floor; the kept fills are in [`cabinet/xlm-face.md`](cabinet/xlm-face.md).
 

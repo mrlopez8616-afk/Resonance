@@ -15,6 +15,7 @@ import { TSLA_SLEEVES } from "@/data/tsla-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { listFills } from "./fills";
+import { latestVaultAsOf, withVaultAsOf } from "./position-lots";
 import { loadFillsStore, liveSleevesFromEnvelope, type FillsStoreBackend } from "./fills-store";
 import { isStorageUnavailable, type StoreAvailability } from "@/lib/storage-unavailable";
 
@@ -51,8 +52,9 @@ const SEED_BOOKS: SleeveBooks = {
 };
 
 function booksFromEnvelope(envelope: Parameters<typeof liveSleevesFromEnvelope>[0]): SleeveBooks {
+  const vaultAsOf = latestVaultAsOf(listFills(envelope.fills));
   return {
-    XRP: liveSleevesFromEnvelope(envelope, "XRP") ?? XRP_SLEEVES,
+    XRP: withVaultAsOf(liveSleevesFromEnvelope(envelope, "XRP") ?? XRP_SLEEVES, vaultAsOf),
     SUI: liveSleevesFromEnvelope(envelope, "SUI") ?? SUI_SLEEVES,
     PWR: liveSleevesFromEnvelope(envelope, "PWR") ?? PWR_SLEEVES,
     VRT: liveSleevesFromEnvelope(envelope, "VRT") ?? VRT_SLEEVES,

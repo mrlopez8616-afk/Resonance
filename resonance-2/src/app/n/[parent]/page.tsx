@@ -81,7 +81,11 @@ export default async function ParentNodePage({
           <Link href="/" className="calendar-back">
             Floor
           </Link>
-          <PublicGroupFloor group={group} treasury={parent.id === "crypto"} />
+          <PublicGroupFloor
+            group={group}
+            bars={floor.groupBars[parent.id]}
+            treasury={parent.id === "crypto"}
+          />
         </OperatorShell>
       );
     }

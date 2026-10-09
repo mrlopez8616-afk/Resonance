@@ -11,6 +11,9 @@ import {
   lotBarPopoverLines,
   lotBarValueLabel,
   lotDateLabel,
+  publicBarsForBook,
+  publicBarsForRollup,
+  publicLotChartModel,
   unknownEntryCaption,
   type ClosedLotBarInput,
   type OpenLotBarInput,
@@ -224,10 +227,9 @@ describe("lot bars", () => {
       true,
     );
     assert.equal(bars[0]?.magnitude, 4.2);
-    const hidden = lotBarPopoverLines(bars[0]!, true).join(" ");
-    assert.match(hidden, /Sep 18/);
-    assert.match(hidden, /%/);
-    assert.equal(hidden.includes("$"), false);
+    const hidden = lotBarPopoverLines(bars[0]!, true);
+    assert.deepEqual(hidden, ["Sep 18", "First buy", "+4.2%"]);
+    assert.equal(hidden.join(" ").includes("$"), false);
     const shown = lotBarPopoverLines(bars[0]!, false).join(" ");
     assert.match(shown, /\$/);
     const parent = barsFromRollup(
@@ -282,10 +284,10 @@ describe("lot bars", () => {
     assert.match(privateLines, /entry/);
     assert.match(privateLines, /exit/);
     assert.match(privateLines, /\$/);
-    const publicLines = lotBarPopoverLines(bars[0]!, true).join(" ");
-    assert.match(publicLines, /Sold/);
-    assert.match(publicLines, /%/);
-    assert.equal(publicLines.includes("$"), false);
+    const publicLines = lotBarPopoverLines(bars[0]!, true);
+    assert.deepEqual(publicLines, ["Sep 14", "First buy", "+1.1%"]);
+    assert.equal(publicLines.join(" ").includes("$"), false);
+    assert.equal(publicLines.join(" ").includes("shares"), false);
     const hidden = barsFromClosedLots([{ ...closed, exitUsd: Number.NaN, realizedPct: null }], false);
     assert.deepEqual(hidden, []);
     const text = collectText(LotBarChart({ model: { bars, caption: null }, label: "sold" })).join(" ");
@@ -308,5 +310,74 @@ describe("lot bars", () => {
     assert.equal(book.includes("position-mark"), false);
     assert.equal(book.includes("<circle"), false);
     assert.equal(home.includes("home-visuals"), true);
+    const floor = readFileSync(`${root}/components/public-floor.tsx`, "utf8");
+    const holdingFace = floor.slice(
+      floor.indexOf("export function PublicHoldingFace"),
+      floor.indexOf("export function TreasuryCard"),
+    );
+    const groupFloor = floor.slice(
+      floor.indexOf("export function PublicGroupFloor"),
+      floor.indexOf("export function PublicNodePage"),
+    );
+    const nodeFace = floor.slice(
+      floor.indexOf("export function PublicNodePage"),
+      floor.indexOf("export function PublicFightRecord"),
+    );
+    assert.equal(holdingFace.includes("IndexChart"), false);
+    assert.equal(holdingFace.includes("position-mark"), false);
+    assert.equal(holdingFace.includes("<circle"), false);
+    assert.equal(groupFloor.includes("IndexChart"), false);
+    assert.equal(groupFloor.includes("<circle"), false);
+    assert.match(groupFloor, /LotBarChart/);
+    assert.equal(nodeFace.includes("IndexChart"), false);
+    assert.equal(nodeFace.includes("position-mark"), false);
+    assert.equal(nodeFace.includes("<circle"), false);
+    assert.match(nodeFace, /bars/);
+    assert.match(nodePage, /PublicNodePage/);
+    assert.match(nodePage, /bars=\{floor\.nodeBars/);
+    assert.match(parentPage, /bars=\{floor\.groupBars/);
+    const publicBars = publicBarsForBook(
+      [lot({ time: "2026-09-18T12:00:00-05:00", day: "2026-09-18", pnlUsd: 12.5, pnlPct: 11.4, valueUsd: 40, entryUsd: 10 })],
+      [],
+    );
+    assert.equal(JSON.stringify(publicBars).includes("$"), false);
+    assert.equal(publicPayloadHasMoneyKey(publicBars), false);
+    const rendered = collectText(
+      LotBarChart({
+        model: publicLotChartModel(publicBars),
+        publicMode: true,
+        label: "PWR lots",
+      }),
+    ).join(" ");
+    assert.match(rendered, /\+11\.4%/);
+    assert.match(rendered, /First buy/);
+    assert.match(rendered, /Sep 18/);
+    assert.equal(rendered.includes("$"), false);
+    assert.equal(rendered.includes("shares"), false);
+    const parentBars = publicBarsForRollup(
+      [row({ ticker: "PWR", pnlUsd: 19, pnlPct: 8, valueUsd: 40 }), row({ ticker: "SUI", pnlUsd: null, pnlPct: null })],
+      "ai-stocks",
+    );
+    assert.deepEqual(parentBars.map((bar) => bar.label), ["PWR"]);
+    assert.equal(parentBars[0]?.href, "/n/ai-stocks/pwr");
+    const parentText = collectText(
+      LotBarChart({
+        model: publicLotChartModel(parentBars),
+        publicMode: true,
+        label: "AI Stocks holdings",
+      }),
+    ).join(" ");
+    assert.match(parentText, /\+8\.0%/);
+    assert.equal(parentText.includes("$"), false);
+    assert.equal(parentText.includes("First buy"), false);
   });
 });
+
+function publicPayloadHasMoneyKey(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  return Object.entries(value as Record<string, unknown>).some(([key, child]) => {
+    if (/usd|price|quantity|shares|qty|cost|balance|stake|amount|bankroll|token/i.test(key)) return true;
+    if (Array.isArray(child)) return child.some((item) => publicPayloadHasMoneyKey(item));
+    return publicPayloadHasMoneyKey(child);
+  });
+}

@@ -126,7 +126,7 @@ export default async function NodeDetailPage({
           <Link href={`/n/${parent.id}`} className="calendar-back">
             {parent.label}
           </Link>
-          <PublicNodePage ticker={node.ticker} holding={holding} />
+          <PublicNodePage ticker={node.ticker} holding={holding} bars={floor.nodeBars[node.ticker] ?? []} />
         </OperatorShell>
       );
     }
