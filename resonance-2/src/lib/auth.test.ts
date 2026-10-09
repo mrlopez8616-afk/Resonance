@@ -262,8 +262,11 @@ describe("login core", { concurrency: false }, () => {
     assert.match(setCookie, /HttpOnly/i);
     assert.match(setCookie, /Secure/i);
     assert.match(setCookie, /SameSite=Lax/i);
+    assert.doesNotMatch(setCookie, /SameSite=Strict/i);
     assert.match(setCookie, /Path=\//);
+    assert.doesNotMatch(setCookie, /(?:^|[; ])Domain=/i);
     assert.match(setCookie, /Max-Age=2592000/);
+    assert.match(setCookie, /Expires=/i);
     const token = /__Host-resonance_session=([^;]+)/.exec(setCookie)?.[1] ?? "";
     assert.equal(isSessionToken(token), true);
 
@@ -361,6 +364,12 @@ describe("login core", { concurrency: false }, () => {
     assert.equal(planAccess({ ...base, pathname: "/favicon.ico", method: "GET", nextPath: "/" }).kind, "allow");
     assert.equal(planAccess({ ...base, pathname: "/robots.txt", method: "GET", nextPath: "/" }).kind, "allow");
     assert.equal(planAccess({ ...base, pathname: "/icons/mark.png", method: "GET", nextPath: "/" }).kind, "allow");
+    assert.equal(planAccess({ ...base, pathname: "/sw.js", method: "GET", nextPath: "/" }).kind, "allow");
+    assert.equal(planAccess({ ...base, pathname: "/offline.html", method: "GET", nextPath: "/" }).kind, "allow");
+    assert.equal(
+      planAccess({ ...base, pathname: "/manifest.webmanifest", method: "GET", nextPath: "/" }).kind,
+      "allow",
+    );
 
     const home = planAccess({ ...base, pathname: "/", method: "GET", nextPath: "/" });
     assert.deepEqual(home, { kind: "redirect", next: "/" });

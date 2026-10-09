@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Offline · Resonance</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --text: #0a0b0d;
+        --muted: #5b616e;
+        --border: #e7eaed;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding:
+          max(1.5rem, env(safe-area-inset-top))
+          max(1.5rem, env(safe-area-inset-right))
+          max(1.5rem, env(safe-area-inset-bottom))
+          max(1.5rem, env(safe-area-inset-left));
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      main {
+        width: min(100%, 26rem);
+        padding: 1.35rem 1.25rem 1.2rem;
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        background: #ffffff;
+      }
+      p.kicker {
+        margin: 0;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        margin: 0.35rem 0 0.4rem;
+        font-size: 1.65rem;
+        font-weight: 600;
+        letter-spacing: -0.04em;
+      }
+      p.copy {
+        margin: 0 0 1rem;
+        color: var(--muted);
+        font-size: 1rem;
+      }
+      button {
+        min-height: 2.75rem;
+        padding: 0.55rem 0.9rem;
+        border: 1px solid var(--text);
+        border-radius: 0.55rem;
+        background: var(--text);
+        color: #fff;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">Resonance</p>
+      <h1>You're offline</h1>
+      <p class="copy">You're offline. Resonance needs a connection.</p>
+      <button type="button" onclick="location.reload()">Retry</button>
+    </main>
+  </body>
+</html>

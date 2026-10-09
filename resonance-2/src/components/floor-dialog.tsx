@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export function FloorDialog({
   open,
@@ -13,6 +14,12 @@ export function FloorDialog({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const [root, setRoot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setRoot(document.body);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     function onKey(event: KeyboardEvent) {
@@ -22,9 +29,9 @@ export function FloorDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !root) return null;
 
-  return (
+  return createPortal(
     <div
       className="floor-dialog-backdrop"
       role="presentation"
@@ -42,6 +49,7 @@ export function FloorDialog({
         </h2>
         {children}
       </div>
-    </div>
+    </div>,
+    root,
   );
 }

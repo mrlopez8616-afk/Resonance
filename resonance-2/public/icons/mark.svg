@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Resonance mark. Inter SemiBold "R" on --ink (#0a0b0d). Opaque; no transparency. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Resonance">
+  <title>Resonance</title>
+  <rect width="512" height="512" fill="#0a0b0d"/>
+  <g transform="translate(117.739 399.360) scale(0.192430 -0.192430)" fill="#ffffff">
+    <path d="M150 0L150 1490L707 1490Q964 1490 1098 1358Q1232 1226 1232 1013Q1232 862 1164 753Q1096 644 964 592L1287 0L988 0L695 547L417 547L417 0ZM417 768L668 768Q819 768 889 831.5Q959 895 959 1013Q959 1133 889 1199.5Q819 1266 666 1266L417 1266Z"/>
+  </g>
+</svg>
