@@ -40,8 +40,9 @@ export const CATALYST_NODES = [
 
 /**
  * Nodes the committed catalyst file already covers.
- * Newer AI Stocks names are allowed without an invented earnings row.
- * ETN and HUBB stay so their existing rows still load.
+ * NVDA and SPCX are allowed. Their next earnings stay out until a company
+ * IR page or press release names the date.
+ * ETN and HUBB stay so the retired rows still load. Upcoming weeks hide them.
  */
 export const SEEDED_CATALYST_NODES = [
   "XRP",
@@ -53,6 +54,8 @@ export const SEEDED_CATALYST_NODES = [
   "GEV",
   "CEG",
   "HUBB",
+  "TSM",
+  "TSLA",
   "MACRO",
 ] as const;
 

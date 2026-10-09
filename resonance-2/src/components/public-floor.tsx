@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LotBarChart } from "@/components/lot-bar-chart";
 import { NodeSquare } from "@/components/node-square";
+import { CATALYST_CALENDAR_HREF } from "@/lib/catalyst-calendar";
 import type { BuildHomeCard } from "@/lib/build-tracker";
 import { publicLotChartModel, type PublicLotBar } from "@/lib/lot-bars";
 import {
@@ -121,12 +122,15 @@ export function PublicHome({
   fitness,
   fightRecord,
   buildHome,
+  aiCatalystLine = null,
 }: {
   crypto: PublicGroup;
   aiStocks: PublicGroup;
   fitness: { headline: string | null; unit: string | null; lines: readonly string[] };
   fightRecord: string | null;
   buildHome: BuildHomeCard | null;
+  /** Next AI catalyst. A link, so it sits beside the card link and not inside it. */
+  aiCatalystLine?: string | null;
 }) {
   return (
     <section className="node-grid home-floor" aria-label="Node floor">
@@ -141,14 +145,25 @@ export function PublicHome({
         </Link>
       </NodeSquare>
       <NodeSquare parent home wide live={aiStocks.weightLabel !== null} label="AI Stocks">
-        <Link href="/n/ai-stocks" className="node-log-link" title="Open AI Stocks">
-          <ParentFace
-            label="AI Stocks"
-            weightLabel={aiStocks.weightLabel}
-            growthLabel={aiStocks.growthLabel}
-            series={aiStocks.series}
-          />
-        </Link>
+        <div className="live-face parent-face">
+          <Link href="/n/ai-stocks" className="node-log-link" title="Open AI Stocks">
+            <ParentFace
+              label="AI Stocks"
+              weightLabel={aiStocks.weightLabel}
+              growthLabel={aiStocks.growthLabel}
+              series={aiStocks.series}
+            />
+          </Link>
+          {aiCatalystLine ? (
+            <ul className="parent-lines">
+              <li>
+                <Link href={CATALYST_CALENDAR_HREF} className="parent-line-link">
+                  {aiCatalystLine}
+                </Link>
+              </li>
+            </ul>
+          ) : null}
+        </div>
       </NodeSquare>
       <NodeSquare parent home live={fitness.headline !== null || fitness.lines.length > 0} label="Fitness">
         <Link href="/n/fitness" className="node-log-link" title="Open Fitness">

@@ -13,9 +13,9 @@ import {
 import { parseCalendarEvent } from "./calendar-event";
 
 describe("calendar writers", () => {
-  it("keeps the committed catalyst file to the ten nodes", () => {
+  it("keeps the committed catalyst file aligned with the seed", () => {
     assert.equal(catalystFile.length, CATALYST_SEED_COUNT);
-    assert.equal(catalystSeed.length, 34);
+    assert.equal(catalystSeed.length, CATALYST_SEED_COUNT);
     assert.deepEqual(
       catalystSeed.map((event) => event.id),
       catalystFile.map((event) => event.id),

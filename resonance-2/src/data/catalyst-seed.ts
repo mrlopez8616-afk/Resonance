@@ -9,7 +9,7 @@ import {
 import { chicagoInstant, formatChicagoIso, isCivilDay } from "@/lib/calendar-time";
 import rawCatalysts from "./catalyst-events.json";
 
-export const CATALYST_SEED_COUNT = 34;
+export const CATALYST_SEED_COUNT = 36;
 
 const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EVENT_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;

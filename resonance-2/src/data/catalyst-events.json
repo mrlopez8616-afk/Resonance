@@ -111,6 +111,17 @@
     "type": "catalyst"
   },
   {
+    "id": "tsm-q3-2026-earnings",
+    "node": "TSM",
+    "title": "TSMC Q3 2026 earnings conference",
+    "start": "2026-10-15",
+    "time_ct": "01:00",
+    "status": "confirmed",
+    "source_url": "https://investor.tsmc.com/english/quarterly-results/2026/q3",
+    "note": "Company IR: Thursday, October 15, 2026, 14:00 Taiwan time (2:00 Eastern, 1:00 AM CT).",
+    "type": "catalyst"
+  },
+  {
     "id": "vrt-q3-2026-earnings",
     "node": "VRT",
     "title": "Vertiv Q3 2026 earnings (before market open)",
@@ -118,6 +129,17 @@
     "status": "tentative",
     "source_url": "https://robinhood.com/us/en/stocks/VRT/",
     "note": "Data-center power and thermal orders and backlog read straight through to AI buildout demand; Robinhood data shows this date as unverified by the company.",
+    "type": "catalyst"
+  },
+  {
+    "id": "tsla-q3-2026-earnings",
+    "node": "TSLA",
+    "title": "Tesla Q3 2026 financial results and Q&A webcast",
+    "start": "2026-10-21",
+    "time_ct": "16:30",
+    "status": "confirmed",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/exhibit991111111.htm",
+    "note": "Company press release filed October 2, 2026: results after the close on Wednesday, October 21, 2026. Webcast at 4:30 PM CT.",
     "type": "catalyst"
   },
   {

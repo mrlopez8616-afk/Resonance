@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { FitnessGrid } from "@/components/fitness-grid";
+import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
 import { PositionRollupView } from "@/components/position-book";
 import { PublicFightRecord, PublicGroupFloor } from "@/components/public-floor";
@@ -11,7 +12,7 @@ import { PredictionsFloor } from "@/components/predictions-floor";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadPublicFloor } from "@/lib/public-load";
-import { publicRecordLabel } from "@/lib/public-mode";
+import { publicRecordLabel, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessCards } from "@/lib/fitness-store";
@@ -74,13 +75,19 @@ export default async function ParentNodePage({
       );
     }
     if (parent.id === "crypto" || parent.id === "ai-stocks") {
-      const floor = await loadPublicFloor();
+      const [floor, calendar] = await Promise.all([
+        loadPublicFloor(),
+        parent.id === "ai-stocks" ? loadCalendarForPage() : Promise.resolve(null),
+      ]);
       const group = parent.id === "crypto" ? floor.model.crypto : floor.model.aiStocks;
       return (
         <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
           <Link href="/" className="calendar-back">
             Floor
           </Link>
+          {calendar ? (
+            <CatalystEntry events={calendar.events.map((event) => scrubTextFields(event))} now={new Date()} />
+          ) : null}
           <PublicGroupFloor
             group={group}
             bars={floor.groupBars[parent.id]}
@@ -213,6 +220,7 @@ export default async function ParentNodePage({
         Floor
       </Link>
       {retiring ? <p className="parent-retiring">{retiring}</p> : null}
+      {parent.id === "ai-stocks" ? <CatalystEntry events={events} now={now} /> : null}
       <NodeGrid
         parentId={parent.id}
         parentLabel={parent.label}

@@ -30,6 +30,7 @@ import {
   publicPayloadLeaks,
   publicRecordLabel,
   publicTextLeaks,
+  scrubTextFields,
   PUBLIC_MODE_COOKIE,
   stripMoneyText,
   toPublicFloor,
@@ -239,10 +240,11 @@ function publicLessonsHtml(): string {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
+      import("@/components/catalyst-calendar"),
       import("@/components/fitness-grid"),
       import("@/components/fitness-detail"),
       import("@/components/calendar-desk"),
@@ -259,6 +261,19 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     title: stripMoneyText(calendarEvent().title),
     note: stripMoneyText(calendarEvent().note ?? ""),
   };
+  const moneyCatalyst = scrubTextFields({
+    id: "money-catalyst",
+    kind: "catalyst" as const,
+    node: "NVDA" as const,
+    start: "2026-10-09T15:00:00-05:00",
+    title: "Pays $12",
+    status: "confirmed" as const,
+    writer: "agent" as const,
+    sourceUrl: "https://example.com/nvda",
+    note: "About $4 USD",
+    allDay: true,
+  });
+  const catalystNow = new Date("2026-10-09T16:00:00.000Z");
   const home = render(
     createElement(
       "div",
@@ -328,7 +343,25 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   const visible = [
     { path: "/", html: home },
     { path: "/n/crypto", html: crypto },
-    { path: "/n/ai-stocks", html: stocks },
+    { path: "/n/ai-stocks", html: `${stocks}${render(createElement(catalysts.CatalystEntry, { events: [moneyCatalyst], now: catalystNow }))}` },
+    {
+      path: "/n/ai-stocks/catalysts",
+      html: render(createElement(catalysts.CatalystWeekCards, { events: [moneyCatalyst], now: catalystNow })),
+    },
+    {
+      path: "/n/ai-stocks/catalysts/this-week",
+      html: render(
+        createElement(catalysts.CatalystWeekList, {
+          events: [moneyCatalyst],
+          bucket: "this-week",
+          now: catalystNow,
+        }),
+      ),
+    },
+    {
+      path: "/n/ai-stocks/catalysts/this-week/money-catalyst",
+      html: render(createElement(catalysts.CatalystEventDetail, { event: moneyCatalyst })),
+    },
     { path: "/n/crypto/sui", html: suiNode },
     { path: "/n/crypto/xrp", html: treasury },
     { path: "/n/ai-stocks/nvda", html: stockNode },
@@ -490,6 +523,9 @@ describe("public render scan", () => {
       "/fights/ufc/page.tsx",
       "/login/page.tsx",
       "/log/page.tsx",
+      "/n/ai-stocks/catalysts/page.tsx",
+      "/n/ai-stocks/catalysts/[bucket]/page.tsx",
+      "/n/ai-stocks/catalysts/[bucket]/[event]/page.tsx",
       "/n/build/page.tsx",
       "/n/build/[section]/page.tsx",
       "/n/approvals/page.tsx",
@@ -507,6 +543,9 @@ describe("public render scan", () => {
       "/",
       "/n/crypto",
       "/n/ai-stocks",
+      "/n/ai-stocks/catalysts",
+      "/n/ai-stocks/catalysts/this-week",
+      "/n/ai-stocks/catalysts/this-week/money-catalyst",
       "/n/crypto/sui",
       "/n/crypto/xrp",
       "/n/ai-stocks/nvda",
@@ -588,7 +627,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/build", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
