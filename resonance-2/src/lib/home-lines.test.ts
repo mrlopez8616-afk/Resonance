@@ -150,14 +150,14 @@ describe("AI stock home lines", () => {
       ],
       now: NOW,
     });
-    assert.deepEqual(lines, ["ETN -3.4%", "VRT earnings · 21 Oct"]);
+    assert.deepEqual(lines, ["VRT +1.2%", "VRT earnings · 21 Oct"]);
   });
 
   it("breaks a tie toward the higher signed change, then the ticker", () => {
     assert.equal(
       topMoverLine(
         [
-          move({ ticker: "HUBB", changePct: -2 }),
+          move({ ticker: "NVDA", changePct: -2 }),
           move({ ticker: "CEG", changePct: 2 }),
         ],
         NOW,
@@ -167,12 +167,12 @@ describe("AI stock home lines", () => {
     assert.equal(
       topMoverLine(
         [
-          move({ ticker: "VRT", changePct: 1.5 }),
-          move({ ticker: "ETN", changePct: 1.5 }),
+          move({ ticker: "TSLA", changePct: 1.5 }),
+          move({ ticker: "TSM", changePct: 1.5 }),
         ],
         NOW,
       ),
-      "ETN +1.5%",
+      "TSLA +1.5%",
     );
   });
 
@@ -180,7 +180,7 @@ describe("AI stock home lines", () => {
     const lines = aiStockSecondaryLines({
       moves: [
         move({
-          ticker: "ETN",
+          ticker: "NVDA",
           changePct: -9,
           fetchedAt: new Date(NOW.getTime() - HOME_QUOTE_MAX_AGE_MS - 10).toISOString(),
         }),
@@ -196,10 +196,10 @@ describe("AI stock home lines", () => {
 
   it("skips hidden nodes before choosing the mover and names a month-only catalyst as a month", () => {
     const moves = [
-      move({ ticker: "ETN", changePct: -4 }),
+      move({ ticker: "NVDA", changePct: -4 }),
       move({ ticker: "VRT", changePct: 1 }),
     ];
-    const visible = visibleHomeMoves(moves, ["etn"]);
+    const visible = visibleHomeMoves(moves, ["nvda"]);
     assert.deepEqual(
       visible.map((item) => item.ticker),
       ["VRT"],

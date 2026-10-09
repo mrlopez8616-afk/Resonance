@@ -6,6 +6,7 @@ export function NodeSquare({
   empty = false,
   parent = false,
   home = false,
+  wide = false,
   label,
   onDelete,
   children,
@@ -16,6 +17,8 @@ export function NodeSquare({
   parent?: boolean;
   /** Home parent card. Lets the square grow so secondary lines stay visible. */
   home?: boolean;
+  /** Home card that needs a wider chart, such as the eight AI Stocks bars. */
+  wide?: boolean;
   label: string;
   onDelete?: () => void;
   children: ReactNode;
@@ -23,7 +26,7 @@ export function NodeSquare({
   const state = live ? "is-live" : dashed ? "is-offline" : "";
   return (
     <article
-      className={`node-square ${state} ${empty ? "is-empty" : ""} ${parent ? "is-parent" : ""} ${home ? "is-home" : ""}`}
+      className={`node-square ${state} ${empty ? "is-empty" : ""} ${parent ? "is-parent" : ""} ${home ? "is-home" : ""} ${wide ? "is-wide" : ""}`}
       aria-label={label}
     >
       {onDelete ? (

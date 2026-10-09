@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { FightDeskSummary } from "@/lib/bets";
+import { sleevesForEquityCard } from "@/lib/ai-stocks";
 import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { assembleLiveFace, type LiveFaceData, type SpotQuote } from "@/lib/live-face";
 import { loadLiveSleeveBooks, type SleeveBooks } from "@/lib/sleeve-prints";
@@ -28,17 +29,18 @@ export async function loadOperatorFloor(): Promise<OperatorFloor> {
     loadLiveSleeveBooks(),
     loadFightDeskSummary(),
   ]);
-  const faces = {
+  const faces: Record<string, LiveFaceData> = {
     XRP: assembleLiveFace("XRP", sleeves.books.XRP, cryptoQuotes.XRP),
     SUI: assembleLiveFace("SUI", sleeves.books.SUI, cryptoQuotes.SUI),
-    PWR: assembleLiveFace("PWR", sleeves.books.PWR, equityQuotes.PWR),
-    ETN: assembleLiveFace("ETN", sleeves.books.ETN, equityQuotes.ETN),
-    VRT: assembleLiveFace("VRT", sleeves.books.VRT, equityQuotes.VRT),
-    GEV: assembleLiveFace("GEV", sleeves.books.GEV, equityQuotes.GEV),
-    CEG: assembleLiveFace("CEG", sleeves.books.CEG, equityQuotes.CEG),
-    HUBB: assembleLiveFace("HUBB", sleeves.books.HUBB, equityQuotes.HUBB),
     HBAR: assembleLiveFace("HBAR", sleeves.books.HBAR, cryptoQuotes.HBAR),
   };
+  for (const ticker of EQUITY_FACE_TICKERS) {
+    faces[ticker] = assembleLiveFace(
+      ticker,
+      sleevesForEquityCard(sleeves.books[ticker]),
+      equityQuotes[ticker],
+    );
+  }
   const storageMessage = storageBanner([
     sleeves.status,
     fightDesk.status === "unavailable" ? "unavailable" : "live",

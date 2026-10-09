@@ -27,11 +27,13 @@ export const NODE_PARENT = {
   sol: "crypto",
   flr: "crypto",
   pwr: "ai-stocks",
-  etn: "ai-stocks",
   vrt: "ai-stocks",
   gev: "ai-stocks",
   ceg: "ai-stocks",
-  hubb: "ai-stocks",
+  nvda: "ai-stocks",
+  tsm: "ai-stocks",
+  tsla: "ai-stocks",
+  spcx: "ai-stocks",
   [FIGHT_DESK_ID]: "fight-desk",
 } as const satisfies Record<string, ParentId>;
 

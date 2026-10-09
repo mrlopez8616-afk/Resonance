@@ -3,6 +3,7 @@ import {
   CALENDAR_STATUSES,
   CALENDAR_TIME_ZONE,
   CALENDAR_WRITERS,
+  CATALYST_NODES,
   isCatalystNode,
   type CalendarEvent,
   type CalendarLane,
@@ -221,7 +222,7 @@ function parseCatalyst(raw: Record<string, unknown>): CalendarEvent {
   const node = asTrimmed(raw.node).toUpperCase();
   if (!isCatalystNode(node)) {
     throw new CalendarWriteError(
-      "node must be one of XRP, SUI, FLR, PWR, ETN, VRT, GEV, CEG, HUBB, MACRO.",
+      `node must be one of ${CATALYST_NODES.join(", ")}.`,
     );
   }
   const status = asTrimmed(raw.status).toLowerCase();

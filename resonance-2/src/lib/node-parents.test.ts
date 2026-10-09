@@ -25,11 +25,13 @@ const PROPOSED = {
   sol: "crypto",
   flr: "crypto",
   pwr: "ai-stocks",
-  etn: "ai-stocks",
   vrt: "ai-stocks",
   gev: "ai-stocks",
   ceg: "ai-stocks",
-  hubb: "ai-stocks",
+  nvda: "ai-stocks",
+  tsm: "ai-stocks",
+  tsla: "ai-stocks",
+  spcx: "ai-stocks",
   [FIGHT_DESK_ID]: "fight-desk",
 } as const;
 
@@ -80,7 +82,7 @@ describe("node parent map", () => {
     );
     assert.deepEqual(
       nodesOnParent([], "ai-stocks").map((node) => node.ticker),
-      ["PWR", "ETN", "VRT", "GEV", "CEG", "HUBB", "+"],
+      ["PWR", "VRT", "GEV", "CEG", "NVDA", "TSM", "TSLA", "SPCX", "+"],
     );
     assert.deepEqual(nodesOnParent([], "fight-desk").map((node) => node.ticker), []);
     assert.deepEqual(
@@ -158,10 +160,17 @@ describe("node parent map", () => {
     assert.equal(none.valuedCount, 0);
     assert.equal(none.paintedCount, 3);
 
-    const hidden = parentAggregate("ai-stocks", ["pwr"], { ETN: 1, VRT: 1, GEV: 1, CEG: 1, HUBB: 1 }, null, "live");
-    assert.equal(hidden.childCount, 5);
-    assert.equal(hidden.paintedCount, 5);
-    assert.equal(hidden.liveUsd, 5);
+    const hidden = parentAggregate(
+      "ai-stocks",
+      ["pwr"],
+      { VRT: 1, GEV: 1, CEG: 1, NVDA: 1, ETN: 99, HUBB: 99 },
+      null,
+      "live",
+    );
+    assert.equal(hidden.childCount, 7);
+    assert.equal(hidden.paintedCount, 7);
+    assert.equal(hidden.valuedCount, 4);
+    assert.equal(hidden.liveUsd, 4);
   });
 
   it("counts the fight desk tile and uses its open count only when the summary exists", () => {
@@ -215,15 +224,27 @@ describe("node parent map", () => {
     const partial = parentAggregate(
       "ai-stocks",
       [],
-      { PWR: 4, ETN: 1, VRT: null, GEV: 2, CEG: 1, HUBB: null },
+      {
+        PWR: 4,
+        VRT: null,
+        GEV: 2,
+        CEG: 1,
+        NVDA: 3,
+        TSM: null,
+        TSLA: null,
+        SPCX: null,
+        ETN: 50,
+        HUBB: 50,
+      },
       null,
       "live",
     );
     assert.deepEqual(parentSummaryLine(partial), {
-      value: formatCompactUsd(8),
-      unit: "value of 4 of 6",
+      value: formatCompactUsd(10),
+      unit: "value of 4 of 8",
       coverage: true,
     });
+    assert.equal(partial.liveUsd, 10);
     assert.deepEqual(
       parentSummaryLine(
         parentAggregate("crypto", [], { XRP: null, SUI: null, HBAR: null }, null, "live"),

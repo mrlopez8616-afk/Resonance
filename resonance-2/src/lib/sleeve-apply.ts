@@ -5,8 +5,12 @@ import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { GEV_SLEEVES } from "@/data/gev-sleeves";
 import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
 import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
+import { NVDA_SLEEVES } from "@/data/nvda-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
+import { SPCX_SLEEVES } from "@/data/spcx-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
+import { TSM_SLEEVES } from "@/data/tsm-sleeves";
+import { TSLA_SLEEVES } from "@/data/tsla-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
@@ -21,10 +25,14 @@ export const LIVE_SLEEVE_SEEDS: Record<string, readonly NodeSleeve[]> = {
   XRP: XRP_SLEEVES,
   SUI: SUI_SLEEVES,
   PWR: PWR_SLEEVES,
-  ETN: ETN_SLEEVES,
   VRT: VRT_SLEEVES,
   GEV: GEV_SLEEVES,
   CEG: CEG_SLEEVES,
+  NVDA: NVDA_SLEEVES,
+  TSM: TSM_SLEEVES,
+  TSLA: TSLA_SLEEVES,
+  SPCX: SPCX_SLEEVES,
+  ETN: ETN_SLEEVES,
   HUBB: HUBB_SLEEVES,
   HBAR: HBAR_SLEEVES,
 };

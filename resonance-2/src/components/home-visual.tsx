@@ -39,6 +39,7 @@ export function AiChangeVisual({ bars }: { bars: readonly ChangeBar[] }) {
   const room = 18;
   const max = Math.max(1, ...bars.map((bar) => Math.abs(bar.changePct)));
   const slot = width / bars.length;
+  const tickClass = bars.length > 6 ? "home-tick home-tick-compact" : "home-tick";
   return (
     <HomeChartFrame label="Day change by ticker">
       <line x1="0" x2={width} y1={mid} y2={mid} className="home-zero" />
@@ -52,7 +53,7 @@ export function AiChangeVisual({ bars }: { bars: readonly ChangeBar[] }) {
           <g key={bar.ticker}>
             <title>{`${bar.ticker} ${bar.changePct > 0 ? "+" : ""}${bar.changePct.toFixed(1)}%`}</title>
             <rect x={x} y={y} width={slot * 0.56} height={heightPx} rx="1.2" className={tone} />
-            <text x={index * slot + slot / 2} y={labelY} textAnchor="middle" className="home-tick">
+            <text x={index * slot + slot / 2} y={labelY} textAnchor="middle" className={tickClass}>
               {bar.ticker}
             </text>
           </g>

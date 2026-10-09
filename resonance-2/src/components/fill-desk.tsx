@@ -3,7 +3,7 @@ import type { Fill } from "@/data/fills";
 import { BetScorecard, UfcBookPanel, type BookAvailability } from "@/components/bet-scorecard";
 import { FillLog } from "@/components/fill-log";
 import { summarizeUfcBook, type Bet } from "@/lib/bets";
-import { LOCKED_TICKERS } from "@/lib/fill-event";
+import { ACCEPTED_FILL_TICKERS } from "@/lib/fill-event";
 import {
   BET_DESK_TICKER,
   DESK_SLEEVES,
@@ -39,7 +39,7 @@ export function FillDesk({
   const deskHref = fillDeskHref(query);
   const ufcHref = fillDeskHref({ ticker: BET_DESK_TICKER });
   const ufcCurrent = ufcHref === deskHref;
-  const tickerOptions: string[] = [...LOCKED_TICKERS, BET_DESK_TICKER];
+  const tickerOptions: string[] = [...ACCEPTED_FILL_TICKERS, BET_DESK_TICKER];
   if (query.ticker && !tickerOptions.includes(query.ticker)) {
     tickerOptions.push(query.ticker);
   }

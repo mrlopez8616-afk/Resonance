@@ -26,6 +26,28 @@ export const CATALYST_NODES = [
   "SUI",
   "FLR",
   "PWR",
+  "VRT",
+  "GEV",
+  "CEG",
+  "NVDA",
+  "TSM",
+  "TSLA",
+  "SPCX",
+  "ETN",
+  "HUBB",
+  "MACRO",
+] as const;
+
+/**
+ * Nodes the committed catalyst file already covers.
+ * Newer AI Stocks names are allowed without an invented earnings row.
+ * ETN and HUBB stay so their existing rows still load.
+ */
+export const SEEDED_CATALYST_NODES = [
+  "XRP",
+  "SUI",
+  "FLR",
+  "PWR",
   "ETN",
   "VRT",
   "GEV",
@@ -66,7 +88,7 @@ export type CalendarEvent = {
   kind?: "catalyst" | "fight";
   /** Required on lane rows. Omitted on catalysts. */
   lane?: CalendarLane;
-  /** Required on catalysts. One of the ten catalyst nodes. */
+  /** Required on catalysts. One of `CATALYST_NODES`. */
   node?: CatalystNode;
   /** ISO-8601 with a numeric offset or `Z`. */
   start: string;

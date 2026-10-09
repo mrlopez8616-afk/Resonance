@@ -83,7 +83,7 @@ describe("fill event parse + idempotency", () => {
     );
     assert.throws(
       () => parseFillEvent({ ...mondayPacket, ticker: "DOGE" }),
-      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR\)/,
+      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR VRT GEV CEG NVDA TSM TSLA SPCX HBAR\)/,
     );
   });
 
@@ -113,7 +113,7 @@ describe("fill event parse + idempotency", () => {
           orderId: "new-xlm-order",
           ticker: "XLM",
         }),
-      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR\)/,
+      /locked nodes \(BTC ETH SOL XRP SUI FLR PWR VRT GEV CEG NVDA TSM TSLA SPCX HBAR\)/,
     );
   });
 

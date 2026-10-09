@@ -1,8 +1,9 @@
 import type { Fill, FillSide, FillSleeveId, FillVenue, TradeFill } from "@/data/fills";
 import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
+import { AI_STOCK_TICKERS, RETIRED_AI_TICKERS } from "@/lib/ai-stocks";
 import { isDecimalString } from "@/lib/decimal";
 
-/** Locked nodes. Never invent a ticker. Append only. */
+/** Active nodes. Never invent a ticker. Append only. */
 export const LOCKED_TICKERS = [
   "BTC",
   "ETH",
@@ -10,16 +11,18 @@ export const LOCKED_TICKERS = [
   "XRP",
   "SUI",
   "FLR",
-  "PWR",
-  "ETN",
-  "VRT",
-  "GEV",
-  "CEG",
-  "HUBB",
+  ...AI_STOCK_TICKERS,
   "HBAR",
 ] as const;
 
 export type LockedTicker = (typeof LOCKED_TICKERS)[number];
+
+/** Still accepted so a closing sell can zero the sleeve. Not an active child. */
+export const RETIRED_FILL_TICKERS = RETIRED_AI_TICKERS;
+
+export const ACCEPTED_FILL_TICKERS = [...LOCKED_TICKERS, ...RETIRED_FILL_TICKERS] as const;
+
+export type AcceptedFillTicker = (typeof ACCEPTED_FILL_TICKERS)[number];
 
 /**
  * Symbols that remain on stored fills after the node left the floor.
@@ -30,7 +33,7 @@ export type HistoricalFillTicker = Exclude<
   LockedTicker
 >;
 
-export type FillSymbol = LockedTicker | HistoricalFillTicker;
+export type FillSymbol = AcceptedFillTicker | HistoricalFillTicker;
 
 export const FILL_VENUES = ["robinhood", "coinbase"] as const;
 export const WRITABLE_SLEEVE_IDS = ["rh-main", "rh-agentic", "coinbase"] as const;
@@ -80,13 +83,17 @@ export function isLockedTicker(value: string): value is LockedTicker {
   return (LOCKED_TICKERS as readonly string[]).includes(value);
 }
 
+export function isAcceptedFillTicker(value: string): value is AcceptedFillTicker {
+  return (ACCEPTED_FILL_TICKERS as readonly string[]).includes(value);
+}
+
 export function isHistoricalFillTicker(value: string): value is HistoricalFillTicker {
   if (isLockedTicker(value)) return false;
   return POSITION_LOG_FILLS.some((row) => row.ticker === value);
 }
 
 export function isFillSymbol(value: string): value is FillSymbol {
-  return isLockedTicker(value) || isHistoricalFillTicker(value);
+  return isAcceptedFillTicker(value) || isHistoricalFillTicker(value);
 }
 
 /** The known position-log rows whose ticker is no longer a floor node. */
@@ -174,13 +181,13 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
 
   const ticker = readTicker(raw);
   let symbol: FillSymbol;
-  if (isLockedTicker(ticker)) {
+  if (isAcceptedFillTicker(ticker)) {
     symbol = ticker;
   } else if (isRetainedLogFill(orderId || tradeKey, ticker)) {
     symbol = ticker;
   } else {
     throw new FillIngestError(
-      `ticker must be one of the locked nodes (${LOCKED_TICKERS.join(" ")}).`,
+      `ticker must be one of the locked nodes (${LOCKED_TICKERS.join(" ")}) or a retiring book (${RETIRED_FILL_TICKERS.join(" ")}).`,
     );
   }
 

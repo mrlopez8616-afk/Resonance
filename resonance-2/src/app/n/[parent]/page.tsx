@@ -11,6 +11,7 @@ import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessCards } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
+import { retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { valueCardFromFace } from "@/lib/value-card";
@@ -100,6 +101,8 @@ export default async function ParentNodePage({
   }
 
   const floor = await loadOperatorFloor();
+  const retiring =
+    parent.id === "ai-stocks" ? retiringHeldLine(retiringHeldTickers(floor.sleeves)) : null;
   const cards = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, valueCardFromFace(face)]),
   );
@@ -114,6 +117,7 @@ export default async function ParentNodePage({
       <Link href="/" className="calendar-back">
         Floor
       </Link>
+      {retiring ? <p className="parent-retiring">{retiring}</p> : null}
       <NodeGrid
         parentId={parent.id}
         parentLabel={parent.label}

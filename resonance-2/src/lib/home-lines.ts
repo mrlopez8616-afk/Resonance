@@ -135,8 +135,8 @@ export function changeBarsForTickers(
 }
 
 /**
- * Session-change bars in floor order. A stale or missing quote is left out.
- * Hidden when none of the six is live.
+ * Session-change bars in AI Stocks order. A stale or missing quote is left out.
+ * Hidden when none of the eight is live. Retired names are not in this list.
  */
 export function aiChangeBars(moves: readonly HomeMove[], now: Date): ChangeBar[] | null {
   return changeBarsForTickers(EQUITY_FACE_TICKERS, moves, now);
@@ -258,23 +258,27 @@ function moverCatalystLines(
   moves: readonly HomeMove[],
   catalyst: string | null,
   now: Date,
+  extra?: string | null,
 ): string[] {
-  return keep([topMoverLine(moves, now), catalyst]);
+  return keep([topMoverLine(moves, now), catalyst, extra]);
 }
 
 export function aiStockSecondaryLines(input: {
   moves: readonly HomeMove[];
   events?: readonly CalendarEvent[];
   catalystLine?: string | null;
+  /** Retired books that still have shares. Null hides the line. */
+  retiringLine?: string | null;
   now: Date;
 }): string[] {
+  const moves = input.moves.filter((move) => AI_TICKERS.has(move.ticker));
   const catalyst =
     input.catalystLine !== undefined
       ? input.catalystLine
       : input.events
         ? nextAiCatalystLine(input.events, input.now)
         : null;
-  return moverCatalystLines(input.moves, catalyst, input.now);
+  return moverCatalystLines(moves, catalyst, input.now, input.retiringLine);
 }
 
 /**

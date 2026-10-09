@@ -1,12 +1,12 @@
 # Resonance 2.0
 
-Operator floor for Resonance 2.0. **XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, and HBAR are live.** The homepage paints those faces plus the one `+` slot. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. XLM is not a floor node; its three historical fills stay on `/log`. The Xaman gas wallet is never shown.
+Operator floor for Resonance 2.0. **XRP, SUI, PWR, VRT, GEV, CEG, NVDA, TSM, TSLA, SPCX, and HBAR are live.** ETN and HUBB are retired from the AI Stocks children; their fills and sleeve books stay so a closing sell can post. The homepage paints parent cards. BTC, ETH, and SOL stay in the floor roster and are not painted while offline. FLR stays locked with no floor square. XLM is not a floor node; its three historical fills stay on `/log`. The Xaman gas wallet is never shown.
 
 This folder is a **separate** Next.js App Router app. It does not share runtime, routes, or data with the Phase Zero dashboard at the repo root. Point Vercel project `resonance3` at Root Directory `resonance-2`.
 
 ## Surfaces
 
-- `/` — factory-floor shell: left toolbar, live node squares, one `+` slot, LIVE chip, operator status strip. Offline roster rows are not painted. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for PWR/ETN/VRT/GEV/CEG/HUBB), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
+- `/` — factory-floor shell: left toolbar, live node squares, one `+` slot, LIVE chip, operator status strip. Offline roster rows are not painted. Live faces show ticker, large spot price, sleeve-sum units (`tokens` for crypto, `shares` for the AI Stocks books), live USD, then sleeve rows. `×` removes a square after confirm; `+` restores it. Sleeve files and fills stay.
 - `/log` — search desk over the one fill store ([`src/data/fills.ts`](src/data/fills.ts) is the seed / local fallback). Filter by ticker, date range, sleeve, and source. A nodes strip lists every locked ticker with a non-zero live sleeve print or a fill quantity. A live node click opens that ticker’s pane (`/log?ticker=…`). Same fill card. Ingest is unchanged.
 - `/calendar` — operating calendar. Day is the default, with Week and Month. A month square opens `/calendar/YYYY-MM-DD`. Lanes: Cadence, Capital, Build, Gates, plus node-tagged catalysts. Same Blob cabinet as fills (`resonance-2/calendar.json`) and the same Bearer secret. See [`cabinet/operating-calendar.md`](cabinet/operating-calendar.md).
 
@@ -17,18 +17,22 @@ Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POS
 - XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (RH Agentic `51.601`; Flare vault `28281`; no RH Main sleeve; no Coinbase sleeve)
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic `0` sold; Coinbase 33.7)
 - PWR — [`src/data/pwr-sleeves.ts`](src/data/pwr-sleeves.ts) (RH Agentic `0.003917` **shares** only)
-- ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (RH Agentic `0.005844` **shares** only)
 - VRT — [`src/data/vrt-sleeves.ts`](src/data/vrt-sleeves.ts) (RH Agentic `0.009991` **shares** only)
 - GEV — [`src/data/gev-sleeves.ts`](src/data/gev-sleeves.ts) (RH Agentic `0.002640` **shares** only)
 - CEG — [`src/data/ceg-sleeves.ts`](src/data/ceg-sleeves.ts) (RH Agentic `0.009617` **shares** only)
-- HUBB — [`src/data/hubb-sleeves.ts`](src/data/hubb-sleeves.ts) (RH Agentic `0.005566` **shares** only)
+- NVDA — [`src/data/nvda-sleeves.ts`](src/data/nvda-sleeves.ts) (RH Agentic `0` until a fill posts)
+- TSM — [`src/data/tsm-sleeves.ts`](src/data/tsm-sleeves.ts) (RH Agentic `0` until a fill posts)
+- TSLA — [`src/data/tsla-sleeves.ts`](src/data/tsla-sleeves.ts) (RH Agentic `0` until a fill posts)
+- SPCX — [`src/data/spcx-sleeves.ts`](src/data/spcx-sleeves.ts) (RH Agentic `0` until a fill posts)
+- ETN — [`src/data/etn-sleeves.ts`](src/data/etn-sleeves.ts) (retired child; RH Agentic book stays for a closing sell)
+- HUBB — [`src/data/hubb-sleeves.ts`](src/data/hubb-sleeves.ts) (retired child; RH Agentic book stays for a closing sell)
 - HBAR — [`src/data/hbar-sleeves.ts`](src/data/hbar-sleeves.ts) (RH Agentic `7847.91` **tokens** only)
 
-Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). PWR, ETN, VRT, GEV, CEG, and HUBB use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
+Crypto live price is fetched **server-side** from public spot feeds (CoinGecko, Binance fallback) in [`src/lib/spot-price.ts`](src/lib/spot-price.ts). The eight AI Stocks use the equity helper in [`src/lib/equity-price.ts`](src/lib/equity-price.ts) (Yahoo → Yahoo chart → Stooq) — not CoinGecko. ETN and HUBB are not quoted. Hub posts fills to `POST /api/fills`. This app does not poll Robinhood or Coinbase. Do not put broker keys in the client or in `NEXT_PUBLIC_*`.
 
 The floor background is a mood wash from that same live book versus 24 hours ago ([`src/lib/portfolio-mood.ts`](src/lib/portfolio-mood.ts)). Each live holding is current value versus `quantity × price24hAgo` (or the feed’s own 24h percent when it did not send a prior price). **Flat** means the absolute portfolio change is under **0.05%**. If coverage of priced value is under half, or every 24h price is missing, the wash stays neutral and the chip reads unavailable. When some holdings are excluded but the rest still clear that bar, the chip says **partial**. Fight Desk bets are not holdings. Node squares stay white. In development only, `?mood=up|down|flat|unknown` forces the wash for screenshots; production ignores it.
 
-Flare vault is a **manual** founder constant (`28281` XRP) on the XRP face only. Ingest cannot write it. SUI, PWR, ETN, VRT, GEV, CEG, HUBB, and HBAR have no vault line.
+Flare vault is a **manual** founder constant (`28281` XRP) on the XRP face only. Ingest cannot write it. The other live books have no vault line.
 
 Reuse notes: [`cabinet/xrp-face.md`](cabinet/xrp-face.md), [`cabinet/sui-face.md`](cabinet/sui-face.md), [`cabinet/pwr-face.md`](cabinet/pwr-face.md), [`cabinet/etn-face.md`](cabinet/etn-face.md), [`cabinet/vrt-face.md`](cabinet/vrt-face.md), [`cabinet/gev-face.md`](cabinet/gev-face.md), [`cabinet/ceg-face.md`](cabinet/ceg-face.md), [`cabinet/hubb-face.md`](cabinet/hubb-face.md), [`cabinet/hbar-face.md`](cabinet/hbar-face.md), fill ingest: [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md). XLM left the floor; the kept fills are in [`cabinet/xlm-face.md`](cabinet/xlm-face.md).
 

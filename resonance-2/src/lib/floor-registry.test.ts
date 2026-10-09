@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import { catalogNodes, removedNodes, visibleNodes } from "./floor-registry";
 
-const LIVE = ["XRP", "SUI", "PWR", "ETN", "VRT", "GEV", "CEG", "HUBB", "HBAR"];
+const LIVE = ["XRP", "SUI", "PWR", "VRT", "GEV", "CEG", "NVDA", "TSM", "TSLA", "SPCX", "HBAR"];
 const OFFLINE = ["BTC", "ETH", "SOL"];
 
 describe("homepage floor paint", () => {
@@ -41,7 +41,7 @@ describe("homepage floor paint", () => {
     const visible = visibleNodes(["xrp", "btc"]);
     assert.deepEqual(
       visible.map((node) => node.ticker),
-      ["SUI", "PWR", "ETN", "VRT", "GEV", "CEG", "HUBB", "HBAR", "+"],
+      ["SUI", "PWR", "VRT", "GEV", "CEG", "NVDA", "TSM", "TSLA", "SPCX", "HBAR", "+"],
     );
 
     assert.deepEqual(
