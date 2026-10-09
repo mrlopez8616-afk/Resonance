@@ -11,8 +11,12 @@ import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessCards } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
-import { retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
+import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
+import { holdingChildModel, type ChildCardModel } from "@/lib/child-card";
+import { nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
+import { loadCryptoHistory, loadEquityHistory } from "@/lib/price-history";
+import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { valueCardFromFace } from "@/lib/value-card";
 
@@ -100,7 +104,16 @@ export default async function ParentNodePage({
     );
   }
 
-  const floor = await loadOperatorFloor();
+  const childParent = parent.id === "crypto" || parent.id === "ai-stocks";
+  const [floor, calendar, history] = await Promise.all([
+    loadOperatorFloor(),
+    childParent ? loadCalendarForPage() : Promise.resolve(null),
+    parent.id === "crypto"
+      ? loadCryptoHistory(["XRP", "SUI", "HBAR"])
+      : parent.id === "ai-stocks"
+        ? loadEquityHistory(AI_STOCK_TICKERS)
+        : Promise.resolve(null),
+  ]);
   const retiring =
     parent.id === "ai-stocks" ? retiringHeldLine(retiringHeldTickers(floor.sleeves)) : null;
   const cards = Object.fromEntries(
@@ -109,6 +122,39 @@ export default async function ParentNodePage({
   const heldUsd = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
   );
+  const now = new Date();
+  const events = calendar?.events ?? [];
+  const childCards: Record<string, ChildCardModel> = {};
+  if (parent.id === "crypto") {
+    for (const ticker of ["XRP", "SUI", "HBAR"] as const) {
+      const face = floor.faces[ticker];
+      if (!face) continue;
+      const quote = floor.spotQuotes[ticker];
+      childCards[ticker] = holdingChildModel({
+        face,
+        changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
+        fetchedAt: quote?.fetchedAt ?? null,
+        now,
+        catalyst: nextTickerCatalystLine(events, ticker, now),
+        history: history?.[ticker] ?? null,
+        treasury: ticker === "XRP",
+      });
+    }
+  } else if (parent.id === "ai-stocks") {
+    for (const ticker of AI_STOCK_TICKERS) {
+      const face = floor.faces[ticker];
+      if (!face) continue;
+      const quote = floor.equityQuotes[ticker];
+      childCards[ticker] = holdingChildModel({
+        face,
+        changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
+        fetchedAt: quote?.fetchedAt ?? null,
+        now,
+        catalyst: nextTickerCatalystLine(events, ticker, now),
+        history: history?.[ticker] ?? null,
+      });
+    }
+  }
   return (
     <OperatorShell
       storageMessage={floor.storageMessage}
@@ -123,6 +169,7 @@ export default async function ParentNodePage({
         parentLabel={parent.label}
         cards={cards}
         heldUsd={heldUsd}
+        childCards={childParent ? childCards : undefined}
       />
     </OperatorShell>
   );

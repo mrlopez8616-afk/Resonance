@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
+import { ChildValueCard } from "@/components/child-value-card";
 import { FloorDialog } from "@/components/floor-dialog";
 import { NodeSquare } from "@/components/node-square";
 import { ValueCard } from "@/components/value-card";
@@ -14,6 +15,7 @@ import {
   writeHiddenIds,
 } from "@/lib/floor-registry";
 import { isZeroCryptoHolding, nodesOnParent, removedOnParent } from "@/lib/node-parents";
+import type { ChildCardModel } from "@/lib/child-card";
 import type { ValueCardModel } from "@/lib/value-card";
 import type { ParentId } from "@/data/node-parents";
 
@@ -28,6 +30,7 @@ export function NodeGrid({
   parentLabel,
   cards,
   heldUsd,
+  childCards,
 }: {
   parentId: ParentId;
   parentLabel: string;
@@ -35,6 +38,8 @@ export function NodeGrid({
   cards: Readonly<Record<string, ValueCardModel>>;
   /** Position value in dollars. A crypto card at exactly zero is not painted. */
   heldUsd?: Readonly<Record<string, number | null | undefined>>;
+  /** Content-sized child cards. When a ticker is present, it replaces the plain value card. */
+  childCards?: Readonly<Record<string, ChildCardModel>>;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -68,16 +73,26 @@ export function NodeGrid({
 
   return (
     <>
-      <section className="node-grid" aria-label={`${parentLabel} nodes`}>
+      <section
+        className={`node-grid${childCards ? " child-floor" : ""}`}
+        aria-label={`${parentLabel} nodes`}
+      >
         {nodes.map((node) => {
           if (node.status === "live") {
             if (isZeroCryptoHolding(node.ticker, heldUsd?.[node.ticker])) return null;
+            const child = childCards?.[node.ticker];
             const card = cards[node.ticker] ?? NOT_CONNECTED;
-            const shown = card.headline !== null || card.priceLine !== null;
+            const shown = child
+              ? child.headline !== null ||
+                child.priceLine !== null ||
+                child.lines.length > 0 ||
+                child.spark !== null
+              : card.headline !== null || card.priceLine !== null;
             return (
               <NodeSquare
                 key={node.id}
                 parent
+                home={Boolean(child)}
                 live={shown}
                 dashed={!shown}
                 label={`${node.ticker} node`}
@@ -88,7 +103,11 @@ export function NodeGrid({
                   className="node-log-link"
                   title={`Open ${node.ticker}`}
                 >
-                  <ValueCard ticker={node.ticker} model={card} compact />
+                  {child ? (
+                    <ChildValueCard model={child} />
+                  ) : (
+                    <ValueCard ticker={node.ticker} model={card} compact />
+                  )}
                 </Link>
               </NodeSquare>
             );
