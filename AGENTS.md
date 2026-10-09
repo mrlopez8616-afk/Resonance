@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 KEEP IT CLEAN, DRILL DOWN ALWAYS. This is the Resonance 2 operator floor (`resonance-2`).
 
-- The home page shows only the parent cards: Crypto, AI Stocks, Fitness, Finance, Fight Desk, and Build. No child squares or detail lists on home. Build opens `/n/build`. The headline stays the one value line. Under it, a card may show up to three short secondary lines built from data the page already loaded. A thin This Week strip may sit above the cards.
+- The home page shows only the parent cards: Crypto, AI Stocks, Fitness, Finance, Fight Desk, and Build, plus a System card sized to its text. No child squares or detail lists on home. Build opens `/n/build`. System opens `/n/system`. The headline stays the one value line. Under it, a card may show up to three short secondary lines built from data the page already loaded. A thin This Week strip may sit above the cards.
 - A parent page shows only its child nodes as cards. Details live one level down, on that node's page. Fight Desk shows Bankroll and Fights. Fights links to `/fights`.
 - A back control or breadcrumb goes up exactly one level.
 - A stored fill with a null sleeve is corrected by a migration that names that order id. Do not retag every null sleeve.
