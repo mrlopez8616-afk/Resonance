@@ -239,7 +239,7 @@ Yield on the manual Flare vault is `kind: "reward"` (alias `side: "reward"`). It
 }
 ```
 
-Migration `021_xrp_vault_reward` inserts this row and sets the `flare-vault` print to `28287` when the row is absent and that print is missing or exactly `28281`. A missing print is the founder seed. Any other print changes nothing. The face quantity stays the typed constant `FLARE_VAULT_XRP` (`28287`, manual, as of Oct 9). A stored print does not override that constant.
+Migration `021_xrp_vault_reward` inserts this row and sets the `flare-vault` print to `28287` when the row is absent and that print is missing or exactly `28281`. A missing print is the founder seed. Any other print changes nothing. The face quantity stays the typed constant `FLARE_VAULT_XRP` (`28287`, manual). The face date is the latest flare-vault reward or print time. A stored print does not override the quantity constant.
 
 The fills table has no fee column. A `fee` decimal string is stored on the row payload as `feeUsd`.
 

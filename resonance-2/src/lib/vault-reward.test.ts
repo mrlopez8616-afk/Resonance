@@ -141,10 +141,8 @@ describe("vault reward", () => {
       today: "2026-10-09",
       vaultQuantity: "28287",
     });
-    assert.equal(
-      position?.vaultLine,
-      vaultUnknownLine("28287", "6"),
-    );
+    assert.equal(position?.vaultLine, vaultUnknownLine("28287", "6", "Oct 9"));
+    assert.match(position?.vaultLine ?? "", /as of Oct 9/);
     assert.match(position?.vaultLine ?? "", /reward 6/);
     assert.equal((position?.vaultLine ?? "").includes("$"), false);
     assert.equal(FLARE_VAULT_XRP, "28287");

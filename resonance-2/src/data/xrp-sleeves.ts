@@ -25,9 +25,8 @@ import type { NodeSleeve } from "@/data/sleeves";
  * Do not edit the vault constant from a broker pull.
  */
 
-/** Founder-typed vault. 28281 grew by 6 (yield) on 2026-10-09. Not a buy. */
+/** Founder-typed vault quantity. 28281 grew by 6 (yield). Not a buy. The face date comes from the reward or print time. */
 export const FLARE_VAULT_XRP = "28287";
-export const FLARE_VAULT_AS_OF = "Oct 9";
 
 export type XrpSleeve = NodeSleeve;
 
@@ -52,6 +51,5 @@ export const XRP_SLEEVES: XrpSleeve[] = [
     quantity: FLARE_VAULT_XRP,
     source: "manual",
     manual: true,
-    note: `as of ${FLARE_VAULT_AS_OF}`,
   },
 ];

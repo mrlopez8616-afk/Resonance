@@ -250,14 +250,79 @@ export function lotBarValueLabel(bar: LotBar, publicMode: boolean): string | nul
   return label.replace("-", "−");
 }
 
-/** Popover lines. Public mode is the percent only, with no dollar text. */
+/**
+ * Public chart row. Percent only. No dollar, share, or price fields,
+ * so a public payload can carry it.
+ */
+export type PublicLotBar = {
+  id: string;
+  day: string;
+  label: string;
+  tone: LotBarTone;
+  percent: number;
+  partial: boolean;
+  sold: boolean;
+  sequence: number;
+  first: boolean;
+  href: string | null;
+};
+
+export function toPublicLotBars(bars: readonly LotBar[]): PublicLotBar[] {
+  return bars.map((bar) => ({
+    id: bar.id,
+    day: bar.day,
+    label: bar.axisLabel,
+    tone: bar.tone,
+    percent: bar.magnitude,
+    partial: bar.partial,
+    sold: bar.sold,
+    sequence: bar.sequence,
+    first: bar.first,
+    href: bar.href,
+  }));
+}
+
+/** Open lots win. A flat book uses the closed lots. Dollars are dropped. */
+export function publicBarsForBook(
+  open: readonly OpenLotBarInput[],
+  closed: readonly ClosedLotBarInput[],
+): PublicLotBar[] {
+  const bars = open.length > 0 ? barsFromOpenLots(open, true) : barsFromClosedLots(closed, true);
+  return toPublicLotBars(bars);
+}
+
+export function publicBarsForRollup(rows: readonly RollupRow[], parentId: string): PublicLotBar[] {
+  return toPublicLotBars(barsFromRollup(rows, parentId, true).bars);
+}
+
+/** Chart model for a public page. Labels and popovers read the percent only. */
+export function publicLotChartModel(bars: readonly PublicLotBar[]): LotBarModel {
+  return {
+    caption: null,
+    bars: bars.map((bar) =>
+      blankBar({
+        id: bar.id,
+        day: bar.day,
+        axisLabel: bar.label,
+        tone: bar.tone,
+        magnitude: bar.percent,
+        partial: bar.partial,
+        sold: bar.sold,
+        sequence: bar.sequence,
+        first: bar.first,
+        pnlPct: bar.percent,
+        href: bar.href,
+      }),
+    ),
+  };
+}
+
+/** Popover lines. Public mode is the date, the lot label, and the percent. */
 export function lotBarPopoverLines(bar: LotBar, publicMode: boolean): string[] {
   const percent = formatLotPct(bar.pnlPct);
   const badge = badgeLabel(bar);
   if (publicMode) {
-    return [badge, bar.axisLabel, bar.sold ? "Sold" : null, percent].filter(
-      (line): line is string => Boolean(line),
-    );
+    return [bar.axisLabel || null, badge, percent].filter((line): line is string => Boolean(line));
   }
   if (bar.sold) {
     const money = formatSignedUsd(bar.pnlUsd);

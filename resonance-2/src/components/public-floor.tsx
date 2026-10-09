@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { LotBarChart } from "@/components/lot-bar-chart";
 import { NodeSquare } from "@/components/node-square";
 import type { BuildHomeCard } from "@/lib/build-tracker";
+import { publicLotChartModel, type PublicLotBar } from "@/lib/lot-bars";
 import {
   TREASURY_LINE,
   type PublicGroup,
@@ -58,7 +60,14 @@ function IndexChart({ points }: { points: readonly PublicSeriesPoint[] }) {
   );
 }
 
-export function PublicHoldingFace({ holding }: { holding: PublicHolding }) {
+export function PublicHoldingFace({
+  holding,
+  bars = [],
+}: {
+  holding: PublicHolding;
+  bars?: readonly PublicLotBar[];
+}) {
+  const chart = publicLotChartModel(bars);
   return (
     <div className="live-face value-card parent-face child-card">
       <header className="live-head">
@@ -68,7 +77,9 @@ export function PublicHoldingFace({ holding }: { holding: PublicHolding }) {
           <p className="value-price">{holding.gainLabel} since first buy</p>
         ) : null}
       </header>
-      <IndexChart points={holding.series} />
+      {chart.bars.length > 0 ? (
+        <LotBarChart model={chart} publicMode label={`${holding.ticker} lots`} />
+      ) : null}
     </div>
   );
 }
@@ -204,11 +215,14 @@ export function PublicHome({
 
 export function PublicGroupFloor({
   group,
+  bars = [],
   treasury = false,
 }: {
   group: PublicGroup;
+  bars?: readonly PublicLotBar[];
   treasury?: boolean;
 }) {
+  const chart = publicLotChartModel(bars);
   return (
     <section className="node-grid child-floor" aria-label={`${group.label} nodes`}>
       {group.holdings.map((holding) => (
@@ -222,6 +236,11 @@ export function PublicGroupFloor({
           </Link>
         </NodeSquare>
       ))}
+      {chart.bars.length > 0 ? (
+        <div className="public-lot-bars">
+          <LotBarChart model={chart} publicMode label={`${group.label} holdings`} />
+        </div>
+      ) : null}
       {treasury ? <TreasuryCard /> : null}
     </section>
   );
@@ -230,9 +249,11 @@ export function PublicGroupFloor({
 export function PublicNodePage({
   ticker,
   holding,
+  bars = [],
 }: {
   ticker: string;
   holding: PublicHolding | null;
+  bars?: readonly PublicLotBar[];
 }) {
   if (!holding) {
     return (
@@ -248,7 +269,7 @@ export function PublicNodePage({
   return (
     <section className="node-grid node-detail" aria-label={`${ticker} node`}>
       <NodeSquare parent home live wide label={`${ticker} node`}>
-        <PublicHoldingFace holding={holding} />
+        <PublicHoldingFace holding={holding} bars={bars} />
       </NodeSquare>
     </section>
   );

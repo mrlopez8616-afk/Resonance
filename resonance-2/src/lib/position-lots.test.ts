@@ -16,7 +16,9 @@ import {
   coinbaseAgenticUnknownLine,
   displayLotBooks,
   rollupHoldingBooks,
+  latestVaultAsOf,
   vaultUnknownLine,
+  withVaultAsOf,
   xrpAgenticUnknownLine,
   type LedgerFill,
 } from "./position-lots";
@@ -131,7 +133,29 @@ describe("FIFO lots", () => {
     assert.equal(ledger.status, "matched");
     assert.equal(ledger.openShares, "5");
     assert.equal(ledger.costUsd, 560);
-    assert.equal(vaultUnknownLine("28281"), "Flare / Xaman vault · manual · as of Oct 9 · entry unknown");
+    assert.equal(vaultUnknownLine("28281"), "Flare / Xaman vault · manual · entry unknown");
+    assert.equal(
+      vaultUnknownLine("28281", "6", "Oct 9"),
+      "Flare / Xaman vault · manual · as of Oct 9 · reward 6 · entry unknown",
+    );
+    assert.equal(
+      latestVaultAsOf([
+        { kind: "reward", symbol: "XRP", sleeve: "flare-vault", time: "2026-10-09T17:25:00-05:00" },
+      ]),
+      "Oct 9",
+    );
+    assert.equal(
+      latestVaultAsOf(
+        [{ kind: "reward", symbol: "XRP", sleeve: "flare-vault", time: "2026-10-09T17:25:00-05:00" }],
+        "2026-10-10T18:00:00-05:00",
+      ),
+      "Oct 10",
+    );
+    assert.equal(latestVaultAsOf([], "2026-10-01T12:00:00-05:00"), "Oct 1");
+    assert.equal(latestVaultAsOf([]), null);
+    assert.equal(withVaultAsOf([{ id: "flare-vault", note: "as of Oct 9" }], null)[0]?.note, undefined);
+    assert.equal(withVaultAsOf([{ id: "rh-agentic", note: "keep" }], "Oct 9")[0]?.note, "keep");
+    assert.equal(withVaultAsOf([{ id: "flare-vault" }], "Oct 9")[0]?.note, "as of Oct 9");
     assert.equal(vaultUnknownLine("0"), null);
     assert.equal(coinbaseAgenticUnknownLine("10"), "Coinbase Agentic · 10 · entry unknown");
     assert.equal(coinbaseAgenticUnknownLine("0"), null);
@@ -170,7 +194,7 @@ describe("FIFO lots", () => {
     assert.equal(position.ledger.status, "matched");
     assert.equal(position.ledger.costUsd, 72.24);
     assert.equal(position.unknownLine, "Coinbase Agentic · 10 · entry unknown");
-    assert.equal(position.vaultLine, "Flare / Xaman vault · manual · as of Oct 9 · entry unknown");
+    assert.equal(position.vaultLine, "Flare / Xaman vault · manual · entry unknown");
     const totals = positionBookTotals({
       ledger: position.ledger,
       livePrice: 2,
@@ -366,7 +390,7 @@ describe("FIFO lots", () => {
     assert.match(text, /Coinbase Agentic · entry unknown/);
     assert.match(text, /10 shares/);
     assert.match(text, /492\.828\s+shares/);
-    assert.match(text, /Flare \/ Xaman vault · manual · as of Oct 9 · entry unknown/);
+    assert.match(text, /Flare \/ Xaman vault · manual · entry unknown/);
     assert.equal(text.includes("$0.00"), false);
     assert.equal(text.includes("Total · partial 0"), false);
     const caption = "492.828 shares entry unknown, not charted · 10 shares entry unknown, not charted · 28281 shares entry unknown, not charted";
@@ -637,7 +661,7 @@ describe("FIFO lots", () => {
     assert.match(xrpText, /28,342\.601/);
     assert.match(xrpText, /RH Agentic/);
     assert.match(xrpText, /Coinbase Agentic/);
-    assert.match(xrpText, /Flare \/ Xaman vault · manual · as of Oct 9 · entry unknown/);
+    assert.match(xrpText, /Flare \/ Xaman vault · manual · entry unknown/);
     assert.match(xrpText, /Total · partial/);
     const suiRollup = rollupHoldingBooks({
       tickers: ["SUI"],
@@ -887,7 +911,7 @@ describe("SUI portfolio transfer lots", () => {
     const digest = createHash("sha256")
       .update(JSON.stringify({ position: before.position, totals: before.totals }))
       .digest("hex");
-    assert.equal(digest, "5bcfebe1c6929825d2b7b90485dc19b09c95c6a9ffe31b557bc80937856bde15");
+    assert.equal(digest, "c7b22ee138811c17f5fee0a067c4a840fd9e37faa31bbe3540fe1eb774775692");
   });
 });
 

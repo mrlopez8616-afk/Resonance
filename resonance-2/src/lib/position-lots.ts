@@ -29,15 +29,78 @@ export function positionSleeve(ticker: string): "rh-agentic" | "coinbase" | null
   return null;
 }
 
+/** `Oct 9` in Chicago. A missing or invalid instant is not a date. */
+export function vaultAsOfLabel(instant: string | null | undefined): string | null {
+  const raw = instant?.trim() ?? "";
+  if (!raw || Number.isNaN(Date.parse(raw))) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+    day: "numeric",
+  }).formatToParts(new Date(raw));
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!month || !day) return null;
+  return `${month} ${day}`;
+}
+
+/**
+ * Later of the flare-vault print instant and the latest XRP vault reward.
+ * Neither one is invented when it is missing.
+ */
+export function latestVaultAsOf(
+  fills: readonly { kind?: string; symbol?: string; sleeve?: string; time?: string }[],
+  printedAt?: string | null,
+): string | null {
+  let latestMs = Number.NaN;
+  let latest: string | null = null;
+  const consider = (instant: string | null | undefined) => {
+    const raw = instant?.trim() ?? "";
+    const ms = Date.parse(raw);
+    if (!raw || Number.isNaN(ms)) return;
+    if (Number.isNaN(latestMs) || ms > latestMs) {
+      latestMs = ms;
+      latest = raw;
+    }
+  };
+  consider(printedAt);
+  for (const fill of fills) {
+    if (fill.kind !== "reward") continue;
+    if ((fill.symbol ?? "").trim().toUpperCase() !== "XRP") continue;
+    if (fill.sleeve !== "flare-vault") continue;
+    consider(fill.time);
+  }
+  return vaultAsOfLabel(latest);
+}
+
 export function vaultUnknownLine(
   quantity: string | null | undefined,
   rewardQty?: string | null,
+  asOf?: string | null,
 ): string | null {
   const qty = quantity?.trim() ?? "";
   if (!isDecimalString(qty) || Number(qty) <= 0) return null;
   const reward =
     rewardQty && isDecimalString(rewardQty) && Number(rewardQty) > 0 ? ` · reward ${rewardQty.trim()}` : "";
-  return `Flare / Xaman vault · manual · as of Oct 9${reward} · entry unknown`;
+  const dated = asOf?.trim() ? ` · as of ${asOf.trim()}` : "";
+  return `Flare / Xaman vault · manual${dated}${reward} · entry unknown`;
+}
+
+/** Face note for the vault row. No date when neither a print nor a reward has a time. */
+export function withVaultAsOf<T extends { id: string; note?: string }>(
+  sleeves: readonly T[],
+  asOf: string | null,
+): (T & { note?: string })[] {
+  const note = asOf?.trim() ? `as of ${asOf.trim()}` : undefined;
+  return sleeves.map((sleeve) => {
+    if (sleeve.id !== "flare-vault") return sleeve;
+    if (!note) {
+      const next = { ...sleeve };
+      delete next.note;
+      return next;
+    }
+    return { ...sleeve, note };
+  });
 }
 
 /** Reward fills are income with no cost. They are not lots and not buys. */
@@ -1116,7 +1179,11 @@ export function assembleNodePosition(input: {
     ledger,
     chart,
     quantity,
-    vaultLine: vaultUnknownLine(vaultShares, vaultRewardQuantity(input.fills, input.ticker)),
+    vaultLine: vaultUnknownLine(
+      vaultShares,
+      vaultRewardQuantity(input.fills, input.ticker),
+      latestVaultAsOf(input.fills),
+    ),
     unknownLine: unknownShares && xrp ? xrpAgenticUnknownLine(input.ticker, input.sleeves) : null,
     unknownShares,
     vaultShares,

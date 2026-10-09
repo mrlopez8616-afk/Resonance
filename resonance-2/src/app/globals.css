@@ -815,6 +815,12 @@ body {
   overflow: visible;
 }
 
+.public-lot-bars {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
 .child-role {
   margin: 0.15rem 0 0;
   max-width: 40rem;
@@ -2593,9 +2599,11 @@ body {
   }
 
   .node-detail .node-square,
-  .node-detail .node-square.is-live {
+  .node-detail .node-square.is-live,
+  .node-detail .node-square.is-home.is-parent.is-live {
     min-height: 0;
     aspect-ratio: auto;
+    grid-column: 1 / -1;
   }
 
   .lot-row,
