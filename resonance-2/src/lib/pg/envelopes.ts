@@ -291,6 +291,32 @@ function isTradeFill(fill: Fill): fill is Fill & { side: "buy" | "sell"; quantit
   return fill.kind !== "bet" && typeof fill.side === "string";
 }
 
+type TrackedFill = {
+  id: string | null;
+  source: string;
+  externalId: string;
+  payload: unknown;
+};
+
+/** Trade identity across seed:, venue:, and bare keys. Bets stay on external_id. */
+function fillOrderToken(payload: unknown, externalId: string): string | null {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const record = payload as Record<string, unknown>;
+    if (record.kind === "bet") return null;
+    if (typeof record.orderId === "string" && record.orderId.trim()) {
+      return record.orderId.trim().toLowerCase();
+    }
+  }
+  const lower = externalId.trim().toLowerCase();
+  const colon = lower.lastIndexOf(":");
+  const token = (colon >= 0 ? lower.slice(colon + 1) : lower).trim();
+  return token.length > 0 ? token : null;
+}
+
+function preferTracked(rows: readonly TrackedFill[], source: string): TrackedFill | undefined {
+  return rows.find((row) => row.source === source) ?? rows[0];
+}
+
 export async function loadFillsEnvelope(): Promise<FillsStoreEnvelope | null> {
   const [meta, rows, prints] = await Promise.all([
     readMeta("fills"),
@@ -328,42 +354,85 @@ export async function saveFillsEnvelope(
   options: SaveOptions = {},
 ): Promise<WriteCounts> {
   const dryRun = options.dryRun === true;
-  const existing = await sqlQuery<{ source: string; external_id: string; payload: unknown }>(
-    `SELECT source, external_id, payload FROM fills`,
+  const existing = await sqlQuery<{ id: string | number; source: string; external_id: string; payload: unknown }>(
+    `SELECT id, source, external_id, payload FROM fills`,
   );
-  // external_id is the fill's identity. source used to be part of the
-  // lookup, so a re-tag that changed venue (and therefore the derived
-  // source) inserted a second row for the same order. Match the stored
-  // external_id no matter which source it sits under, and rewrite that
-  // row — including source — instead of inserting another one.
-  const byExternalId = new Map<string, { source: string; payload: unknown }[]>();
+  // A fill's order can sit under seed:<id>, robinhood:<id>, or the bare id.
+  // Match any of those and rewrite that row. A second key for the same order
+  // must not insert another row.
+  const byExternalId = new Map<string, TrackedFill[]>();
+  const byOrder = new Map<string, TrackedFill[]>();
+  const detach = (row: TrackedFill) => {
+    const external = (byExternalId.get(row.externalId) ?? []).filter((item) => item !== row);
+    if (external.length === 0) byExternalId.delete(row.externalId);
+    else byExternalId.set(row.externalId, external);
+    const token = fillOrderToken(row.payload, row.externalId);
+    if (!token) return;
+    const group = (byOrder.get(token) ?? []).filter((item) => item !== row);
+    if (group.length === 0) byOrder.delete(token);
+    else byOrder.set(token, group);
+  };
+  const attach = (row: TrackedFill) => {
+    const external = byExternalId.get(row.externalId) ?? [];
+    external.push(row);
+    byExternalId.set(row.externalId, external);
+    const token = fillOrderToken(row.payload, row.externalId);
+    if (!token) return;
+    const group = byOrder.get(token) ?? [];
+    group.push(row);
+    byOrder.set(token, group);
+  };
+  const identityTaken = (source: string, externalId: string, self: TrackedFill) =>
+    (byExternalId.get(externalId) ?? []).some((row) => row !== self && row.source === source);
   for (const row of existing) {
-    const list = byExternalId.get(row.external_id) ?? [];
-    list.push({ source: row.source, payload: readJson(row.payload) });
-    byExternalId.set(row.external_id, list);
+    attach({
+      id: String(row.id),
+      source: row.source,
+      externalId: row.external_id,
+      payload: readJson(row.payload),
+    });
   }
   const counts = emptyCounts(envelope.fills.length);
-  const pending: { fill: Fill; source: string; externalId: string; previousSource: string | null }[] = [];
+  const pending: { fill: Fill; source: string; externalId: string; id: string | null; tracked: TrackedFill }[] = [];
 
   for (const fill of envelope.fills) {
     const source = fill.venue ?? "seed";
     const externalId = fillRowKey(fill).trim().toLowerCase();
-    const stored = byExternalId.get(externalId) ?? [];
-    const current = stored.find((row) => row.source === source) ?? stored[0];
+    const token = fill.kind === "bet" ? null : fill.orderId.trim().toLowerCase();
+    const exact = byExternalId.get(externalId) ?? [];
+    const current = preferTracked(exact, source) ?? (token ? preferTracked(byOrder.get(token) ?? [], source) : undefined);
     if (!current) {
+      const tracked: TrackedFill = { id: null, source, externalId, payload: fill };
+      attach(tracked);
       counts.inserted += 1;
-      pending.push({ fill, source, externalId, previousSource: null });
-      byExternalId.set(externalId, [{ source, payload: fill }]);
+      pending.push({ fill, source, externalId, id: null, tracked });
       continue;
     }
-    const samePayload = canonical(current.payload) === canonical(fill);
-    if (samePayload && current.source === source) counts.unchanged += 1;
-    else {
-      counts.updated += 1;
-      pending.push({ fill, source, externalId, previousSource: current.source });
-      current.source = source;
-      current.payload = fill;
+    let nextSource = source;
+    let nextExternalId = externalId;
+    if (identityTaken(nextSource, nextExternalId, current)) {
+      nextSource = current.source;
+      nextExternalId = current.externalId;
     }
+    const samePayload = canonical(current.payload) === canonical(fill);
+    if (samePayload && current.source === nextSource && current.externalId === nextExternalId) {
+      counts.unchanged += 1;
+      continue;
+    }
+    detach(current);
+    current.source = nextSource;
+    current.externalId = nextExternalId;
+    current.payload = fill;
+    attach(current);
+    const queued = pending.find((row) => row.tracked === current);
+    if (queued) {
+      queued.fill = fill;
+      queued.source = nextSource;
+      queued.externalId = nextExternalId;
+      continue;
+    }
+    counts.updated += 1;
+    pending.push({ fill, source: nextSource, externalId: nextExternalId, id: current.id, tracked: current });
   }
 
   if (dryRun) return counts;
@@ -385,7 +454,7 @@ export async function saveFillsEnvelope(
       row.fill.note ?? null,
       JSON.stringify(row.fill),
     ];
-    if (row.previousSource === null) {
+    if (row.id === null) {
       await sqlQuery(
         `INSERT INTO fills (
            source, external_id, filled_at, symbol, side, quantity, price, venue, sleeve,
@@ -412,6 +481,7 @@ export async function saveFillsEnvelope(
     await sqlQuery(
       `UPDATE fills SET
          source = $1,
+         external_id = $2,
          filled_at = $3,
          symbol = $4,
          side = $5,
@@ -423,9 +493,8 @@ export async function saveFillsEnvelope(
          log_only = $11,
          note = $12,
          payload = $13::jsonb
-       WHERE source = $14
-         AND external_id = $2`,
-      [...values, row.previousSource],
+       WHERE id = $14`,
+      [...values, row.id],
     );
   }
 

@@ -745,6 +745,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "014_cb_agentic_xrp",
         "015_dedupe_retagged_fills",
         "016_build_items",
+        "019_dedupe_fill_keys",
       ],
     );
     assert.equal(
