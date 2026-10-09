@@ -66,13 +66,15 @@ body {
 /* A lots book is taller than the viewport. Let that page grow so the chart
    sits under the headline and the rows stay in the page, not a nested scroller. */
 .operator-floor:has(.position-book),
-.operator-floor:has(.position-rollup) {
+.operator-floor:has(.position-rollup),
+.operator-floor:has(.system-map) {
   height: auto;
   min-height: 100dvh;
 }
 
 .operator-floor:has(.position-book) .operator-main,
-.operator-floor:has(.position-rollup) .operator-main {
+.operator-floor:has(.position-rollup) .operator-main,
+.operator-floor:has(.system-map) .operator-main {
   flex: none;
   overflow: visible;
 }
@@ -3032,4 +3034,328 @@ body {
 .shortcut-setup-body code {
   overflow-wrap: anywhere;
   font-size: 0.84em;
+}
+
+.system-map {
+  min-width: 0;
+}
+
+.system-lenses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.85rem 0 1rem;
+}
+
+.system-lenses a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.system-lenses a[aria-current="page"] {
+  border-color: var(--live);
+  color: var(--live);
+}
+
+.system-lenses a:focus-visible,
+.system-feedTargets a:focus-visible,
+.system-cardTitle a:focus-visible,
+.system-chips a:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.system-feed {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  margin: 0 0 0.9rem;
+}
+
+.system-feedNode,
+.system-feedTargets a,
+.system-step,
+.system-branch,
+.system-card,
+.system-source,
+.system-agent,
+.system-rule,
+.system-phase {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.system-feedNode {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.system-arrow {
+  display: block;
+  width: 1.1rem;
+  height: 1.35rem;
+  margin: 0 auto;
+  color: var(--muted);
+}
+
+.system-feedTargets {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.system-feedTargets a {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.75rem;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.system-caption,
+.system-detail,
+.system-role,
+.system-scope,
+.system-when,
+.system-meta {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.system-caption {
+  margin: 0.15rem 0 0;
+  text-align: center;
+}
+
+.system-cards,
+.system-stack {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.system-card,
+.system-source,
+.system-agent,
+.system-rule,
+.system-phase {
+  padding: 0.75rem 0.85rem 0.8rem;
+}
+
+.system-cardHead,
+.system-agentHead,
+.system-phaseHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.system-cardTitle,
+.system-agentHead h3,
+.system-source h3,
+.system-step h3,
+.system-branch h3,
+.system-rule h3,
+.system-phase h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.system-cardTitle a,
+.system-feedTargets a:hover,
+.system-chips a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.system-cardTitle a:hover,
+.system-chips a:hover,
+.system-feedTargets a:hover {
+  color: var(--live);
+}
+
+.system-chip {
+  flex: none;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.system-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.system-chips a,
+.system-chips span {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.system-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.system-flowItem {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.system-step,
+.system-branch {
+  padding: 0.7rem 0.85rem 0.75rem;
+}
+
+.system-step p,
+.system-branch p,
+.system-source p,
+.system-agent p,
+.system-rule p,
+.system-phase p {
+  margin: 0.28rem 0 0;
+  line-height: 1.4;
+}
+
+.system-branches {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.system-ruleNote {
+  max-width: 28rem;
+  margin: 0.85rem auto 0;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.system-kicker {
+  margin: 0 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.system-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.system-timeline > li {
+  position: relative;
+  padding-bottom: 0.7rem;
+}
+
+.system-timeline > li::before {
+  content: "";
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0;
+  left: 0.28rem;
+  width: 2px;
+  background: var(--border);
+}
+
+.system-timeline > li:last-child::before {
+  display: none;
+}
+
+.system-phase {
+  margin-left: 1.15rem;
+}
+
+@media (min-width: 720px) {
+  .system-feedTargets,
+  .system-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .system-feed {
+    align-items: center;
+  }
+
+  .system-feedNode,
+  .system-caption {
+    width: min(100%, 28rem);
+  }
+
+  .system-feedTargets {
+    width: min(100%, 36rem);
+  }
+}
+
+.system-home {
+  display: flex;
+  margin-top: 0.55rem;
+}
+
+.system-home article.node-square.is-home.is-parent.is-live {
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  grid-column: auto;
+}
+
+.system-homeLine {
+  margin: 0.28rem 0 0;
+  max-width: 16rem;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
 }

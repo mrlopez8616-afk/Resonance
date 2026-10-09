@@ -1,4 +1,5 @@
 import { ParentGrid } from "@/components/parent-grid";
+import { SystemHomeCard } from "@/components/system-map";
 import { OperatorShell } from "@/components/operator-shell";
 import { ThisWeek } from "@/components/this-week";
 import { getSession } from "@/lib/auth-session";
@@ -112,6 +113,7 @@ export default async function Home() {
         asOf={asOf.toISOString()}
         buildHome={buildHome}
       />
+      <SystemHomeCard />
     </OperatorShell>
   );
 }
