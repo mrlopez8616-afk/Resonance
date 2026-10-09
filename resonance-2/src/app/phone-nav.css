@@ -158,6 +158,7 @@
   }
 
   .phone-tab {
+    position: relative;
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
@@ -169,12 +170,29 @@
     padding: 0.2rem 0.05rem 0.15rem;
     border-radius: 0.65rem;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 650;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     line-height: 1.1;
     text-decoration: none;
     -webkit-tap-highlight-color: color-mix(in srgb, var(--text) 12%, transparent);
+  }
+
+  .phone-tab > span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .phone-tab-icon {
+    position: relative;
+    display: flex;
+  }
+
+  .phone-tab-icon .approval-count {
+    top: -0.2rem;
+    right: -0.45rem;
   }
 
   .phone-tab.is-active {

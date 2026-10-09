@@ -3,11 +3,12 @@ import { LockIcon } from "@/components/icons";
 import { MoodFloor, MoodLegend, MoodPreviewSync } from "@/components/mood-floor";
 import { OperatorToolbar } from "@/components/operator-toolbar";
 import { PhoneNav } from "@/components/phone-nav";
+import { countPendingApprovals } from "@/lib/approvals-store";
 import { getSession } from "@/lib/auth-session";
-import type { PublicModeClientStatus } from "@/lib/owner-pin";
 import { loadModeSwitchStatus } from "@/lib/owner-pin-store";
 import { loadPortfolioMood } from "@/lib/portfolio-mood-load";
 import { isPublicMode } from "@/lib/public-mode-server";
+import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 export async function OperatorShell({
   children,
@@ -27,14 +28,21 @@ export async function OperatorShell({
     ? { tone: mood.tone, changePct: mood.changePct, partial: mood.partial }
     : mood;
   const owner = session?.role === "owner";
-  let modeStatus: PublicModeClientStatus | null = null;
-  if (owner) {
-    try {
-      modeStatus = await loadModeSwitchStatus();
-    } catch {
-      modeStatus = { pinSet: false, lockedUntil: null, unavailable: true };
-    }
-  }
+  const [modeStatus, pendingApprovals] = await Promise.all([
+    owner
+      ? loadModeSwitchStatus().catch(() => ({
+          pinSet: false,
+          lockedUntil: null,
+          unavailable: true,
+        }))
+      : Promise.resolve(null),
+    pub
+      ? Promise.resolve(null)
+      : countPendingApprovals().catch((error: unknown) => {
+          if (!isStorageUnavailable(error)) throw error;
+          return null;
+        }),
+  ]);
   return (
     <MoodFloor initialMood={initialMood}>
       {pub ? (
@@ -45,7 +53,7 @@ export async function OperatorShell({
       <Suspense fallback={null}>
         <MoodPreviewSync />
       </Suspense>
-      <OperatorToolbar publicMode={pub} modeStatus={modeStatus} />
+      <OperatorToolbar publicMode={pub} modeStatus={modeStatus} pendingApprovals={pendingApprovals} />
       <div className="operator-canvas">
         <header className="operator-header">
           <h1 className="operator-title">RESONANCE 2.0</h1>

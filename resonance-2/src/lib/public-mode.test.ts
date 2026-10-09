@@ -377,6 +377,9 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     "/fights/main-card",
     "/fights/prelims",
     "/fights/contender-series",
+    "/n/approvals",
+    "/n/approvals/pending",
+    "/n/approvals/done",
   ].map((path) => ({ path, html: hidden }));
   return [...visible, ...blocked];
 }
@@ -489,6 +492,8 @@ describe("public render scan", () => {
       "/log/page.tsx",
       "/n/build/page.tsx",
       "/n/build/[section]/page.tsx",
+      "/n/approvals/page.tsx",
+      "/n/approvals/[view]/page.tsx",
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
@@ -511,6 +516,8 @@ describe("public render scan", () => {
       "/n/build",
       "/n/build/platform",
       "/n/lessons",
+      "/n/approvals",
+      "/n/approvals/pending",
       "/n/system",
       "/n/system/live",
       "/calendar",
@@ -573,6 +580,11 @@ describe("public render scan", () => {
       "/api/spot-price",
       "/api/settings/fitness-token",
       "/api/settings/owner-pin",
+      "/n/approvals",
+      "/n/approvals/pending",
+      "/n/approvals/done",
+      "/api/approvals",
+      "/api/approvals/appr_example/decision",
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
