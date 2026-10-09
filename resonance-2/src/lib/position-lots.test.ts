@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { isValidElement, type ReactNode } from "react";
 import { describe, it } from "node:test";
-import { PositionBook, PositionChartView, LotsTable, PositionRollupView } from "@/components/position-book";
+import { PositionBook, LotsTable, PositionRollupView } from "@/components/position-book";
+import { barsFromClosedLots, lotBarPopoverLines } from "@/lib/lot-bars";
 import { formatTotalUnits, totalSleeveQuantity } from "@/lib/live-face";
 import { bookTotals, positionBookTotals } from "./position-lots";
 import {
   assembleNodePosition,
   buildLotsLedger,
-  buildPositionChart,
   cbAgenticLotLines,
   coinbaseAgenticUnknownLine,
   displayLotBooks,
@@ -127,7 +131,7 @@ describe("FIFO lots", () => {
     assert.equal(ledger.status, "matched");
     assert.equal(ledger.openShares, "5");
     assert.equal(ledger.costUsd, 560);
-    assert.equal(vaultUnknownLine("28281"), "Flare / Xaman vault · manual · entry unknown");
+    assert.equal(vaultUnknownLine("28281"), "Flare / Xaman vault · manual · as of Oct 9 · entry unknown");
     assert.equal(vaultUnknownLine("0"), null);
     assert.equal(coinbaseAgenticUnknownLine("10"), "Coinbase Agentic · 10 · entry unknown");
     assert.equal(coinbaseAgenticUnknownLine("0"), null);
@@ -166,7 +170,7 @@ describe("FIFO lots", () => {
     assert.equal(position.ledger.status, "matched");
     assert.equal(position.ledger.costUsd, 72.24);
     assert.equal(position.unknownLine, "Coinbase Agentic · 10 · entry unknown");
-    assert.equal(position.vaultLine, "Flare / Xaman vault · manual · entry unknown");
+    assert.equal(position.vaultLine, "Flare / Xaman vault · manual · as of Oct 9 · entry unknown");
     const totals = positionBookTotals({
       ledger: position.ledger,
       livePrice: 2,
@@ -211,7 +215,7 @@ describe("FIFO lots", () => {
     assert.equal(JSON.stringify(rollup).includes("628"), false);
   });
 
-  it("puts markers on fill days and withholds a chart from ETN and HUBB", () => {
+  it("keeps an open book on lot bars and leaves a flat book's sold lots for the bar chart", () => {
     const ledger = buildLotsLedger({
       fills: sold,
       ticker: "NVDA",
@@ -219,35 +223,55 @@ describe("FIFO lots", () => {
       quantity: "5",
       livePrice: 130,
     });
-    const closes = [
-      { day: "2026-10-01", close: 100 },
-      { day: "2026-10-02", close: 110 },
-      { day: "2026-10-06", close: 120 },
-      { day: "2026-10-08", close: 130 },
-    ];
-    const chart = buildPositionChart({
+    assert.equal(ledger.openLots.length > 0, true);
+    assert.equal(ledger.closedLots.length, 1);
+    assert.equal(ledger.closedLots[0]?.soldDay, "2026-10-06");
+    assert.equal(ledger.closedLots[0]?.exitUsd !== null, true);
+    const text = collectText(
+      PositionBook({
+        ledger,
+        quantity: "5",
+        livePrice: 130,
+        vaultLine: null,
+        ticker: "NVDA",
+      }),
+    ).join(" ");
+    assert.match(text, /First buy/);
+    assert.equal(text.includes("Sold"), false);
+    assert.equal(text.includes("Position over time"), false);
+    assert.equal(text.includes("position-mark"), false);
+    const flat = buildLotsLedger({
+      fills: [...sold, fill({ time: "2026-10-07T15:00:00Z", side: "sell", quantity: "5", price: "140" })],
       ticker: "NVDA",
-      ledger,
-      closes,
-      quantity: "5",
-      today: "2026-10-08",
+      sleeve: "rh-agentic",
+      quantity: "0",
     });
-    assert.equal(chart?.mode, "matched");
-    assert.deepEqual(
-      chart?.markers.map((marker) => `${marker.day}:${marker.side}`),
-      ["2026-10-01:buy", "2026-10-02:buy", "2026-10-03:buy", "2026-10-06:sell"],
-    );
-    assert.equal(
-      buildPositionChart({ ticker: "ETN", ledger, closes, quantity: "5", today: "2026-10-08" }),
-      null,
-    );
-    assert.equal(
-      buildPositionChart({ ticker: "HUBB", ledger, closes, quantity: "5", today: "2026-10-08" }),
-      null,
-    );
+    assert.equal(flat.status, "matched");
+    assert.equal(flat.openLots.length, 0);
+    assert.equal(flat.closedLots.every((lot) => lot.exitUsd !== null && lot.soldDay !== null), true);
+    const flatText = collectText(
+      PositionBook({
+        ledger: flat,
+        quantity: "0",
+        livePrice: null,
+        vaultLine: null,
+        ticker: "NVDA",
+      }),
+    ).join(" ");
+    assert.match(flatText, /First buy/);
+    assert.match(flatText, /Sold/);
+    assert.match(flatText, /#2/);
+    assert.equal(flatText.includes("Position over time"), false);
+    assert.equal(collectClass(PositionBook({
+      ledger,
+      quantity: "5",
+      livePrice: 130,
+      vaultLine: null,
+      ticker: "NVDA",
+    }), "position-value"), 0);
   });
 
-  it("falls back to current holdings when the entry is unknown", () => {
+  it("names unknown shares instead of drawing a holdings line", () => {
     const ledger = buildLotsLedger({
       fills: [],
       ticker: "SUI",
@@ -256,22 +280,18 @@ describe("FIFO lots", () => {
       livePrice: 2,
     });
     assert.equal(ledger.status, "short");
-    const closes = Array.from({ length: 5 }, (_, index) => ({
-      day: `2026-10-0${index + 4}`,
-      close: 2,
-    }));
-    const chart = buildPositionChart({
-      ticker: "SUI",
-      ledger,
-      closes,
-      quantity: "33.7",
-      today: "2026-10-08",
-    });
-    assert.equal(chart?.mode, "holdings");
-    assert.equal(chart?.caption, "Value at current holdings · entry unknown");
-    assert.equal(chart?.entry, null);
-    assert.deepEqual(chart?.markers, []);
-    assert.equal(chart?.points.at(-1)?.costUsd, null);
+    const text = collectText(
+      PositionBook({
+        ledger,
+        quantity: "33.7",
+        livePrice: 2,
+        vaultLine: null,
+        ticker: "SUI",
+      }),
+    ).join(" ");
+    assert.match(text, /33\.7 SUI entry unknown, not charted/);
+    assert.equal(text.includes("Value at current holdings"), false);
+    assert.equal(text.includes("Position over time"), false);
   });
 
   it("rolls a parent up from matched cost only and flags a partial book", () => {
@@ -335,7 +355,6 @@ describe("FIFO lots", () => {
     assert.equal(position.ledger.costUsd, null);
     const book = PositionBook({
       ledger: position.ledger,
-      chart: position.chart,
       quantity: position.quantity,
       livePrice: 1.39,
       vaultLine: position.vaultLine,
@@ -347,12 +366,14 @@ describe("FIFO lots", () => {
     assert.match(text, /Coinbase Agentic · entry unknown/);
     assert.match(text, /10 shares/);
     assert.match(text, /492\.828\s+shares/);
-    assert.match(text, /Flare \/ Xaman vault · manual · entry unknown/);
+    assert.match(text, /Flare \/ Xaman vault · manual · as of Oct 9 · entry unknown/);
     assert.equal(text.includes("$0.00"), false);
     assert.equal(text.includes("Total · partial 0"), false);
-    const caption = "Value at current holdings · entry unknown";
+    const caption = "492.828 shares entry unknown, not charted · 10 shares entry unknown, not charted · 28281 shares entry unknown, not charted";
     assert.equal(text.split(caption).length - 1, 1);
     assert.equal(collectClass(book, "position-caption"), 1);
+    assert.equal(text.includes("Value at current holdings"), false);
+    assert.equal(text.includes("Position over time"), false);
 
     const stock = assembleNodePosition({
       fills: [],
@@ -366,7 +387,6 @@ describe("FIFO lots", () => {
     const stockText = collectText(
       PositionBook({
         ledger: stock.ledger,
-        chart: stock.chart,
         quantity: stock.quantity,
         livePrice: 10,
         vaultLine: null,
@@ -374,7 +394,7 @@ describe("FIFO lots", () => {
     ).join(" ");
     assert.match(stockText, /Total · partial · 4\.000 · ~\$40\.00 · entry unknown/);
     assert.equal(stockText.includes("$0.00"), false);
-    assert.equal(stockText.split(caption).length - 1, 1);
+    assert.equal(stockText.split("4 shares entry unknown, not charted").length - 1, 1);
 
     const sui = buildLotsLedger({
       fills: [
@@ -403,7 +423,6 @@ describe("FIFO lots", () => {
     const suiText = collectText(
       PositionBook({
         ledger: sui,
-        chart: null,
         quantity: "33.7",
         livePrice: 1.058,
         vaultLine: null,
@@ -499,7 +518,7 @@ describe("FIFO lots", () => {
           vaultShares: "28281",
         }),
         liveLabel: null,
-        vaultLine: "Flare / Xaman vault · manual · entry unknown",
+        vaultLine: "Flare / Xaman vault · manual · as of Oct 9 · entry unknown",
         agenticLines: xrp,
       }),
     ).join(" ");
@@ -554,7 +573,6 @@ describe("FIFO lots", () => {
     const suiText = collectText(
       PositionBook({
         ledger: sui.ledger,
-        chart: null,
         quantity: sui.quantity,
         livePrice: 1.058,
         vaultLine: sui.vaultLine,
@@ -604,7 +622,6 @@ describe("FIFO lots", () => {
     const xrpText = collectText(
       PositionBook({
         ledger: xrp.ledger,
-        chart: null,
         quantity: xrp.quantity,
         livePrice: 1.4,
         vaultLine: xrp.vaultLine,
@@ -620,7 +637,7 @@ describe("FIFO lots", () => {
     assert.match(xrpText, /28,342\.601/);
     assert.match(xrpText, /RH Agentic/);
     assert.match(xrpText, /Coinbase Agentic/);
-    assert.match(xrpText, /Flare \/ Xaman vault · manual · entry unknown/);
+    assert.match(xrpText, /Flare \/ Xaman vault · manual · as of Oct 9 · entry unknown/);
     assert.match(xrpText, /Total · partial/);
     const suiRollup = rollupHoldingBooks({
       tickers: ["SUI"],
@@ -642,6 +659,10 @@ function collectPaths(node: ReactNode, found: { className: string; d: string }[]
     return found;
   }
   if (!isValidElement(node)) return found;
+  if (typeof node.type === "function") {
+    collectPaths((node.type as (props: unknown) => ReactNode)(node.props), found);
+    return found;
+  }
   const props = node.props as { children?: ReactNode; className?: string; d?: string };
   if (node.type === "path" && typeof props.d === "string") {
     found.push({ className: String(props.className ?? ""), d: props.d });
@@ -687,7 +708,7 @@ function collectText(node: ReactNode, found: string[] = []): string[] {
 }
 
 describe("position chart geometry", () => {
-  it("closes the area on the bottom edge and lists the open lots", () => {
+  it("lists the open lots and does not draw a line with dots", () => {
     const ledger = buildLotsLedger({
       fills: sold,
       ticker: "NVDA",
@@ -695,25 +716,20 @@ describe("position chart geometry", () => {
       quantity: "5",
       livePrice: 130,
     });
-    const chart = buildPositionChart({
-      ticker: "NVDA",
+    const book = PositionBook({
       ledger,
-      closes: [
-        { day: "2026-10-01", close: 100 },
-        { day: "2026-10-08", close: 130 },
-      ],
       quantity: "5",
-      today: "2026-10-08",
+      livePrice: 130,
+      vaultLine: null,
+      ticker: "NVDA",
     });
-    assert.ok(chart);
-    const paths = collectPaths(PositionChartView({ chart, totals: bookTotals(ledger, 130, "5") }));
-    const area = paths.find((path) => path.className.includes("position-area"));
-    const line = paths.find((path) => path.className.includes("position-value"));
-    assert.ok(area);
-    assert.ok(line);
-    assert.equal(line.d.includes("Z"), false);
-    assert.match(area.d, /L[0-9.]+ 168\.00 L[0-9.]+ 168\.00 Z$/);
-    const text = collectText(
+    const paths = collectPaths(book);
+    assert.equal(paths.some((path) => path.className.includes("position-area")), false);
+    assert.equal(paths.some((path) => path.className.includes("position-value")), false);
+    const text = collectText(book).join(" ");
+    assert.match(text, /First buy/);
+    assert.equal(text.includes("Position over time"), false);
+    const table = collectText(
       LotsTable({
         ledger,
         totals: bookTotals(ledger, 130, "5"),
@@ -721,8 +737,219 @@ describe("position chart geometry", () => {
         vaultLine: vaultUnknownLine("28281"),
       }),
     ).join(" ");
-    assert.match(text, /1 of 2/);
-    assert.match(text, /Flare \/ Xaman vault/);
-    assert.equal(text.includes("fills don't match holdings"), false);
+    assert.match(table, /1 of 2/);
+    assert.match(table, /Flare \/ Xaman vault/);
+    assert.equal(table.includes("fills don't match holdings"), false);
   });
+});
+
+const fixtureDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+
+function fixtureJson(name: string): { fills?: LedgerFill[]; sleeves?: { id: string; quantity: string }[] } {
+  return JSON.parse(readFileSync(path.join(fixtureDir, name), "utf8"));
+}
+
+describe("SUI portfolio transfer lots", () => {
+  const liveFills = fixtureJson("fills-before.json").fills ?? [];
+  const suiBefore = fixtureJson("sui-sleeves-before.json").sleeves ?? [];
+  const xrpSleeves = fixtureJson("xrp-sleeves-before.json").sleeves ?? [];
+  const transfer: LedgerFill = {
+    kind: "transfer",
+    time: "2026-10-09T16:59:00-05:00",
+    symbol: "SUI",
+    quantity: "1.2",
+    fromSleeve: "cb-agentic",
+    toSleeve: "coinbase",
+    result: "filled",
+  };
+  const suiAfter = [
+    { id: "rh-agentic", quantity: "0" },
+    { id: "coinbase", quantity: "34.9" },
+    { id: "cb-agentic", quantity: "0" },
+  ];
+
+  function positioned(
+    ticker: string,
+    fills: readonly LedgerFill[],
+    sleeves: readonly { id: string; quantity: string }[],
+  ) {
+    const position = assembleNodePosition({
+      fills,
+      ticker,
+      sleeves,
+      priceUsd: null,
+      closes: [],
+      today: "2026-10-09",
+    });
+    assert.ok(position);
+    const totals = positionBookTotals({
+      ledger: position.ledger,
+      livePrice: null,
+      sleeveShares: position.quantity,
+      unknownShares: position.unknownShares,
+      vaultShares: position.vaultShares,
+      holdingUnits: position.holdingUnits,
+      addedCostUsd: position.addedCostUsd,
+      unexplained: position.unexplained,
+    });
+    return { position, totals };
+  }
+
+  it("keeps the 1.2 lot's date and cost on coinbase with no realized P/L", () => {
+    const before = positioned("SUI", liveFills, suiBefore);
+    const after = positioned("SUI", [...liveFills, transfer], suiAfter);
+    assert.equal(before.totals.costUsd, 28.3);
+    assert.equal(after.totals.costUsd, 28.3);
+    assert.equal(after.position.holdingUnits, 34.9);
+    assert.equal(after.totals.partial, false);
+    assert.deepEqual(after.position.agenticLines, []);
+    const coinbase = after.position.books.find((book) => book.id === "coinbase");
+    assert.ok(coinbase);
+    assert.equal(coinbase.ledger.status, "matched");
+    assert.equal(coinbase.quantity, "34.9");
+    assert.equal(coinbase.ledger.openShares, "34.9");
+    assert.equal(coinbase.ledger.costUsd, 28.3);
+    const realized = coinbase.ledger.closedLots.reduce((sum, lot) => sum + lot.realizedPnlUsd, 0);
+    assert.equal(realized, 0);
+    assert.deepEqual(coinbase.ledger.closedLots, []);
+    assert.deepEqual(
+      coinbase.ledger.openLots.map((lot) => `${lot.sharesLabel} @ ${lot.price}`),
+      ["1.2 @ 1.0601340274", "16.9 @ 0.8019", "16.8 @ 0.8020710385"],
+    );
+    assert.equal(
+      after.position.books.some((book) => book.id === "cb-agentic"),
+      false,
+    );
+  });
+
+  it("sells the September lots before the transferred October lot", () => {
+    const sold = buildLotsLedger({
+      fills: [
+        ...liveFills,
+        transfer,
+        {
+          time: "2026-10-09T18:00:00-05:00",
+          symbol: "SUI",
+          side: "sell",
+          quantity: "16.8",
+          price: "1",
+          sleeve: "coinbase",
+          result: "filled",
+        },
+      ],
+      ticker: "SUI",
+      sleeve: "coinbase",
+      quantity: "18.1",
+    });
+    assert.equal(sold.status, "matched");
+    assert.equal(sold.closedLots[0]?.price, "0.8020710385");
+    assert.equal(sold.closedLots[0]?.originalQty, "16.8");
+    assert.deepEqual(
+      sold.openLots.map((lot) => lot.price),
+      ["1.0601340274", "0.8019"],
+    );
+  });
+
+  it("mismatches a transfer the source lots cannot cover", () => {
+    const ledger = buildLotsLedger({
+      fills: [
+        {
+          time: "2026-10-09T15:21:33-05:00",
+          symbol: "SUI",
+          side: "buy",
+          quantity: "1.2",
+          price: "1.0601340274",
+          sleeve: "cb-agentic",
+          result: "filled",
+        },
+        {
+          kind: "transfer",
+          time: "2026-10-09T16:59:00-05:00",
+          symbol: "SUI",
+          quantity: "2",
+          fromSleeve: "cb-agentic",
+          toSleeve: "coinbase",
+          result: "filled",
+        },
+      ],
+      ticker: "SUI",
+      sleeve: "coinbase",
+      quantity: "2",
+    });
+    assert.equal(ledger.status, "over");
+    assert.equal(ledger.note, "fills don't match holdings");
+  });
+
+  it("leaves the XRP position identical to the pre-transfer book", () => {
+    const before = positioned("XRP", liveFills, xrpSleeves);
+    const after = positioned("XRP", [...liveFills, transfer], xrpSleeves);
+    assert.deepEqual(after, before);
+    const digest = createHash("sha256")
+      .update(JSON.stringify({ position: before.position, totals: before.totals }))
+      .digest("hex");
+    assert.equal(digest, "5bcfebe1c6929825d2b7b90485dc19b09c95c6a9ffe31b557bc80937856bde15");
+  });
+});
+
+describe("retired books", () => {
+  const liveFills = fixtureJson("fills-before.json").fills ?? [];
+
+  for (const ticker of ["ETN", "HUBB"] as const) {
+    it(`charts ${ticker} final lots from the fills and skips a line`, () => {
+      const position = assembleNodePosition({
+        fills: liveFills,
+        ticker,
+        sleeves: [{ id: "rh-agentic", quantity: "0" }],
+        priceUsd: null,
+        closes: [],
+        today: "2026-10-09",
+      });
+      assert.ok(position);
+      assert.equal(position.quantity, "0");
+      assert.equal(position.ledger.openLots.length, 0);
+      assert.equal(position.ledger.closedLots.length > 0, true);
+      assert.equal(position.ledger.closedLots.every((lot) => lot.exitUsd !== null), true);
+      const text = collectText(
+        PositionBook({
+          ledger: position.ledger,
+          quantity: "0",
+          livePrice: null,
+          vaultLine: null,
+          ticker,
+        }),
+      ).join(" ");
+      assert.match(text, /First buy/);
+      assert.match(text, /Sold/);
+      assert.match(text, /bought /);
+      assert.match(text, /sold /);
+      assert.match(text, /entry /);
+      assert.match(text, /exit /);
+      assert.equal(text.includes("Position over time"), false);
+      const bars = barsFromClosedLots(
+        position.ledger.closedLots.flatMap((lot) => {
+          const entry = Number(lot.price);
+          if (lot.exitUsd === null || lot.soldDay === null || !(entry > 0)) return [];
+          return [
+            {
+              time: lot.time,
+              day: lot.day,
+              soldDay: lot.soldDay,
+              originalQty: lot.originalQty,
+              price: lot.price,
+              entryUsd: entry,
+              exitUsd: lot.exitUsd,
+              realizedPnlUsd: lot.realizedPnlUsd,
+              realizedPct: lot.realizedPct,
+            },
+          ];
+        }),
+        true,
+      );
+      assert.equal(bars.length > 0, true);
+      assert.equal(bars[0]?.first, true);
+      const hidden = lotBarPopoverLines(bars[0]!, true).join(" ");
+      assert.match(hidden, /%/);
+      assert.equal(hidden.includes("$"), false);
+    });
+  }
 });

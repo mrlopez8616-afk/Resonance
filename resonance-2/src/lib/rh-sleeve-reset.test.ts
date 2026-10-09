@@ -83,6 +83,7 @@ describe("rh-agentic sleeve reset", { concurrency: false }, () => {
       [
         ...EXPECTED_ROWS.map((row) => [...row]),
         ["XRP", "cb-agentic", "10"],
+        ["XRP", "flare-vault", "28287"],
       ].sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1])),
     );
 

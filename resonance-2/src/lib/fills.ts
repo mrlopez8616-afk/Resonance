@@ -25,7 +25,7 @@ export function overlayStoredFillFields(
 ): unknown {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
   const fill = payload as Record<string, unknown>;
-  if (fill.kind === "bet") return payload;
+  if (fill.kind === "bet" || fill.kind === "transfer" || fill.kind === "reward") return payload;
   const next = { ...fill };
   const sleeve = stored.sleeve?.trim() ?? "";
   const venue = stored.venue?.trim() ?? "";

@@ -66,6 +66,26 @@ describe("calendar writers", () => {
     assert.equal(again.title, body.title);
   });
 
+  it("titles an internal transfer without a trade side", () => {
+    const body = capitalCalendarBody({
+      kind: "transfer",
+      time: "2026-10-09T16:59:00-05:00",
+      symbol: "SUI",
+      quantity: "1.2",
+      venue: "coinbase",
+      fromSleeve: "cb-agentic",
+      toSleeve: "coinbase",
+      orderId: "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59",
+      idempotencyKey: "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+      result: "filled",
+      note: "Coinbase portfolio transfer Agentic d757d013 to Default 5aba0d3b. Not a trade.",
+    });
+    assert.equal(body.title, "SUI transfer 1.2");
+    assert.equal(body.note, "coinbase · cb-agentic → coinbase");
+    assert.equal(body.lane, "capital");
+    assert.doesNotThrow(() => parseCalendarEvent(body));
+  });
+
   it("posts one weekday Daily Brief id and refuses Saturday", () => {
     const postedAt = new Date("2026-09-25T13:00:00-05:00");
     const body = dailyBriefCalendarBody("2026-09-25", {

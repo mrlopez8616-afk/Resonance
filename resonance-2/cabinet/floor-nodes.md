@@ -15,7 +15,7 @@ Catalog (seed order): `src/data/floor-nodes.ts`. Hidden ids: `localStorage` key 
 
 ## What delete does **not** touch
 
-- `src/data/xrp-sleeves.ts` / Flare vault `28281` (founder constant; no Coinbase sleeve)
+- `src/data/xrp-sleeves.ts` / Flare vault `28287` as of Oct 9 (founder constant; no Coinbase sleeve)
 - `src/data/sui-sleeves.ts` / RH Agentic `0` (sold) + Coinbase `33.7`
 - `src/data/pwr-sleeves.ts` / RH Agentic `0.003917` shares
 - `src/data/etn-sleeves.ts` / RH Agentic `0.005844` shares

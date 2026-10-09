@@ -1,16 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
-import { FillIngestError, parseFillEvent } from "./fill-event";
+import { FillIngestError, parseFillEvent, type NormalizedTradeEvent } from "./fill-event";
 import {
   applyFillToSleevePrints,
   applyQuantityDelta,
+  applyTransferToSleevePrints,
   mergeSleeveBook,
   sanitizeSleevePrints,
 } from "./sleeve-apply";
 
-function event(overrides: Record<string, unknown> = {}) {
-  return parseFillEvent({
+function event(overrides: Record<string, unknown> = {}): NormalizedTradeEvent {
+  const parsed = parseFillEvent({
     venue: "robinhood",
     orderId: "order-1",
     ticker: "SUI",
@@ -21,6 +22,10 @@ function event(overrides: Record<string, unknown> = {}) {
     filledAt: "2026-09-21T08:30:00-05:00",
     ...overrides,
   });
+  if (parsed.kind === "transfer" || parsed.kind === "reward") {
+    throw new Error("expected a trade fill");
+  }
+  return parsed;
 }
 
 describe("sleeve apply", () => {
@@ -101,7 +106,7 @@ describe("sleeve apply", () => {
     const merged = mergeSleeveBook("XRP", result.prints, XRP_SLEEVES);
     assert.equal(merged.find((row) => row.id === "cb-agentic")?.quantity, "11");
     assert.equal(merged.find((row) => row.id === "rh-agentic")?.quantity, "51.601");
-    assert.equal(merged.find((row) => row.id === "flare-vault")?.quantity, "28281");
+    assert.equal(merged.find((row) => row.id === "flare-vault")?.quantity, "28287");
     assert.equal(merged.some((row) => row.id === "coinbase"), false);
   });
 
@@ -448,7 +453,7 @@ describe("sleeve apply", () => {
     );
     const vault = merged.find((row) => row.id === "flare-vault");
     const agentic = merged.find((row) => row.id === "rh-agentic");
-    assert.equal(vault?.quantity, "28281");
+    assert.equal(vault?.quantity, "28287");
     assert.equal(vault?.manual, true);
     assert.equal(agentic?.quantity, "60");
 
@@ -458,5 +463,52 @@ describe("sleeve apply", () => {
     assert.equal(cleaned.XRP?.["flare-vault"], undefined);
     assert.equal(cleaned.XRP?.["rh-main"], undefined);
     assert.equal(cleaned.XRP?.["rh-agentic"], "51.601");
+  });
+
+  it("moves 1.2 SUI between sleeves and refuses a short or manual source", () => {
+    const parsed = parseFillEvent({
+      kind: "transfer",
+      venue: "coinbase",
+      orderId: "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59",
+      idempotencyKey: "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+      ticker: "SUI",
+      quantity: "1.2",
+      fromSleeve: "cb-agentic",
+      toSleeve: "coinbase",
+      filledAt: "2026-10-09T16:59:00-05:00",
+    });
+    assert.equal(parsed.kind, "transfer");
+    if (parsed.kind !== "transfer") return;
+    const moved = applyTransferToSleevePrints(
+      { SUI: { coinbase: "33.7", "cb-agentic": "1.2" } },
+      parsed,
+    );
+    assert.equal(moved.applied, true);
+    assert.equal(moved.prints.SUI?.coinbase, "34.9");
+    assert.equal(moved.prints.SUI?.["cb-agentic"], "0");
+    assert.equal(moved.fromQuantity, "0");
+    assert.equal(moved.toQuantity, "34.9");
+
+    assert.throws(
+      () =>
+        applyTransferToSleevePrints(
+          { SUI: { coinbase: "33.7", "cb-agentic": "1.2" } },
+          { ...parsed, qty: "1.3" },
+        ),
+      (error: unknown) => error instanceof FillIngestError && error.status === 409,
+    );
+    assert.throws(
+      () =>
+        applyTransferToSleevePrints(
+          {},
+          {
+            ...parsed,
+            ticker: "XRP",
+            fromSleeve: "flare-vault" as typeof parsed.fromSleeve,
+            toSleeve: "cb-agentic",
+          },
+        ),
+      /flare-vault|manual/,
+    );
   });
 });

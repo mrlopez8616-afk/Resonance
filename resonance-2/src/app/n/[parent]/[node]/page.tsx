@@ -31,9 +31,9 @@ import { nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
 import { loadPublicFloor } from "@/lib/public-load";
-import { isPublicMode } from "@/lib/public-mode-server";
 import { positionCostFromFills } from "@/lib/position-cost";
 import { assembleNodePosition, displayLotBooks } from "@/lib/position-lots";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { loadCryptoCloses, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
@@ -53,6 +53,11 @@ export async function generateMetadata({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
+  const retiredName = retiredEquityTicker(parentId, nodeId);
+  if (retiredName) {
+    const parent = parentById(parentId);
+    return { title: `${retiredName} · ${parent?.label ?? "AI Stocks"} · Resonance 2.0` };
+  }
   const retired = retiredAiNodeHref(parentId, nodeId) ?? retiredCryptoNodeHref(parentId, nodeId);
   if (retired) redirect(retired);
   if (parentId === "fitness") {
@@ -84,6 +89,8 @@ export default async function NodeDetailPage({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
+  const retiredName = retiredEquityTicker(parentId, nodeId);
+  if (retiredName) return retiredEquityPage(retiredName);
   const retired = retiredAiNodeHref(parentId, nodeId) ?? retiredCryptoNodeHref(parentId, nodeId);
   if (retired) redirect(retired);
   const legacy = legacyParentHref(parentId, nodeId);
@@ -247,7 +254,8 @@ export default async function NodeDetailPage({
           spark: priceSpark(series),
           role: aiStockRole(ticker),
         };
-    const showBook = Boolean(quantity);
+    const hasFills = book.fills.some((fill) => fill.symbol.trim().toUpperCase() === ticker);
+    const showBook = Boolean(quantity) || hasFills;
     const pageModel: ChildCardModel = showBook
       ? { ...model, spark: null, role: null }
       : model;
@@ -261,7 +269,7 @@ export default async function NodeDetailPage({
         </Link>
         <div className="child-page">
           <ChildValueCard model={pageModel} wide />
-          {quantity ? (
+          {showBook ? (
             <NodePosition
               fills={book.fills}
               ticker={ticker}
@@ -331,7 +339,7 @@ export default async function NodeDetailPage({
   );
 }
 
-function NodePosition({
+async function NodePosition({
   fills,
   ticker,
   sleeves,
@@ -347,6 +355,7 @@ function NodePosition({
   vaultQuantity?: string | null;
 }) {
   const today = yahooSessionDay(Date.now() / 1000) ?? "";
+  const publicMode = await isPublicMode();
   const position = assembleNodePosition({
     fills,
     ticker,
@@ -360,7 +369,6 @@ function NodePosition({
   return (
     <PositionBook
       ledger={position.ledger}
-      chart={position.chart}
       quantity={position.quantity}
       livePrice={priceUsd}
       vaultLine={position.vaultLine}
@@ -371,6 +379,39 @@ function NodePosition({
       holdingUnits={position.holdingUnits}
       addedCostUsd={position.addedCostUsd}
       unexplained={position.unexplained}
+      ticker={ticker}
+      publicMode={publicMode}
     />
+  );
+}
+
+function retiredEquityTicker(parentId: string, nodeId: string): "ETN" | "HUBB" | null {
+  if (parentId !== "ai-stocks") return null;
+  if (nodeId === "etn") return "ETN";
+  if (nodeId === "hubb") return "HUBB";
+  return null;
+}
+
+async function retiredEquityPage(ticker: "ETN" | "HUBB") {
+  const parent = parentById("ai-stocks");
+  if (!parent) notFound();
+  const [floor, book] = await Promise.all([loadOperatorFloor(), loadOperatorFills()]);
+  const sleeves = sleevesFor(floor, ticker) ?? [];
+  return (
+    <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
+      <Link href={`/n/${parent.id}`} className="calendar-back">
+        {parent.label}
+      </Link>
+      <div className="child-page">
+        <p className="child-role">{ticker} · retired</p>
+        <NodePosition
+          fills={book.fills}
+          ticker={ticker}
+          sleeves={sleeves}
+          priceUsd={null}
+          closes={[]}
+        />
+      </div>
+    </OperatorShell>
   );
 }

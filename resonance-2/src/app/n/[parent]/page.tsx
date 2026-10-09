@@ -12,7 +12,6 @@ import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadPublicFloor } from "@/lib/public-load";
 import { publicRecordLabel } from "@/lib/public-mode";
-import { isPublicMode } from "@/lib/public-mode-server";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessCards } from "@/lib/fitness-store";
@@ -23,6 +22,7 @@ import { CRYPTO_HOME_TICKERS, nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { rollupHoldingBooks } from "@/lib/position-lots";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { loadCryptoCloses, loadCryptoHistory, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
@@ -218,6 +218,8 @@ export default async function ParentNodePage({
       />
       {childParent && book && dated ? (
         <PositionRollupView
+          parentId={parent.id}
+          publicMode={await isPublicMode()}
           rollup={rollupHoldingBooks({
             tickers: parent.id === "crypto" ? CRYPTO_HOME_TICKERS : AI_STOCK_TICKERS,
             fills: book.fills,

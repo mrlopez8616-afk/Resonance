@@ -2,41 +2,9 @@ import Link from "next/link";
 import { fillRowKey, formatFillTime } from "@/lib/fills";
 import type { BetFill, Fill } from "@/data/fills";
 import { betStatusLabel, formatUsd } from "@/lib/bets";
+import { Field, RewardFillCard, TransferFillCard } from "@/components/transfer-fill-card";
 
-function Field({
-  label,
-  value,
-  tone,
-  wrap = "normal",
-}: {
-  label: string;
-  value: string;
-  tone?: "buy" | "sell" | "ok";
-  wrap?: "normal" | "id";
-}) {
-  const toneClass =
-    tone === "buy"
-      ? "text-[color:var(--buy)]"
-      : tone === "sell"
-        ? "text-[color:var(--sell)]"
-        : tone === "ok"
-          ? "text-[color:var(--ok)]"
-          : "text-[color:var(--text)]";
-  const wrapClass = wrap === "id" ? "break-all" : "break-words";
-
-  return (
-    <div className="grid grid-cols-[4.75rem_minmax(0,1fr)] items-baseline gap-x-3 border-t border-[color:var(--border)] py-2.5 first:border-t-0 first:pt-0 sm:grid-cols-[5.75rem_minmax(0,1fr)]">
-      <dt className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-[color:var(--muted)]">
-        {label}
-      </dt>
-      <dd
-        className={`min-w-0 font-[family-name:var(--font-geist-mono)] text-[0.92rem] leading-6 ${wrapClass} ${toneClass}`}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
+export { RewardFillCard, TransferFillCard } from "@/components/transfer-fill-card";
 
 function venueLabel(venue: string): string {
   if (venue === "coinbase-predict") return "Coinbase Predict";
@@ -93,6 +61,8 @@ export function BetFillCard({ fill }: { fill: BetFill }) {
 
 export function FillCard({ fill }: { fill: Fill }) {
   if (fill.kind === "bet") return <BetFillCard fill={fill} />;
+  if (fill.kind === "transfer") return <TransferFillCard fill={fill} />;
+  if (fill.kind === "reward") return <RewardFillCard fill={fill} />;
   return (
     <article className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 sm:px-5">
       <dl>

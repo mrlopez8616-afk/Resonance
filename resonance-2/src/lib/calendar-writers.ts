@@ -41,8 +41,20 @@ export function capitalCalendarBody(fill: Fill): Record<string, unknown> {
   const key = fill.idempotencyKey?.trim() || `${fill.venue ?? "fill"}:${fill.orderId}`;
   const day = fillCalendarDate(fill.time);
   const ticker = fill.symbol.trim().toUpperCase();
-  const title = `${ticker} ${fill.side} ${fill.quantity}`.replace(/\s+/g, " ").trim().slice(0, 120);
-  const note = [fill.venue, fill.sleeve].filter(Boolean).join(" · ");
+  const title = (
+    fill.kind === "transfer"
+      ? `${ticker} transfer ${fill.quantity}`
+      : fill.kind === "reward"
+        ? `${ticker} reward ${fill.quantity}`
+        : `${ticker} ${fill.side} ${fill.quantity}`
+  )
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  const note =
+    fill.kind === "transfer"
+      ? [fill.venue, `${fill.fromSleeve} → ${fill.toSleeve}`].filter(Boolean).join(" · ")
+      : [fill.venue, fill.sleeve].filter(Boolean).join(" · ");
   return {
     id: capitalFillEventId(key),
     lane: "capital",

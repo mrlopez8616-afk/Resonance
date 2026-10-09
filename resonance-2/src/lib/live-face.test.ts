@@ -207,17 +207,17 @@ describe("live face units", () => {
     );
     assert.equal(
       face.sleeves.find((row) => row.id === "flare-vault")?.quantity,
-      "28281",
+      "28287",
     );
     assert.equal(
       face.sleeves.find((row) => row.id === "flare-vault")?.quantityLabel,
-      "28,281",
+      "28,287",
     );
     assert.equal(face.sleeves.some((row) => row.id === "rh-main"), false);
     assert.equal(face.sleeves.some((row) => row.id === "coinbase"), false);
     assert.equal(JSON.stringify(face).includes("628"), false);
-    assert.equal(face.totalUnits, 28342.601);
-    assert.equal(face.totalUsd, 28342.601 * 1.2);
-    assert.equal(face.totalUnitsLabel, "28,342.601");
+    assert.equal(face.totalUnits, 28348.601);
+    assert.equal(face.totalUsd, 28348.601 * 1.2);
+    assert.equal(face.totalUnitsLabel, "28,348.601");
   });
 });
