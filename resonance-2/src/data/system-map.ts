@@ -110,6 +110,14 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     connection: "Coming. YouTube Studio will run this node.",
     children: [],
   },
+  {
+    id: "lessons",
+    label: "Lessons",
+    href: "/n/lessons",
+    status: "live",
+    connection: "A dated log of what the floor learned.",
+    children: [],
+  },
 ];
 
 export const SYSTEM_AGENTS = [

@@ -239,7 +239,7 @@ function publicLessonsHtml(): string {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses] =
+  const [{ BuildParent, BuildSectionBody }, floor, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -249,6 +249,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/components/calendar-day-page"),
       import("@/components/system-map"),
       import("@/data/system-map"),
+      import("@/lib/system-live"),
     ]);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const nvda = model.aiStocks.holdings.find((holding) => holding.ticker === "NVDA") ?? null;
@@ -341,6 +342,24 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       path: lens.id === "nodes" ? "/n/system" : `/n/system?lens=${lens.id}`,
       html: render(createElement(system.SystemMap, { lens: lens.id })),
     })),
+    {
+      path: "/n/system/live",
+      html: (() => {
+        const built = liveGraph.buildLiveGraph();
+        const shown = liveGraph.presentLiveGraph(built, true);
+        const finance = liveGraph.mapFinancePulse(
+          { asOf: "2026-10-09", at: "2026-10-09T21:03:00.000Z" },
+          liveGraph.liveEdgeSet(built),
+        );
+        const events = liveGraph.toSystemEventResponse(finance ? [finance] : [], true);
+        return [
+          ...shown.points
+            .filter((point) => point.kind === "hub" || point.kind === "node")
+            .map((point) => `${point.label} ${point.detail ?? ""}`),
+          JSON.stringify(events),
+        ].join("\n");
+      })(),
+    },
     { path: "/calendar", html: calendar },
     { path: "/calendar/2026-10-08", html: day },
     { path: "/settings", html: settings },
@@ -472,6 +491,7 @@ describe("public render scan", () => {
       "/n/build/[section]/page.tsx",
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
+      "/n/system/live/page.tsx",
       "/n/[parent]/page.tsx",
       "/n/[parent]/[node]/page.tsx",
       "/settings/page.tsx",
@@ -492,6 +512,7 @@ describe("public render scan", () => {
       "/n/build/platform",
       "/n/lessons",
       "/n/system",
+      "/n/system/live",
       "/calendar",
       "/calendar/2026-10-08",
       "/settings",
@@ -524,6 +545,11 @@ describe("public render scan", () => {
     const systemPage = pages.find((page) => page.path === "/n/system");
     assert.match(systemPage?.html ?? "", /System/);
     assert.equal(systemPage?.html.includes("$"), false);
+    const livePage = pages.find((page) => page.path === "/n/system/live");
+    assert.match(livePage?.html ?? "", /Lessons/);
+    assert.match(livePage?.html ?? "", /Finance/);
+    assert.equal(livePage?.html.includes("plaid"), false);
+    assert.equal(livePage?.html.includes("private snapshot"), false);
     const buildSectionPage = pages.find((page) => page.path === "/n/build/platform");
     assert.equal(buildSectionPage?.html.includes("pull/80"), false);
     assert.equal(buildSectionPage?.html.includes("#80"), false);
@@ -550,7 +576,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/build", "/n/lessons", "/n/system", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/build", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

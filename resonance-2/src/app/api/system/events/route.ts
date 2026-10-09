@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { loadSystemEvents } from "@/lib/system-events";
 import { parseSince, toSystemEventResponse } from "@/lib/system-live";
+import { requestIsPublicMode } from "@/lib/public-mode-server";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
 
 /** Test hook. `undefined` reads the session cookie. */
 let sessionForTests: { role: string } | null | undefined;
+/** Test hook. `undefined` uses `requestIsPublicMode`. */
+let publicModeForTests: boolean | undefined;
 
 export function setSystemEventsSessionForTests(session: { role: string } | null | undefined) {
   sessionForTests = session;
+}
+
+export function setSystemEventsPublicModeForTests(publicMode: boolean | undefined) {
+  publicModeForTests = publicMode;
 }
 
 function json(body: { ok: boolean; error?: string; events?: unknown }, status: number) {
@@ -45,7 +52,8 @@ export async function GET(request: Request) {
 
   try {
     const events = await loadSystemEvents(parsed.since);
-    return json(toSystemEventResponse(events), 200);
+    const publicMode = publicModeForTests ?? (await requestIsPublicMode(request));
+    return json(toSystemEventResponse(events, publicMode), 200);
   } catch (error) {
     if (isStorageUnavailable(error)) {
       return json({ ok: false, error: "Events are unavailable." }, 503);

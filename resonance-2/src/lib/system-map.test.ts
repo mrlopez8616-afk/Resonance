@@ -33,6 +33,7 @@ function appPage(rel: string): boolean {
 export function systemRouteResolves(href: string): boolean {
   if (href === "/fights") return appPage("fights");
   if (href === "/n/build") return appPage("n/build");
+  if (href === "/n/lessons") return appPage("n/lessons");
   const parent = /^\/n\/([a-z0-9-]+)$/.exec(href);
   if (parent) return appPage("n/[parent]") && parentById(parent[1]) !== null;
   const child = /^\/n\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(href);
@@ -58,10 +59,10 @@ const SECRETISH = [
 ];
 
 describe("system map", () => {
-  it("counts nine agents and seven nodes on the home line", () => {
+  it("counts nine agents and eight nodes on the home line", () => {
     assert.equal(SYSTEM_AGENTS.length, 9);
-    assert.equal(SYSTEM_NODES.length, 7);
-    assert.equal(SYSTEM_HOME_LINE, "9 agents · 7 nodes · all protections on");
+    assert.equal(SYSTEM_NODES.length, 8);
+    assert.equal(SYSTEM_HOME_LINE, "9 agents · 8 nodes · all protections on");
     assert.equal(SYSTEM_LENSES.length, 6);
     assert.equal(DATA_SOURCES.some((source) => source.name === "GitHub Actions"), true);
     assert.equal(DATA_SOURCES.some((source) => source.name === "Build Tracker API"), true);

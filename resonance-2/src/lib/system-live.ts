@@ -6,12 +6,14 @@ import {
   SYSTEM_SLEEVES,
 } from "@/data/system-map";
 
-/** Same cookie public mode writes. `1` is public. Anything else is private. */
-export const PUBLIC_MODE_COOKIE = "__Host-resonance_public";
-
 export const SYSTEM_EVENT_POLL_MS = 25_000;
 export const SYSTEM_EVENT_REPLAY_LIMIT = 6;
 export const LIVE_PULSE_MS = 1800;
+export const LIVE_CAMERA_FOV = 40;
+/** Pull the bounding sphere inside the frame so hub and node labels stay on screen. */
+export const LIVE_FIT_PADDING = 1.18;
+/** Half-width of the longest node label, in CSS pixels, reserved on each side. */
+export const LIVE_LABEL_GUTTER_PX = 56;
 
 export const SYSTEM_PULSE_TYPES = ["fill", "build", "brief", "fight", "finance"] as const;
 export type SystemPulseType = (typeof SYSTEM_PULSE_TYPES)[number];
@@ -430,16 +432,114 @@ export function mapFinancePulse(input: { asOf: string; at: string }, edges: Read
   };
 }
 
-export function toSystemEventResponse(events: readonly SystemPulse[]): { ok: true; events: SystemPulse[] } {
-  return {
-    ok: true,
-    events: events.map((event) => ({
-      id: event.id,
-      type: event.type,
-      nodeIds: [...event.nodeIds],
-      edgeIds: [...event.edgeIds],
+/**
+ * Public mode keeps a finance pulse on the Finance node and drops the path.
+ * The private response still names the Plaid edge and the snapshot day.
+ */
+export function presentLiveEvents(events: readonly SystemPulse[], publicMode: boolean): SystemPulse[] {
+  return events.map((event) => {
+    if (!publicMode || event.type !== "finance") {
+      return {
+        id: event.id,
+        type: event.type,
+        nodeIds: [...event.nodeIds],
+        edgeIds: [...event.edgeIds],
+        at: event.at,
+      };
+    }
+    return {
+      id: `finance:${event.at}`,
+      type: "finance",
+      nodeIds: [livePointId("node", "finance")],
+      edgeIds: [],
       at: event.at,
-    })),
+    };
+  });
+}
+
+export function toSystemEventResponse(
+  events: readonly SystemPulse[],
+  publicMode = false,
+): { ok: true; events: SystemPulse[] } {
+  return { ok: true, events: presentLiveEvents(events, publicMode) };
+}
+
+/** Radius of the sphere centered on the hub that contains every point. */
+export function liveGraphRadius(points: readonly { x: number; y: number; z: number }[]): number {
+  let radius = 0;
+  for (const point of points) {
+    radius = Math.max(radius, Math.hypot(point.x, point.y, point.z));
+  }
+  return radius;
+}
+
+/**
+ * Camera distance that fits the bounding sphere in the viewport, with padding
+ * and a side gutter for labels. A short wide phone is limited by width.
+ */
+export function liveFitDistance(
+  radius: number,
+  viewport: { width: number; height: number },
+  fovDeg = LIVE_CAMERA_FOV,
+): number {
+  const width = Math.max(viewport.width, 1);
+  const height = Math.max(viewport.height, 1);
+  const tanV = Math.tan((fovDeg * Math.PI) / 360);
+  const tanH = tanV * (width / height);
+  const usableW = Math.max(width - LIVE_LABEL_GUTTER_PX * 2, width * 0.5);
+  const usableH = Math.max(height - LIVE_LABEL_GUTTER_PX * 2, height * 0.5);
+  const distH = (radius * width) / (usableW * tanH);
+  const distV = (radius * height) / (usableH * tanV);
+  return Math.max(distH, distV) * LIVE_FIT_PADDING;
+}
+
+/** Fitted camera, elevated so the web reads as a floor and still looks at the hub. */
+export function liveCameraFit(
+  radius: number,
+  viewport: { width: number; height: number },
+): { distance: number; position: { x: number; y: number; z: number } } {
+  const distance = liveFitDistance(radius, viewport);
+  const length = Math.hypot(0, 0.58, 1);
+  return {
+    distance,
+    position: {
+      x: 0,
+      y: (0.58 / length) * distance,
+      z: (1 / length) * distance,
+    },
+  };
+}
+
+/** Normalized device coordinates for the fitted camera. The hub is the look target. */
+export function liveProjected(
+  point: { x: number; y: number; z: number },
+  camera: { x: number; y: number; z: number },
+  viewport: { width: number; height: number },
+  fovDeg = LIVE_CAMERA_FOV,
+): { x: number; y: number } {
+  const fx = -camera.x;
+  const fy = -camera.y;
+  const fz = -camera.z;
+  const fl = Math.hypot(fx, fy, fz) || 1;
+  const forward = { x: fx / fl, y: fy / fl, z: fz / fl };
+  const up = { x: 0, y: 1, z: 0 };
+  const rx = forward.y * up.z - forward.z * up.y;
+  const ry = forward.z * up.x - forward.x * up.z;
+  const rz = forward.x * up.y - forward.y * up.x;
+  const rl = Math.hypot(rx, ry, rz) || 1;
+  const right = { x: rx / rl, y: ry / rl, z: rz / rl };
+  const ux = right.y * forward.z - right.z * forward.y;
+  const uy = right.z * forward.x - right.x * forward.z;
+  const uz = right.x * forward.y - right.y * forward.x;
+  const vx = point.x - camera.x;
+  const vy = point.y - camera.y;
+  const vz = point.z - camera.z;
+  const depth = vx * forward.x + vy * forward.y + vz * forward.z;
+  const tanV = Math.tan((fovDeg * Math.PI) / 360);
+  const tanH = tanV * (viewport.width / Math.max(viewport.height, 1));
+  return {
+    x: (vx * right.x + vy * right.y + vz * right.z) / depth / tanH,
+    y: (vx * ux + vy * uy + vz * uz) / depth / tanV,
   };
 }
 
@@ -519,11 +619,3 @@ export function preferStaticLiveView(input: LiveCapability & { choice: LiveViewC
   return false;
 }
 
-/** The helper wins when this deploy has one. Otherwise the public cookie is the same contract. */
-export async function resolveLivePublicMode(
-  helper: (() => boolean | Promise<boolean>) | null,
-  cookieValue: string | null | undefined,
-): Promise<boolean> {
-  if (helper) return Boolean(await helper());
-  return cookieValue === "1";
-}

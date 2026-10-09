@@ -46,6 +46,8 @@ const markers = [
   "/n/build",
   "/n/system/live",
   ">Live<",
+  "Lessons",
+  "/n/lessons",
 ];
 for (const marker of markers) {
   if (!html.includes(marker)) fail(`missing ${marker}`);

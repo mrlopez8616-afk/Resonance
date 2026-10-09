@@ -2,7 +2,7 @@
 
 import { OrbitControls } from "@react-three/drei/core/OrbitControls";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AdditiveBlending,
   BufferAttribute,
@@ -10,12 +10,16 @@ import {
   Color,
   InstancedMesh,
   Object3D,
+  PerspectiveCamera,
   SphereGeometry,
   Vector3,
 } from "three";
 import {
+  LIVE_CAMERA_FOV,
   LIVE_KIND_COLOR,
   LIVE_PULSE_MS,
+  liveFitDistance,
+  liveGraphRadius,
   type LiveGraph,
   type LiveKind,
   type LivePoint,
@@ -145,20 +149,22 @@ function Web({
     bright.current.clear();
     let travel: { ax: number; ay: number; az: number; bx: number; by: number; bz: number; t: number } | null = null;
     let litKey = "idle";
-    if (pulse && pulse.edgeIds.length > 0) {
+    if (pulse) {
       elapsed.current += Math.min(delta, 0.05) * 1000;
       const t = Math.min(1, elapsed.current / LIVE_PULSE_MS);
-      const span = t * pulse.edgeIds.length;
-      const segment = Math.min(pulse.edgeIds.length - 1, Math.floor(Math.max(0, span)));
-      const local = pulse.edgeIds.length === 1 ? t : span - segment;
-      const edge = graph.edges.find((item) => item.id === pulse.edgeIds[segment]);
-      const start = edge ? byId.get(edge.from) : undefined;
-      const end = edge ? byId.get(edge.to) : undefined;
-      if (start && end) {
-        const eased = local * local * (3 - 2 * local);
-        travel = { ax: start.x, ay: start.y, az: start.z, bx: end.x, by: end.y, bz: end.z, t: eased };
+      if (pulse.edgeIds.length > 0) {
+        const span = t * pulse.edgeIds.length;
+        const segment = Math.min(pulse.edgeIds.length - 1, Math.floor(Math.max(0, span)));
+        const local = pulse.edgeIds.length === 1 ? t : span - segment;
+        const edge = graph.edges.find((item) => item.id === pulse.edgeIds[segment]);
+        const start = edge ? byId.get(edge.from) : undefined;
+        const end = edge ? byId.get(edge.to) : undefined;
+        if (start && end) {
+          const eased = local * local * (3 - 2 * local);
+          travel = { ax: start.x, ay: start.y, az: start.z, bx: end.x, by: end.y, bz: end.z, t: eased };
+        }
       }
-      if (t > 0.62) {
+      if (pulse.edgeIds.length === 0 || t > 0.62) {
         for (const id of pulse.nodeIds) bright.current.add(id);
         litKey = pulse.id;
       }
@@ -242,6 +248,34 @@ function Web({
   );
 }
 
+function placeLiveCamera(camera: PerspectiveCamera, distance: number) {
+  const length = Math.hypot(0, 0.58, 1);
+  camera.position.set(0, (0.58 / length) * distance, (1 / length) * distance);
+  camera.near = 0.1;
+  camera.far = Math.max(80, distance * 8);
+  camera.lookAt(0, 0, 0);
+  camera.updateProjectionMatrix();
+}
+
+function FitFrame({ radius }: { radius: number }) {
+  const camera = useThree((state) => state.camera) as PerspectiveCamera;
+  const size = useThree((state) => state.size);
+  const controls = useThree((state) => state.controls) as { target: Vector3; update: () => void } | null;
+  const width = size.width;
+  const height = size.height;
+
+  useLayoutEffect(() => {
+    if (width < 2 || height < 2 || !(radius > 0)) return;
+    placeLiveCamera(camera, liveFitDistance(radius, { width, height }, camera.fov || LIVE_CAMERA_FOV));
+    if (controls) {
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+  }, [camera, controls, height, radius, width]);
+
+  return null;
+}
+
 export function SystemLiveScene({
   graph,
   pulse,
@@ -258,6 +292,7 @@ export function SystemLiveScene({
   onSelect: (id: string) => void;
 }) {
   const [frameloop, setFrameloop] = useState<"always" | "never">("always");
+  const radius = useMemo(() => liveGraphRadius(graph.points), [graph.points]);
 
   useEffect(() => {
     const sync = () => setFrameloop(document.visibilityState === "visible" ? "always" : "never");
@@ -271,7 +306,7 @@ export function SystemLiveScene({
       dpr={[1, 2]}
       flat
       frameloop={frameloop}
-      camera={{ position: [0, 4.5, 7.5], fov: 40, near: 0.1, far: 40 }}
+      camera={{ position: [0, 8, 14], fov: LIVE_CAMERA_FOV, near: 0.1, far: 80 }}
       gl={{ antialias: true, alpha: false, powerPreference: "high-performance", stencil: false }}
     >
       <color attach="background" args={["#070b14"]} />
@@ -279,16 +314,18 @@ export function SystemLiveScene({
       <Web graph={graph} pulse={pulse} onPulseDone={onPulseDone} onSelect={onSelect} />
       <LabelLock points={labeled} labels={labels} />
       <OrbitControls
+        makeDefault
         enablePan={false}
         enableDamping
         dampingFactor={0.08}
         rotateSpeed={0.65}
         zoomSpeed={0.7}
-        minDistance={3.1}
-        maxDistance={14}
+        minDistance={2.6}
+        maxDistance={80}
         minPolarAngle={0.25}
         maxPolarAngle={Math.PI * 0.82}
       />
+      <FitFrame radius={radius} />
     </Canvas>
   );
 }

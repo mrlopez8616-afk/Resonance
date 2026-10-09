@@ -5,7 +5,11 @@ import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { NextRequest } from "next/server";
-import { GET, setSystemEventsSessionForTests } from "@/app/api/system/events/route";
+import {
+  GET,
+  setSystemEventsPublicModeForTests,
+  setSystemEventsSessionForTests,
+} from "@/app/api/system/events/route";
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
 import { applyMigrations } from "@/lib/pg/migrate";
@@ -14,16 +18,20 @@ import {
   SYSTEM_EVENT_KEYS,
   SYSTEM_EVENT_POLL_MS,
   buildLiveGraph,
+  LIVE_LABEL_GUTTER_PX,
+  liveCameraFit,
   liveEdgeId,
   liveEdgeSet,
+  liveGraphRadius,
   livePointId,
+  liveProjected,
   mapBuildPulse,
   mapCalendarPulse,
   mapFillPulse,
   mapFinancePulse,
   preferStaticLiveView,
+  presentLiveEvents,
   presentLiveGraph,
-  resolveLivePublicMode,
   selectLiveEvents,
   type LiveCapability,
   type SystemPulse,
@@ -60,8 +68,9 @@ describe("system live graph", () => {
     const hub = graph.points.find((point) => point.id === "hub:sophia");
     assert.equal(hub?.label, "Sophia Luna");
     assert.deepEqual([hub?.x, hub?.y, hub?.z], [0, 0, 0]);
-    assert.equal(graph.points.filter((point) => point.kind === "node").length, 7);
+    assert.equal(graph.points.filter((point) => point.kind === "node").length, 8);
     assert.equal(graph.points.some((point) => point.id === "node:youtube" && point.href === null), true);
+    assert.equal(graph.points.find((point) => point.id === "node:lessons")?.href, "/n/lessons");
     assert.equal(graph.points.find((point) => point.id === "node:crypto")?.href, "/n/crypto");
     for (const edge of graph.edges) {
       assert.equal(graph.points.some((point) => point.id === edge.from), true, edge.id);
@@ -202,7 +211,7 @@ describe("system live event mapping", () => {
     }
   });
 
-  it("keeps the poll inside the live window and prefers an isPublicMode helper", async () => {
+  it("keeps the poll inside the live window and uses the real public-mode check", () => {
     assert.equal(SYSTEM_EVENT_POLL_MS >= 20_000 && SYSTEM_EVENT_POLL_MS <= 30_000, true);
     const older: SystemPulse = {
       id: "fill:old",
@@ -216,9 +225,41 @@ describe("system live event mapping", () => {
       selectLiveEvents([older, newer], "2026-10-09T20:30:00.000Z").map((event) => event.id),
       ["fill:new"],
     );
-    assert.equal(await resolveLivePublicMode(async () => false, "1"), false);
-    assert.equal(await resolveLivePublicMode(null, "1"), true);
-    assert.equal(await resolveLivePublicMode(null, null), false);
+    const page = readFileSync(path.join(root, "src/lib/system-public.ts"), "utf8");
+    const route = readFileSync(path.join(root, "src/app/api/system/events/route.ts"), "utf8");
+    assert.match(page, /isPublicMode\(\)/);
+    assert.match(route, /requestIsPublicMode\(request\)/);
+  });
+
+  it("drops finance event details to a bare pulse in public mode", () => {
+    const at = "2026-10-09T21:03:00.000Z";
+    const finance = mapFinancePulse({ asOf: "2026-10-09", at }, edges);
+    assert.ok(finance);
+    const [shown] = presentLiveEvents([finance], true);
+    assert.equal(shown?.id, `finance:${at}`);
+    assert.deepEqual(shown?.nodeIds, ["node:finance"]);
+    assert.deepEqual(shown?.edgeIds, []);
+    assert.equal(JSON.stringify(shown).includes("plaid"), false);
+    assert.equal(JSON.stringify(shown).includes("2026-10-09:"), false);
+    const [full] = presentLiveEvents([finance], false);
+    assert.deepEqual(full?.edgeIds, ["source:plaid--node:finance"]);
+    assert.equal(full?.id.includes("2026-10-09"), true);
+  });
+
+  it("fits the bounding sphere so node labels stay inside a 390px frame", () => {
+    const phone = { width: 390, height: 456 };
+    const radius = liveGraphRadius(graph.points);
+    const fit = liveCameraFit(radius, phone);
+    const wide = liveCameraFit(radius, { width: 800, height: 456 });
+    assert.equal(fit.distance > wide.distance, true);
+    const gutterX = LIVE_LABEL_GUTTER_PX / (phone.width / 2);
+    const gutterY = 28 / (phone.height / 2);
+    for (const point of graph.points) {
+      if (point.kind !== "hub" && point.kind !== "node") continue;
+      const ndc = liveProjected(point, fit.position, phone);
+      assert.equal(Math.abs(ndc.x) < 1 - gutterX, true, `${point.label} x ${ndc.x}`);
+      assert.equal(Math.abs(ndc.y) < 1 - gutterY, true, `${point.label} y ${ndc.y}`);
+    }
   });
 });
 
@@ -268,6 +309,7 @@ describe("system events endpoint", { concurrency: false }, () => {
   after(() => {
     setSqlClientForTests(null);
     setSystemEventsSessionForTests(undefined);
+    setSystemEventsPublicModeForTests(undefined);
   });
 
   it("returns no amount or quantity fields", async () => {
@@ -358,6 +400,21 @@ describe("system events endpoint", { concurrency: false }, () => {
     assert.deepEqual(byType.fight?.edgeIds, ["source:calendar--node:fight-desk"]);
     assert.deepEqual(byType.finance?.edgeIds, ["source:plaid--node:finance"]);
     assert.equal(body.events.some((event) => event.id.includes("fights-open")), false);
+
+    setSystemEventsPublicModeForTests(true);
+    const shared = await GET(
+      new Request("https://resonance.test/api/system/events?since=2026-10-09T20:00:00.000Z"),
+    );
+    assert.equal(shared.status, 200);
+    const publicBody = (await shared.json()) as { ok: boolean; events: SystemPulse[] };
+    const publicFinance = publicBody.events.find((event) => event.type === "finance");
+    assert.deepEqual(publicFinance?.edgeIds, []);
+    assert.deepEqual(publicFinance?.nodeIds, ["node:finance"]);
+    assert.equal(JSON.stringify(publicFinance).includes("plaid"), false);
+    const publicKeys = new Set(["ok", "events", ...SYSTEM_EVENT_KEYS]);
+    for (const key of keysOf(publicBody)) assert.equal(publicKeys.has(key), true, key);
+    assert.equal(JSON.stringify(publicBody).includes("SENTINEL"), false);
+    setSystemEventsPublicModeForTests(undefined);
     assert.equal(body.events.some((event) => event.id.includes("later")), false);
 
     const query = readFileSync(path.join(root, "src/lib/system-events.ts"), "utf8");
