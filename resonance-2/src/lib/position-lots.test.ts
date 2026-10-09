@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { isValidElement, type ReactNode } from "react";
 import { describe, it } from "node:test";
-import { PositionChartView, LotsTable } from "@/components/position-book";
+import { PositionChartView, LotsTable, PositionRollupView } from "@/components/position-book";
 import { bookTotals } from "./position-lots";
 import {
   buildLotsLedger,
@@ -216,6 +216,13 @@ describe("FIFO lots", () => {
     assert.equal(rollup.costUsd, 560);
     assert.equal(rollup.valueUsd, 717.4);
     assert.equal(rollup.pnlUsd, 90);
+    const text = collectText(PositionRollupView({ rollup })).join(" ");
+    assert.match(text, /Total · partial/);
+    assert.match(text, /entry unknown/);
+    const view = PositionRollupView({ rollup });
+    assert.equal(isValidElement(view), true);
+    const lines = collectClass(view, "rollup-line");
+    assert.equal(lines >= 2, true);
   });
 });
 
@@ -231,6 +238,18 @@ function collectPaths(node: ReactNode, found: { className: string; d: string }[]
   }
   collectPaths(props.children, found);
   return found;
+}
+
+function collectClass(node: ReactNode, className: string, count = { n: 0 }): number {
+  if (Array.isArray(node)) {
+    for (const child of node) collectClass(child, className, count);
+    return count.n;
+  }
+  if (!isValidElement(node)) return count.n;
+  const props = node.props as { children?: ReactNode; className?: string };
+  if (typeof props.className === "string" && props.className.split(" ").includes(className)) count.n += 1;
+  collectClass(props.children, className, count);
+  return count.n;
 }
 
 function collectText(node: ReactNode, found: string[] = []): string[] {

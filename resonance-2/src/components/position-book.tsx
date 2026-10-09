@@ -292,30 +292,65 @@ export function PositionRollupView({ rollup }: { rollup: PositionRollup }) {
   return (
     <section className="position-rollup" aria-label="Holdings roll-up">
       {chart ? <PositionChartView chart={chart} totals={null} /> : null}
-      <ul className="lot-list">
-        {rollup.rows.map((row) => (
-          <li className="lot-row" key={row.ticker}>
-            <span className="lot-main">
-              <span>{row.ticker}</span>
-              <span>{row.partial ? "entry unknown" : `cost ${formatLotUsd(row.costUsd)}`}</span>
-            </span>
-            <span className="lot-side">
-              {row.valueUsd !== null ? <span>{formatLotUsd(row.valueUsd)}</span> : null}
-              <Pnl usd={row.pnlUsd} pct={row.pnlPct} />
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="lot-total">
-        <span className="lot-main">
-          <span>{rollup.partial ? "Total · partial" : "Total"}</span>
-          {rollup.costUsd !== null ? <span>cost {formatLotUsd(rollup.costUsd)}</span> : null}
-        </span>
-        <span className="lot-side">
-          {rollup.valueUsd !== null ? <span>{formatLotUsd(rollup.valueUsd)}</span> : null}
-          <Pnl usd={rollup.pnlUsd} pct={rollup.pnlPct} />
-        </span>
+      <div className="rollup-list">
+        {rollup.rows.map((row) =>
+          rollupLine({
+            key: row.ticker,
+            label: row.ticker,
+            note: row.partial ? "entry unknown" : costNote(row.costUsd),
+            value: formatLotUsd(row.valueUsd),
+            usd: row.pnlUsd,
+            pct: row.pnlPct,
+          }),
+        )}
+        {rollupLine({
+          total: true,
+          label: rollup.partial ? "Total · partial" : "Total",
+          note: costNote(rollup.costUsd),
+          value: formatLotUsd(rollup.valueUsd),
+          usd: rollup.pnlUsd,
+          pct: rollup.pnlPct,
+        })}
       </div>
     </section>
+  );
+}
+
+function costNote(usd: number | null): string | null {
+  const label = formatLotUsd(usd);
+  return label ? `cost ${label}` : null;
+}
+
+function rollupLine({
+  key,
+  label,
+  note,
+  value,
+  usd,
+  pct,
+  total = false,
+}: {
+  key?: string;
+  label: string;
+  note: string | null;
+  value: string | null;
+  usd: number | null;
+  pct: number | null;
+  total?: boolean;
+}): ReactNode {
+  const tone = toneOf(usd);
+  const percent = formatLotPct(pct);
+  const mark = arrow(tone);
+  return (
+    <div key={key} className={total ? "rollup-line is-total" : "rollup-line"}>
+      <span className="rollup-label">
+        <span className="rollup-name">{label}</span>
+        {note ? <span className="rollup-note">{note}</span> : null}
+      </span>
+      <span className="rollup-figures">
+        {value ? <span>{value}</span> : null}
+        {percent ? <span className={tone ? `is-${tone}` : undefined}>{`${mark} ${percent}`.trim()}</span> : null}
+      </span>
+    </div>
   );
 }

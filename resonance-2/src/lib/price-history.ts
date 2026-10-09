@@ -131,7 +131,9 @@ async function fetchCryptoCloses(ticker: SpotTicker): Promise<{ day: string; clo
   const cached = readDated(cryptoDated, ticker);
   if (cached !== undefined) return cached;
   try {
-    const url = `https://api.coingecko.com/api/v3/coins/${GECKO_IDS[ticker]}/market_chart?vs_currency=usd&days=max`;
+    // Public CoinGecko rejects days=max (past 365 days only). A year of daily
+    // closes is enough for the position chart.
+    const url = `https://api.coingecko.com/api/v3/coins/${GECKO_IDS[ticker]}/market_chart?vs_currency=usd&days=365`;
     const response = await fetchWithTimeout(url, {
       headers: { accept: "application/json", "user-agent": "Resonance2/0.1" },
     });

@@ -62,6 +62,20 @@ body {
   background: transparent;
 }
 
+/* A lots book is taller than the viewport. Let that page grow so the chart
+   sits under the headline and the rows stay in the page, not a nested scroller. */
+.operator-floor:has(.position-book),
+.operator-floor:has(.position-rollup) {
+  height: auto;
+  min-height: 100dvh;
+}
+
+.operator-floor:has(.position-book) .operator-main,
+.operator-floor:has(.position-rollup) .operator-main {
+  flex: none;
+  overflow: visible;
+}
+
 /* Soft wash behind the floor. Peak mixes stay under the contrast budget:
    #16C784 at 16% and #e10600 at 14% over white keep muted #5b616e above 4.5:1.
    Node cards stay on --surface. */
@@ -655,32 +669,86 @@ body {
 }
 
 .child-role {
-  margin: 0.5rem 0 0;
-  max-width: 36rem;
+  margin: 0.15rem 0 0;
+  max-width: 40rem;
   font-size: 0.92rem;
   line-height: 1.4;
   color: var(--text);
 }
 
 .child-page {
-  max-width: 36rem;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.7rem;
+  width: 100%;
+  max-width: 40rem;
+  height: auto;
   min-width: 0;
+}
+
+.child-page > .live-face {
+  flex: none;
+  height: auto;
+  overflow: visible;
+}
+
+.node-detail {
+  flex: none;
+  width: min(100%, 40rem);
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: auto;
+}
+
+.node-detail .node-square,
+.node-detail .node-square.is-live,
+.node-detail .node-square.is-parent,
+.node-detail .node-square.is-parent.is-live {
+  height: auto;
+  aspect-ratio: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.node-detail .node-log-link,
+.node-detail .live-face {
+  flex: none;
+  height: auto;
+  overflow: visible;
 }
 
 .position-book,
 .position-rollup {
+  flex: none;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  margin-top: 0.85rem;
+  margin-top: 0;
+  overflow-x: clip;
 }
 
 .position-chart {
-  margin: 0 0 0.75rem;
+  margin: 0;
+}
+
+.position-chart .home-visual {
+  flex: none;
+  height: auto;
+  margin-top: 0;
 }
 
 .position-chart svg {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 640 / 168;
+}
+
+.node-detail + .position-book {
+  width: min(100%, 40rem);
+  margin-top: 0.7rem;
 }
 
 .position-area {
@@ -824,6 +892,65 @@ body {
 
 .position-rollup {
   margin-top: 1.1rem;
+}
+
+.rollup-list {
+  min-width: 0;
+}
+
+.rollup-line {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.42rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.rollup-label {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.rollup-name {
+  flex: none;
+}
+
+.rollup-note {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.rollup-figures {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rollup-line.is-total {
+  font-weight: 600;
+}
+
+.rollup-figures .is-up {
+  color: #0b8f5a;
+}
+
+.rollup-figures .is-down {
+  color: var(--live);
 }
 
 .child-page .value-headline {
@@ -2093,6 +2220,34 @@ body {
 
   .child-floor {
     grid-template-columns: 1fr;
+  }
+
+  .node-detail .node-square,
+  .node-detail .node-square.is-live {
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .lot-row,
+  .lot-total {
+    font-size: 0.84rem;
+    gap: 0.08rem 0.4rem;
+  }
+
+  .lot-main {
+    flex-wrap: nowrap;
+  }
+
+  .lot-side {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  .rollup-line {
+    gap: 0.4rem;
+    font-size: 0.8rem;
   }
 }
 

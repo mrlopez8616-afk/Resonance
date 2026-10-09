@@ -215,6 +215,10 @@ export default async function NodeDetailPage({
           spark: priceSpark(series),
           role: aiStockRole(ticker),
         };
+    const showBook = Boolean(quantity);
+    const pageModel: ChildCardModel = showBook
+      ? { ...model, spark: null, role: null }
+      : model;
     return (
       <OperatorShell
         storageMessage={floor.storageMessage}
@@ -224,7 +228,7 @@ export default async function NodeDetailPage({
           {parent.label}
         </Link>
         <div className="child-page">
-          <ChildValueCard model={model} wide />
+          <ChildValueCard model={pageModel} wide />
           {quantity ? (
             <NodePosition
               fills={book.fills}
@@ -234,6 +238,7 @@ export default async function NodeDetailPage({
               closes={dated[ticker] ?? []}
             />
           ) : null}
+          {showBook && model.role ? <p className="child-role">{model.role}</p> : null}
         </div>
       </OperatorShell>
     );
@@ -257,7 +262,7 @@ export default async function NodeDetailPage({
       <Link href={`/n/${parent.id}`} className="calendar-back">
         {parent.label}
       </Link>
-      <section className="node-grid" aria-label={`${node.ticker} node`}>
+      <section className="node-grid node-detail" aria-label={`${node.ticker} node`}>
         <NodeSquare
           live={ready}
           dashed={!ready}
