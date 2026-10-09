@@ -31,13 +31,17 @@ function sparkLine(spark: ChildCardSpark, wide: boolean, label: string): ReactNo
   const xAt = (index: number) =>
     values.length === 1 ? width / 2 : pad + (index / (values.length - 1)) * (width - pad * 2);
   const yAt = (value: number) => height - pad - ((value - min) / span) * (height - pad * 2);
-  const path = values
+  const line = values
     .map((value, index) => `${index === 0 ? "M" : "L"}${xAt(index).toFixed(2)} ${yAt(value).toFixed(2)}`)
     .join(" ");
+  const baseline = height.toFixed(2);
+  const area = `${line} L${xAt(values.length - 1).toFixed(2)} ${baseline} L${xAt(0).toFixed(2)} ${baseline} Z`;
+  const tone = `is-${spark.tone}`;
   return (
     <div className="home-visual">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
-        <path d={path} className={`price-spark is-${spark.tone}`} />
+        <path d={area} className={`price-spark-area ${tone}`} />
+        <path d={line} className={`price-spark ${tone}`} />
       </svg>
     </div>
   );

@@ -22,6 +22,20 @@ function countTag(node: ReactNode, tag: string): number {
   return (node.type === tag ? 1 : 0) + countTag(props.children, tag);
 }
 
+function collectPaths(node: ReactNode, found: { className: string; d: string }[] = []) {
+  if (Array.isArray(node)) {
+    for (const child of node) collectPaths(child, found);
+    return found;
+  }
+  if (!isValidElement(node)) return found;
+  const props = node.props as { children?: ReactNode; className?: string; d?: string };
+  if (node.type === "path" && typeof props.d === "string") {
+    found.push({ className: String(props.className ?? ""), d: props.d });
+  }
+  collectPaths(props.children, found);
+  return found;
+}
+
 function collectText(node: ReactNode, found: string[] = []): string[] {
   if (node == null || typeof node === "boolean") return found;
   if (typeof node === "string" || typeof node === "number") {
@@ -172,6 +186,41 @@ describe("child value card", () => {
     assert.equal(text.some((line) => line.startsWith("Agentic")), true);
     assert.equal(countTag(view, "svg"), 1);
     assert.equal(model.spark?.tone, "down");
+  });
+
+  it("fills the spark area down to the chart bottom, not across the endpoints", () => {
+    const face = assembleLiveFace(
+      "VRT",
+      [{ id: "rh-agentic", label: "RH Agentic", quantity: "2", source: "robinhood-config", manual: false }],
+      QUOTE,
+    );
+    const model = holdingChildModel({
+      face,
+      changePct: 1,
+      fetchedAt: FRESH,
+      now: NOW,
+      history: [2.2, 2.4, 2],
+    });
+    assert.equal(model.spark?.tone, "down");
+    const card = collectPaths(ChildValueCard({ model }));
+    const page = collectPaths(ChildValueCard({ model, wide: true }));
+    for (const [paths, height, lastX] of [
+      [card, "44.00", "165.00"],
+      [page, "64.00", "317.00"],
+    ] as const) {
+      const area = paths.find((path) => path.className.includes("price-spark-area"));
+      const line = paths.find((path) => path.className.split(" ").includes("price-spark"));
+      assert.ok(area);
+      assert.ok(line);
+      assert.equal(line.d.includes("Z"), false);
+      assert.equal(line.d.includes(` ${height}`), false);
+      assert.equal(area.className.includes("is-down"), true);
+      assert.match(area.d, new RegExp(`L${lastX} ${height} L3\\.00 ${height} Z$`));
+      const seriesEnd = line.d.slice(line.d.lastIndexOf("L"));
+      assert.equal(seriesEnd.includes(height), false);
+      assert.equal(area.d.startsWith(line.d), true);
+    }
+    assert.equal(countTag(ChildValueCard({ model: { ...model, spark: null } }), "svg"), 0);
   });
 });
 

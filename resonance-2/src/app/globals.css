@@ -582,23 +582,40 @@ body {
   fill: var(--muted);
 }
 
-.price-spark {
+.home-visual .price-spark {
   fill: none;
   stroke-width: 1.6;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
-.price-spark.is-up {
+.home-visual .price-spark.is-up {
   stroke: #16c784;
 }
 
-.price-spark.is-down {
+.home-visual .price-spark.is-down {
   stroke: var(--live);
 }
 
-.price-spark.is-flat {
+.home-visual .price-spark.is-flat {
   stroke: var(--muted);
+}
+
+.home-visual .price-spark-area {
+  stroke: none;
+  fill-opacity: 0.2;
+}
+
+.home-visual .price-spark-area.is-up {
+  fill: #16c784;
+}
+
+.home-visual .price-spark-area.is-down {
+  fill: var(--live);
+}
+
+.home-visual .price-spark-area.is-flat {
+  fill: var(--muted);
 }
 
 .parent-lines li.is-up {
