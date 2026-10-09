@@ -161,7 +161,7 @@ describe("fills store core", () => {
       HBAR_AGENTIC_TOKENS,
     );
     assert.equal(mergeSleeveBook("XLM", envelope.sleevePrints).length, 0);
-    assert.equal(HBAR_AGENTIC_TOKENS, "7847.91");
+    assert.equal(HBAR_AGENTIC_TOKENS, "0");
     assert.equal(addDecimal(addDecimal("3846.51", "3963.14"), "38.26"), "7847.91");
     assert.equal(addDecimal(addDecimal("438.01", "409.10"), "3.95"), "851.06");
     assert.equal(subtractDecimal("1910.31", "1910.31"), "0");
@@ -237,7 +237,7 @@ describe("fills store core", () => {
     assert.equal(withoutFlag.envelope.sleevePrints.HBAR, undefined);
     assert.equal(
       mergeSleeveBook("HBAR", withoutFlag.envelope.sleevePrints)[0]?.quantity,
-      "7847.91",
+      "0",
     );
     assert.equal(
       mergeSleeveBook("XLM", withoutFlag.envelope.sleevePrints).length,
@@ -319,7 +319,7 @@ describe("fills store core", () => {
     );
     assert.equal(later.applied, true);
     assert.equal(later.fill.logOnly, undefined);
-    assert.equal(later.envelope.sleevePrints.HBAR?.["rh-agentic"], "7848.91");
+    assert.equal(later.envelope.sleevePrints.HBAR?.["rh-agentic"], "1");
     assert.equal(later.envelope.sleevePrints.XLM, undefined);
   });
 

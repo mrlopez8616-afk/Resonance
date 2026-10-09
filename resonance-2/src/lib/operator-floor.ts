@@ -24,7 +24,7 @@ export type OperatorFloor = {
 /** Same read-only floor load the homepage used before parent drill-down. */
 export async function loadOperatorFloor(): Promise<OperatorFloor> {
   const [cryptoQuotes, equityQuotes, sleeves, fightDesk] = await Promise.all([
-    loadSpotQuotes(["XRP", "SUI", "HBAR"]),
+    loadSpotQuotes(["XRP", "SUI"]),
     loadEquityQuotes(EQUITY_FACE_TICKERS),
     loadLiveSleeveBooks(),
     loadFightDeskSummary(),
@@ -32,7 +32,6 @@ export async function loadOperatorFloor(): Promise<OperatorFloor> {
   const faces: Record<string, LiveFaceData> = {
     XRP: assembleLiveFace("XRP", sleeves.books.XRP, cryptoQuotes.XRP),
     SUI: assembleLiveFace("SUI", sleeves.books.SUI, cryptoQuotes.SUI),
-    HBAR: assembleLiveFace("HBAR", sleeves.books.HBAR, cryptoQuotes.HBAR),
   };
   for (const ticker of EQUITY_FACE_TICKERS) {
     faces[ticker] = assembleLiveFace(

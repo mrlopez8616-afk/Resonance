@@ -3,6 +3,7 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { FitnessGrid } from "@/components/fitness-grid";
 import { NodeGrid } from "@/components/node-grid";
+import { PositionRollupView } from "@/components/position-book";
 import { OperatorShell } from "@/components/operator-shell";
 import { PredictionsFloor } from "@/components/predictions-floor";
 import { requireRole } from "@/lib/auth-session";
@@ -13,9 +14,12 @@ import { loadFitnessCards } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { holdingChildModel, type ChildCardModel } from "@/lib/child-card";
-import { nextTickerCatalystLine } from "@/lib/home-lines";
+import { CRYPTO_HOME_TICKERS, nextTickerCatalystLine } from "@/lib/home-lines";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
-import { loadCryptoHistory, loadEquityHistory } from "@/lib/price-history";
+import { yahooSessionDay } from "@/lib/equity-chart";
+import { rollupHoldingBooks } from "@/lib/position-lots";
+import { loadCryptoCloses, loadCryptoHistory, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
+import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { valueCardFromFace } from "@/lib/value-card";
@@ -105,13 +109,19 @@ export default async function ParentNodePage({
   }
 
   const childParent = parent.id === "crypto" || parent.id === "ai-stocks";
-  const [floor, calendar, history] = await Promise.all([
+  const [floor, calendar, history, book, dated] = await Promise.all([
     loadOperatorFloor(),
     childParent ? loadCalendarForPage() : Promise.resolve(null),
     parent.id === "crypto"
-      ? loadCryptoHistory(["XRP", "SUI", "HBAR"])
+      ? loadCryptoHistory(CRYPTO_HOME_TICKERS)
       : parent.id === "ai-stocks"
         ? loadEquityHistory(AI_STOCK_TICKERS)
+        : Promise.resolve(null),
+    childParent ? loadOperatorFills() : Promise.resolve(null),
+    parent.id === "crypto"
+      ? loadCryptoCloses(CRYPTO_HOME_TICKERS)
+      : parent.id === "ai-stocks"
+        ? loadEquityCloses(AI_STOCK_TICKERS)
         : Promise.resolve(null),
   ]);
   const retiring =
@@ -126,7 +136,7 @@ export default async function ParentNodePage({
   const events = calendar?.events ?? [];
   const childCards: Record<string, ChildCardModel> = {};
   if (parent.id === "crypto") {
-    for (const ticker of ["XRP", "SUI", "HBAR"] as const) {
+    for (const ticker of CRYPTO_HOME_TICKERS) {
       const face = floor.faces[ticker];
       if (!face) continue;
       const quote = floor.spotQuotes[ticker];
@@ -171,6 +181,23 @@ export default async function ParentNodePage({
         heldUsd={heldUsd}
         childCards={childParent ? childCards : undefined}
       />
+      {childParent && book && dated ? (
+        <PositionRollupView
+          rollup={rollupHoldingBooks({
+            tickers: parent.id === "crypto" ? CRYPTO_HOME_TICKERS : AI_STOCK_TICKERS,
+            fills: book.fills,
+            sleeves: floor.sleeves,
+            prices: Object.fromEntries(
+              (parent.id === "crypto" ? CRYPTO_HOME_TICKERS : AI_STOCK_TICKERS).map((ticker) => [
+                ticker,
+                floor.faces[ticker]?.priceUsd ?? null,
+              ]),
+            ),
+            closes: dated,
+            today: yahooSessionDay(Date.now() / 1000) ?? "",
+          })}
+        />
+      ) : null}
     </OperatorShell>
   );
 }

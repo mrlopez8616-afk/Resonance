@@ -300,7 +300,7 @@ describe("sleeve apply", () => {
       event({ ticker: "HBAR", sleeve: "rh-agentic", qty: "0.01" }),
     );
     assert.equal(hbar.applied, true);
-    assert.equal(hbar.prints.HBAR?.["rh-agentic"], "7847.92");
+    assert.equal(hbar.prints.HBAR?.["rh-agentic"], "0.01");
   });
 
   it("refuses inventing rh-main on HBAR and does not invent an XLM book", () => {

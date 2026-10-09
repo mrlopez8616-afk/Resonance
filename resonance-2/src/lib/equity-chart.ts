@@ -103,13 +103,17 @@ export function quoteFromYahooChart(
 
 /** Daily closes, oldest first. Null and non-positive bars are dropped. */
 export function dailyClosesFromYahooChart(body: unknown): number[] {
+  return datedClosesFromYahooChart(body).map((bar) => bar.close);
+}
+
+/** One close per US session day, oldest first. A later bar on the same day wins. */
+export function datedClosesFromYahooChart(body: unknown): { day: string; close: number }[] {
   const result = chartResult(body);
   if (!result) return [];
-  const closes = result.indicators?.quote?.[0]?.close ?? [];
-  const out: number[] = [];
-  for (const value of closes) {
-    const close = positive(value);
-    if (close !== null) out.push(close);
+  const byDay = new Map<string, number>();
+  for (const bar of sessionBars(result)) {
+    if (!bar.day) continue;
+    byDay.set(bar.day, bar.close);
   }
-  return out;
+  return [...byDay.entries()].map(([day, close]) => ({ day, close }));
 }

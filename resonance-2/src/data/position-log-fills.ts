@@ -1,7 +1,8 @@
 /**
  * Confirmed Robinhood Agentic fills already inside the typed position seeds.
  *
- * HBAR seed `7847.91` is the 2026-09-29 buy plus the two 2026-10-01 buys.
+ * The HBAR log rows are the 2026-09-29 buy plus the two 2026-10-01 buys.
+ * The floor no longer holds HBAR, so the sleeve seed is 0. These rows stay.
  * Cost basis $851.06 ($438.01 + $409.10 + $3.95).
  * XLM is not a floor node and has no sleeve seed. The 2026-09-29 buys
  * (1891.36 + 18.95, cost basis $438.01) and the 2026-10-01 sell stay on

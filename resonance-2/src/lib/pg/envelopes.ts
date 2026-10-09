@@ -11,7 +11,7 @@ import {
   parseCalendarEnvelope,
   type CalendarStoreEnvelope,
 } from "@/lib/calendar-store-core";
-import { fillRowKey } from "@/lib/fills";
+import { fillRowKey, overlayStoredFillFields } from "@/lib/fills";
 import {
   FILLS_STORE_VERSION,
   parseFillsEnvelope,
@@ -294,7 +294,9 @@ function isTradeFill(fill: Fill): fill is Fill & { side: "buy" | "sell"; quantit
 export async function loadFillsEnvelope(): Promise<FillsStoreEnvelope | null> {
   const [meta, rows, prints] = await Promise.all([
     readMeta("fills"),
-    sqlQuery<{ payload: unknown }>(`SELECT payload FROM fills ORDER BY id ASC`),
+    sqlQuery<{ payload: unknown; sleeve: string | null; venue: string | null }>(
+      `SELECT payload, sleeve, venue FROM fills ORDER BY id ASC`,
+    ),
     sqlQuery<{ ticker: string; sleeve_id: string; quantity: string }>(
       `SELECT ticker, sleeve_id, quantity FROM sleeve_prints`,
     ),
@@ -311,7 +313,12 @@ export async function loadFillsEnvelope(): Promise<FillsStoreEnvelope | null> {
     version: FILLS_STORE_VERSION,
     updatedAt: clock.updatedAt,
     seededAt: clock.seededAt,
-    fills: rows.map((row) => readJson(row.payload)),
+    fills: rows.map((row) =>
+      overlayStoredFillFields(readJson(row.payload), {
+        sleeve: row.sleeve,
+        venue: row.venue,
+      }),
+    ),
     sleevePrints,
   });
 }

@@ -130,7 +130,7 @@ describe("operator log desk", () => {
 
     assert.deepEqual(
       nodesWithValue([], LIVE_SLEEVE_SEEDS).map((node) => node.ticker),
-      ["XRP", "SUI", "PWR", "VRT", "GEV", "CEG", "HBAR", "ETN", "HUBB"],
+      ["XRP", "SUI", "PWR", "VRT", "GEV", "CEG", "ETN", "HUBB"],
     );
     assert.equal(
       nodesWithValue([], { SUI: [{ quantity: "0" }] }).length,

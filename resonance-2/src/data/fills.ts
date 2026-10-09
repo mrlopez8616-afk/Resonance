@@ -87,6 +87,9 @@ export const fills: Fill[] = [
     price: "1.36756",
     orderId: "6aad6b7a-415a-4895-b43c-72c0eca79a55",
     result: "filled",
+    venue: "robinhood",
+    sleeve: "rh-agentic",
+    idempotencyKey: "seed:6aad6b7a-415a-4895-b43c-72c0eca79a55",
   },
   {
     time: "2026-09-18T11:49:18-05:00",

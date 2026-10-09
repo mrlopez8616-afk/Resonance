@@ -271,8 +271,8 @@ describe("AI stock glance", () => {
       quantity: "3",
       priceUsd: 132,
     });
-    assert.equal(sold?.averageLabel, "cost $110.00");
-    assert.equal(sold?.pnl?.text, "P/L +20.0%");
+    assert.equal(sold?.averageLabel, "cost $113.33");
+    assert.equal(sold?.pnl?.text, "P/L +16.5%");
 
     assert.equal(positionCostFromFills({ fills, ticker: "NVDA", quantity: "5", priceUsd: 121 }), null);
     assert.equal(

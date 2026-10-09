@@ -1,5 +1,6 @@
 import { sqlQuery } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
+import { XRP_AGENTIC_SELL_ORDER, patchXrpAgenticSellPayload } from "@/lib/pg/xrp-sleeve-fix";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 function errorText(error: unknown): string {
@@ -79,11 +80,17 @@ export async function applyMigrations(
       const view = /^CREATE VIEW\s+([a-z_][a-z0-9_]*)/i.exec(statement);
       if (view?.[1] && (await viewExists(view[1]).catch(() => false))) continue;
       try {
-        await sqlQuery(statement);
+        const rows = await sqlQuery(statement);
+        if (statement.includes(XRP_AGENTIC_SELL_ORDER)) {
+          console.log(`011_xrp_agentic_sleeve: updated ${rows.length} fill row(s)`);
+        }
       } catch (error) {
         if (view && /already exists/i.test(errorText(error))) continue;
         throw error;
       }
+    }
+    if (id === "011_xrp_agentic_sleeve") {
+      await patchXrpAgenticSellPayload();
     }
     await sqlQuery(`INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [
       id,

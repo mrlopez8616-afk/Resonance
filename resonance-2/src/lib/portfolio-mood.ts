@@ -10,7 +10,7 @@ import { isDecimalString } from "@/lib/decimal";
  * before that comparison so binary dust cannot flip the band.
  *
  * Eligible holdings are the live floor faces with a positive quantity
- * (XRP, SUI, the eight AI Stocks, HBAR). Zero-quantity sleeves
+ * (XRP, SUI, and the eight AI Stocks). Zero-quantity sleeves
  * are ignored. Retired ETN and HUBB are not quoted and are not in this list.
  * Fight Desk bets are not holdings and are not in this list.
  *
@@ -37,7 +37,6 @@ export const PORTFOLIO_FACE_TICKERS = [
   "XRP",
   "SUI",
   ...AI_STOCK_TICKERS,
-  "HBAR",
 ] as const;
 
 export type PortfolioFaceTicker = (typeof PORTFOLIO_FACE_TICKERS)[number];

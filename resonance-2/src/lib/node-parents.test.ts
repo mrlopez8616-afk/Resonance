@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import { FIGHT_DESK_ID, NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { formatCompactUsd } from "@/lib/live-face";
+import { retiredCryptoNodeHref } from "./crypto-nodes";
 import {
   legacyParentHref,
   isZeroCryptoHolding,
@@ -19,7 +20,6 @@ import {
 const PROPOSED = {
   xrp: "crypto",
   sui: "crypto",
-  hbar: "crypto",
   btc: "crypto",
   eth: "crypto",
   sol: "crypto",
@@ -78,7 +78,7 @@ describe("node parent map", () => {
   it("paints the same live squares under their parent, and never paints offline or FLR", () => {
     assert.deepEqual(
       nodesOnParent([], "crypto").map((node) => node.ticker),
-      ["XRP", "SUI", "HBAR", "+"],
+      ["XRP", "SUI", "+"],
     );
     assert.deepEqual(
       nodesOnParent([], "ai-stocks").map((node) => node.ticker),
@@ -87,16 +87,19 @@ describe("node parent map", () => {
     assert.deepEqual(nodesOnParent([], "fight-desk").map((node) => node.ticker), []);
     assert.deepEqual(
       nodesOnParent(["xrp", "pwr", "btc"], "crypto").map((node) => node.ticker),
-      ["SUI", "HBAR", "+"],
+      ["SUI", "+"],
     );
     assert.deepEqual(
       removedOnParent(["xrp", "pwr", "btc"], "crypto").map((node) => node.ticker),
       ["XRP", "BTC"],
     );
     assert.equal(
-      nodesOnParent([], "crypto").some((node) => node.ticker === "FLR" || node.ticker === "BTC"),
+      nodesOnParent([], "crypto").some((node) => node.ticker === "FLR" || node.ticker === "BTC" || node.ticker === "HBAR"),
       false,
     );
+    assert.equal(retiredCryptoNodeHref("crypto", "hbar"), "/n/crypto");
+    assert.equal(retiredCryptoNodeHref("ai-stocks", "hbar"), null);
+    assert.equal(nodePageHref("HBAR"), null);
   });
 
   it("sums the children that have a real value and counts the rest as missing", () => {
@@ -131,9 +134,10 @@ describe("node parent map", () => {
     assert.equal(complete.valuedCount, 2);
     assert.equal(complete.paintedCount, 2);
     assert.equal(complete.openBets, null);
-    assert.equal(isZeroCryptoHolding("HBAR", 0), true);
-    assert.equal(isZeroCryptoHolding("HBAR", 0.004), true);
-    assert.equal(isZeroCryptoHolding("HBAR", 0.02), false);
+    assert.equal(isZeroCryptoHolding("XRP", 0), true);
+    assert.equal(isZeroCryptoHolding("XRP", 0.004), true);
+    assert.equal(isZeroCryptoHolding("XRP", 0.02), false);
+    assert.equal(isZeroCryptoHolding("HBAR", 100), false);
     assert.equal(isZeroCryptoHolding("PWR", 0), false);
 
     const missing = parentAggregate(
@@ -143,11 +147,11 @@ describe("node parent map", () => {
       null,
       "live",
     );
-    assert.equal(missing.liveUsd, 11);
-    assert.equal(missing.liveUsdLabel, formatCompactUsd(11));
-    assert.equal(missing.valuedCount, 2);
-    assert.equal(missing.paintedCount, 3);
-    assert.equal(missing.childCount, 3);
+    assert.equal(missing.liveUsd, 10);
+    assert.equal(missing.liveUsdLabel, formatCompactUsd(10));
+    assert.equal(missing.valuedCount, 1);
+    assert.equal(missing.paintedCount, 2);
+    assert.equal(missing.childCount, 2);
 
     const none = parentAggregate(
       "crypto",
@@ -158,7 +162,7 @@ describe("node parent map", () => {
     );
     assert.equal(none.liveUsd, null);
     assert.equal(none.valuedCount, 0);
-    assert.equal(none.paintedCount, 3);
+    assert.equal(none.paintedCount, 2);
 
     const hidden = parentAggregate(
       "ai-stocks",
@@ -249,7 +253,7 @@ describe("node parent map", () => {
       parentSummaryLine(
         parentAggregate("crypto", [], { XRP: null, SUI: null, HBAR: null }, null, "live"),
       ),
-      { value: "value of 0 of 3", unit: "", coverage: true },
+      { value: "value of 0 of 2", unit: "", coverage: true },
     );
 
     const predictions = parentAggregate(

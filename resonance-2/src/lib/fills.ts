@@ -15,6 +15,25 @@ export function fillRowKey(fill: Fill): string {
   return fill.idempotencyKey ?? `${fill.venue ?? "seed"}:${fill.orderId}`;
 }
 
+/**
+ * A stored sleeve or venue column fills a payload that omitted the field.
+ * A null column stays null. This does not guess a sleeve.
+ */
+export function overlayStoredFillFields(
+  payload: unknown,
+  stored: { sleeve?: string | null; venue?: string | null },
+): unknown {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const fill = payload as Record<string, unknown>;
+  if (fill.kind === "bet") return payload;
+  const next = { ...fill };
+  const sleeve = stored.sleeve?.trim() ?? "";
+  const venue = stored.venue?.trim() ?? "";
+  if ((next.sleeve == null || next.sleeve === "") && sleeve) next.sleeve = sleeve;
+  if ((next.venue == null || next.venue === "") && venue) next.venue = venue;
+  return next;
+}
+
 const FILL_TIME =
   /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2}|Z)$/;
 
