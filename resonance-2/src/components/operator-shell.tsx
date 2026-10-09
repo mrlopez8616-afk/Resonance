@@ -56,7 +56,7 @@ export async function OperatorShell({
           <MoodLegend />
         </header>
         <Suspense fallback={null}>
-          <PhoneNav />
+          <PhoneNav publicMode={pub} />
         </Suspense>
         <div className="operator-main">
           {storageMessage ? (

@@ -122,6 +122,12 @@ function nodeHref(ticker: string): string | null {
   return `/n/${parentId}/${node.id}`;
 }
 
+/** Public mode never prints the treasury token in the phone trail. */
+export function publicTrailLabel(href: string, label: string): string {
+  if (href === "/n/crypto/xrp" || label === "XRP") return "Treasury";
+  return label;
+}
+
 function childLabel(nodeId: string, parentId?: string): string {
   if (parentId === "build") return buildSectionLabel(nodeId);
   const titled = CHILD_TITLES[nodeId];

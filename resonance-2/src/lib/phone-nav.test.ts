@@ -17,6 +17,7 @@ import {
   isStandaloneMode,
   phoneTabActive,
   phoneTrail,
+  publicTrailLabel,
   pullDecision,
   pullShouldAnimate,
   swipeDecision,
@@ -183,6 +184,14 @@ describe("phone tabs", () => {
     assert.equal(phoneTabActive("/log", "/log"), true);
     assert.equal(phoneTabActive("/settings/security", "/settings/security"), true);
     assert.equal(phoneTabActive("/log", "/"), false);
+  });
+});
+
+describe("public trail labels", () => {
+  it("replaces the treasury token name and leaves other labels", () => {
+    assert.equal(publicTrailLabel("/n/crypto/xrp", "XRP"), "Treasury");
+    assert.equal(publicTrailLabel("/n/crypto/sui", "SUI"), "SUI");
+    assert.equal(publicTrailLabel("/n/crypto", "Crypto"), "Crypto");
   });
 });
 
