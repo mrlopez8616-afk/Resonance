@@ -1,4 +1,5 @@
 import type { NodeSleeve } from "@/data/sleeves";
+import { AI_STOCK_TICKERS, RETIRED_AI_TICKERS } from "@/lib/ai-stocks";
 import { isDecimalString } from "@/lib/decimal";
 
 export type SpotQuote = {
@@ -45,20 +46,13 @@ export type LiveFaceData = {
   unitsWord: FaceUnitWord;
 };
 
-/** Live equity faces only. Do not invent offline tickers here. */
-export const EQUITY_FACE_TICKERS = [
-  "PWR",
-  "ETN",
-  "VRT",
-  "GEV",
-  "CEG",
-  "HUBB",
-] as const;
+/** Live equity faces. Retired names stay off this list so they are not quoted. */
+export const EQUITY_FACE_TICKERS = AI_STOCK_TICKERS;
+
+const SHARE_TICKERS = new Set<string>([...AI_STOCK_TICKERS, ...RETIRED_AI_TICKERS]);
 
 export function faceUnitWord(ticker: string): FaceUnitWord {
-  return (EQUITY_FACE_TICKERS as readonly string[]).includes(ticker)
-    ? "shares"
-    : "tokens";
+  return SHARE_TICKERS.has(ticker) ? "shares" : "tokens";
 }
 
 export function sleeveQuantityNumber(quantity: string): number {

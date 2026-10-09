@@ -1,13 +1,13 @@
 import type { Fill, FillSleeveId, FillVenue } from "@/data/fills";
 import { isDecimalString } from "@/lib/decimal";
 import {
+  ACCEPTED_FILL_TICKERS,
+  isAcceptedFillTicker,
   isFillSymbol,
   isFillVenue,
-  isLockedTicker,
   isWritableSleeveId,
-  LOCKED_TICKERS,
+  type AcceptedFillTicker,
   type FillSymbol,
-  type LockedTicker,
 } from "@/lib/fill-event";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -15,7 +15,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 export type DeskNodeMark = "sleeve" | "fills";
 
 export type DeskNode = {
-  ticker: LockedTicker;
+  ticker: AcceptedFillTicker;
   mark: DeskNodeMark;
 };
 
@@ -184,7 +184,7 @@ export function nodesWithValue(
 ): DeskNode[] {
   const sleeveTickers = new Set<string>();
   for (const [ticker, rows] of Object.entries(sleeves)) {
-    if (!isLockedTicker(ticker)) continue;
+    if (!isAcceptedFillTicker(ticker)) continue;
     if (rows?.some((row) => quantityHasValue(row.quantity))) {
       sleeveTickers.add(ticker);
     }
@@ -194,12 +194,12 @@ export function nodesWithValue(
   for (const fill of fills) {
     if (fill.kind === "bet") continue;
     const ticker = fill.symbol.trim().toUpperCase();
-    if (!isLockedTicker(ticker)) continue;
+    if (!isAcceptedFillTicker(ticker)) continue;
     if (quantityHasValue(fill.quantity)) fillTickers.add(ticker);
   }
 
   const nodes: DeskNode[] = [];
-  for (const ticker of LOCKED_TICKERS) {
+  for (const ticker of ACCEPTED_FILL_TICKERS) {
     if (sleeveTickers.has(ticker)) nodes.push({ ticker, mark: "sleeve" });
     else if (fillTickers.has(ticker)) nodes.push({ ticker, mark: "fills" });
   }

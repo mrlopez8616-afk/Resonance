@@ -7,6 +7,7 @@ import { loadFinancePage } from "@/lib/finance/store";
 import { financeHomeForRole, type FinanceHomeFace } from "@/lib/finance/view";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFitnessHome } from "@/lib/fitness-store";
+import { retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { EQUITY_FACE_TICKERS } from "@/lib/live-face";
 import { CRYPTO_HOME_TICKERS, nextAiCatalystLine, nextCryptoCatalystLine, type HomeMove } from "@/lib/home-lines";
 import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
@@ -87,6 +88,7 @@ export default async function Home() {
         cryptoMoves={cryptoMoves}
         catalystLine={nextAiCatalystLine(calendar.events, asOf)}
         cryptoCatalystLine={nextCryptoCatalystLine(calendar.events, asOf)}
+        retiringLine={retiringHeldLine(retiringHeldTickers(floor.sleeves))}
         stepSlots={fitnessStepBars(fitness.stepDays)}
         tierBar={
           ledger

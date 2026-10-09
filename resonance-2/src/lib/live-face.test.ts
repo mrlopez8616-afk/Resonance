@@ -42,13 +42,17 @@ describe("live face units", () => {
     assert.equal(formatTotalUnits(0), "0");
   });
 
-  it("labels PWR ETN VRT GEV CEG HUBB shares and crypto tokens", () => {
+  it("labels equity faces shares and crypto tokens", () => {
     assert.equal(faceUnitWord("PWR"), "shares");
     assert.equal(faceUnitWord("ETN"), "shares");
     assert.equal(faceUnitWord("VRT"), "shares");
     assert.equal(faceUnitWord("GEV"), "shares");
     assert.equal(faceUnitWord("CEG"), "shares");
     assert.equal(faceUnitWord("HUBB"), "shares");
+    assert.equal(faceUnitWord("NVDA"), "shares");
+    assert.equal(faceUnitWord("TSM"), "shares");
+    assert.equal(faceUnitWord("TSLA"), "shares");
+    assert.equal(faceUnitWord("SPCX"), "shares");
     assert.equal(faceUnitWord("XRP"), "tokens");
     assert.equal(faceUnitWord("SUI"), "tokens");
     assert.equal(faceUnitWord("HBAR"), "tokens");

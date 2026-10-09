@@ -1,7 +1,8 @@
 import type { NodeSleeve } from "@/data/sleeves";
 
 /**
- * HUBB sleeve quantities for the live equity face.
+ * HUBB sleeve quantities. The node is retired from AI Stocks children.
+ * This book stays so a closing sell can still update the print.
  *
  * Hub live lock 2026-09-21: RH Agentic only, 0.005566 shares.
  * Confirmed again 2026-09-30 (avg cost $449.16 is not a sleeve field).

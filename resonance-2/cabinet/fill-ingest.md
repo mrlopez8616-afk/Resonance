@@ -12,12 +12,12 @@ Reuse the existing operator log and live faces. Do not invent a second fill card
 | Log UI | `src/components/fill-log.tsx` | Same `FillLog` / `FillCard` |
 | Sort | `src/lib/fills.ts` → `listFills` | Newest `time` first |
 | Sleeve type | `src/data/sleeves.ts` → `NodeSleeve` | Quantity stays a string |
-| Seed prints | `src/data/xrp-sleeves.ts`, `src/data/sui-sleeves.ts`, `src/data/pwr-sleeves.ts`, `src/data/etn-sleeves.ts`, `src/data/vrt-sleeves.ts`, `src/data/gev-sleeves.ts`, `src/data/ceg-sleeves.ts`, `src/data/hubb-sleeves.ts`, `src/data/hbar-sleeves.ts` | Fallback when the durable store has no override |
+| Seed prints | `src/data/*-sleeves.ts` | Fallback when the durable store has no override. NVDA, TSM, TSLA, and SPCX start at 0. ETN and HUBB stay so a closing sell can post. |
 | Face | `assembleLiveFace` + `LiveNodeFace` | Positions from merged sleeves. Only `quote.usd` is a live price |
 | Auth spirit | Phase Zero `RESONANCE_SYNC_SECRET` Bearer | Server-only. Never `NEXT_PUBLIC_*` |
 | Store spirit | Phase Zero Blob + local file | Private JSON envelope. Local/dev writes `.data/fills.json` |
 
-Live floor is **XRP + SUI + PWR + ETN + VRT + GEV + CEG + HUBB + HBAR**. Locked nodes only — never invent a ticker or a sleeve id. PWR, ETN, VRT, GEV, CEG, and HUBB are equity faces ([`pwr-face.md`](./pwr-face.md), [`etn-face.md`](./etn-face.md), [`vrt-face.md`](./vrt-face.md), [`gev-face.md`](./gev-face.md), [`ceg-face.md`](./ceg-face.md), [`hubb-face.md`](./hubb-face.md)); ingest may write `rh-agentic` only on those six. HBAR is a crypto face ([`hbar-face.md`](./hbar-face.md)); ingest may write `rh-agentic` only on that book. XLM is not a floor node ([`xlm-face.md`](./xlm-face.md)).
+Live floor is **XRP + SUI + PWR + VRT + GEV + CEG + NVDA + TSM + TSLA + SPCX + HBAR**. Locked nodes only — never invent a ticker or a sleeve id. The eight AI Stocks are equity faces; ingest may write `rh-agentic` only. ETN and HUBB are retired from the children and are still accepted so a closing sell can zero `rh-agentic`. HBAR is a crypto face ([`hbar-face.md`](./hbar-face.md)); ingest may write `rh-agentic` only on that book. XLM is not a floor node ([`xlm-face.md`](./xlm-face.md)).
 
 ## Who writes what
 
@@ -197,7 +197,7 @@ Do not invent a Flare amount. Do not auto-edit vault quantity.
 
 ### Live vs offline tickers
 
-- **Live books today:** XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR. Sleeve apply runs only when that ticker already has the named sleeve id.
+- **Live books today:** XRP, SUI, PWR, VRT, GEV, CEG, NVDA, TSM, TSLA, SPCX, HBAR. ETN and HUBB remain sleeve books for closing sells. Sleeve apply runs only when that ticker already has the named sleeve id.
 - **Unknown sleeve on a live book** (example: `XRP` + `rh-main`, `XRP` + `coinbase`, `SUI` + `rh-main`, `PWR` + `coinbase`, `ETN` + `rh-main`, `VRT` + `rh-main`, `GEV` + `rh-main`, or `HBAR` + `rh-main`) → **400**. Do not invent a row. A stored XRP `rh-main` or `coinbase` override is dropped on read once that sleeve is gone from the seed.
 - **Locked but offline ticker** (BTC, ETH, SOL, FLR) → operator log **may** append (value transfer still happened). Sleeve apply is skipped. Do not invent a face or a sleeve book.
 - Unknown ticker outside the locked roster → **400**.

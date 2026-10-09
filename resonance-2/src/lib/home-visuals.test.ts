@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { isValidElement, type ReactNode } from "react";
 import { describe, it } from "node:test";
+import { AiChangeVisual } from "@/components/home-visual";
+import { AI_STOCK_TICKERS } from "@/lib/ai-stocks";
 import { BANKROLL_FIRST_EVENT } from "@/lib/bankroll";
 import { metricSamples } from "@/lib/fitness-board";
 import { fitnessWeekStepDays } from "@/lib/fitness-board";
@@ -21,6 +24,29 @@ import {
 import type { Bet } from "@/lib/bets";
 
 const NOW = new Date("2026-10-08T15:00:00.000Z");
+
+function countElements(node: ReactNode, tag: string): number {
+  if (Array.isArray(node)) return node.reduce((sum, child) => sum + countElements(child, tag), 0);
+  if (!isValidElement(node)) return 0;
+  const props = node.props as { children?: ReactNode };
+  return (node.type === tag ? 1 : 0) + countElements(props.children, tag);
+}
+
+function collectText(node: ReactNode, found: string[] = []): string[] {
+  if (node == null || typeof node === "boolean") return found;
+  if (typeof node === "string" || typeof node === "number") {
+    found.push(String(node));
+    return found;
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) collectText(child, found);
+    return found;
+  }
+  if (isValidElement(node)) {
+    collectText((node.props as { children?: ReactNode }).children, found);
+  }
+  return found;
+}
 
 function move(ticker: string, changePct: number | null, ageMs = 0): HomeMove {
   return {
@@ -97,16 +123,39 @@ describe("home visuals", () => {
       { ticker: "PWR", changePct: -0.4 },
       { ticker: "GEV", changePct: 0 },
       { ticker: "CEG", changePct: -2.2 },
-      { ticker: "HUBB", changePct: 1.2 },
     ]);
     assert.equal(
+      bars?.some((bar) => bar.ticker === "ETN" || bar.ticker === "HUBB"),
+      false,
+    );
+    assert.equal(
       aiChangeBars(
-        [move("PWR", 1, HOME_QUOTE_MAX_AGE_MS + 1), move("ETN", null), move("VRT", Number.NaN)],
+        [move("PWR", 1, HOME_QUOTE_MAX_AGE_MS + 1), move("NVDA", null), move("VRT", Number.NaN)],
         NOW,
       ),
       null,
     );
     assert.equal(aiChangeBars([], NOW), null);
+  });
+
+  it("renders eight AI Stocks bars and leaves ETN and HUBB off the chart", () => {
+    const moves = [
+      ...AI_STOCK_TICKERS.map((ticker, index) => move(ticker, index - 3)),
+      move("ETN", 9),
+      move("HUBB", -9),
+    ];
+    const bars = aiChangeBars(moves, NOW);
+    assert.deepEqual(
+      bars?.map((bar) => bar.ticker),
+      [...AI_STOCK_TICKERS],
+    );
+    assert.equal(bars?.length, 8);
+    const chart = AiChangeVisual({ bars: bars ?? [] });
+    assert.equal(countElements(chart, "rect"), 8);
+    const active = new Set<string>(AI_STOCK_TICKERS);
+    const labels = collectText(chart).filter((label) => active.has(label));
+    assert.deepEqual(labels, [...AI_STOCK_TICKERS]);
+    assert.equal(collectText(chart).some((label) => label === "ETN" || label === "HUBB"), false);
   });
 
   it("paints XRP then SUI, green or red by sign, and hides a missing quote", () => {

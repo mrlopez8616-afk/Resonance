@@ -17,6 +17,7 @@ import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
 import { FITNESS_NODES, fitnessLegacyHref } from "@/lib/fitness-board";
 import { loadFitnessNode } from "@/lib/fitness-store";
+import { retiredAiNodeHref } from "@/lib/ai-stocks";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -34,6 +35,8 @@ export async function generateMetadata({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
+  const retired = retiredAiNodeHref(parentId, nodeId);
+  if (retired) redirect(retired);
   if (parentId === "fitness") {
     const moved = fitnessLegacyHref(nodeId);
     if (moved) permanentRedirect(moved);
@@ -63,6 +66,8 @@ export default async function NodeDetailPage({
   params: Promise<{ parent: string; node: string }>;
 }) {
   const { parent: parentId, node: nodeId } = await params;
+  const retired = retiredAiNodeHref(parentId, nodeId);
+  if (retired) redirect(retired);
   const legacy = legacyParentHref(parentId, nodeId);
   if (legacy) {
     if (parentId === "predictions") permanentRedirect(legacy);

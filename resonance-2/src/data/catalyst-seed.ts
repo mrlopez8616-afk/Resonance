@@ -1,5 +1,5 @@
 import {
-  CATALYST_NODES,
+  SEEDED_CATALYST_NODES,
   isCatalystNode,
   type CalendarEvent,
   type CatalystNode,
@@ -62,7 +62,7 @@ export function catalystEventsFromRaw(raw: unknown): CalendarEvent[] {
     seen.add(id);
 
     const node = text(item.node).toUpperCase();
-    assertSeed(isCatalystNode(node), `${id} has a node outside the allowed ten.`);
+    assertSeed(isCatalystNode(node), `${id} has a node outside the catalyst list.`);
 
     const title = text(item.title);
     assertSeed(Boolean(title) && title.length <= 120, `${id} title is required.`);
@@ -115,7 +115,7 @@ export function catalystEventsFromRaw(raw: unknown): CalendarEvent[] {
   }
 
   const used = new Set(events.map((event) => event.node));
-  for (const node of CATALYST_NODES) {
+  for (const node of SEEDED_CATALYST_NODES) {
     assertSeed(used.has(node), `seed is missing node ${node}.`);
   }
 

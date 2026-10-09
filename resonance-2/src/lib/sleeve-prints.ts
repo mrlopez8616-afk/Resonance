@@ -6,8 +6,12 @@ import { ETN_SLEEVES } from "@/data/etn-sleeves";
 import { GEV_SLEEVES } from "@/data/gev-sleeves";
 import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
 import { HUBB_SLEEVES } from "@/data/hubb-sleeves";
+import { NVDA_SLEEVES } from "@/data/nvda-sleeves";
 import { PWR_SLEEVES } from "@/data/pwr-sleeves";
+import { SPCX_SLEEVES } from "@/data/spcx-sleeves";
 import { SUI_SLEEVES } from "@/data/sui-sleeves";
+import { TSM_SLEEVES } from "@/data/tsm-sleeves";
+import { TSLA_SLEEVES } from "@/data/tsla-sleeves";
 import { VRT_SLEEVES } from "@/data/vrt-sleeves";
 import { XRP_SLEEVES } from "@/data/xrp-sleeves";
 import { listFills } from "./fills";
@@ -18,10 +22,14 @@ export type SleeveBooks = {
   XRP: readonly NodeSleeve[];
   SUI: readonly NodeSleeve[];
   PWR: readonly NodeSleeve[];
-  ETN: readonly NodeSleeve[];
   VRT: readonly NodeSleeve[];
   GEV: readonly NodeSleeve[];
   CEG: readonly NodeSleeve[];
+  NVDA: readonly NodeSleeve[];
+  TSM: readonly NodeSleeve[];
+  TSLA: readonly NodeSleeve[];
+  SPCX: readonly NodeSleeve[];
+  ETN: readonly NodeSleeve[];
   HUBB: readonly NodeSleeve[];
   HBAR: readonly NodeSleeve[];
 };
@@ -30,10 +38,14 @@ const SEED_BOOKS: SleeveBooks = {
   XRP: XRP_SLEEVES,
   SUI: SUI_SLEEVES,
   PWR: PWR_SLEEVES,
-  ETN: ETN_SLEEVES,
   VRT: VRT_SLEEVES,
   GEV: GEV_SLEEVES,
   CEG: CEG_SLEEVES,
+  NVDA: NVDA_SLEEVES,
+  TSM: TSM_SLEEVES,
+  TSLA: TSLA_SLEEVES,
+  SPCX: SPCX_SLEEVES,
+  ETN: ETN_SLEEVES,
   HUBB: HUBB_SLEEVES,
   HBAR: HBAR_SLEEVES,
 };
@@ -43,10 +55,14 @@ function booksFromEnvelope(envelope: Parameters<typeof liveSleevesFromEnvelope>[
     XRP: liveSleevesFromEnvelope(envelope, "XRP") ?? XRP_SLEEVES,
     SUI: liveSleevesFromEnvelope(envelope, "SUI") ?? SUI_SLEEVES,
     PWR: liveSleevesFromEnvelope(envelope, "PWR") ?? PWR_SLEEVES,
-    ETN: liveSleevesFromEnvelope(envelope, "ETN") ?? ETN_SLEEVES,
     VRT: liveSleevesFromEnvelope(envelope, "VRT") ?? VRT_SLEEVES,
     GEV: liveSleevesFromEnvelope(envelope, "GEV") ?? GEV_SLEEVES,
     CEG: liveSleevesFromEnvelope(envelope, "CEG") ?? CEG_SLEEVES,
+    NVDA: liveSleevesFromEnvelope(envelope, "NVDA") ?? NVDA_SLEEVES,
+    TSM: liveSleevesFromEnvelope(envelope, "TSM") ?? TSM_SLEEVES,
+    TSLA: liveSleevesFromEnvelope(envelope, "TSLA") ?? TSLA_SLEEVES,
+    SPCX: liveSleevesFromEnvelope(envelope, "SPCX") ?? SPCX_SLEEVES,
+    ETN: liveSleevesFromEnvelope(envelope, "ETN") ?? ETN_SLEEVES,
     HUBB: liveSleevesFromEnvelope(envelope, "HUBB") ?? HUBB_SLEEVES,
     HBAR: liveSleevesFromEnvelope(envelope, "HBAR") ?? HBAR_SLEEVES,
   };

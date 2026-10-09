@@ -1,3 +1,4 @@
+import { AI_STOCK_TICKERS } from "@/lib/ai-stocks";
 import { isDecimalString } from "@/lib/decimal";
 
 /**
@@ -9,8 +10,9 @@ import { isDecimalString } from "@/lib/decimal";
  * before that comparison so binary dust cannot flip the band.
  *
  * Eligible holdings are the live floor faces with a positive quantity
- * (XRP, SUI, PWR, ETN, VRT, GEV, CEG, HUBB, HBAR). Zero-quantity sleeves
- * are ignored. Fight Desk bets are not holdings and are not in this list.
+ * (XRP, SUI, the eight AI Stocks, HBAR). Zero-quantity sleeves
+ * are ignored. Retired ETN and HUBB are not quoted and are not in this list.
+ * Fight Desk bets are not holdings and are not in this list.
  *
  * A holding is included only when the feed supplied a positive current
  * USD price and a positive 24h-ago price. The prior price is the feed's
@@ -34,12 +36,7 @@ export const MIN_VALUE_COVERAGE = 0.5;
 export const PORTFOLIO_FACE_TICKERS = [
   "XRP",
   "SUI",
-  "PWR",
-  "ETN",
-  "VRT",
-  "GEV",
-  "CEG",
-  "HUBB",
+  ...AI_STOCK_TICKERS,
   "HBAR",
 ] as const;
 

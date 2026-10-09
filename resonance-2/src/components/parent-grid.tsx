@@ -51,6 +51,7 @@ function linesFor(
     cryptoMoves: readonly HomeMove[];
     catalystLine: string | null;
     cryptoCatalystLine: string | null;
+    retiringLine: string | null;
     fitnessWeek: FitnessWeekFacts | null;
     fitnessLine: FitnessHomeLine | null;
     predictions: PredictionsHomeFacts | null;
@@ -67,6 +68,7 @@ function linesFor(
     return aiStockSecondaryLines({
       moves: visibleHomeMoves(input.moves, input.hiddenIds),
       catalystLine: input.catalystLine,
+      retiringLine: input.retiringLine,
       now: input.asOf,
     });
   }
@@ -88,6 +90,7 @@ export function ParentGrid({
   cryptoMoves = [],
   catalystLine = null,
   cryptoCatalystLine = null,
+  retiringLine = null,
   stepSlots = null,
   tierBar = null,
   bankrollLine = null,
@@ -109,6 +112,8 @@ export function ParentGrid({
   catalystLine?: string | null;
   /** Next crypto calendar or catalyst line. Null when none is upcoming. */
   cryptoCatalystLine?: string | null;
+  /** Retired AI names that still have shares. Null when both books are closed. */
+  retiringLine?: string | null;
   stepSlots?: readonly StepSlot[] | null;
   tierBar?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
@@ -137,6 +142,7 @@ export function ParentGrid({
           cryptoMoves,
           catalystLine,
           cryptoCatalystLine,
+          retiringLine,
           fitnessWeek,
           fitnessLine,
           predictions,
@@ -236,6 +242,7 @@ export function ParentGrid({
             key={parent.id}
             parent
             home
+            wide={parent.id === "ai-stocks"}
             live={connected}
             dashed={!connected}
             label={parent.label}
