@@ -226,7 +226,7 @@ describe("portfolio mood", () => {
     assert.equal(mood.partial, false);
     assert.ok(mood.changePct !== null && mood.changePct > 0.9 && mood.changePct < 1.1);
     const xrp = holdingFromBook("XRP", XRP_SLEEVES, { usd: 2, change24hPct: 1 });
-    assert.equal(xrp.quantity, 28332.601);
+    assert.equal(xrp.quantity, 28342.601);
   });
 
   it("treats a missing 24h field on a dominant holding as unknown", () => {

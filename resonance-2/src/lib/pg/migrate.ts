@@ -1,7 +1,14 @@
 import { sqlQuery } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
+import { SUI_AGENTIC_BUY_ORDER, patchSuiAgenticBuyPayload } from "@/lib/pg/sui-sleeve-fix";
 import { XRP_AGENTIC_SELL_ORDER, patchXrpAgenticSellPayload } from "@/lib/pg/xrp-sleeve-fix";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
+
+/** Coinbase SUI buys inserted by 013. Logging only; the SQL is the guard. */
+const SUI_COINBASE_BACKFILL_ORDERS = [
+  "6bab89a3-fdbb-4768-92f4-dbb5654bf1f3",
+  "4ef87d64-62b4-42f1-ac48-7db6941d5ba8",
+] as const;
 
 function errorText(error: unknown): string {
   if (isStorageUnavailable(error)) return error.reason;
@@ -84,6 +91,15 @@ export async function applyMigrations(
         if (statement.includes(XRP_AGENTIC_SELL_ORDER)) {
           console.log(`011_xrp_agentic_sleeve: updated ${rows.length} fill row(s)`);
         }
+        if (statement.includes(SUI_AGENTIC_BUY_ORDER)) {
+          console.log(`012_sui_agentic_sleeve: updated ${rows.length} fill row(s)`);
+        }
+        if (SUI_COINBASE_BACKFILL_ORDERS.some((orderId) => statement.includes(orderId))) {
+          console.log(`013_sui_coinbase_backfill: inserted ${rows.length} fill row(s)`);
+        }
+        if (statement.includes("'cb-agentic'")) {
+          console.log(`014_cb_agentic_xrp: inserted ${rows.length} sleeve row(s)`);
+        }
       } catch (error) {
         if (view && /already exists/i.test(errorText(error))) continue;
         throw error;
@@ -91,6 +107,9 @@ export async function applyMigrations(
     }
     if (id === "011_xrp_agentic_sleeve") {
       await patchXrpAgenticSellPayload();
+    }
+    if (id === "012_sui_agentic_sleeve") {
+      await patchSuiAgenticBuyPayload();
     }
     await sqlQuery(`INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [
       id,

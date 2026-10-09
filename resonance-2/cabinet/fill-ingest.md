@@ -17,7 +17,7 @@ Reuse the existing operator log and live faces. Do not invent a second fill card
 | Auth spirit | Phase Zero `RESONANCE_SYNC_SECRET` Bearer | Server-only. Never `NEXT_PUBLIC_*` |
 | Store spirit | Phase Zero Blob + local file | Private JSON envelope. Local/dev writes `.data/fills.json` |
 
-Live floor is **XRP + SUI + PWR + VRT + GEV + CEG + NVDA + TSM + TSLA + SPCX + HBAR**. Locked nodes only — never invent a ticker or a sleeve id. The eight AI Stocks are equity faces; ingest may write `rh-agentic` only. ETN and HUBB are retired from the children and are still accepted so a closing sell can zero `rh-agentic`. HBAR is a crypto face ([`hbar-face.md`](./hbar-face.md)); ingest may write `rh-agentic` only on that book. XLM is not a floor node ([`xlm-face.md`](./xlm-face.md)).
+Live floor is **XRP + SUI + PWR + VRT + GEV + CEG + NVDA + TSM + TSLA + SPCX**. Locked nodes only — never invent a ticker or a sleeve id. The AI core is PWR, VRT, GEV, CEG, NVDA, TSM, TSLA, and SPCX; ingest may write `rh-agentic` only on those books. ETN, HUBB, and HBAR are retired from the children and are still accepted for sells and history. XRP and SUI are the crypto tickers. XLM is not a floor node ([`xlm-face.md`](./xlm-face.md)). HBAR history stays on the log ([`hbar-face.md`](./hbar-face.md)).
 
 ## Who writes what
 
@@ -67,11 +67,11 @@ Canonical ingest object. Strings stay strings so quantity and price stay exact.
 | --- | --- | --- |
 | `venue` | yes | `robinhood` \| `coinbase` (lowercase after normalize) |
 | `orderId` or `tradeId` | one required | Trimmed. Used for the idempotency key. Prefer `orderId` when both exist |
-| `ticker` | yes | Uppercase. Must be one of the locked nodes: `BTC ETH SOL XRP SUI FLR PWR ETN VRT GEV CEG HUBB HBAR`. The three retained XLM order ids still parse; any other XLM order is refused |
+| `ticker` | yes | Uppercase. Crypto: `XRP` `SUI`. AI core: `PWR` `VRT` `GEV` `CEG` `NVDA` `TSM` `TSLA` `SPCX`. Retired names accepted for sells and history: `ETN` `HUBB` `HBAR`. Locked offline names (`BTC` `ETH` `SOL` `FLR`) may log and do not grow a sleeve. The three retained XLM order ids still parse; any other XLM order is refused |
 | `side` | yes | `buy` \| `sell` |
 | `qty` | yes | Positive decimal string. Alias: `quantity` (existing `Fill` field) |
 | `price` | yes | Non-negative decimal string |
-| `sleeve` | yes | Print target. `rh-main` \| `rh-agentic` \| `coinbase` only |
+| `sleeve` | yes | Print target. `rh-main` \| `rh-agentic` \| `coinbase` \| `cb-agentic` only. `cb-agentic` is Coinbase Agentic and requires venue `coinbase` |
 | `filledAt` | yes | ISO-8601 with offset or `Z`. Alias: `time` (existing `Fill` field) |
 | `result` | no | Defaults to `filled` |
 | `note` | no | Operator copy only (packet name). Not a second quantity |
@@ -102,6 +102,8 @@ Also treat an existing seed row with the same `orderId` / `tradeId` as a hit, ev
 
 That match is the only apply guard. A fill that is new to the log is applied unless it is on the position-log list below or the body sets `backfill` / `historical`. There is no second order-id check: `orderId` is already the trade key inside the idempotency key, and `fillMatchesEvent` also matches `orderId` and `tradeId` on their own. A re-POST of a logged fill returns `deduped: true` and `applied: false` whether or not the new body sets `backfill`. The stored row is left as it was.
 
+A legacy row with a null sleeve is fixed by a migration that names that order id. Do not retag every null sleeve. That is the same rule as `AGENTS.md`.
+
 ## Stored row (operator log)
 
 Ingest writes one `Fill` and keeps `/log` on the same component:
@@ -117,13 +119,13 @@ Ingest writes one `Fill` and keeps `/log` on the same component:
   result,
   venue,         // robinhood | coinbase
   tradeId?,      // present when hub sent it
-  sleeve,         // rh-main | rh-agentic | coinbase
+  sleeve,         // rh-main | rh-agentic | coinbase | cb-agentic
   idempotencyKey, // venue:trade-key
   backfill?       // true when the POST was a historical replay
 }
 ```
 
-`src/data/fills.ts` remains the **seed / local fallback**. Those two sample rows stay as-is. First boot of an empty durable store copies them into the envelope **without** re-applying sleeve math (the typed last-known prints already include that history).
+`src/data/fills.ts` remains the **seed / local fallback**. The two sample rows are the Sep 18 XRP sell and the Sep 18 SUI buy, both `rh-agentic` / `robinhood`. First boot of an empty durable store copies them into the envelope **without** re-applying sleeve math (the typed last-known prints already include that history).
 
 ## Sleeve apply
 
@@ -171,19 +173,40 @@ curl -X POST https://resonance3.vercel.app/api/fills \
 
 A live fill of that same `orderId` later is a dedupe. It does not apply the quantity.
 
+The two Coinbase SUI buys that sum to the `33.7` sleeve (16.8 at `0.8020710385`, order `6bab89a3-fdbb-4768-92f4-dbb5654bf1f3`, and 16.9 at `0.8019`, order `4ef87d64-62b4-42f1-ac48-7db6941d5ba8`) are inserted by migration `013_sui_coinbase_backfill` with `backfill: true`. That migration does not write `sleeve_prints`. `POST /api/fills` already accepts `venue: "coinbase"`, `sleeve: "coinbase"`, and `backfill: true` for the same shape. A second insert of those order ids is a no-op.
+
 ### Which sleeve ids update
 
 | Sleeve id | XRP | SUI | PWR | ETN | VRT | GEV | CEG | HUBB | HBAR | Writer |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `rh-main` | **no** (founder closed the XRP Main lot) | **no** (SUI has no Main line) | **no** (PWR has no Main line) | **no** (ETN has no Main line) | **no** (VRT has no Main line) | **no** (GEV has no Main line) | **no** (CEG has no Main line) | **no** (HUBB has no Main line) | **no** (HBAR has no Main line) | ingest, venue `robinhood` only |
 | `rh-agentic` | yes | yes (`0` seed, sold) | yes (`0.003917` seed, shares) | yes (`0.005844` seed, shares) | yes (`0.009991` seed, shares) | yes (`0.002640` seed, shares) | yes (`0.009617` seed, shares) | yes (`0.005566` seed, shares) | yes (`7847.91` seed, tokens) | ingest, venue `robinhood` only |
-| `coinbase` | **no** (founder closed the XRP Coinbase lot) | yes | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | ingest, venue `coinbase` only |
+| `cb-agentic` | yes (`10` seed, transfer, no cost) | **no** | **no** | **no** | **no** | **no** | **no** | **no** | **no** | ingest, venue `coinbase` only |
+| `coinbase` | **no** (founder closed the XRP Coinbase lot; the Default portfolio's XRP is not a line) | yes (`33.7` seed) | **no** (PWR has no Coinbase line) | **no** (ETN has no Coinbase line) | **no** (VRT has no Coinbase line) | **no** (GEV has no Coinbase line) | **no** (CEG has no Coinbase line) | **no** (HUBB has no Coinbase line) | **no** (HBAR has no Coinbase line) | ingest, venue `coinbase` only |
 | `flare-vault` | yes (XRP only) | no such line | no such line | no such line | no such line | no such line | no such line | no such line | no such line | **founder / typed constant only** |
+
+NVDA, TSM, TSLA, and SPCX follow the PWR rule: `rh-agentic` only, venue `robinhood`.
 
 Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print:
 
 - `robinhood` → `rh-main` or `rh-agentic`
-- `coinbase` → `coinbase`
+- `coinbase` → `coinbase` or `cb-agentic`
+
+`cb-agentic` with venue `robinhood` is a 400. Nothing in this app places a trade. A `cb-agentic` fill is a tracking row.
+
+```json
+{
+  "venue": "coinbase",
+  "orderId": "REPLACE-WITH-COINBASE-ORDER-ID",
+  "ticker": "XRP",
+  "side": "buy",
+  "qty": "1",
+  "price": "1.40",
+  "sleeve": "cb-agentic",
+  "filledAt": "2026-10-09T12:00:00-05:00",
+  "result": "filled"
+}
+```
 
 ### Flare vault (founder lock)
 

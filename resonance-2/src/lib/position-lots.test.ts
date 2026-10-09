@@ -4,10 +4,14 @@ import { describe, it } from "node:test";
 import { PositionChartView, LotsTable, PositionRollupView } from "@/components/position-book";
 import { bookTotals } from "./position-lots";
 import {
+  assembleNodePosition,
   buildLotsLedger,
   buildPositionChart,
+  coinbaseAgenticUnknownLine,
   rollupHoldingBooks,
+  totalsWithUnknownHolding,
   vaultUnknownLine,
+  xrpAgenticUnknownLine,
   type LedgerFill,
 } from "./position-lots";
 
@@ -123,6 +127,74 @@ describe("FIFO lots", () => {
     assert.equal(ledger.costUsd, 560);
     assert.equal(vaultUnknownLine("28281"), "Flare / Xaman vault · manual · entry unknown");
     assert.equal(vaultUnknownLine("0"), null);
+    assert.equal(coinbaseAgenticUnknownLine("10"), "Coinbase Agentic · 10 · entry unknown");
+    assert.equal(coinbaseAgenticUnknownLine("0"), null);
+    assert.equal(
+      xrpAgenticUnknownLine("SUI", [{ id: "coinbase", quantity: "33.7" }]),
+      null,
+    );
+  });
+
+  it("marks XRP partial for Coinbase Agentic and leaves the Default book off", () => {
+    const fills = [
+      fill({
+        time: "2026-09-01T15:00:00Z",
+        symbol: "XRP",
+        side: "buy",
+        quantity: "51.601",
+        price: "1.40",
+        sleeve: "rh-agentic",
+      }),
+    ];
+    const sleeves = [
+      { id: "rh-agentic", quantity: "51.601" },
+      { id: "cb-agentic", quantity: "10" },
+      { id: "flare-vault", quantity: "28281" },
+    ];
+    const position = assembleNodePosition({
+      fills,
+      ticker: "XRP",
+      sleeves,
+      priceUsd: 2,
+      closes: [],
+      today: "2026-10-09",
+      vaultQuantity: "28281",
+    });
+    assert.ok(position);
+    assert.equal(position.ledger.status, "matched");
+    assert.equal(position.ledger.costUsd, 72.24);
+    assert.equal(position.unknownLine, "Coinbase Agentic · 10 · entry unknown");
+    assert.equal(position.vaultLine, "Flare / Xaman vault · manual · entry unknown");
+    const totals = totalsWithUnknownHolding(bookTotals(position.ledger, 2, position.quantity), position.unknownLine);
+    assert.equal(totals.partial, true);
+    assert.equal(totals.partialLabel, "partial");
+    assert.equal(totals.costUsd, 72.24);
+    const text = collectText(
+      LotsTable({
+        ledger: position.ledger,
+        totals,
+        liveLabel: null,
+        vaultLine: position.vaultLine,
+        unknownLine: position.unknownLine,
+      }),
+    ).join(" ");
+    assert.match(text, /Coinbase Agentic · 10 · entry unknown/);
+    assert.match(text, /Total · partial/);
+    assert.equal(text.includes("628"), false);
+    assert.equal(text.includes("coinbase"), false);
+    const rollup = rollupHoldingBooks({
+      tickers: ["XRP"],
+      fills,
+      sleeves: { XRP: sleeves },
+      prices: { XRP: 2 },
+      closes: {},
+      today: "2026-10-09",
+    });
+    assert.equal(rollup.partial, true);
+    assert.equal(rollup.rows[0]?.partial, true);
+    assert.equal(rollup.rows[0]?.valueUsd, 123.2);
+    assert.equal(rollup.rows[0]?.costUsd, 72.24);
+    assert.equal(JSON.stringify(rollup).includes("628"), false);
   });
 
   it("puts markers on fill days and withholds a chart from ETN and HUBB", () => {

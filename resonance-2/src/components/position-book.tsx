@@ -3,6 +3,7 @@ import {
   LOT_PREVIEW,
   bookTotals,
   formatLotPct,
+  totalsWithUnknownHolding,
   formatLotUsd,
   formatSignedUsd,
   type BookTotals,
@@ -185,11 +186,13 @@ export function LotsTable({
   totals,
   liveLabel,
   vaultLine,
+  unknownLine = null,
 }: {
   ledger: LotsLedger;
   totals: BookTotals;
   liveLabel: string | null;
   vaultLine: string | null;
+  unknownLine?: string | null;
 }) {
   const preview = ledger.openLots.slice(0, LOT_PREVIEW);
   const rest = ledger.openLots.slice(LOT_PREVIEW);
@@ -208,6 +211,13 @@ export function LotsTable({
               <summary>Show all {ledger.openLots.length} open lots</summary>
               <ul className="lot-list">{rest.map((lot) => lotRow(lot))}</ul>
             </details>
+          </li>
+        ) : null}
+        {unknownLine ? (
+          <li className="lot-row lot-gap">
+            <span className="lot-main">
+              <span>{unknownLine}</span>
+            </span>
           </li>
         ) : null}
         {ledger.gapShares ? (
@@ -251,14 +261,16 @@ export function PositionBook({
   quantity,
   livePrice,
   vaultLine,
+  unknownLine = null,
 }: {
   ledger: LotsLedger;
   chart: PositionChart | null;
   quantity: string;
   livePrice: number | null;
   vaultLine: string | null;
+  unknownLine?: string | null;
 }) {
-  const totals = bookTotals(ledger, livePrice, quantity);
+  const totals = totalsWithUnknownHolding(bookTotals(ledger, livePrice, quantity), unknownLine);
   const gapValue =
     ledger.gapShares && livePrice && livePrice > 0
       ? formatLotUsd(Number(ledger.gapShares) * livePrice)
@@ -272,7 +284,13 @@ export function PositionBook({
           <span>{chart.entry}</span>
         </p>
       ) : null}
-      <LotsTable ledger={ledger} totals={totals} liveLabel={gapValue} vaultLine={vaultLine} />
+      <LotsTable
+        ledger={ledger}
+        totals={totals}
+        liveLabel={gapValue}
+        vaultLine={vaultLine}
+        unknownLine={unknownLine}
+      />
     </div>
   );
 }

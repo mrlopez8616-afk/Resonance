@@ -36,12 +36,12 @@ export type HistoricalFillTicker = Exclude<
 export type FillSymbol = AcceptedFillTicker | HistoricalFillTicker;
 
 export const FILL_VENUES = ["robinhood", "coinbase"] as const;
-export const WRITABLE_SLEEVE_IDS = ["rh-main", "rh-agentic", "coinbase"] as const;
+export const WRITABLE_SLEEVE_IDS = ["rh-main", "rh-agentic", "coinbase", "cb-agentic"] as const;
 export const FLARE_VAULT_SLEEVE_ID = "flare-vault";
 
 export const VENUE_SLEEVES: Record<FillVenue, readonly FillSleeveId[]> = {
   robinhood: ["rh-main", "rh-agentic"],
-  coinbase: ["coinbase"],
+  coinbase: ["coinbase", "cb-agentic"],
 };
 
 export class FillIngestError extends Error {
@@ -213,7 +213,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     );
   }
   if (!isWritableSleeveId(sleeveRaw)) {
-    throw new FillIngestError("sleeve must be rh-main, rh-agentic, or coinbase.");
+    throw new FillIngestError("sleeve must be rh-main, rh-agentic, coinbase, or cb-agentic.");
   }
   if (!VENUE_SLEEVES[venueRaw].includes(sleeveRaw)) {
     throw new FillIngestError(

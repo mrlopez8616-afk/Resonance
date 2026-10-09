@@ -82,6 +82,29 @@ describe("sleeve apply", () => {
     assert.equal(cleaned.XRP?.["rh-agentic"], "51.601");
   });
 
+  it("applies a Coinbase fill to cb-agentic and leaves the other XRP sleeves", () => {
+    const result = applyFillToSleevePrints(
+      {},
+      event({
+        venue: "coinbase",
+        sleeve: "cb-agentic",
+        ticker: "XRP",
+        qty: "1",
+        orderId: "cb-xrp-1",
+      }),
+    );
+    assert.equal(result.applied, true);
+    assert.equal(result.prints.XRP?.["cb-agentic"], "11");
+    assert.equal(result.prints.XRP?.["rh-agentic"], undefined);
+    assert.equal(result.prints.XRP?.["flare-vault"], undefined);
+    assert.equal(result.prints.XRP?.coinbase, undefined);
+    const merged = mergeSleeveBook("XRP", result.prints, XRP_SLEEVES);
+    assert.equal(merged.find((row) => row.id === "cb-agentic")?.quantity, "11");
+    assert.equal(merged.find((row) => row.id === "rh-agentic")?.quantity, "51.601");
+    assert.equal(merged.find((row) => row.id === "flare-vault")?.quantity, "28281");
+    assert.equal(merged.some((row) => row.id === "coinbase"), false);
+  });
+
   it("updates Coinbase from a Coinbase fill", () => {
     const result = applyFillToSleevePrints(
       {},

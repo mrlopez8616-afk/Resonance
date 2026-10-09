@@ -6,7 +6,7 @@ export type FillVenue = "robinhood" | "coinbase";
 export type BetVenue = "coinbase-predict";
 
 /** Writable sleeve prints. `flare-vault` is founder-typed and is not a FillSleeveId. */
-export type FillSleeveId = "rh-main" | "rh-agentic" | "coinbase";
+export type FillSleeveId = "rh-main" | "rh-agentic" | "coinbase" | "cb-agentic";
 
 export type BetFillStatus = "open" | "won" | "lost" | "void" | "sold";
 
@@ -99,5 +99,8 @@ export const fills: Fill[] = [
     price: "0.80729341",
     orderId: "6aad6b8e-f2a6-4be3-a803-65940a748d8d",
     result: "filled",
+    venue: "robinhood",
+    sleeve: "rh-agentic",
+    idempotencyKey: "seed:6aad6b8e-f2a6-4be3-a803-65940a748d8d",
   },
 ];

@@ -173,7 +173,15 @@ describe("live face units", () => {
     });
     assert.deepEqual(
       face.sleeves.map((row) => row.id),
-      ["rh-agentic", "flare-vault"],
+      ["rh-agentic", "cb-agentic", "flare-vault"],
+    );
+    assert.equal(
+      face.sleeves.find((row) => row.id === "cb-agentic")?.quantity,
+      "10",
+    );
+    assert.equal(
+      face.sleeves.find((row) => row.id === "cb-agentic")?.label,
+      "Coinbase Agentic",
     );
     assert.equal(
       face.sleeves.find((row) => row.id === "rh-agentic")?.quantity,
@@ -193,6 +201,9 @@ describe("live face units", () => {
     );
     assert.equal(face.sleeves.some((row) => row.id === "rh-main"), false);
     assert.equal(face.sleeves.some((row) => row.id === "coinbase"), false);
-    assert.equal(face.totalUnitsLabel, "28,332.601");
+    assert.equal(JSON.stringify(face).includes("628"), false);
+    assert.equal(face.totalUnits, 28342.601);
+    assert.equal(face.totalUsd, 28342.601 * 1.2);
+    assert.equal(face.totalUnitsLabel, "28,342.601");
   });
 });

@@ -142,7 +142,8 @@ function coerceStoredFill(raw: unknown): Fill | null {
   if (
     raw.sleeve === "rh-main" ||
     raw.sleeve === "rh-agentic" ||
-    raw.sleeve === "coinbase"
+    raw.sleeve === "coinbase" ||
+    raw.sleeve === "cb-agentic"
   ) {
     fill.sleeve = raw.sleeve;
   }

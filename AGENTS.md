@@ -15,6 +15,7 @@ KEEP IT CLEAN, DRILL DOWN ALWAYS. This is the Resonance 2 operator floor (`reson
 - The home page shows only the parent cards: Crypto, AI Stocks, Fitness, Finance, Fight Desk. No child squares or detail lists on home. The headline stays the one value line. Under it, a card may show up to three short secondary lines built from data the page already loaded. A thin This Week strip may sit above the cards.
 - A parent page shows only its child nodes as cards. Details live one level down, on that node's page. Fight Desk shows Bankroll and Fights. Fights links to `/fights`.
 - A back control or breadcrumb goes up exactly one level.
+- A stored fill with a null sleeve is corrected by a migration that names that order id. Do not retag every null sleeve.
 - VALUE FIRST. On a value node card the top headline number is the position's current value in dollars (quantity held times the live price). The live price sits under it as a smaller line. Quantity comes only from sleeve quantities, sleeve prints, or live store rows, and the price is a live price. No position or quantity source: show the live price as the secondary line with "no position" or "not connected". Never invent a value. A parent number is the sum of its children's real values; if a child has no value, say so (for example "value of 4 of 6"). New value nodes use the shared value card.
 
 ## Login

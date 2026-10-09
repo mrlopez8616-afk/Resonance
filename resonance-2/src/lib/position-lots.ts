@@ -23,6 +23,37 @@ export function vaultUnknownLine(quantity: string | null | undefined): string | 
   return "Flare / Xaman vault · manual · entry unknown";
 }
 
+/**
+ * Coinbase Agentic XRP arrived by transfer. No fill explains it, so the
+ * line names the quantity and refuses a cost. The Default portfolio is
+ * not this sleeve and is not a line.
+ */
+export function coinbaseAgenticUnknownLine(quantity: string | null | undefined): string | null {
+  const qty = quantity?.trim() ?? "";
+  if (!isDecimalString(qty) || Number(qty) <= 0) return null;
+  return `Coinbase Agentic · ${qty} · entry unknown`;
+}
+
+/** A positive cb-agentic print on XRP. Any other ticker, including a coinbase sleeve, is ignored. */
+export function xrpAgenticUnknownLine(
+  ticker: string,
+  sleeves: readonly { id: string; quantity: string }[] | undefined,
+): string | null {
+  if (ticker.trim().toUpperCase() !== "XRP") return null;
+  const row = sleeves?.find((item) => item.id === "cb-agentic");
+  return coinbaseAgenticUnknownLine(row?.quantity);
+}
+
+/** The lots total stays partial while an uncosted sleeve is on the book. */
+export function totalsWithUnknownHolding(totals: BookTotals, unknownLine: string | null): BookTotals {
+  if (!unknownLine) return totals;
+  return {
+    ...totals,
+    partial: true,
+    partialLabel: totals.partialLabel === "entry unknown" ? "entry unknown" : "partial",
+  };
+}
+
 export type LedgerFill = {
   time: string;
   symbol: string;
@@ -468,6 +499,8 @@ export function rollupPositions(
     ledger: LotsLedger;
     valueUsd: number | null;
     chart: PositionChart | null;
+    /** Market value of shares that have no cost. Counts in value and marks the book partial. */
+    unknownValueUsd?: number | null;
   }[],
 ): PositionRollup {
   let cost = 0;
@@ -478,10 +511,13 @@ export function rollupPositions(
   let partial = false;
   const out: RollupRow[] = [];
   for (const row of rows) {
+    const extra = typeof row.unknownValueUsd === "number" && row.unknownValueUsd > 0 ? row.unknownValueUsd : 0;
     const matched = row.ledger.status === "matched" && row.ledger.costUsd !== null && row.valueUsd !== null;
-    if (!matched) partial = true;
-    if (row.valueUsd !== null) {
-      value += row.valueUsd;
+    const displayValue =
+      row.valueUsd === null ? (extra > 0 ? money(extra) : null) : money(row.valueUsd + extra);
+    if (!matched || extra > 0) partial = true;
+    if (displayValue !== null) {
+      value += displayValue;
       valueCount += 1;
     }
     if (matched && row.ledger.costUsd !== null && row.valueUsd !== null) {
@@ -497,10 +533,10 @@ export function rollupPositions(
     out.push({
       ticker: row.ticker,
       costUsd: matched ? row.ledger.costUsd : null,
-      valueUsd: row.valueUsd,
+      valueUsd: displayValue,
       pnlUsd,
       pnlPct,
-      partial: !matched,
+      partial: !matched || extra > 0,
     });
   }
   const byDay = new Map<string, { value: number; cost: number; costParts: number }>();
@@ -582,6 +618,8 @@ export function assembleNodePosition(input: {
   chart: PositionChart | null;
   quantity: string;
   vaultLine: string | null;
+  /** Uncosted sleeve on this page. Null when that sleeve is absent or zero. */
+  unknownLine: string | null;
 } | null {
   const sleeve = positionSleeve(input.ticker);
   if (!sleeve) return null;
@@ -607,6 +645,7 @@ export function assembleNodePosition(input: {
     chart,
     quantity,
     vaultLine: input.ticker.trim().toUpperCase() === "XRP" ? vaultUnknownLine(input.vaultQuantity) : null,
+    unknownLine: xrpAgenticUnknownLine(input.ticker, input.sleeves),
   };
 }
 
@@ -624,6 +663,7 @@ export function rollupHoldingBooks(input: {
     ledger: LotsLedger;
     valueUsd: number | null;
     chart: PositionChart | null;
+    unknownValueUsd: number | null;
   }[] = [];
   for (const ticker of input.tickers) {
     const sleeve = positionSleeve(ticker);
@@ -646,11 +686,15 @@ export function rollupHoldingBooks(input: {
       quantity,
       today: input.today,
     });
+    const knownValue = live ? money(Number(quantity) * live) : null;
+    const unknownQty = ticker.trim().toUpperCase() === "XRP" ? sleeveQuantity(input.sleeves[ticker], "cb-agentic") : null;
+    const unknownValueUsd = unknownQty && live ? money(Number(unknownQty) * live) : null;
     rows.push({
       ticker,
       ledger,
-      valueUsd: live ? money(Number(quantity) * live) : null,
+      valueUsd: knownValue,
       chart,
+      unknownValueUsd,
     });
   }
   return rollupPositions(rows);

@@ -23,6 +23,7 @@ export const DESK_SLEEVES = [
   { id: "rh-main", label: "RH Main" },
   { id: "rh-agentic", label: "RH Agentic" },
   { id: "coinbase", label: "Coinbase" },
+  { id: "cb-agentic", label: "Coinbase Agentic" },
   { id: "unset", label: "unset" },
 ] as const;
 
