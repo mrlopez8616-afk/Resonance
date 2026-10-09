@@ -2,11 +2,21 @@ import { neon } from "@neondatabase/serverless";
 import { Pool } from "pg";
 import { StorageUnavailableError } from "@/lib/storage-unavailable";
 
+export type SqlStatement = {
+  text: string;
+  params?: readonly unknown[];
+};
+
 export type SqlClient = {
   query<T extends Record<string, unknown> = Record<string, unknown>>(
     text: string,
     params?: readonly unknown[],
   ): Promise<T[]>;
+  /**
+   * Runs every statement on one connection and commits once.
+   * In-memory suite clients omit this; the caller runs the statements in order.
+   */
+  transaction?(statements: readonly SqlStatement[]): Promise<Record<string, unknown>[][]>;
 };
 
 let override: SqlClient | null = null;
@@ -51,6 +61,24 @@ export function createPgClient(databaseUrl: string): SqlClient {
       const result = await pool.query(text, [...params]);
       return result.rows as T[];
     },
+    async transaction(statements) {
+      const client = await pool.connect();
+      const results: Record<string, unknown>[][] = [];
+      try {
+        await client.query("BEGIN");
+        for (const statement of statements) {
+          const result = await client.query(statement.text, [...(statement.params ?? [])]);
+          results.push(result.rows as Record<string, unknown>[]);
+        }
+        await client.query("COMMIT");
+        return results;
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
   };
 }
 
@@ -63,6 +91,12 @@ export function createNeonClient(databaseUrl: string): SqlClient {
     ): Promise<T[]> {
       const rows = await sql.query(text, [...params]);
       return rows as T[];
+    },
+    async transaction(statements) {
+      const results = await sql.transaction((txn) =>
+        statements.map((statement) => txn.query(statement.text, [...(statement.params ?? [])])),
+      );
+      return results as Record<string, unknown>[][];
     },
   };
 }
@@ -86,6 +120,26 @@ export async function sqlQuery<T extends Record<string, unknown> = Record<string
   try {
     const client = await getSql();
     return await client.query<T>(text, params);
+  } catch (error) {
+    if (error instanceof StorageUnavailableError) throw error;
+    throw new StorageUnavailableError("postgres", postgresFailureReason(error));
+  }
+}
+
+/** One commit for every statement. Clients without transaction() run them in order. */
+export async function sqlTransaction(
+  statements: readonly SqlStatement[],
+): Promise<Record<string, unknown>[][]> {
+  const client = await getSql();
+  if (!client.transaction) {
+    const results: Record<string, unknown>[][] = [];
+    for (const statement of statements) {
+      results.push(await sqlQuery(statement.text, statement.params ?? []));
+    }
+    return results;
+  }
+  try {
+    return await client.transaction(statements);
   } catch (error) {
     if (error instanceof StorageUnavailableError) throw error;
     throw new StorageUnavailableError("postgres", postgresFailureReason(error));

@@ -1,4 +1,4 @@
-import { sqlQuery } from "@/lib/pg/client";
+import { sqlQuery, sqlTransaction } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
 import { patchRetaggedFillPayloads } from "@/lib/pg/fill-source-dedupe";
 import { SUI_AGENTIC_BUY_ORDER, patchSuiAgenticBuyPayload } from "@/lib/pg/sui-sleeve-fix";
@@ -14,6 +14,32 @@ const SUI_COINBASE_BACKFILL_ORDERS = [
 function errorText(error: unknown): string {
   if (isStorageUnavailable(error)) return error.reason;
   return error instanceof Error ? error.message : "";
+}
+
+function logFillKeyDedupe(statement: string, rows: Record<string, unknown>[]): void {
+  if (/^DELETE\b/i.test(statement)) {
+    for (const row of rows) {
+      console.log(
+        `019_dedupe_fill_keys: deleted id ${row.id} source ${row.source} external_id ${row.external_id}`,
+      );
+    }
+    return;
+  }
+  if (statement.includes("INSERT INTO fills_dedupe_backup")) {
+    for (const row of rows) {
+      console.log(
+        `019_dedupe_fill_keys: backed up id ${row.id} source ${row.source} external_id ${row.external_id}`,
+      );
+    }
+    return;
+  }
+  if (statement.includes("manual_review_order_id")) {
+    for (const row of rows) {
+      console.warn(
+        `019_dedupe_fill_keys: manual review order ${row.manual_review_order_id} has ${row.row_count} rows`,
+      );
+    }
+  }
 }
 
 function logRetaggedFillStatement(statement: string, rows: Record<string, unknown>[]): void {
@@ -100,6 +126,19 @@ export async function applyMigrations(
     });
     if (seen.length > 0) {
       skipped.push(id);
+      continue;
+    }
+
+    if (id === "019_dedupe_fill_keys") {
+      const statements = splitSqlStatements(migration.sql);
+      const batches = await sqlTransaction(statements.map((text) => ({ text })));
+      statements.forEach((statement, index) => {
+        logFillKeyDedupe(statement, batches[index] ?? []);
+      });
+      await sqlQuery(`INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [
+        id,
+      ]);
+      applied.push(id);
       continue;
     }
 
