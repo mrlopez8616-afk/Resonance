@@ -354,6 +354,39 @@ export const SUI_CB_AGENTIC_TRANSFER_SQL = "-- 020: Coinbase internal transfer, 
 
 export const XRP_VAULT_REWARD_SQL = "-- 021: Flare vault yield, +6 XRP at 2026-10-09 17:25 CT. A reward, not a buy.\n-- Inserts one reward row and sets the flare-vault print to 28287 in one statement,\n-- only when the reward row is absent and the print is missing or exactly 28281.\n-- A missing print is the founder seed 28281, which is not stored in sleeve_prints.\n-- Any other print changes nothing. A second run changes 0 rows.\n-- The row is not a buy and not a sell.\nWITH guard AS (\n  SELECT 1 AS ok\n  WHERE NOT EXISTS (\n      SELECT 1 FROM fills\n      WHERE external_id = 'manual:reward:flare-vault:xrp:2026-10-09t17:25'\n         OR payload->>'orderId' = 'reward:flare-vault:XRP:2026-10-09T17:25')\n    AND NOT EXISTS (\n      SELECT 1 FROM sleeve_prints\n      WHERE ticker = 'XRP' AND sleeve_id = 'flare-vault' AND quantity::numeric <> 28281)\n),\nins AS (\n  INSERT INTO fills (source, external_id, filled_at, symbol, side, quantity, price,\n                     venue, sleeve, result, log_only, note, payload)\n  SELECT 'manual',\n         'manual:reward:flare-vault:xrp:2026-10-09t17:25',\n         '2026-10-09T17:25:00-05:00'::timestamptz, 'XRP', 'reward', '6'::numeric, NULL,\n         'manual', 'flare-vault', 'filled', false,\n         'Vault yield/rewards, manual update',\n         '{\"kind\":\"reward\",\"time\":\"2026-10-09T17:25:00-05:00\",\"symbol\":\"XRP\",\"quantity\":\"6\",\"venue\":\"manual\",\"sleeve\":\"flare-vault\",\"orderId\":\"reward:flare-vault:XRP:2026-10-09T17:25\",\"idempotencyKey\":\"manual:reward:flare-vault:xrp:2026-10-09t17:25\",\"result\":\"filled\",\"note\":\"Vault yield/rewards, manual update\"}'::jsonb\n  FROM guard\n  RETURNING external_id\n),\ndst AS (\n  INSERT INTO sleeve_prints (ticker, sleeve_id, quantity)\n  SELECT 'XRP', 'flare-vault', '28287' FROM ins\n  ON CONFLICT (ticker, sleeve_id) DO UPDATE SET quantity = EXCLUDED.quantity\n  RETURNING sleeve_id, quantity\n)\nSELECT (SELECT count(*) FROM ins)::int AS reward_rows,\n       (SELECT count(*) FROM dst)::int AS vault_rows;\n";
 
+export const APPROVALS_SQL = `-- Approval queue. A row is a request and, later, a recorded decision.
+-- Approving or declining does not move money, place a trade, or call out.
+-- Idempotent: CREATE is IF NOT EXISTS. A second run changes nothing.
+-- Number 022. 021 is the vault reward. This file inserts no rows.
+
+CREATE TABLE IF NOT EXISTS approvals (
+  id text PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  requested_by_agent text NOT NULL,
+  title text NOT NULL,
+  detail text NOT NULL DEFAULT '',
+  category text NOT NULL CHECK (category IN ('trade', 'transfer', 'build', 'other')),
+  node text,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined', 'cancelled')),
+  decided_by text CHECK (decided_by IS NULL OR decided_by IN ('owner', 'operator')),
+  decided_at timestamptz,
+  decision_note text,
+  idempotency_key text NOT NULL,
+  UNIQUE (idempotency_key),
+  CONSTRAINT approvals_pending_clear CHECK (
+    status <> 'pending'
+    OR (decided_by IS NULL AND decided_at IS NULL AND decision_note IS NULL)
+  ),
+  CONSTRAINT approvals_decided_set CHECK (
+    status = 'pending'
+    OR (decided_by IS NOT NULL AND decided_at IS NOT NULL)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS approvals_status_created_idx
+  ON approvals (status, created_at DESC);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -374,4 +407,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "019_dedupe_fill_keys", sql: DEDUPE_FILL_KEYS_SQL },
   { id: "020_sui_cb_agentic_transfer", sql: SUI_CB_AGENTIC_TRANSFER_SQL },
   { id: "021_xrp_vault_reward", sql: XRP_VAULT_REWARD_SQL },
+  { id: "022_approvals", sql: APPROVALS_SQL },
 ];

@@ -36,6 +36,7 @@ export const READ_ROUTES = [
   "GET /api/fights/breakdown?event=",
   "GET /api/build/items",
   "GET /api/lessons",
+  "GET /api/approvals",
 ] as const;
 
 export const MACHINE_ROUTES = [
@@ -52,6 +53,7 @@ export const MACHINE_ROUTES = [
   "PATCH /api/build/items",
   "POST /api/lessons",
   "PATCH /api/lessons",
+  "POST /api/approvals",
 ] as const;
 
 const SESSION_TOKEN = /^[A-Za-z0-9_-]{43}$/;

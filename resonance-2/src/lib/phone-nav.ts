@@ -24,8 +24,15 @@ export const PHONE_TABS = [
   { href: "/log", label: "Log" },
   { href: "/calendar", label: "Calendar" },
   { href: "/n/build", label: "Build" },
+  { href: "/n/approvals", label: "Approvals" },
   { href: "/settings/security", label: "Settings" },
 ] as const;
+
+/** Public mode hides the operator log and the whole approval queue. */
+export function phoneTabHidden(href: string, publicMode: boolean): boolean {
+  if (!publicMode) return false;
+  return href === "/log" || href === "/n/approvals";
+}
 
 /** Left-edge start zone, in CSS pixels. */
 export const SWIPE_EDGE_PX = 24;
@@ -197,6 +204,19 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
       return { back: HOME, crumbs: [HOME, lessons] };
     }
+    if (parentId === "approvals") {
+      const approvals: PhoneTarget = { href: "/n/approvals", label: "Approvals" };
+      if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, approvals] };
+      const view = parts[2];
+      if (view === "pending" || view === "done") {
+        const child: PhoneTarget = {
+          href: `/n/approvals/${view}`,
+          label: view === "pending" ? "Pending" : "Done",
+        };
+        return { back: approvals, crumbs: [HOME, approvals, child] };
+      }
+      return homeTrail();
+    }
     const parentLabel = PARENT_LABELS[parentId];
     if (!parentLabel) return homeTrail();
     const parent: PhoneTarget = { href: `/n/${parentId}`, label: parentLabel };
@@ -280,8 +300,12 @@ export function phoneTabActive(href: string, pathname: string): boolean {
   const path = segments(pathname).join("/");
   const normalized = path ? `/${path}` : "/";
   if (href === "/n/build") return normalized === "/n/build" || normalized.startsWith("/n/build/");
+  if (href === "/n/approvals") {
+    return normalized === "/n/approvals" || normalized.startsWith("/n/approvals/");
+  }
   if (href === "/") {
     if (normalized === "/n/build" || normalized.startsWith("/n/build/")) return false;
+    if (normalized === "/n/approvals" || normalized.startsWith("/n/approvals/")) return false;
     return normalized === "/" || normalized.startsWith("/n/") || normalized.startsWith("/fights");
   }
   if (href === "/settings/security") return normalized === "/settings" || normalized.startsWith("/settings/");

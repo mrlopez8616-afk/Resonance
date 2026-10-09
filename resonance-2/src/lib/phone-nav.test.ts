@@ -10,6 +10,7 @@ import { FINANCE_NODES } from "@/lib/finance/view";
 import { FITNESS_NODES } from "@/lib/fitness-board";
 import {
   PHONE_TABS,
+  phoneTabHidden,
   PULL_COMMIT_PX,
   SWIPE_COMMIT_PX,
   SWIPE_EDGE_PX,
@@ -113,6 +114,24 @@ describe("phone back targets", () => {
       ],
     });
     assert.deepEqual(phoneTrail("/n/lessons/extra").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/approvals"), {
+      back: { href: "/", label: "Floor" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/approvals", label: "Approvals" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/approvals/pending").back, {
+      href: "/n/approvals",
+      label: "Approvals",
+    });
+    assert.equal(phoneTrail("/n/approvals/pending").crumbs.at(-1)?.label, "Pending");
+    assert.deepEqual(phoneTrail("/n/approvals/done").back, {
+      href: "/n/approvals",
+      label: "Approvals",
+    });
+    assert.equal(phoneTrail("/n/approvals/done").crumbs.at(-1)?.label, "Done");
+    assert.deepEqual(phoneTrail("/n/approvals/other").back, { href: "/", label: "Home" });
   });
 
   it("sends an unknown route home", () => {
@@ -186,11 +205,19 @@ describe("phone tabs", () => {
     assert.equal(PHONE_TABS[0]?.href, "/");
     assert.deepEqual(
       PHONE_TABS.map((tab) => tab.label),
-      ["Home", "Log", "Calendar", "Build", "Settings"],
+      ["Home", "Log", "Calendar", "Build", "Approvals", "Settings"],
     );
     assert.equal(phoneTabActive("/", "/"), true);
     assert.equal(phoneTabActive("/", "/n/ai-stocks/nvda"), true);
     assert.equal(phoneTabActive("/", "/n/lessons"), true);
+    assert.equal(phoneTabActive("/", "/n/approvals"), false);
+    assert.equal(phoneTabActive("/n/approvals", "/n/approvals"), true);
+    assert.equal(phoneTabActive("/n/approvals", "/n/approvals/pending"), true);
+    assert.equal(phoneTabActive("/n/approvals", "/n/build"), false);
+    assert.equal(phoneTabHidden("/n/approvals", true), true);
+    assert.equal(phoneTabHidden("/log", true), true);
+    assert.equal(phoneTabHidden("/n/approvals", false), false);
+    assert.equal(phoneTabHidden("/", true), false);
     assert.equal(phoneTabActive("/n/build", "/n/lessons"), false);
     assert.equal(phoneTabActive("/", "/fights/ufc"), true);
     assert.equal(phoneTabActive("/", "/n/build"), false);
