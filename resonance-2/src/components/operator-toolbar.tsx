@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   ApprovalsIcon,
+  BuildIcon,
   CalendarIcon,
   HomeIcon,
   LogIcon,
   SettingsIcon,
 } from "@/components/icons";
+import { PHONE_TABS, phoneTabActive } from "@/lib/phone-nav";
 
 const PRIMARY = [
   { href: "/", label: "Home / Floor", icon: HomeIcon, exact: true },
@@ -18,6 +20,14 @@ const PRIMARY = [
 ] as const;
 
 const PLACEHOLDERS = [{ label: "Approvals", icon: ApprovalsIcon }] as const;
+
+const PHONE_ICONS = {
+  "/": HomeIcon,
+  "/log": LogIcon,
+  "/calendar": CalendarIcon,
+  "/n/build": BuildIcon,
+  "/settings/security": SettingsIcon,
+} as const;
 
 function RailButton({
   label,
@@ -111,6 +121,23 @@ export function OperatorToolbar() {
       >
         <SettingsIcon />
       </RailButton>
+      <nav className="phone-tabbar" aria-label="Phone">
+        {PHONE_TABS.map((tab) => {
+          const Icon = PHONE_ICONS[tab.href];
+          const active = phoneTabActive(tab.href, pathname);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={active ? "phone-tab is-active" : "phone-tab"}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon size={22} />
+              <span>{tab.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </aside>
   );
 }

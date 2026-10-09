@@ -75,6 +75,16 @@ export function LockIcon(props: IconProps) {
   );
 }
 
+export function BuildIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 20h16" />
+      <path d="M6 16V9.2L12 5l6 4.2V16" />
+      <path d="M10 20v-5h4v5" />
+    </Svg>
+  );
+}
+
 export function SettingsIcon(props: IconProps) {
   return (
     <Svg {...props}>

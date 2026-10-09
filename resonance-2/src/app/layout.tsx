@@ -6,6 +6,7 @@ import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { PATH_HEADER, isLoginPage } from "@/lib/auth-core";
 import { requireSession } from "@/lib/auth-session";
 import "./globals.css";
+import "./phone-nav.css";
 
 const inter = Inter({
   variable: "--font-inter",

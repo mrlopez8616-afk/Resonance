@@ -204,6 +204,28 @@
   }
 }
 
+@media (max-width: 640px) {
+  .note,
+  .groupHead h2,
+  .chip,
+  .meta,
+  .next,
+  .shipped summary {
+    font-size: 14px;
+  }
+
+  .meta a,
+  .shipped summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .shipped summary {
+    display: flex;
+  }
+}
+
 @media (min-width: 900px) {
   .items {
     display: grid;

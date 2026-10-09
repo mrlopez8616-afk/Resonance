@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { LockIcon } from "@/components/icons";
 import { MoodFloor, MoodLegend, MoodPreviewSync } from "@/components/mood-floor";
 import { OperatorToolbar } from "@/components/operator-toolbar";
+import { PhoneNav } from "@/components/phone-nav";
 import { loadPortfolioMood } from "@/lib/portfolio-mood-load";
 
 export async function OperatorShell({
@@ -29,6 +30,9 @@ export async function OperatorShell({
           </span>
           <MoodLegend />
         </header>
+        <Suspense fallback={null}>
+          <PhoneNav />
+        </Suspense>
         <div className="operator-main">
           {storageMessage ? (
             <p className="storage-banner" role="status" data-storage-banner="unavailable">
