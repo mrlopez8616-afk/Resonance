@@ -746,6 +746,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "015_dedupe_retagged_fills",
         "016_build_items",
         "019_dedupe_fill_keys",
+        "020_sui_cb_agentic_transfer",
       ],
     );
     assert.equal(

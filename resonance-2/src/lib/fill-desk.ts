@@ -145,6 +145,26 @@ export function filterFills(rows: readonly Fill[], query: FillDeskQuery): Fill[]
       return true;
     }
 
+    if (fill.kind === "transfer") {
+      if (query.sleeve === "unset") return false;
+      if (
+        query.sleeve &&
+        fill.fromSleeve !== query.sleeve &&
+        fill.toSleeve !== query.sleeve
+      ) {
+        return false;
+      }
+      if (query.source === "unset") {
+        if (fill.venue) return false;
+      } else if (query.source && fill.venue !== query.source) {
+        return false;
+      }
+      const day = fillCalendarDate(fill.time);
+      if (query.from && (!day || day < query.from)) return false;
+      if (query.to && (!day || day > query.to)) return false;
+      return true;
+    }
+
     if (query.sleeve === "unset") {
       if (fill.sleeve) return false;
     } else if (query.sleeve && fill.sleeve !== query.sleeve) {

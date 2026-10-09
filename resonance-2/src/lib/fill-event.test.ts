@@ -161,4 +161,67 @@ describe("fill event parse + idempotency", () => {
     };
     assert.equal(fillMatchesEvent(seed, event), true);
   });
+
+  it("parses an internal sleeve transfer and rejects a bad one", () => {
+    const body = {
+      kind: "transfer",
+      venue: "coinbase",
+      orderId: "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59",
+      idempotencyKey: "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+      ticker: "SUI",
+      quantity: "1.2",
+      fromSleeve: "cb-agentic",
+      toSleeve: "coinbase",
+      filledAt: "2026-10-09T16:59:00-05:00",
+      result: "filled",
+      note: "Coinbase portfolio transfer Agentic d757d013 to Default 5aba0d3b. Not a trade.",
+    };
+    const event = parseFillEvent(body);
+    assert.equal(event.kind, "transfer");
+    assert.equal(
+      event.idempotencyKey,
+      "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+    );
+    assert.equal(
+      event.idempotencyKey,
+      fillIdempotencyKey("coinbase", "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59"),
+    );
+    if (event.kind !== "transfer") return;
+    assert.equal(event.fromSleeve, "cb-agentic");
+    assert.equal(event.toSleeve, "coinbase");
+    assert.equal(event.qty, "1.2");
+    const fill = eventToFill(event);
+    assert.equal(fill.kind, "transfer");
+    assert.equal(fill.quantity, "1.2");
+    assert.equal("side" in fill, false);
+    assert.equal("price" in fill, false);
+    const alias = parseFillEvent({ ...body, kind: undefined, side: "transfer" });
+    assert.equal(alias.kind, "transfer");
+    assert.equal(alias.idempotencyKey, event.idempotencyKey);
+
+    assert.throws(
+      () => parseFillEvent({ ...body, idempotencyKey: undefined }),
+      /idempotencyKey is required/,
+    );
+    assert.throws(
+      () => parseFillEvent({ ...body, fromSleeve: "coinbase" }),
+      /must be different/,
+    );
+    assert.throws(
+      () => parseFillEvent({ ...body, fromSleeve: "flare-vault" }),
+      /flare-vault/,
+    );
+    assert.throws(
+      () => parseFillEvent({ ...body, fromSleeve: "rh-main" }),
+      /not valid for venue/,
+    );
+    assert.throws(
+      () => parseFillEvent({ ...body, quantity: "0" }),
+      /positive decimal/,
+    );
+    assert.throws(
+      () => parseFillEvent({ ...body, backfill: true }),
+      /backfill/,
+    );
+  });
 });

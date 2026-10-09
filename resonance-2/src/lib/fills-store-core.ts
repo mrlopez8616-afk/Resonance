@@ -1,4 +1,4 @@
-import { fills as seedFills, type Fill } from "@/data/fills";
+import { fills as seedFills, type Fill, type FillSleeveId, type TransferFill } from "@/data/fills";
 import {
   isPositionLogOrder,
   POSITION_LOG_FILLS,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/fill-event";
 import {
   applyFillToSleevePrints,
+  applyTransferToSleevePrints,
   sanitizeSleevePrints,
   type SleevePrints,
 } from "@/lib/sleeve-apply";
@@ -116,8 +117,48 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function readSleeveId(value: unknown): FillSleeveId | null {
+  if (
+    value === "rh-main" ||
+    value === "rh-agentic" ||
+    value === "coinbase" ||
+    value === "cb-agentic"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function coerceTransferFill(raw: Record<string, unknown>): TransferFill | null {
+  if (typeof raw.time !== "string" || !raw.time.trim()) return null;
+  if (typeof raw.symbol !== "string" || !raw.symbol.trim()) return null;
+  if (typeof raw.quantity !== "string" || !raw.quantity.trim()) return null;
+  if (typeof raw.orderId !== "string" || !raw.orderId.trim()) return null;
+  if (typeof raw.idempotencyKey !== "string" || !raw.idempotencyKey.trim()) return null;
+  const fromSleeve = readSleeveId(raw.fromSleeve);
+  const toSleeve = readSleeveId(raw.toSleeve);
+  if (!fromSleeve || !toSleeve || fromSleeve === toSleeve) return null;
+  if (raw.venue !== "robinhood" && raw.venue !== "coinbase") return null;
+  const fill: TransferFill = {
+    kind: "transfer",
+    time: raw.time,
+    symbol: raw.symbol,
+    quantity: raw.quantity,
+    orderId: raw.orderId,
+    result: typeof raw.result === "string" && raw.result ? raw.result : "filled",
+    venue: raw.venue,
+    fromSleeve,
+    toSleeve,
+    idempotencyKey: raw.idempotencyKey.trim(),
+  };
+  if (typeof raw.tradeId === "string" && raw.tradeId.trim()) fill.tradeId = raw.tradeId.trim();
+  if (typeof raw.note === "string" && raw.note.trim()) fill.note = raw.note.trim();
+  return fill;
+}
+
 function coerceStoredFill(raw: unknown): Fill | null {
   if (!isRecord(raw)) return null;
+  if (raw.kind === "transfer" || raw.side === "transfer") return coerceTransferFill(raw);
   if (typeof raw.time !== "string" || !raw.time.trim()) return null;
   if (typeof raw.symbol !== "string" || !raw.symbol.trim()) return null;
   if (raw.side !== "buy" && raw.side !== "sell") return null;
@@ -202,7 +243,7 @@ export function findFillInEnvelope(
 }
 
 function fillIsBackfill(fill: Fill): boolean {
-  return fill.kind !== "bet" && fill.backfill === true;
+  return fill.kind !== "bet" && fill.kind !== "transfer" && fill.backfill === true;
 }
 
 export function ingestFillIntoEnvelope(
@@ -225,6 +266,22 @@ export function ingestFillIntoEnvelope(
       deduped: true,
       applied: false,
       ...(fillIsBackfill(existing) ? { backfill: true as const } : {}),
+    };
+  }
+
+  if (event.kind === "transfer") {
+    const moved = applyTransferToSleevePrints(envelope.sleevePrints, event);
+    const fill = eventToFill(event);
+    return {
+      envelope: {
+        ...envelope,
+        updatedAt: now,
+        fills: [...envelope.fills, fill],
+        sleevePrints: moved.prints,
+      },
+      fill,
+      deduped: false,
+      applied: moved.applied,
     };
   }
 

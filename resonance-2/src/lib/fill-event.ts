@@ -1,4 +1,4 @@
-import type { Fill, FillSide, FillSleeveId, FillVenue, TradeFill } from "@/data/fills";
+import type { Fill, FillSide, FillSleeveId, FillVenue, TradeFill, TransferFill } from "@/data/fills";
 import { POSITION_LOG_FILLS } from "@/data/position-log-fills";
 import { AI_STOCK_TICKERS, RETIRED_AI_TICKERS } from "@/lib/ai-stocks";
 import { isDecimalString } from "@/lib/decimal";
@@ -54,7 +54,8 @@ export class FillIngestError extends Error {
   }
 }
 
-export type NormalizedFillEvent = {
+export type NormalizedTradeEvent = {
+  kind?: undefined;
   venue: FillVenue;
   orderId: string;
   tradeId?: string;
@@ -72,6 +73,29 @@ export type NormalizedFillEvent = {
   backfill?: boolean;
   idempotencyKey: string;
 };
+
+/** Internal sleeve move. No price, no side, and no backfill. */
+export type NormalizedTransferEvent = {
+  kind: "transfer";
+  venue: FillVenue;
+  orderId: string;
+  tradeId?: string;
+  ticker: FillSymbol;
+  side?: undefined;
+  qty: string;
+  price?: undefined;
+  sleeve?: undefined;
+  fromSleeve: FillSleeveId;
+  toSleeve: FillSleeveId;
+  filledAt: string;
+  result: string;
+  note?: string;
+  feeUsd?: undefined;
+  backfill?: undefined;
+  idempotencyKey: string;
+};
+
+export type NormalizedFillEvent = NormalizedTradeEvent | NormalizedTransferEvent;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -146,6 +170,21 @@ function readSleeve(raw: Record<string, unknown>): string {
   return asTrimmed(raw.sleeve || raw.sleeveTarget || raw.sleeveId).toLowerCase();
 }
 
+function assertWritableVenueSleeve(venue: FillVenue, sleeveRaw: string, field: string): FillSleeveId {
+  if (sleeveRaw === FLARE_VAULT_SLEEVE_ID) {
+    throw new FillIngestError(
+      "flare-vault is founder-entered only and cannot be written by ingest.",
+    );
+  }
+  if (!isWritableSleeveId(sleeveRaw)) {
+    throw new FillIngestError(`${field} must be rh-main, rh-agentic, coinbase, or cb-agentic.`);
+  }
+  if (!VENUE_SLEEVES[venue].includes(sleeveRaw)) {
+    throw new FillIngestError(`sleeve ${sleeveRaw} is not valid for venue ${venue}.`);
+  }
+  return sleeveRaw;
+}
+
 /** `fee` or `feeUsd`, as a non-negative decimal string. Absent means no fee was sent. */
 function readFeeUsd(raw: Record<string, unknown>): string | undefined {
   const fee = raw.feeUsd ?? raw.fee;
@@ -203,7 +242,17 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     );
   }
 
+  const kindRaw = asTrimmed(raw.kind).toLowerCase();
   const sideRaw = asTrimmed(raw.side).toLowerCase();
+  if (kindRaw === "transfer" || sideRaw === "transfer") {
+    if (kindRaw && kindRaw !== "transfer") {
+      throw new FillIngestError("kind must be transfer.");
+    }
+    if (sideRaw && sideRaw !== "transfer") {
+      throw new FillIngestError("a transfer cannot include a trade side.");
+    }
+    return parseTransferEvent(raw, outer, venueRaw, orderId, tradeId, tradeKey, symbol);
+  }
   if (sideRaw !== "buy" && sideRaw !== "sell") {
     throw new FillIngestError("side must be buy or sell.");
   }
@@ -218,20 +267,7 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
     throw new FillIngestError("price must be a non-negative decimal string.");
   }
 
-  const sleeveRaw = readSleeve(raw);
-  if (sleeveRaw === FLARE_VAULT_SLEEVE_ID) {
-    throw new FillIngestError(
-      "flare-vault is founder-entered only and cannot be written by ingest.",
-    );
-  }
-  if (!isWritableSleeveId(sleeveRaw)) {
-    throw new FillIngestError("sleeve must be rh-main, rh-agentic, coinbase, or cb-agentic.");
-  }
-  if (!VENUE_SLEEVES[venueRaw].includes(sleeveRaw)) {
-    throw new FillIngestError(
-      `sleeve ${sleeveRaw} is not valid for venue ${venueRaw}.`,
-    );
-  }
+  const sleeveRaw = assertWritableVenueSleeve(venueRaw, readSleeve(raw), "sleeve");
 
   const filledAt = readFilledAt(raw);
   if (!filledAt || Number.isNaN(Date.parse(filledAt))) {
@@ -261,7 +297,89 @@ export function parseFillEvent(body: unknown): NormalizedFillEvent {
   };
 }
 
-export function eventToFill(event: NormalizedFillEvent): TradeFill {
+function parseTransferEvent(
+  raw: Record<string, unknown>,
+  outer: Record<string, unknown> | null,
+  venueRaw: FillVenue,
+  orderId: string,
+  tradeId: string,
+  tradeKey: string,
+  symbol: FillSymbol,
+): NormalizedTransferEvent {
+  if (readBackfill(raw, outer)) {
+    throw new FillIngestError("backfill is not valid for a transfer.");
+  }
+  const providedKey = asTrimmed(raw.idempotencyKey);
+  if (!providedKey) {
+    throw new FillIngestError("idempotencyKey is required for a transfer.");
+  }
+  const idempotencyKey = fillIdempotencyKey(venueRaw, tradeKey);
+  if (providedKey.toLowerCase() !== idempotencyKey) {
+    throw new FillIngestError("idempotencyKey must match the venue and trade key.");
+  }
+
+  const qty = readQty(raw);
+  if (!isDecimalString(qty) || qty.startsWith("-") || Number(qty) <= 0) {
+    throw new FillIngestError("qty must be a positive decimal string.");
+  }
+
+  const fromSleeve = assertWritableVenueSleeve(
+    venueRaw,
+    asTrimmed(raw.fromSleeve).toLowerCase(),
+    "fromSleeve",
+  );
+  const toSleeve = assertWritableVenueSleeve(
+    venueRaw,
+    asTrimmed(raw.toSleeve).toLowerCase(),
+    "toSleeve",
+  );
+  if (fromSleeve === toSleeve) {
+    throw new FillIngestError("fromSleeve and toSleeve must be different.");
+  }
+
+  const filledAt = readFilledAt(raw);
+  if (!filledAt || Number.isNaN(Date.parse(filledAt))) {
+    throw new FillIngestError("filledAt must be an ISO-8601 timestamp.");
+  }
+
+  const result = asTrimmed(raw.result) || "filled";
+  const note = asTrimmed(raw.note) || undefined;
+  return {
+    kind: "transfer",
+    venue: venueRaw,
+    orderId: orderId || tradeKey,
+    tradeId: tradeId || undefined,
+    ticker: symbol,
+    qty,
+    fromSleeve,
+    toSleeve,
+    filledAt,
+    result,
+    note,
+    idempotencyKey,
+  };
+}
+
+export function eventToFill(event: NormalizedTransferEvent): TransferFill;
+export function eventToFill(event: NormalizedTradeEvent): TradeFill;
+export function eventToFill(event: NormalizedFillEvent): Fill;
+export function eventToFill(event: NormalizedFillEvent): Fill {
+  if (event.kind === "transfer") {
+    return {
+      kind: "transfer",
+      time: event.filledAt,
+      symbol: event.ticker,
+      quantity: event.qty,
+      orderId: event.orderId,
+      result: event.result,
+      venue: event.venue,
+      fromSleeve: event.fromSleeve,
+      toSleeve: event.toSleeve,
+      idempotencyKey: event.idempotencyKey,
+      ...(event.tradeId ? { tradeId: event.tradeId } : {}),
+      ...(event.note ? { note: event.note } : {}),
+    };
+  }
   return {
     time: event.filledAt,
     symbol: event.ticker,

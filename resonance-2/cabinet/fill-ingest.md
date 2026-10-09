@@ -194,6 +194,30 @@ Venue / sleeve pairing is strict so a mis-aimed POST cannot move the wrong print
 
 `cb-agentic` with venue `robinhood` is a 400. Nothing in this app places a trade. A `cb-agentic` fill is a tracking row. `cb-agentic` accepts XRP and SUI. SUI has no print until a fill; the seed quantity is `0`, so the first buy is the whole position. Do not send `backfill: true` for a live trade, or the sleeve will not move.
 
+## Internal sleeve transfer
+
+A portfolio move inside one venue is `kind: "transfer"` (alias `side: "transfer"`). It is not a trade. There is no price, no fee, and no realized P/L. The lot keeps its original date and cost. `backfill` is rejected. `fromSleeve` and `toSleeve` must both be writable sleeves of that venue, and they must differ. `flare-vault` and a cross-venue pair are rejected. Quantity must be a positive decimal. Price on the body is ignored.
+
+`idempotencyKey` is required. It is `venue` plus the lowercased trade key, the same rule as a buy or sell: `{venue}:{lowercase-orderId}`. A POST without that key is rejected. A second POST of the same key is `deduped` and does not move the sleeves again.
+
+```json
+{
+  "kind": "transfer",
+  "venue": "coinbase",
+  "orderId": "transfer:cb-agentic->coinbase:SUI:2026-10-09T16:59",
+  "idempotencyKey": "coinbase:transfer:cb-agentic->coinbase:sui:2026-10-09t16:59",
+  "ticker": "SUI",
+  "quantity": "1.2",
+  "fromSleeve": "cb-agentic",
+  "toSleeve": "coinbase",
+  "filledAt": "2026-10-09T16:59:00-05:00",
+  "result": "filled",
+  "note": "Coinbase portfolio transfer Agentic d757d013 to Default 5aba0d3b. Not a trade."
+}
+```
+
+That body moves 1.2 SUI from Coinbase Agentic to Default. Migration `020_sui_cb_agentic_transfer` inserts this row and sets the SUI prints (`cb-agentic` 0, `coinbase` 34.9) in one statement when the guard matches. It does not change buy `4f8720ee-fd80-4a8e-b7f2-ec4c9f8c1f79` and it does not insert a buy or a sell. A later POST of the same body dedupes against that row.
+
 The fills table has no fee column. A `fee` decimal string is stored on the row payload as `feeUsd`.
 
 ```json
