@@ -206,6 +206,16 @@ async function fetchEquityCloses(ticker: string): Promise<{ day: string; close: 
 }
 
 /**
+ * When the trigger watch's CoinGecko year chart last succeeded.
+ * The body stays in this module. Callers get a timestamp only.
+ */
+export function readXrpDailyCloseCache(nowMs: number): { fetchedAt: string; ageMs: number } | null {
+  const hit = cryptoBodies.get("XRP:365");
+  if (!hit || hit.body == null) return null;
+  return { fetchedAt: new Date(hit.at).toISOString(), ageMs: nowMs - hit.at };
+}
+
+/**
  * XRP daily closes for the trigger watch. Same CoinGecko year as
  * `loadCryptoCloses`, bucketed by UTC day. Null when the feed is down.
  */

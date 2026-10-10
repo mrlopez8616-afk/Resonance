@@ -255,6 +255,18 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       }
       return homeTrail();
     }
+    if (parentId === "control") {
+      const control: PhoneTarget = { href: "/n/control", label: "Control Room" };
+      if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, control] };
+      const view = parts[2];
+      const childLabel =
+        view === "approvals" ? "Approvals" : view === "bots" ? "Bots" : view === "feeds" ? "Feeds" : null;
+      if (childLabel && view) {
+        const child: PhoneTarget = { href: `/n/control/${view}`, label: childLabel };
+        return { back: control, crumbs: [HOME, control, child] };
+      }
+      return homeTrail();
+    }
     const parentLabel = PARENT_LABELS[parentId];
     if (!parentLabel) return homeTrail();
     const parent: PhoneTarget = { href: `/n/${parentId}`, label: parentLabel };

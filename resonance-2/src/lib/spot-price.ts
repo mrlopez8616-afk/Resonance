@@ -27,6 +27,16 @@ export function isSpotTicker(value: string): value is SpotTicker {
   return (SPOT_TICKERS as readonly string[]).includes(value);
 }
 
+/** Cache age only. The price stays in this module. */
+export function readSpotCache(
+  ticker: SpotTicker,
+  now = Date.now(),
+): { fetchedAt: string; source: string; ageMs: number } | null {
+  const hit = cache.get(ticker);
+  if (!hit?.quote.fetchedAt || !hit.quote.source) return null;
+  return { fetchedAt: hit.quote.fetchedAt, source: hit.quote.source, ageMs: now - hit.at };
+}
+
 async function fetchWithTimeout(
   url: string,
   init: RequestInit = {},

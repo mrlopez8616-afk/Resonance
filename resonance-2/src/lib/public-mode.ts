@@ -52,6 +52,7 @@ const HIDDEN_PREFIXES = [
   "/api/settings/owner-pin",
   "/n/approvals",
   "/api/approvals",
+  "/n/control/approvals",
 ] as const;
 
 export function isHiddenInPublicMode(pathname: string): boolean {
