@@ -240,7 +240,7 @@ function publicLessonsHtml(): string {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -252,8 +252,19 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/components/system-map"),
       import("@/data/system-map"),
       import("@/lib/system-live"),
+      import("@/lib/xrp-trigger"),
+      import("@/components/xrp-trigger-floor"),
     ]);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
+  const triggerView = trigger.evaluateXrpTrigger(
+    [
+      { day: "2026-10-06", close: 1.4 },
+      { day: "2026-10-07", close: 1.5 },
+      { day: "2026-10-08", close: 1.6 },
+    ],
+    new Date("2026-10-09T15:00:00.000Z"),
+  );
+  const triggerCard = createElement(triggerFloor.XrpTriggerCard, { view: triggerView, publicMode: true });
   const nvda = model.aiStocks.holdings.find((holding) => holding.ticker === "NVDA") ?? null;
   const sui = model.crypto.holdings.find((holding) => holding.ticker === "SUI") ?? null;
   const scrubbed = {
@@ -288,7 +299,9 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       createElement(system.SystemHomeCard),
     ),
   );
-  const crypto = render(createElement(PublicGroupFloor, { group: model.crypto, treasury: true }));
+  const crypto = render(
+    createElement(PublicGroupFloor, { group: model.crypto, treasury: true, extra: triggerCard }),
+  );
   const stocks = render(createElement(PublicGroupFloor, { group: model.aiStocks }));
   const stockNode = render(createElement(PublicNodePage, { ticker: "NVDA", holding: nvda }));
   const suiNode = render(createElement(PublicNodePage, { ticker: "SUI", holding: sui }));
@@ -364,6 +377,10 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     },
     { path: "/n/crypto/sui", html: suiNode },
     { path: "/n/crypto/xrp", html: treasury },
+    {
+      path: "/n/crypto/xrp-trigger",
+      html: render(createElement(triggerFloor.XrpTriggerFloor, { view: triggerView, publicMode: true })),
+    },
     { path: "/n/ai-stocks/nvda", html: stockNode },
     { path: "/n/fitness", html: fitness },
     { path: "/n/fitness/steps", html: steps },
@@ -528,6 +545,7 @@ describe("public render scan", () => {
       "/n/ai-stocks/catalysts/[bucket]/[event]/page.tsx",
       "/n/build/page.tsx",
       "/n/build/[section]/page.tsx",
+      "/n/crypto/xrp-trigger/page.tsx",
       "/n/approvals/page.tsx",
       "/n/approvals/[view]/page.tsx",
       "/n/lessons/page.tsx",
@@ -548,6 +566,7 @@ describe("public render scan", () => {
       "/n/ai-stocks/catalysts/this-week/money-catalyst",
       "/n/crypto/sui",
       "/n/crypto/xrp",
+      "/n/crypto/xrp-trigger",
       "/n/ai-stocks/nvda",
       "/n/fitness",
       "/n/fitness/steps",
@@ -573,11 +592,21 @@ describe("public render scan", () => {
 
   it("fails when a public route prints a dollar, USD, or a share count", () => {
     for (const page of pages) {
-      const leaks = publicTextLeaks(page.html).filter((id) => {
+      const html =
+        page.path === "/n/crypto/xrp-trigger" ? page.html.replaceAll("$1.55", "") : page.html;
+      const leaks = publicTextLeaks(html).filter((id) => {
         if (id !== "shares" || !page.path.startsWith("/n/system")) return true;
-        return /\bshares?\b/i.test(page.html.replaceAll("SUI share", ""));
+        return /\bshares?\b/i.test(html.replaceAll("SUI share", ""));
       });
       assert.equal(leaks.join(","), "", `${page.path} leaked ${leaks.join(",")}`);
+      if (page.path === "/n/crypto/xrp-trigger") {
+        assert.match(page.html, /\$1\.55/);
+        assert.equal(html.includes("$"), false, page.path);
+        assert.match(page.html, /Holds for 5 closes in a row: 1 of 5/);
+        assert.match(page.html, /Founder's go: not given/);
+        assert.match(page.html, /\+3\.2% from the line/);
+        assert.equal(page.html.includes("shares"), false);
+      }
       assert.equal(page.html.includes("unknown cost"), false, page.path);
       assert.equal(page.html.includes("entry unknown"), false, page.path);
     }

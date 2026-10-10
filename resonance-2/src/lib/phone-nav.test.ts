@@ -79,6 +79,10 @@ describe("phone back targets", () => {
     assert.deepEqual(xrp.back, { href: "/n/crypto", label: "Crypto" });
     assert.equal(xrp.crumbs.at(-1)?.label, "XRP");
 
+    const trigger = phoneTrail("/n/crypto/xrp-trigger");
+    assert.deepEqual(trigger.back, { href: "/n/crypto", label: "Crypto" });
+    assert.equal(trigger.crumbs.at(-1)?.label, "XRP Trigger");
+
     for (const node of FLOOR_NODES) {
       if (node.status === "empty") continue;
       const parentId = NODE_PARENT[node.id as keyof typeof NODE_PARENT];

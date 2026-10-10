@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { ChildValueCard } from "@/components/child-value-card";
 import { FloorDialog } from "@/components/floor-dialog";
 import { NodeSquare } from "@/components/node-square";
@@ -31,6 +31,7 @@ export function NodeGrid({
   cards,
   heldUsd,
   childCards,
+  extra = null,
 }: {
   parentId: ParentId;
   parentLabel: string;
@@ -40,6 +41,8 @@ export function NodeGrid({
   heldUsd?: Readonly<Record<string, number | null | undefined>>;
   /** Content-sized child cards. When a ticker is present, it replaces the plain value card. */
   childCards?: Readonly<Record<string, ChildCardModel>>;
+  /** One more child card, such as the XRP trigger watch. */
+  extra?: ReactNode;
 }) {
   const hiddenRaw = useSyncExternalStore(
     subscribeHiddenIds,
@@ -64,10 +67,17 @@ export function NodeGrid({
   const removed = removedOnParent(hiddenIds, parentId);
 
   if (nodes.length === 0) {
+    if (!extra) {
+      return (
+        <p className="parent-empty" role="status">
+          not connected yet
+        </p>
+      );
+    }
     return (
-      <p className="parent-empty" role="status">
-        not connected yet
-      </p>
+      <section className={`node-grid${childCards ? " child-floor" : ""}`} aria-label={`${parentLabel} nodes`}>
+        {extra}
+      </section>
     );
   }
 
@@ -130,6 +140,7 @@ export function NodeGrid({
 
           return null;
         })}
+        {extra}
       </section>
 
       <FloorDialog

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { LotBarChart } from "@/components/lot-bar-chart";
 import { NodeSquare } from "@/components/node-square";
@@ -232,10 +233,12 @@ export function PublicGroupFloor({
   group,
   bars = [],
   treasury = false,
+  extra = null,
 }: {
   group: PublicGroup;
   bars?: readonly PublicLotBar[];
   treasury?: boolean;
+  extra?: ReactNode;
 }) {
   const chart = publicLotChartModel(bars);
   return (
@@ -251,6 +254,7 @@ export function PublicGroupFloor({
           </Link>
         </NodeSquare>
       ))}
+      {extra}
       {chart.bars.length > 0 ? (
         <div className="public-lot-bars">
           <LotBarChart model={chart} publicMode label={`${group.label} holdings`} />

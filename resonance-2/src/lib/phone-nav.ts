@@ -110,6 +110,7 @@ const CHILD_TITLES: Record<string, string> = {
   "net-worth": "Net Worth",
   fees: "Fees & Alerts",
   bankroll: "Bankroll",
+  "xrp-trigger": "XRP Trigger",
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

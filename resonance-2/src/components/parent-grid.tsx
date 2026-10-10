@@ -19,14 +19,17 @@ import {
   aiChangeBars,
   cryptoChangeBars,
   cryptoHomeSecondaryLines,
+  cryptoSecondaryLines,
   FINANCE_HOME_LABEL,
   fitnessSecondaryLines,
   predictionsHeadline,
   predictionsSecondaryLines,
   visibleHomeMoves,
   type HomeMove,
+  type HomeQuote,
   type PredictionsHomeFacts,
 } from "@/lib/home-lines";
+import { XRP_TRIGGER_HREF } from "@/lib/xrp-trigger";
 import type { FinanceHomeFace } from "@/lib/finance/view";
 import type { StepSlot, TierSegment } from "@/lib/home-visuals";
 import { CATALYST_CALENDAR_HREF } from "@/lib/catalyst-calendar";
@@ -89,6 +92,7 @@ export function ParentGrid({
   predictions = null,
   moves = [],
   cryptoMoves = [],
+  xrpQuote = null,
   catalystLine = null,
   cryptoCatalystLine = null,
   retiringLine = null,
@@ -111,6 +115,8 @@ export function ParentGrid({
   moves?: readonly HomeMove[];
   /** XRP and SUI day changes from the same spot quotes the crypto faces already use. */
   cryptoMoves?: readonly HomeMove[];
+  /** Live XRP quote already loaded for the floor. Feeds the $1.55 close line. */
+  xrpQuote?: HomeQuote | null;
   catalystLine?: string | null;
   /** Next crypto calendar or catalyst line. Null when none is upcoming. */
   cryptoCatalystLine?: string | null;
@@ -135,6 +141,8 @@ export function ParentGrid({
   const asOfDate = new Date(asOf);
   const changeBars = aiChangeBars(visibleHomeMoves(moves, hiddenIds), asOfDate);
   const cryptoBars = cryptoChangeBars(visibleHomeMoves(cryptoMoves, hiddenIds), asOfDate);
+  const closeLine =
+    cryptoSecondaryLines(xrpQuote, asOfDate).find((line) => line.startsWith("$1.55 close:")) ?? null;
 
   return (
     <section className="node-grid home-floor" aria-label="Node floor">
@@ -310,6 +318,11 @@ export function ParentGrid({
                 {visual}
               </div>
             </Link>
+            {parent.id === "crypto" && closeLine ? (
+              <Link href={XRP_TRIGGER_HREF} className="parent-line-link">
+                {closeLine}
+              </Link>
+            ) : null}
           </NodeSquare>
         );
       })}
