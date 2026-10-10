@@ -16,6 +16,7 @@ import {
 } from "@/lib/floor-registry";
 import { isZeroCryptoHolding, nodesOnParent, removedOnParent } from "@/lib/node-parents";
 import type { ChildCardModel } from "@/lib/child-card";
+import type { LotBarModel } from "@/lib/lot-bars";
 import type { ValueCardModel } from "@/lib/value-card";
 import type { ParentId } from "@/data/node-parents";
 
@@ -31,6 +32,7 @@ export function NodeGrid({
   cards,
   heldUsd,
   childCards,
+  lotBars,
   extra = null,
 }: {
   parentId: ParentId;
@@ -41,6 +43,8 @@ export function NodeGrid({
   heldUsd?: Readonly<Record<string, number | null | undefined>>;
   /** Content-sized child cards. When a ticker is present, it replaces the plain value card. */
   childCards?: Readonly<Record<string, ChildCardModel>>;
+  /** Open-lot bars for a parent card. Present (even as null) replaces that card's sparkline. */
+  lotBars?: Readonly<Record<string, LotBarModel | null>>;
   /** One more child card, such as the XRP trigger watch. */
   extra?: ReactNode;
 }) {
@@ -114,7 +118,10 @@ export function NodeGrid({
                   title={`Open ${node.ticker}`}
                 >
                   {child ? (
-                    <ChildValueCard model={child} />
+                    <ChildValueCard
+                      model={lotBars ? { ...child, spark: null } : child}
+                      lots={lotBars ? (lotBars[node.ticker] ?? null) : undefined}
+                    />
                   ) : (
                     <ValueCard ticker={node.ticker} model={card} compact />
                   )}

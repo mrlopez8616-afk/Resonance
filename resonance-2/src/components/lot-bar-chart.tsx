@@ -13,13 +13,22 @@ const HALF = (PLOT_H - PAD * 2) / 2;
 const ZERO = PAD + HALF;
 const LABEL_H = 13;
 const MAX_BAR = 48;
+/** Sparkline slot on a parent card. Tall enough to read, short enough to sit under the price. */
+const COMPACT_H = 42;
+const COMPACT_PAD = 3;
 
-function barGeometry(bars: readonly LotBar[]): { top: number; height: number; labelTop: number }[] {
+function barGeometry(
+  bars: readonly LotBar[],
+  plotH = PLOT_H,
+  pad = PAD,
+): { top: number; height: number; labelTop: number }[] {
+  const half = (plotH - pad * 2) / 2;
+  const zero = pad + half;
   const peak = Math.max(...bars.map((bar) => Math.abs(bar.magnitude)), 0);
   return bars.map((bar) => {
-    const span = peak === 0 ? 2 : (Math.abs(bar.magnitude) / peak) * HALF;
+    const span = peak === 0 ? 2 : (Math.abs(bar.magnitude) / peak) * half;
     const height = Math.max(span, 2);
-    const top = bar.magnitude >= 0 ? ZERO - height : ZERO;
+    const top = bar.magnitude >= 0 ? zero - height : zero;
     const bottom = top + height;
     let labelTop: number;
     if (bar.magnitude >= 0) {
@@ -33,6 +42,13 @@ function barGeometry(bars: readonly LotBar[]): { top: number; height: number; la
   });
 }
 
+function compactAria(bars: readonly LotBar[], label: string): string {
+  const percents = bars
+    .map((bar) => lotBarValueLabel(bar, true))
+    .filter((line): line is string => Boolean(line));
+  return [label, ...percents].join(", ");
+}
+
 function badgeText(bar: LotBar): string | null {
   if (bar.sequence < 1) return null;
   return bar.first ? "First buy" : `#${bar.sequence}`;
@@ -41,12 +57,54 @@ function badgeText(bar: LotBar): string | null {
 export function LotBarChart({
   model,
   publicMode = false,
+  compact = false,
   label,
 }: {
   model: LotBarModel;
   publicMode?: boolean;
+  /** Parent-card slot: bars only, no labels, badges, or separate taps. */
+  compact?: boolean;
   label: string;
 }) {
+  if (compact) {
+    const bars = model.bars.filter((bar) => !bar.sold);
+    if (bars.length === 0) return null;
+    const drawn = barGeometry(bars, COMPACT_H, COMPACT_PAD);
+    const zero = COMPACT_PAD + (COMPACT_H - COMPACT_PAD * 2) / 2;
+    return (
+      <figure
+        className="position-chart lot-bars is-compact"
+        aria-label={publicMode ? compactAria(bars, label) : label}
+      >
+        <div className="lot-bars-scroll">
+          <div className="lot-bars-cols">
+            {bars.map((bar, index) => {
+              const box = drawn[index];
+              if (!box) return null;
+              const tone = `is-${bar.tone}`;
+              return (
+                <div
+                  key={bar.id}
+                  className={`lot-bar-col lot-bar ${tone}`}
+                  data-tone={bar.tone}
+                >
+                  <div
+                    className="lot-bar-plot"
+                    style={{ "--lot-zero": `${zero}px`, height: COMPACT_H } as CSSProperties}
+                  >
+                    <span
+                      className={`lot-bar-fill ${tone}`}
+                      style={{ top: box.top, height: box.height }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </figure>
+    );
+  }
   if (model.bars.length === 0 && !model.caption) return null;
   const bars = model.bars;
   const drawn = barGeometry(bars);

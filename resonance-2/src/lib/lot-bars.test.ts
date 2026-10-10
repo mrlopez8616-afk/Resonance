@@ -371,7 +371,117 @@ describe("lot bars", () => {
     assert.equal(parentText.includes("$"), false);
     assert.equal(parentText.includes("First buy"), false);
   });
+
+  it("draws a compact parent-card bar with the lot sign and color", () => {
+    const bars = barsFromOpenLots(
+      [
+        lot({ time: "2026-10-06T12:00:00-05:00", day: "2026-10-06", pnlUsd: -0.28, pnlPct: -1.7, price: "2" }),
+        lot({ time: "2026-09-18T12:00:00-05:00", day: "2026-09-18", pnlUsd: 0.11, pnlPct: 11.4 }),
+      ],
+      false,
+    );
+    const node = LotBarChart({
+      model: { bars, caption: "9 XRP entry unknown, not charted" },
+      compact: true,
+      label: "PWR lots",
+    });
+    assert.ok(isValidElement(node));
+    assert.match(classNameOf(node), /is-compact/);
+    const text = collectText(node).join(" ");
+    assert.match(text, /tone up/);
+    assert.match(text, /tone down/);
+    assert.ok(text.indexOf("tone up") < text.indexOf("tone down"));
+    const up = findByClass(node, "is-up");
+    const down = findByClass(node, "is-down");
+    assert.ok(up);
+    assert.ok(down);
+    assert.match(classNameOf(findByClass(up!, "lot-bar-fill")), /is-up/);
+    assert.match(classNameOf(findByClass(down!, "lot-bar-fill")), /is-down/);
+    const plot = findByClass(node, "lot-bar-plot");
+    const height = isValidElement(plot) ? (plot.props as { style?: { height?: number } }).style?.height : 0;
+    assert.ok(height !== undefined && height >= 36 && height <= 48);
+    assert.equal(findByClass(node, "lot-bar-badge"), null);
+    assert.equal(findByClass(node, "lot-bar-value"), null);
+    assert.equal(findByClass(node, "lot-bar-date"), null);
+    assert.equal(findByClass(node, "lot-bar-hit"), null);
+    assert.equal(elementNames(node).includes("a"), false);
+    assert.equal(elementNames(node).includes("details"), false);
+    assert.equal(text.includes("First buy"), false);
+    assert.equal(text.includes("entry unknown"), false);
+    const empty = LotBarChart({
+      model: { bars: [], caption: "9 XRP entry unknown, not charted" },
+      compact: true,
+      label: "XRP lots",
+    });
+    assert.equal(empty, null);
+    const unknown = barsFromOpenLots(
+      [lot({ time: "2026-09-18T12:00:00-05:00", day: "2026-09-18", entryUsd: Number.NaN, pnlUsd: null, pnlPct: null })],
+      false,
+    );
+    assert.deepEqual(unknown, []);
+    assert.equal(
+      LotBarChart({ model: { bars: unknown, caption: null }, compact: true, label: "XRP lots" }),
+      null,
+    );
+    const pub = barsFromOpenLots(
+      [
+        lot({ time: "2026-09-18T12:00:00-05:00", day: "2026-09-18", pnlUsd: 12.5, pnlPct: 11.4 }),
+        lot({ time: "2026-10-06T12:00:00-05:00", day: "2026-10-06", pnlUsd: -1, pnlPct: -1.7, price: "2" }),
+      ],
+      true,
+    );
+    const publicNode = LotBarChart({
+      model: { bars: pub, caption: null },
+      compact: true,
+      publicMode: true,
+      label: "PWR lots",
+    });
+    assert.ok(isValidElement(publicNode));
+    const aria = (publicNode.props as { "aria-label"?: string })["aria-label"] ?? "";
+    assert.match(aria, /%/);
+    assert.equal(aria.includes("$"), false);
+    const rendered = `${aria} ${collectText(publicNode).join(" ")}`;
+    assert.equal(rendered.includes("$"), false);
+    const root = fileURLToPath(new URL("..", import.meta.url));
+    const parentPage = readFileSync(`${root}/app/n/[parent]/page.tsx`, "utf8");
+    const floor = readFileSync(`${root}/components/public-floor.tsx`, "utf8");
+    const home = readFileSync(`${root}/app/page.tsx`, "utf8");
+    assert.equal(parentPage.includes("priceSpark"), false);
+    assert.equal(parentPage.includes("loadEquityHistory"), false);
+    assert.equal(parentPage.includes("loadCryptoHistory"), false);
+    assert.equal(parentPage.includes("price-spark"), false);
+    assert.equal(parentPage.includes("sparkLine"), false);
+    assert.match(parentPage, /lotBars/);
+    assert.match(parentPage, /cardBars/);
+    const groupFloor = floor.slice(
+      floor.indexOf("export function PublicGroupFloor"),
+      floor.indexOf("export function PublicNodePage"),
+    );
+    assert.match(groupFloor, /compact/);
+    assert.equal(groupFloor.includes("priceSpark"), false);
+    assert.equal(groupFloor.includes("price-spark"), false);
+    assert.equal(groupFloor.includes("IndexChart"), false);
+    assert.match(home, /home-visuals/);
+  });
 });
+
+function elementNames(node: ReactNode, found: string[] = []): string[] {
+  if (node == null || typeof node === "boolean") return found;
+  if (typeof node === "string" || typeof node === "number") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) elementNames(child, found);
+    return found;
+  }
+  if (!isValidElement(node)) return found;
+  const type = node.type;
+  if (typeof type === "string") found.push(type);
+  if (typeof type === "function") {
+    elementNames((type as (props: unknown) => ReactNode)(node.props), found);
+    return found;
+  }
+  elementNames((node.props as { children?: ReactNode }).children, found);
+  return found;
+}
 
 function publicPayloadHasMoneyKey(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
