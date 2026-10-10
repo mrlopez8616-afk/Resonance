@@ -898,6 +898,30 @@ body {
   width: 100%;
 }
 
+.lot-bars.is-compact {
+  margin-top: 0.42rem;
+  pointer-events: none;
+}
+
+.lot-bars.is-compact .lot-bars-scroll {
+  overflow: hidden;
+}
+
+.lot-bars.is-compact .lot-bar-col {
+  min-width: 0;
+}
+
+.lot-bars.is-compact .lot-bar-plot {
+  height: 42px;
+  margin-top: 0;
+}
+
+.lot-bars.is-compact .lot-bar-fill {
+  width: 55%;
+  max-width: 14px;
+  border-radius: 1px;
+}
+
 .lot-bars-scroll {
   overflow-x: auto;
   width: 100%;

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { LotBarChart } from "@/components/lot-bar-chart";
 import type { ChildCardLine, ChildCardModel, ChildCardSpark } from "@/lib/child-card";
+import type { LotBarModel } from "@/lib/lot-bars";
 
 function lineList(lines: readonly ChildCardLine[]): ReactNode {
   if (lines.length === 0) return null;
@@ -55,10 +57,18 @@ function sparkLine(spark: ChildCardSpark, wide: boolean, label: string): ReactNo
 export function ChildValueCard({
   model,
   wide = false,
+  lots,
 }: {
   model: ChildCardModel;
   wide?: boolean;
+  /** Parent cards pass this. Null means the spark slot stays empty. Omit it to keep a price spark. */
+  lots?: LotBarModel | null;
 }) {
+  const compact =
+    lots && lots.bars.length > 0 ? (
+      <LotBarChart model={{ bars: lots.bars, caption: null }} compact label={`${model.ticker} lots`} />
+    ) : null;
+  const spark = lots === undefined && model.spark ? sparkLine(model.spark, wide, `${model.ticker} price history`) : null;
   return (
     <div className={`live-face value-card parent-face child-card${wide ? " is-wide" : ""}`}>
       <header className="live-head">
@@ -71,7 +81,7 @@ export function ChildValueCard({
         {model.priceLine ? <p className="value-price">{model.priceLine}</p> : null}
       </header>
       {lineList(model.lines)}
-      {model.spark ? sparkLine(model.spark, wide, `${model.ticker} price history`) : null}
+      {compact ?? spark}
       {lineList(model.footerLines)}
       {model.role ? <p className="child-role">{model.role}</p> : null}
     </div>

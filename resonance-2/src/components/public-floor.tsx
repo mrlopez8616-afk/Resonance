@@ -65,9 +65,12 @@ function IndexChart({ points }: { points: readonly PublicSeriesPoint[] }) {
 export function PublicHoldingFace({
   holding,
   bars = [],
+  compact = false,
 }: {
   holding: PublicHolding;
   bars?: readonly PublicLotBar[];
+  /** Parent card: mini bars in the spark slot. The node page keeps the full chart. */
+  compact?: boolean;
 }) {
   const chart = publicLotChartModel(bars);
   return (
@@ -80,7 +83,12 @@ export function PublicHoldingFace({
         ) : null}
       </header>
       {chart.bars.length > 0 ? (
-        <LotBarChart model={chart} publicMode label={`${holding.ticker} lots`} />
+        <LotBarChart
+          model={chart}
+          publicMode
+          compact={compact}
+          label={`${holding.ticker} lots`}
+        />
       ) : null}
     </div>
   );
@@ -232,11 +240,14 @@ export function PublicHome({
 export function PublicGroupFloor({
   group,
   bars = [],
+  cardBars,
   treasury = false,
   extra = null,
 }: {
   group: PublicGroup;
   bars?: readonly PublicLotBar[];
+  /** One open-lot series per child ticker. Empty means the card spark slot stays blank. */
+  cardBars?: Readonly<Record<string, readonly PublicLotBar[]>>;
   treasury?: boolean;
   extra?: ReactNode;
 }) {
@@ -250,7 +261,11 @@ export function PublicGroupFloor({
             className="node-log-link"
             title={`Open ${holding.ticker}`}
           >
-            <PublicHoldingFace holding={holding} />
+            <PublicHoldingFace
+              holding={holding}
+              bars={cardBars?.[holding.ticker] ?? []}
+              compact
+            />
           </Link>
         </NodeSquare>
       ))}

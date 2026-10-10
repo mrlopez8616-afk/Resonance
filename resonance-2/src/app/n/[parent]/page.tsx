@@ -21,11 +21,12 @@ import { loadOperatorFloor } from "@/lib/operator-floor";
 import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { holdingChildModel, type ChildCardModel } from "@/lib/child-card";
 import { CRYPTO_HOME_TICKERS, nextTickerCatalystLine } from "@/lib/home-lines";
+import { barsFromOpenLots, type LotBarModel } from "@/lib/lot-bars";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
-import { rollupHoldingBooks } from "@/lib/position-lots";
+import { assembleNodePosition, displayLotBooks, rollupHoldingBooks, type DailyClose, type LedgerFill } from "@/lib/position-lots";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { loadCryptoCloses, loadCryptoHistory, loadEquityCloses, loadEquityHistory, loadXrpTriggerCloses } from "@/lib/price-history";
+import { loadCryptoCloses, loadEquityCloses, loadXrpTriggerCloses } from "@/lib/price-history";
 import { evaluateXrpTrigger } from "@/lib/xrp-trigger";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
@@ -98,6 +99,7 @@ export default async function ParentNodePage({
           <PublicGroupFloor
             group={group}
             bars={floor.groupBars[parent.id]}
+            cardBars={floor.nodeBars}
             treasury={parent.id === "crypto"}
             extra={trigger}
           />
@@ -163,14 +165,9 @@ export default async function ParentNodePage({
   }
 
   const childParent = parent.id === "crypto" || parent.id === "ai-stocks";
-  const [floor, calendar, history, book, dated, triggerCloses] = await Promise.all([
+  const [floor, calendar, book, dated, triggerCloses] = await Promise.all([
     loadOperatorFloor(),
     childParent ? loadCalendarForPage() : Promise.resolve(null),
-    parent.id === "crypto"
-      ? loadCryptoHistory(CRYPTO_HOME_TICKERS)
-      : parent.id === "ai-stocks"
-        ? loadEquityHistory(AI_STOCK_TICKERS)
-        : Promise.resolve(null),
     childParent ? loadOperatorFills() : Promise.resolve(null),
     parent.id === "crypto"
       ? loadCryptoCloses(CRYPTO_HOME_TICKERS)
@@ -201,7 +198,6 @@ export default async function ParentNodePage({
         fetchedAt: quote?.fetchedAt ?? null,
         now,
         catalyst: nextTickerCatalystLine(events, ticker, now),
-        history: history?.[ticker] ?? null,
         treasury: ticker === "XRP",
       });
     }
@@ -216,8 +212,22 @@ export default async function ParentNodePage({
         fetchedAt: quote?.fetchedAt ?? null,
         now,
         catalyst: nextTickerCatalystLine(events, ticker, now),
-        history: history?.[ticker] ?? null,
       });
+    }
+  }
+  const lotTickers = parent.id === "crypto" ? CRYPTO_HOME_TICKERS : parent.id === "ai-stocks" ? AI_STOCK_TICKERS : [];
+  const today = yahooSessionDay(Date.now() / 1000) ?? "";
+  const lotBars: Record<string, LotBarModel | null> = {};
+  if (book && dated) {
+    for (const ticker of lotTickers) {
+      lotBars[ticker] = compactCardLots(
+        ticker,
+        book.fills,
+        floor.sleeves[ticker as keyof typeof floor.sleeves],
+        floor.faces[ticker]?.priceUsd ?? null,
+        dated[ticker] ?? [],
+        today,
+      );
     }
   }
   return (
@@ -236,6 +246,7 @@ export default async function ParentNodePage({
         cards={cards}
         heldUsd={heldUsd}
         childCards={childParent ? childCards : undefined}
+        lotBars={childParent ? lotBars : undefined}
         extra={
           parent.id === "crypto" ? (
             <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], now)} publicMode={false} />
@@ -257,10 +268,49 @@ export default async function ParentNodePage({
               ]),
             ),
             closes: dated,
-            today: yahooSessionDay(Date.now() / 1000) ?? "",
+            today,
           })}
         />
       ) : null}
     </OperatorShell>
   );
+}
+
+/** One bar per open lot with a real entry and P/L. Unknown entry stays off the card. */
+function compactCardLots(
+  ticker: string,
+  fills: readonly LedgerFill[],
+  sleeves: readonly { id: string; quantity: string }[] | undefined,
+  priceUsd: number | null,
+  closes: readonly DailyClose[] | null,
+  today: string,
+): LotBarModel | null {
+  const position = assembleNodePosition({
+    fills,
+    ticker,
+    sleeves,
+    priceUsd,
+    closes: closes ?? [],
+    today,
+  });
+  if (!position) return null;
+  const listed = displayLotBooks(position.books, position.agenticLines.length > 0);
+  const books = listed.length > 0 ? listed : [{ ledger: position.ledger }];
+  const bars = barsFromOpenLots(
+    books.flatMap((book) =>
+      book.ledger.openLots.map((lot) => ({
+        time: lot.time,
+        day: lot.day,
+        remainingQty: lot.remainingQty,
+        originalQty: lot.originalQty,
+        price: lot.price,
+        entryUsd: lot.entryUsd,
+        valueUsd: lot.valueUsd,
+        pnlUsd: lot.pnlUsd,
+        pnlPct: lot.pnlPct,
+      })),
+    ),
+    false,
+  );
+  return bars.length > 0 ? { bars, caption: null } : null;
 }
