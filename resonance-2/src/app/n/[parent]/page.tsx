@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { FitnessGrid } from "@/components/fitness-grid";
 import { CatalystEntry } from "@/components/catalyst-calendar";
@@ -24,7 +25,8 @@ import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { rollupHoldingBooks } from "@/lib/position-lots";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { loadCryptoCloses, loadCryptoHistory, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
+import { loadCryptoCloses, loadCryptoHistory, loadEquityCloses, loadEquityHistory, loadXrpTriggerCloses } from "@/lib/price-history";
+import { evaluateXrpTrigger } from "@/lib/xrp-trigger";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -75,11 +77,16 @@ export default async function ParentNodePage({
       );
     }
     if (parent.id === "crypto" || parent.id === "ai-stocks") {
-      const [floor, calendar] = await Promise.all([
+      const [floor, calendar, triggerCloses] = await Promise.all([
         loadPublicFloor(),
         parent.id === "ai-stocks" ? loadCalendarForPage() : Promise.resolve(null),
+        parent.id === "crypto" ? loadXrpTriggerCloses() : Promise.resolve(null),
       ]);
       const group = parent.id === "crypto" ? floor.model.crypto : floor.model.aiStocks;
+      const trigger =
+        parent.id === "crypto" ? (
+          <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], new Date())} publicMode />
+        ) : null;
       return (
         <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
           <Link href="/" className="calendar-back">
@@ -92,6 +99,7 @@ export default async function ParentNodePage({
             group={group}
             bars={floor.groupBars[parent.id]}
             treasury={parent.id === "crypto"}
+            extra={trigger}
           />
         </OperatorShell>
       );
@@ -155,7 +163,7 @@ export default async function ParentNodePage({
   }
 
   const childParent = parent.id === "crypto" || parent.id === "ai-stocks";
-  const [floor, calendar, history, book, dated] = await Promise.all([
+  const [floor, calendar, history, book, dated, triggerCloses] = await Promise.all([
     loadOperatorFloor(),
     childParent ? loadCalendarForPage() : Promise.resolve(null),
     parent.id === "crypto"
@@ -169,6 +177,7 @@ export default async function ParentNodePage({
       : parent.id === "ai-stocks"
         ? loadEquityCloses(AI_STOCK_TICKERS)
         : Promise.resolve(null),
+    parent.id === "crypto" ? loadXrpTriggerCloses() : Promise.resolve(null),
   ]);
   const retiring =
     parent.id === "ai-stocks" ? retiringHeldLine(retiringHeldTickers(floor.sleeves)) : null;
@@ -227,6 +236,11 @@ export default async function ParentNodePage({
         cards={cards}
         heldUsd={heldUsd}
         childCards={childParent ? childCards : undefined}
+        extra={
+          parent.id === "crypto" ? (
+            <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], now)} publicMode={false} />
+          ) : null
+        }
       />
       {childParent && book && dated ? (
         <PositionRollupView

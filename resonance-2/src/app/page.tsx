@@ -115,6 +115,15 @@ export default async function Home() {
         }
         moves={moves}
         cryptoMoves={cryptoMoves}
+        xrpQuote={
+          floor.spotQuotes.XRP
+            ? {
+                usd: floor.spotQuotes.XRP.usd,
+                change24hPct: floor.spotQuotes.XRP.change24hPct ?? null,
+                fetchedAt: floor.spotQuotes.XRP.fetchedAt,
+              }
+            : null
+        }
         catalystLine={nextAiCatalystLine(calendar.events, asOf)}
         cryptoCatalystLine={nextCryptoCatalystLine(calendar.events, asOf)}
         retiringLine={retiringHeldLine(retiringHeldTickers(floor.sleeves))}

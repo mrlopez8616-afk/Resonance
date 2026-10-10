@@ -4,6 +4,7 @@ import { dailyClosesFromYahooChart, datedClosesFromYahooChart } from "@/lib/equi
 import { datedClosesFromMarketChart, xrpPricesFromMarketChart } from "@/lib/home-visuals";
 import type { EquityFaceTicker } from "@/lib/equity-price";
 import type { SpotTicker } from "@/lib/spot-price";
+import { utcClosesFromMarketChart } from "@/lib/xrp-trigger";
 
 /** History moves slower than the spot. A warm process reuses it. */
 const HISTORY_TTL_MS = 15 * 60 * 1000;
@@ -35,6 +36,15 @@ type DatedEntry = {
 
 const cryptoDated = new Map<string, DatedEntry>();
 const equityDated = new Map<string, DatedEntry>();
+
+type BodyEntry = {
+  at: number;
+  body: unknown | null;
+  ttl: number;
+};
+
+const cryptoBodies = new Map<string, BodyEntry>();
+const cryptoBodyInflight = new Map<string, Promise<unknown | null>>();
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 9000): Promise<Response> {
   const controller = new AbortController();
@@ -127,18 +137,46 @@ function writeDated(
   });
 }
 
+/**
+ * Shared CoinGecko `market_chart` body. `loadCryptoCloses` and the XRP trigger
+ * both read the 365-day response, so one warm process fetches it once.
+ */
+async function fetchCryptoMarketBody(ticker: SpotTicker, days: number): Promise<unknown | null> {
+  const key = `${ticker}:${days}`;
+  const hit = cryptoBodies.get(key);
+  if (hit && Date.now() - hit.at < hit.ttl) return hit.body;
+  const pending = cryptoBodyInflight.get(key);
+  if (pending) return pending;
+  const promise = (async () => {
+    try {
+      const url = `https://api.coingecko.com/api/v3/coins/${GECKO_IDS[ticker]}/market_chart?vs_currency=usd&days=${days}`;
+      const response = await fetchWithTimeout(url, {
+        headers: { accept: "application/json", "user-agent": "Resonance2/0.1" },
+      });
+      if (!response.ok) throw new Error(`CoinGecko HTTP ${response.status}`);
+      const body: unknown = await response.json();
+      cryptoBodies.set(key, { at: Date.now(), body, ttl: HISTORY_TTL_MS });
+      return body;
+    } catch {
+      cryptoBodies.set(key, { at: Date.now(), body: null, ttl: MISS_TTL_MS });
+      return null;
+    } finally {
+      cryptoBodyInflight.delete(key);
+    }
+  })();
+  cryptoBodyInflight.set(key, promise);
+  return promise;
+}
+
 async function fetchCryptoCloses(ticker: SpotTicker): Promise<{ day: string; close: number }[] | null> {
   const cached = readDated(cryptoDated, ticker);
   if (cached !== undefined) return cached;
   try {
     // Public CoinGecko rejects days=max (past 365 days only). A year of daily
     // closes is enough for the position chart.
-    const url = `https://api.coingecko.com/api/v3/coins/${GECKO_IDS[ticker]}/market_chart?vs_currency=usd&days=365`;
-    const response = await fetchWithTimeout(url, {
-      headers: { accept: "application/json", "user-agent": "Resonance2/0.1" },
-    });
-    if (!response.ok) throw new Error(`CoinGecko HTTP ${response.status}`);
-    const closes = datedClosesFromMarketChart(await response.json());
+    const body = await fetchCryptoMarketBody(ticker, 365);
+    if (!body) throw new Error("CoinGecko chart missing");
+    const closes = datedClosesFromMarketChart(body);
     const series = closes.length >= 2 ? closes : null;
     writeDated(cryptoDated, ticker, series);
     return series;
@@ -165,6 +203,17 @@ async function fetchEquityCloses(ticker: string): Promise<{ day: string; close: 
     writeDated(equityDated, ticker, null);
     return null;
   }
+}
+
+/**
+ * XRP daily closes for the trigger watch. Same CoinGecko year as
+ * `loadCryptoCloses`, bucketed by UTC day. Null when the feed is down.
+ */
+export async function loadXrpTriggerCloses(): Promise<{ day: string; close: number }[] | null> {
+  const body = await fetchCryptoMarketBody("XRP", 365);
+  if (!body) return null;
+  const closes = utcClosesFromMarketChart(body);
+  return closes.length > 0 ? closes : null;
 }
 
 export async function loadCryptoCloses(
