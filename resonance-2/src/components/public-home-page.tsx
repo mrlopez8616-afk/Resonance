@@ -1,3 +1,4 @@
+import { ControlHomeCard } from "@/components/control-room";
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ThisWeek } from "@/components/this-week";
 import { PublicHome } from "@/components/public-floor";
@@ -8,6 +9,7 @@ import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
 import { fitnessSecondaryLines, nextAiCatalystLine } from "@/lib/home-lines";
 import { loadFitnessHome } from "@/lib/fitness-store";
+import { loadControlHome } from "@/lib/control-room-store";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
@@ -36,7 +38,8 @@ function safeLine(line: string): string | null {
 }
 
 export async function PublicHomePage() {
-  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome] =
+    await Promise.all([
     loadPublicFloor(),
     loadFitnessHome(),
     loadBankroll(),
@@ -50,6 +53,7 @@ export async function PublicHomePage() {
       if (!isStorageUnavailable(error)) throw error;
       return lessonsHomeFallback;
     }),
+    loadControlHome(true),
   ]);
   const bets = betsLoaded.status === "unavailable" ? [] : betsLoaded.bets;
   const week = thisWeekItems(calendar.events, new Date(), fightLinkTargets(bets, calendar.events))
@@ -96,6 +100,7 @@ export async function PublicHomePage() {
               : buildHome.percentLabel,
         }}
       />
+      <ControlHomeCard lines={controlHome.lines} live={controlHome.live} />
       <SystemHomeCard />
       <LessonsHomeCard
         card={{

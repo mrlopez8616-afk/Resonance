@@ -23,6 +23,14 @@ export function setGithubPullLoaderForTests(loader: Loader | null): void {
   cachedList = null;
 }
 
+/** Age of the in-memory pull list. Null when this process has no successful list. */
+export function readGithubCache(now = Date.now()): { fetchedAt: string; ageMs: number } | null {
+  if (!memory) return null;
+  const fetchedAtMs = memory.expiresAt - MEMORY_MS;
+  if (!Number.isFinite(fetchedAtMs)) return null;
+  return { fetchedAt: new Date(fetchedAtMs).toISOString(), ageMs: now - fetchedAtMs };
+}
+
 export function githubRequestInit(headers: Headers): RequestInit & { next: { revalidate: number } } {
   return {
     headers,

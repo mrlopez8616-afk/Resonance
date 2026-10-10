@@ -163,6 +163,29 @@ describe("phone back targets", () => {
       "Tsm Q3 2026 Earnings",
     );
     assert.deepEqual(phoneTrail("/n/ai-stocks/catalysts/nope").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/control"), {
+      back: { href: "/", label: "Floor" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/control", label: "Control Room" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/control/approvals").back, {
+      href: "/n/control",
+      label: "Control Room",
+    });
+    assert.equal(phoneTrail("/n/control/approvals").crumbs.at(-1)?.label, "Approvals");
+    assert.deepEqual(phoneTrail("/n/control/bots").back, {
+      href: "/n/control",
+      label: "Control Room",
+    });
+    assert.equal(phoneTrail("/n/control/bots").crumbs.at(-1)?.label, "Bots");
+    assert.deepEqual(phoneTrail("/n/control/feeds").back, {
+      href: "/n/control",
+      label: "Control Room",
+    });
+    assert.equal(phoneTrail("/n/control/feeds").crumbs.at(-1)?.label, "Feeds");
+    assert.deepEqual(phoneTrail("/n/control/other").back, { href: "/", label: "Home" });
   });
 
   it("sends an unknown route home", () => {
@@ -242,6 +265,9 @@ describe("phone tabs", () => {
     assert.equal(phoneTabActive("/", "/n/ai-stocks/nvda"), true);
     assert.equal(phoneTabActive("/", "/n/lessons"), true);
     assert.equal(phoneTabActive("/", "/n/approvals"), false);
+    assert.equal(phoneTabActive("/", "/n/control"), true);
+    assert.equal(phoneTabActive("/", "/n/control/bots"), true);
+    assert.equal(phoneTabActive("/n/approvals", "/n/control"), false);
     assert.equal(phoneTabActive("/n/approvals", "/n/approvals"), true);
     assert.equal(phoneTabActive("/n/approvals", "/n/approvals/pending"), true);
     assert.equal(phoneTabActive("/n/approvals", "/n/build"), false);

@@ -1,3 +1,4 @@
+import { ControlHomeCard } from "@/components/control-room";
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ParentGrid } from "@/components/parent-grid";
 import { PublicHomePage } from "@/components/public-home-page";
@@ -20,6 +21,7 @@ import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-
 import { fightLinkTargets } from "@/lib/fight-desk";
 import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
+import { loadControlHome } from "@/lib/control-room-store";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { isPublicMode } from "@/lib/public-mode-server";
@@ -53,7 +55,8 @@ const lessonsHomeFallback: LessonsHomeModel = {
 
 export default async function Home() {
   if (await isPublicMode()) return <PublicHomePage />;
-  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome] = await Promise.all([
+  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome] =
+    await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
     loadBankroll(),
@@ -68,6 +71,7 @@ export default async function Home() {
       if (!isStorageUnavailable(error)) throw error;
       return lessonsHomeFallback;
     }),
+    loadControlHome(false),
   ]);
   let financeHome: FinanceHomeFace | null = null;
   if (session?.role === "owner") {
@@ -138,6 +142,7 @@ export default async function Home() {
         asOf={asOf.toISOString()}
         buildHome={buildHome}
       />
+      <ControlHomeCard lines={controlHome.lines} live={controlHome.live} />
       <SystemHomeCard />
       <LessonsHomeCard card={lessonsHome} />
     </OperatorShell>

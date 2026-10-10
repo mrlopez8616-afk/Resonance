@@ -240,7 +240,7 @@ function publicLessonsHtml(): string {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -254,6 +254,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/lib/system-live"),
       import("@/lib/xrp-trigger"),
       import("@/components/xrp-trigger-floor"),
+      import("@/components/control-room"),
+      import("@/lib/control-room"),
     ]);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const triggerView = trigger.evaluateXrpTrigger(
@@ -285,6 +287,54 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     allDay: true,
   });
   const catalystNow = new Date("2026-10-09T16:00:00.000Z");
+  const controlNow = new Date("2026-10-09T20:12:00.000Z");
+  const publicControl = control.presentControlRoom(
+    {
+      approvals: control.scoreApprovals(
+        [
+          {
+            status: "pending",
+            createdAt: "2026-10-09T18:00:00.000Z",
+            decidedAt: null,
+            title: "Send $1,200",
+            agent: "Robinhood Ops",
+          },
+        ],
+        controlNow,
+      ),
+      agents: control.scoreAgents([
+        { source: "fills:robinhood", at: "2026-10-09T20:00:00.000Z" },
+        { source: "finance_snapshot", at: "2026-10-09T18:00:00.000Z" },
+        { source: "lessons", at: "2026-10-09T19:00:00.000Z" },
+      ]),
+      feeds: control.scoreFeeds(
+        {
+          coingecko: "2026-10-09T20:11:00.000Z",
+          "xrp-closes": "2026-10-09T20:10:00.000Z",
+          yahoo: "2026-10-09T19:00:00.000Z",
+          finance: "2026-10-08T12:00:00.000Z",
+          health: "2026-10-09T16:00:00.000Z",
+          robinhood: "2026-10-09T20:00:00.000Z",
+          coinbase: null,
+          github: null,
+          calendar: "2026-10-09T12:00:00.000Z",
+        },
+        {
+          coingecko: true,
+          "xrp-closes": true,
+          yahoo: true,
+          finance: true,
+          health: true,
+          robinhood: true,
+          coinbase: true,
+          github: true,
+          calendar: true,
+        },
+        controlNow,
+      ),
+    },
+    true,
+  );
   const home = render(
     createElement(
       "div",
@@ -297,6 +347,10 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         buildHome,
       }),
       createElement(system.SystemHomeCard),
+      createElement(controlUi.ControlHomeCard, {
+        lines: control.controlHomeLines(publicControl),
+        live: control.controlHomeLive(publicControl),
+      }),
     ),
   );
   const crypto = render(
@@ -388,6 +442,22 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/build", html: build },
     { path: "/n/build/platform", html: buildSectionHtml },
     { path: "/n/lessons", html: publicLessonsHtml() },
+    {
+      path: "/n/control",
+      html: render(createElement(controlUi.ControlParent, { view: publicControl, now: controlNow })),
+    },
+    {
+      path: "/n/control/bots",
+      html: render(
+        createElement(controlUi.ControlChild, { view: "bots", room: publicControl, now: controlNow }),
+      ),
+    },
+    {
+      path: "/n/control/feeds",
+      html: render(
+        createElement(controlUi.ControlChild, { view: "feeds", room: publicControl, now: controlNow }),
+      ),
+    },
     ...lenses.SYSTEM_LENSES.map((lens) => ({
       path: lens.id === "nodes" ? "/n/system" : `/n/system?lens=${lens.id}`,
       html: render(createElement(system.SystemMap, { lens: lens.id })),
@@ -430,6 +500,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     "/n/approvals",
     "/n/approvals/pending",
     "/n/approvals/done",
+    "/n/control/approvals",
   ].map((path) => ({ path, html: hidden }));
   return [...visible, ...blocked];
 }
@@ -548,6 +619,8 @@ describe("public render scan", () => {
       "/n/crypto/xrp-trigger/page.tsx",
       "/n/approvals/page.tsx",
       "/n/approvals/[view]/page.tsx",
+      "/n/control/page.tsx",
+      "/n/control/[view]/page.tsx",
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
@@ -576,6 +649,10 @@ describe("public render scan", () => {
       "/n/lessons",
       "/n/approvals",
       "/n/approvals/pending",
+      "/n/control",
+      "/n/control/bots",
+      "/n/control/feeds",
+      "/n/control/approvals",
       "/n/system",
       "/n/system/live",
       "/calendar",
@@ -628,6 +705,18 @@ describe("public render scan", () => {
     const buildSectionPage = pages.find((page) => page.path === "/n/build/platform");
     assert.equal(buildSectionPage?.html.includes("pull/80"), false);
     assert.equal(buildSectionPage?.html.includes("#80"), false);
+    const controlPage = pages.find((page) => page.path === "/n/control");
+    assert.match(controlPage?.html ?? "", /Bots/);
+    assert.match(controlPage?.html ?? "", /Feeds/);
+    assert.equal(controlPage?.html.includes("Approvals"), false);
+    assert.equal(controlPage?.html.includes("Finance"), false);
+    const controlFeeds = pages.find((page) => page.path === "/n/control/feeds");
+    assert.match(controlFeeds?.html ?? "", /XRP daily closes/);
+    assert.equal(controlFeeds?.html.includes("$"), false);
+    const controlBots = pages.find((page) => page.path === "/n/control/bots");
+    assert.match(controlBots?.html ?? "", /Robinhood Ops/);
+    assert.match(controlBots?.html ?? "", /no signal/);
+    assert.equal(controlBots?.html.includes("Finance Desk"), false);
     const lessonsPage = pages.find((page) => page.path === "/n/lessons");
     assert.match(lessonsPage?.html ?? "", /LL-023/);
     assert.equal(lessonsPage?.html.includes("LL-021"), false);
@@ -653,10 +742,11 @@ describe("public render scan", () => {
       "/n/approvals/done",
       "/api/approvals",
       "/api/approvals/appr_example/decision",
+      "/n/control/approvals",
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
