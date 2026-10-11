@@ -10,9 +10,12 @@ import {
   type KnownBout,
 } from "@/lib/fight-results";
 import {
+  createEmptyFightResultsEnvelope,
   ensureSeededFightResults,
+  parseFightResultsEnvelope,
   upsertFightResult,
 } from "@/lib/fight-results-store-core";
+import { knownBouts } from "@/lib/fight-desk";
 import { fightByNumber, ufc332Fights } from "@/lib/ufc332";
 
 function seedFor(fight: number) {
@@ -304,5 +307,150 @@ describe("UFC 332 fight results", () => {
     assert.equal(formatBoutLine(null, ["open"]), "Pending");
     assert.equal(formatBoutLine(null, ["won", "open"]), "Pending");
     assert.equal(formatBoutLine(result, ["lost"]), formatFightResult(result));
+  });
+
+  it("records a draw or a no contest with no winner and settles nothing", () => {
+    const event = "ufc-fight-night-allen-vs-duncan";
+    const fightSlug = "ernesta-kareckaite-vs-melissa-gatto";
+    const known: KnownBout[] = [
+      { event, fightSlug, fighters: ["Ernesta Kareckaite", "Melissa Gatto"] },
+    ];
+    const [draw] = parseFightResultBody(
+      {
+        event,
+        fightSlug,
+        outcome: "draw",
+        method: "Majority Draw",
+        round: 3,
+        time: "5:00",
+        source: "Fight Desk",
+      },
+      known,
+    );
+    assert.equal(draw.outcome, "draw");
+    assert.equal(draw.winner, "");
+    assert.equal(draw.opponent, undefined);
+    assert.deepEqual(draw.fighters, ["Ernesta Kareckaite", "Melissa Gatto"]);
+    assert.equal(formatFightResult(draw), "Draw · Majority Draw · R3 5:00");
+    assert.equal(formatBoutLine(draw, ["open"]), "Draw · Majority Draw · R3 5:00");
+    // No bet field on the row: settlement stays on POST /api/bets/settle.
+    assert.equal("settled" in draw || "payout" in draw || "bets" in draw, false);
+
+    const [nc] = parseFightResultBody(
+      { event, fightSlug, outcome: "no contest", round: 2, time: "1:10" },
+      known,
+    );
+    assert.equal(nc.outcome, "no_contest");
+    assert.equal(nc.method, "No contest");
+    assert.equal(formatFightResult(nc), "No contest · R2 1:10");
+    const [ncShort] = parseFightResultBody(
+      { event, fightSlug, outcome: "NC", method: "Accidental eye poke", round: 1, time: "2:00" },
+      known,
+    );
+    assert.equal(ncShort.outcome, "no_contest");
+
+    // A draw with a winner, an opponent, or an unknown outcome is refused.
+    assert.throws(() =>
+      parseFightResultBody(
+        { event, fightSlug, outcome: "draw", winner: "Melissa Gatto", round: 3, time: "5:00" },
+        known,
+      ),
+    );
+    assert.throws(() =>
+      parseFightResultBody(
+        { event, fightSlug, outcome: "draw", opponent: "Melissa Gatto", round: 3, time: "5:00" },
+        known,
+      ),
+    );
+    assert.throws(() =>
+      parseFightResultBody({ event, fightSlug, outcome: "tie", round: 3, time: "5:00" }, known),
+    );
+    // A win still needs a winner.
+    assert.throws(() =>
+      parseFightResultBody({ event, fightSlug, method: "KO", round: 1, time: "1:00" }, known),
+    );
+    const [win] = parseFightResultBody(
+      { event, fightSlug, outcome: "win", winner: "Melissa Gatto", method: "SD", round: 3, time: "5:00" },
+      known,
+    );
+    assert.equal(win.outcome, undefined);
+    assert.equal(win.opponent, "Ernesta Kareckaite");
+  });
+
+  it("upserts a draw over a win and back without stale fields, and re-reads a stored draw", () => {
+    const event = "ufc-fight-night-allen-vs-duncan";
+    const fightSlug = "ernesta-kareckaite-vs-melissa-gatto";
+    const known: KnownBout[] = [
+      { event, fightSlug, fighters: ["Ernesta Kareckaite", "Melissa Gatto"] },
+    ];
+    const [win] = parseFightResultBody(
+      { event, fightSlug, winner: "Melissa Gatto", method: "SD", round: 3, time: "5:00" },
+      known,
+    );
+    const empty = createEmptyFightResultsEnvelope("2026-10-11T00:00:00.000Z");
+    const first = upsertFightResult(empty, win, "2026-10-11T01:00:00.000Z");
+    const [draw] = parseFightResultBody(
+      { event, fightSlug, outcome: "draw", method: "Majority Draw", round: 3, time: "5:00" },
+      known,
+    );
+    const second = upsertFightResult(first.envelope, draw, "2026-10-11T02:00:00.000Z");
+    assert.equal(second.deduped, false);
+    assert.equal(second.result.winner, "");
+    assert.equal(second.result.opponent, undefined);
+    assert.equal(second.result.outcome, "draw");
+    const again = upsertFightResult(second.envelope, draw, "2026-10-11T03:00:00.000Z");
+    assert.equal(again.deduped, true);
+
+    const reread = parseFightResultsEnvelope(JSON.parse(JSON.stringify(second.envelope)));
+    assert.equal(reread?.results.length, 1);
+    assert.equal(reread?.results[0]?.outcome, "draw");
+    assert.deepEqual(reread?.results[0]?.fighters, ["Ernesta Kareckaite", "Melissa Gatto"]);
+    // An old win row (no outcome) still reads as a win; a blank winner without an outcome is dropped.
+    const legacy = parseFightResultsEnvelope({
+      results: [
+        { ...win },
+        { ...win, fightSlug: "other", winner: "" },
+      ],
+    });
+    assert.equal(legacy?.results.length, 1);
+    assert.equal(legacy?.results[0]?.winner, "Melissa Gatto");
+  });
+
+  it("accepts any event named by stored breakdown rows, not only UFC 332", () => {
+    const known = knownBouts([], [], [
+      {
+        eventSlug: "ufc-fight-night-edmonton",
+        fightSlug: "a-one-vs-b-two",
+        aName: "A One",
+        bName: "B Two",
+      },
+      { eventSlug: "ufc-fight-night-edmonton", fightSlug: "half-row", aName: "Solo", bName: null },
+    ]);
+    const [row] = parseFightResultBody(
+      {
+        event: "ufc-fight-night-edmonton",
+        fightSlug: "a-one-vs-b-two",
+        winner: "B Two",
+        method: "Submission",
+        round: 2,
+        time: "3:03",
+      },
+      known,
+    );
+    assert.equal(row.opponent, "A One");
+    assert.throws(() =>
+      parseFightResultBody(
+        { event: "ufc-fight-night-edmonton", fightSlug: "half-row", outcome: "draw", round: 3, time: "5:00" },
+        known,
+      ),
+    );
+    assert.throws(() =>
+      parseFightResultBody(
+        { event: "ufc-unknown", fightSlug: "a-one-vs-b-two", outcome: "draw", round: 3, time: "5:00" },
+        known,
+      ),
+    );
+    // UFC 332 catalog bouts are still known with no rows at all.
+    assert.equal(knownBouts([]).some((bout) => bout.event === "ufc-332"), true);
   });
 });

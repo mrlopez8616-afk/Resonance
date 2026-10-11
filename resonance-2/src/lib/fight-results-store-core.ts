@@ -44,6 +44,7 @@ function hubConfirmed(result: FightResult): boolean {
 function sameCardResult(current: FightResult, seed: FightResult): boolean {
   return (
     current.winner === seed.winner &&
+    (current.outcome ?? "win") === (seed.outcome ?? "win") &&
     current.method === seed.method &&
     current.round === seed.round &&
     current.time === seed.time &&
@@ -102,7 +103,10 @@ function coerceResult(raw: unknown): FightResult | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.event !== "string" || !raw.event.trim()) return null;
   if (typeof raw.fightSlug !== "string" || !raw.fightSlug.trim()) return null;
-  if (typeof raw.winner !== "string" || !raw.winner.trim()) return null;
+  const outcome = raw.outcome === "draw" || raw.outcome === "no_contest" ? raw.outcome : undefined;
+  if (raw.outcome !== undefined && raw.outcome !== "win" && !outcome) return null;
+  if (typeof raw.winner !== "string") return null;
+  if (!outcome && !raw.winner.trim()) return null;
   if (typeof raw.method !== "string" || !raw.method.trim()) return null;
   if (typeof raw.round !== "number" || !Number.isInteger(raw.round)) return null;
   if (typeof raw.time !== "string" || !raw.time.trim()) return null;
@@ -110,12 +114,22 @@ function coerceResult(raw: unknown): FightResult | null {
   const result: FightResult = {
     event: raw.event.trim(),
     fightSlug: raw.fightSlug.trim(),
-    winner: raw.winner.trim(),
+    winner: outcome ? "" : raw.winner.trim(),
     method: raw.method.trim(),
     round: raw.round,
     time: raw.time.trim(),
     status: raw.status,
   };
+  if (outcome) {
+    result.outcome = outcome;
+    if (
+      Array.isArray(raw.fighters) &&
+      raw.fighters.length === 2 &&
+      raw.fighters.every((name) => typeof name === "string" && name.trim())
+    ) {
+      result.fighters = [String(raw.fighters[0]).trim(), String(raw.fighters[1]).trim()];
+    }
+  }
   if (typeof raw.opponent === "string" && raw.opponent.trim()) result.opponent = raw.opponent.trim();
   if (typeof raw.source === "string" && raw.source.trim()) result.source = raw.source.trim();
   return result;

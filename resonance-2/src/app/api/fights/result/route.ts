@@ -6,7 +6,7 @@ import {
   isFightResultsStoreConfigured,
   recordFightResults,
 } from "@/lib/fight-results-store";
-import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadBreakdownsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 import { UFC_332_ID } from "@/lib/ufc332";
@@ -39,7 +39,8 @@ function notConfigured() {
 }
 
 /**
- * Records a bout result. Does not settle bets.
+ * Records a bout result: a win, a draw, or a no contest. Does not settle bets.
+ * Any event works when the bout is on its bets or its stored breakdown rows.
  * The hub posts settlements separately to POST /api/bets/settle.
  */
 export async function POST(request: Request) {
@@ -55,7 +56,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
+    const [book, calendar, breakdowns] = await Promise.all([
+      loadBetsForPage(),
+      loadCalendarForPage(),
+      loadBreakdownsForPage(),
+    ]);
     if (book.status === "unavailable" && bodyNeedsBetBook(body)) {
       return NextResponse.json(
         { ok: false, error: "Bet book is unavailable." },
@@ -63,7 +68,8 @@ export async function POST(request: Request) {
       );
     }
     const bets = book.status === "unavailable" ? [] : book.bets;
-    const incoming = parseFightResultBody(body, knownBouts(bets, calendar.events));
+    const rows = breakdowns.status === "unavailable" ? [] : breakdowns.breakdowns;
+    const incoming = parseFightResultBody(body, knownBouts(bets, calendar.events, rows));
     const written = await recordFightResults(incoming);
     return NextResponse.json({
       ok: true,

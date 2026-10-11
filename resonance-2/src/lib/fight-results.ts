@@ -4,10 +4,22 @@ import { fightByNumber, fightBySlug, UFC_332_ID, ufc332Fights } from "@/lib/ufc3
 export const FIGHT_RESULT_STATUSES = ["final", "pending"] as const;
 export type FightResultStatus = (typeof FIGHT_RESULT_STATUSES)[number];
 
+/**
+ * How the bout ended. A missing outcome is a win, so older rows read the same.
+ * A draw or a no contest has no winner: `winner` is "".
+ */
+export const FIGHT_OUTCOMES = ["win", "draw", "no_contest"] as const;
+export type FightOutcome = (typeof FIGHT_OUTCOMES)[number];
+
 export type FightResult = {
   event: string;
   fightSlug: string;
+  /** "" when outcome is draw or no_contest. */
   winner: string;
+  /** Omitted on a win. */
+  outcome?: Exclude<FightOutcome, "win">;
+  /** Both names, kept on a draw or a no contest so the row still names the bout. */
+  fighters?: [string, string];
   method: string;
   round: number;
   time: string;
@@ -60,6 +72,32 @@ function readTime(value: unknown): string {
   const seconds = Number(match[2]);
   if (seconds > 59) throw new FightResultWriteError("time seconds must be 00 through 59.");
   return `${Number(match[1])}:${match[2]}`;
+}
+
+export function fightOutcome(result: Pick<FightResult, "outcome">): FightOutcome {
+  return result.outcome ?? "win";
+}
+
+export function hasNoWinner(result: Pick<FightResult, "outcome">): boolean {
+  return fightOutcome(result) !== "win";
+}
+
+const OUTCOME_LABEL: Record<FightOutcome, string> = {
+  win: "Win",
+  draw: "Draw",
+  no_contest: "No contest",
+};
+
+export function fightOutcomeLabel(outcome: FightOutcome): string {
+  return OUTCOME_LABEL[outcome];
+}
+
+function readOutcome(value: unknown): FightOutcome {
+  const text = asTrimmed(value).toLowerCase().replace(/[\s-]+/g, "_");
+  if (!text) return "win";
+  if (text === "nc") return "no_contest";
+  if ((FIGHT_OUTCOMES as readonly string[]).includes(text)) return text as FightOutcome;
+  throw new FightResultWriteError("outcome must be win, draw, or no_contest.");
 }
 
 function readRound(value: unknown): number {
@@ -116,8 +154,9 @@ function resolveBout(
 
 /**
  * One bout result. UFC 332 bouts come from the catalog.
- * Any other event must name a fight on `known` (the bets for that event).
- * The winner has to be one of that bout's fighters.
+ * Any other event must name a fight on `known` (bets, or stored breakdown rows, for that event).
+ * A win names one of that bout's fighters. A draw or a no contest names no winner.
+ * Recording a draw or a no contest settles nothing: bets settle on POST /api/bets/settle.
  */
 export function parseFightResult(raw: unknown, known: readonly KnownBout[] = []): FightResult {
   if (!isRecord(raw)) throw new FightResultWriteError("Each result must be an object.");
@@ -132,11 +171,16 @@ export function parseFightResult(raw: unknown, known: readonly KnownBout[] = [])
         : `Unknown fight slug ${fightSlug || "(blank)"} on ${event}.`,
     );
   }
+  const outcome = readOutcome(raw.outcome);
   const winner = asTrimmed(raw.winner);
-  if (!bout.fighters.includes(winner)) {
-    throw new FightResultWriteError("winner must be a fighter on that bout.");
+  if (outcome === "win") {
+    if (!bout.fighters.includes(winner)) {
+      throw new FightResultWriteError("winner must be a fighter on that bout.");
+    }
+  } else if (winner) {
+    throw new FightResultWriteError(`A ${fightOutcomeLabel(outcome).toLowerCase()} has no winner. Leave winner out.`);
   }
-  const method = asTrimmed(raw.method);
+  const method = asTrimmed(raw.method) || (outcome === "win" ? "" : fightOutcomeLabel(outcome));
   if (!method || method.length > 80) {
     throw new FightResultWriteError("method is required.");
   }
@@ -148,18 +192,25 @@ export function parseFightResult(raw: unknown, known: readonly KnownBout[] = [])
     }
     status = statusText;
   }
-  const other = bout.fighters.find((name) => name !== winner);
   const result: FightResult = {
     event,
     fightSlug: bout.fightSlug,
-    winner,
+    winner: outcome === "win" ? winner : "",
     method,
     round: readRound(raw.round),
     time: readTime(raw.time),
     status,
   };
+  if (outcome !== "win") {
+    result.outcome = outcome;
+    result.fighters = [bout.fighters[0], bout.fighters[1]];
+    if (asTrimmed(raw.opponent)) {
+      throw new FightResultWriteError("opponent is only for a win.");
+    }
+  }
+  const other = outcome === "win" ? bout.fighters.find((name) => name !== winner) : undefined;
   if (other) result.opponent = other;
-  const opponent = asTrimmed(raw.opponent);
+  const opponent = outcome === "win" ? asTrimmed(raw.opponent) : "";
   if (opponent) {
     if (!bout.fighters.includes(opponent)) {
       throw new FightResultWriteError("opponent must be a fighter on that bout.");
@@ -184,12 +235,21 @@ export function parseFightResultBody(body: unknown, known: readonly KnownBout[] 
   return [parseFightResult(body, known)];
 }
 
+/**
+ * Incoming wins. Source is kept when omitted.
+ * Opponent is kept only while both rows are wins, so a draw never carries a stale opponent
+ * and a win never carries a stale draw.
+ */
 export function mergeFightResult(current: FightResult, incoming: FightResult): FightResult {
-  return {
-    ...incoming,
-    opponent: incoming.opponent ?? current.opponent,
-    source: incoming.source ?? current.source,
-  };
+  const merged: FightResult = { ...incoming };
+  const bothWins = !hasNoWinner(current) && !hasNoWinner(incoming);
+  const opponent = incoming.opponent ?? (bothWins ? current.opponent : undefined);
+  if (opponent) merged.opponent = opponent;
+  else delete merged.opponent;
+  const source = incoming.source ?? current.source;
+  if (source) merged.source = source;
+  else delete merged.source;
+  return merged;
 }
 
 export function sameFightResult(current: FightResult, incoming: FightResult): boolean {
@@ -202,6 +262,8 @@ export function sameFightResult(current: FightResult, incoming: FightResult): bo
     current.round === merged.round &&
     current.time === merged.time &&
     current.status === merged.status &&
+    fightOutcome(current) === fightOutcome(merged) &&
+    (current.fighters ?? []).join("\0") === (merged.fighters ?? []).join("\0") &&
     (current.opponent ?? "") === (merged.opponent ?? "") &&
     (current.source ?? "") === (merged.source ?? "")
   );
@@ -209,6 +271,13 @@ export function sameFightResult(current: FightResult, incoming: FightResult): bo
 
 export function formatFightResult(result: FightResult | null | undefined): string {
   if (!result || result.status !== "final") return "Pending";
+  if (hasNoWinner(result)) {
+    const label = fightOutcomeLabel(fightOutcome(result));
+    const parts = [label];
+    if (result.method !== label) parts.push(result.method);
+    parts.push(`R${result.round} ${result.time}`);
+    return parts.join(" · ");
+  }
   const who = result.opponent ? `${result.winner} def. ${result.opponent}` : result.winner;
   return `${who} · ${result.method} · R${result.round} ${result.time}`;
 }

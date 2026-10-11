@@ -13,7 +13,14 @@ import {
   type DeskPromotion,
 } from "@/lib/fight-desk";
 import { parentById, parentCardHref } from "@/lib/node-parents";
-import { formatBoutLine, resultForFight, type FightResult } from "@/lib/fight-results";
+import {
+  fightOutcome,
+  fightOutcomeLabel,
+  formatBoutLine,
+  hasNoWinner,
+  resultForFight,
+  type FightResult,
+} from "@/lib/fight-results";
 import {
   UFC_332_EVENT,
   fightBySlug,
@@ -548,7 +555,11 @@ export function FightDetail({
           <p>unavailable</p>
         ) : result && result.status === "final" ? (
           <dl>
-            <Field label="Winner" value={result.winner} />
+            {hasNoWinner(result) ? (
+              <Field label="Outcome" value={fightOutcomeLabel(fightOutcome(result))} />
+            ) : (
+              <Field label="Winner" value={result.winner} />
+            )}
             <Field label="Method" value={result.method} />
             <Field label="Round" value={String(result.round)} />
             <Field label="Time" value={result.time} />
