@@ -4257,3 +4257,68 @@ body {
   text-transform: uppercase;
   color: var(--ok);
 }
+
+.brick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+
+.brick-filter {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: inherit;
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.brick-filter.is-on {
+  border-color: var(--text);
+}
+
+.brick-open {
+  display: block;
+  min-height: 2.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brick-summary {
+  display: -webkit-box;
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.brick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.84rem;
+}
+
+.brick-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: inherit;
+}
+
+.brick-group {
+  margin: 0.85rem 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

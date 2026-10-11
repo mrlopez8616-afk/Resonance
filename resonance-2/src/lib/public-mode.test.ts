@@ -15,6 +15,7 @@ import { createSession } from "@/lib/auth-store";
 import type { BuildHomeCard, BuildSectionView } from "@/lib/build-tracker";
 import { assembleFactoryFloor } from "@/lib/factory-floor";
 import { visibleLessons, type Lesson } from "@/lib/lessons";
+import { presentBricks, type BrickItem, type BrickOverlay } from "@/lib/youtube-bricks";
 import { holdingChildModel } from "@/lib/child-card";
 import type { FitnessCard, FitnessNodeDetail } from "@/lib/fitness-board";
 import { assembleLiveFace } from "@/lib/live-face";
@@ -241,8 +242,56 @@ function publicLessonsHtml(): string {
     .join(" ");
 }
 
+function brickLesson(partial: Partial<Lesson> & Pick<Lesson, "id" | "lesson" | "publicSafe">): Lesson {
+  return {
+    date: "2026-10-01",
+    title: partial.id,
+    category: "build",
+    whatChanged: "Changed the floor.",
+    why: "Founder's call.",
+    sources: ["SOURCE_SENTINEL_sk_live_abc123456789"],
+    buildItemId: null,
+    prNumber: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    ...partial,
+  };
+}
+
+function publicBrickRows() {
+  const items: BrickItem[] = [
+    { id: "platform-pwa", title: "Installable iPhone app", node: "platform", prNumber: 76, sortOrder: 50 },
+    { id: "fitness-runs", title: "Runs tracking", node: "fitness", prNumber: null, sortOrder: 20 },
+    { id: "crypto-day-bars", title: "Home Crypto card", node: "crypto", prNumber: null, sortOrder: 10 },
+  ];
+  const lessons = [
+    brickLesson({
+      id: "LL-021",
+      lesson: "PRIVATE LESSON BODY",
+      publicSafe: false,
+      buildItemId: "platform-pwa",
+    }),
+    brickLesson({
+      id: "LL-030",
+      lesson: "Moved by $40.",
+      publicSafe: true,
+      buildItemId: "fitness-runs",
+    }),
+    brickLesson({
+      id: "LL-023",
+      lesson: "Show the run, then the step count.",
+      publicSafe: true,
+      buildItemId: "crypto-day-bars",
+    }),
+  ];
+  const overlays: BrickOverlay[] = [
+    { brickId: "platform-pwa", status: "scripted", videoUrl: null, note: "Budget $12 for props" },
+  ];
+  return presentBricks({ items, lessons, overlays }, true);
+}
+
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -260,6 +309,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/lib/control-room"),
       import("@/components/youtube-node"),
       import("@/lib/youtube-node"),
+      import("@/components/youtube-bricks"),
     ]);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const triggerView = trigger.evaluateXrpTrigger(
@@ -525,6 +575,18 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         }),
       ),
     },
+    {
+      path: "/n/youtube/bricks",
+      html: render(createElement(brickUi.YouTubeBrickList, { rows: publicBrickRows(), filter: "all" })),
+    },
+    {
+      path: "/n/youtube/bricks/platform-pwa",
+      html: render(
+        createElement(brickUi.YouTubeBrickDetail, {
+          row: publicBrickRows().find((row) => row.id === "platform-pwa")!,
+        }),
+      ),
+    },
     ...lenses.SYSTEM_LENSES.map((lens) => ({
       path: lens.id === "nodes" ? "/n/system" : `/n/system?lens=${lens.id}`,
       html: render(createElement(system.SystemMap, { lens: lens.id })),
@@ -696,6 +758,8 @@ describe("public render scan", () => {
       "/n/youtube/channel/page.tsx",
       "/n/youtube/gear/page.tsx",
       "/n/youtube/gear/[device]/page.tsx",
+      "/n/youtube/bricks/page.tsx",
+      "/n/youtube/bricks/[id]/page.tsx",
       "/n/[parent]/page.tsx",
       "/n/[parent]/[node]/page.tsx",
       "/settings/page.tsx",
@@ -732,6 +796,8 @@ describe("public render scan", () => {
       "/n/youtube/channel",
       "/n/youtube/gear",
       "/n/youtube/gear/mevo-start",
+      "/n/youtube/bricks",
+      "/n/youtube/bricks/platform-pwa",
       "/calendar",
       "/calendar/2026-10-08",
       "/settings",
@@ -798,6 +864,19 @@ describe("public render scan", () => {
     assert.match(lessonsPage?.html ?? "", /LL-023/);
     assert.equal(lessonsPage?.html.includes("LL-021"), false);
     assert.equal(lessonsPage?.html.includes("LL-030"), false);
+    const brickPage = pages.find((page) => page.path === "/n/youtube/bricks");
+    assert.match(brickPage?.html ?? "", /Show the run, then the step count/);
+    assert.equal(brickPage?.html.includes("PRIVATE LESSON BODY"), false);
+    assert.equal(brickPage?.html.includes("LL-021"), false);
+    assert.equal(brickPage?.html.includes("$40"), false);
+    assert.equal(brickPage?.html.includes("$12"), false);
+    assert.equal(brickPage?.html.includes("SOURCE_SENTINEL"), false);
+    assert.equal(brickPage?.html.includes("PR 76"), false);
+    const brickDetail = pages.find((page) => page.path === "/n/youtube/bricks/platform-pwa");
+    assert.match(brickDetail?.html ?? "", /Budget for props/);
+    assert.match(brickDetail?.html ?? "", /no lesson linked/);
+    assert.equal(brickDetail?.html.includes("PRIVATE LESSON BODY"), false);
+    assert.equal(brickDetail?.html.includes("$"), false);
   });
 
   it("hides finance, the bankroll, the log, security, and fights", () => {

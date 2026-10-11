@@ -9,6 +9,7 @@ import {
   gearHref,
   youtubeHomeLines,
   youtubeParentCards,
+  type YouTubeBrickCard,
   type YouTubeGear,
 } from "@/lib/youtube-node";
 
@@ -32,8 +33,8 @@ export function YouTubeHomeCard() {
   );
 }
 
-export function YouTubeParent() {
-  const cards = youtubeParentCards();
+export function YouTubeParent({ brick }: { brick?: YouTubeBrickCard }) {
+  const cards = youtubeParentCards(undefined, brick);
   return (
     <section className="node-grid home-floor" aria-label="YouTube">
       {cards.map((card) => (

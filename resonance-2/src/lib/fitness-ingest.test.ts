@@ -752,6 +752,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "021_xrp_vault_reward",
         "022_approvals",
         "023_factory_floor",
+        "024_youtube_bricks",
       ],
     );
     assert.equal(
