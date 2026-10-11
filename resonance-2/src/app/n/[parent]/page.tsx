@@ -22,6 +22,7 @@ import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/a
 import { holdingChildModel, type ChildCardModel } from "@/lib/child-card";
 import { CRYPTO_HOME_TICKERS, nextTickerCatalystLine } from "@/lib/home-lines";
 import { barsFromOpenLots, type LotBarModel } from "@/lib/lot-bars";
+import { parseLotRangeQuery } from "@/lib/lot-range";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { assembleNodePosition, displayLotBooks, rollupHoldingBooks, type DailyClose, type LedgerFill } from "@/lib/position-lots";
@@ -49,10 +50,13 @@ export async function generateMetadata({
 
 export default async function ParentNodePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ parent: string }>;
+  searchParams: Promise<{ range?: string | string[] }>;
 }) {
-  const { parent: id } = await params;
+  const [{ parent: id }, query] = await Promise.all([params, searchParams]);
+  const range = parseLotRangeQuery(query.range);
   const legacy = legacyParentHref(id);
   if (legacy) {
     if (id === "predictions") permanentRedirect(legacy);
@@ -102,6 +106,7 @@ export default async function ParentNodePage({
             cardBars={floor.nodeBars}
             treasury={parent.id === "crypto"}
             extra={trigger}
+            range={range}
           />
         </OperatorShell>
       );
@@ -257,6 +262,7 @@ export default async function ParentNodePage({
         <PositionRollupView
           parentId={parent.id}
           publicMode={await isPublicMode()}
+          range={range}
           rollup={rollupHoldingBooks({
             tickers: parent.id === "crypto" ? CRYPTO_HOME_TICKERS : AI_STOCK_TICKERS,
             fills: book.fills,

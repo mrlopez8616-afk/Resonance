@@ -66,11 +66,14 @@ export function PublicHoldingFace({
   holding,
   bars = [],
   compact = false,
+  range,
 }: {
   holding: PublicHolding;
   bars?: readonly PublicLotBar[];
   /** Parent card: mini bars in the spark slot. The node page keeps the full chart. */
   compact?: boolean;
+  /** Full chart only. Compact cards ignore it. */
+  range?: string | null;
 }) {
   const chart = publicLotChartModel(bars);
   return (
@@ -87,6 +90,7 @@ export function PublicHoldingFace({
           model={chart}
           publicMode
           compact={compact}
+          range={compact ? undefined : range}
           label={`${holding.ticker} lots`}
         />
       ) : null}
@@ -243,6 +247,7 @@ export function PublicGroupFloor({
   cardBars,
   treasury = false,
   extra = null,
+  range,
 }: {
   group: PublicGroup;
   bars?: readonly PublicLotBar[];
@@ -250,6 +255,8 @@ export function PublicGroupFloor({
   cardBars?: Readonly<Record<string, readonly PublicLotBar[]>>;
   treasury?: boolean;
   extra?: ReactNode;
+  /** Holdings chart window. Child-card bars stay the full series. */
+  range?: string | null;
 }) {
   const chart = publicLotChartModel(bars);
   return (
@@ -272,7 +279,7 @@ export function PublicGroupFloor({
       {extra}
       {chart.bars.length > 0 ? (
         <div className="public-lot-bars">
-          <LotBarChart model={chart} publicMode label={`${group.label} holdings`} />
+          <LotBarChart model={chart} publicMode range={range} label={`${group.label} holdings`} />
         </div>
       ) : null}
       {treasury ? <TreasuryCard /> : null}
@@ -284,10 +291,12 @@ export function PublicNodePage({
   ticker,
   holding,
   bars = [],
+  range,
 }: {
   ticker: string;
   holding: PublicHolding | null;
   bars?: readonly PublicLotBar[];
+  range?: string | null;
 }) {
   if (!holding) {
     return (
@@ -303,7 +312,7 @@ export function PublicNodePage({
   return (
     <section className="node-grid node-detail" aria-label={`${ticker} node`}>
       <NodeSquare parent home live wide label={`${ticker} node`}>
-        <PublicHoldingFace holding={holding} bars={bars} />
+        <PublicHoldingFace holding={holding} bars={bars} range={range} />
       </NodeSquare>
     </section>
   );
