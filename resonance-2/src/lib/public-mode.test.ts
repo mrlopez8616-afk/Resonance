@@ -240,7 +240,7 @@ function publicLessonsHtml(): string {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -256,6 +256,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/components/xrp-trigger-floor"),
       import("@/components/control-room"),
       import("@/lib/control-room"),
+      import("@/components/youtube-node"),
+      import("@/lib/youtube-node"),
     ]);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const triggerView = trigger.evaluateXrpTrigger(
@@ -351,6 +353,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         lines: control.controlHomeLines(publicControl),
         live: control.controlHomeLive(publicControl),
       }),
+      createElement(youtubeUi.YouTubeHomeCard),
     ),
   );
   const crypto = render(
@@ -456,6 +459,18 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       path: "/n/control/feeds",
       html: render(
         createElement(controlUi.ControlChild, { view: "feeds", room: publicControl, now: controlNow }),
+      ),
+    },
+    { path: "/n/youtube", html: render(createElement(youtubeUi.YouTubeParent)) },
+    { path: "/n/youtube/channel", html: render(createElement(youtubeUi.YouTubeChannel)) },
+    { path: "/n/youtube/gear", html: render(createElement(youtubeUi.YouTubeGearList, {})) },
+    {
+      path: "/n/youtube/gear/mevo-start",
+      html: render(
+        createElement(youtubeUi.YouTubeGearDetail, {
+          item: { ...youtube.YOUTUBE_GEAR[0]!, costUsd: 199 },
+          publicMode: true,
+        }),
       ),
     },
     ...lenses.SYSTEM_LENSES.map((lens) => ({
@@ -624,6 +639,10 @@ describe("public render scan", () => {
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
+      "/n/youtube/page.tsx",
+      "/n/youtube/channel/page.tsx",
+      "/n/youtube/gear/page.tsx",
+      "/n/youtube/gear/[device]/page.tsx",
       "/n/[parent]/page.tsx",
       "/n/[parent]/[node]/page.tsx",
       "/settings/page.tsx",
@@ -655,6 +674,10 @@ describe("public render scan", () => {
       "/n/control/approvals",
       "/n/system",
       "/n/system/live",
+      "/n/youtube",
+      "/n/youtube/channel",
+      "/n/youtube/gear",
+      "/n/youtube/gear/mevo-start",
       "/calendar",
       "/calendar/2026-10-08",
       "/settings",

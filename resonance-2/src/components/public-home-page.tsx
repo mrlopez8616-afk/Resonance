@@ -1,4 +1,5 @@
 import { ControlHomeCard } from "@/components/control-room";
+import { YouTubeHomeCard } from "@/components/youtube-node";
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ThisWeek } from "@/components/this-week";
 import { PublicHome } from "@/components/public-floor";
@@ -101,6 +102,7 @@ export async function PublicHomePage() {
         }}
       />
       <ControlHomeCard lines={controlHome.lines} live={controlHome.live} />
+      <YouTubeHomeCard />
       <SystemHomeCard />
       <LessonsHomeCard
         card={{

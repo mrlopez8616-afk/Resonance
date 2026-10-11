@@ -105,10 +105,13 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
   {
     id: "youtube",
     label: "YouTube",
-    href: null,
-    status: "coming",
-    connection: "Coming. YouTube Studio will run this node.",
-    children: [],
+    href: "/n/youtube",
+    status: "live",
+    connection: "YouTube Studio runs this node. Channel stats are not connected yet.",
+    children: [
+      { id: "channel", label: "Channel", href: "/n/youtube/channel" },
+      { id: "gear", label: "Gear", href: "/n/youtube/gear" },
+    ],
   },
   {
     id: "lessons",
