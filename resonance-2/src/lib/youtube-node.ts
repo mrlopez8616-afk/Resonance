@@ -1,7 +1,8 @@
 import { YOUTUBE_GEAR, YOUTUBE_GEAR_SOURCE, type YouTubeGear } from "@/data/youtube-gear";
 
 /**
- * YouTube node. Parent /n/youtube → children Channel and Gear → one device per gear page.
+ * YouTube node. Parent /n/youtube → Channel, Gear, and Brick Tracker.
+ * Gear opens one device per page. Brick Tracker opens one build per page.
  * No channel source is connected yet, so every channel stat reads NOT_CONNECTED.
  * Nothing here invents a number.
  */
@@ -14,6 +15,7 @@ export const YOUTUBE_HREF = "/n/youtube";
 export const YOUTUBE_CHILDREN = [
   { id: "channel", label: "Channel", href: "/n/youtube/channel" },
   { id: "gear", label: "Gear", href: "/n/youtube/gear" },
+  { id: "bricks", label: "Brick Tracker", href: "/n/youtube/bricks" },
 ] as const;
 
 export type YouTubeChildId = (typeof YOUTUBE_CHILDREN)[number]["id"];
@@ -40,6 +42,14 @@ export function channelStatRows(): ChannelStatRow[] {
   return CHANNEL_STATS.map((stat) => ({ id: stat.id, label: stat.label, value: NOT_CONNECTED }));
 }
 
+export type YouTubeBrickCard = {
+  figure: string;
+  lines: string[];
+  live: boolean;
+};
+
+const BRICK_UNCONNECTED: YouTubeBrickCard = { figure: NOT_CONNECTED, lines: [], live: false };
+
 export type YouTubeCard = {
   id: YouTubeChildId;
   label: string;
@@ -54,7 +64,10 @@ function gearCountLabel(count: number): string {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
-export function youtubeParentCards(gear: readonly YouTubeGear[] = YOUTUBE_GEAR): YouTubeCard[] {
+export function youtubeParentCards(
+  gear: readonly YouTubeGear[] = YOUTUBE_GEAR,
+  brick: YouTubeBrickCard = BRICK_UNCONNECTED,
+): YouTubeCard[] {
   const fresh = gear.filter((item) => item.isNew).length;
   return [
     {
@@ -73,11 +86,19 @@ export function youtubeParentCards(gear: readonly YouTubeGear[] = YOUTUBE_GEAR):
       lines: fresh > 0 ? [`${fresh} new`] : [],
       live: gear.length > 0,
     },
+    {
+      id: "bricks",
+      label: "Brick Tracker",
+      href: "/n/youtube/bricks",
+      figure: brick.figure,
+      lines: brick.lines.slice(0, 3),
+      live: brick.live,
+    },
   ];
 }
 
 export function youtubeHomeLines(gear: readonly YouTubeGear[] = YOUTUBE_GEAR): string[] {
-  return [`Channel ${NOT_CONNECTED}`, `Gear: ${gearCountLabel(gear.length).toLowerCase()}`];
+  return [`Channel ${NOT_CONNECTED}`, `Gear: ${gearCountLabel(gear.length).toLowerCase()}`, "Brick Tracker"];
 }
 
 export function gearHref(id: string): string {

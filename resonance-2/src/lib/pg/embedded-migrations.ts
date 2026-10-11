@@ -406,6 +406,22 @@ WHERE NOT EXISTS (
 );
 `;
 
+export const YOUTUBE_BRICKS_SQL = `-- Brick Tracker episode overlay. Number 024.
+-- 023 is the Factory Floor wall, so this id skips it.
+-- One row per build item the hub has set. A missing row reads as idea.
+-- Stores status, an optional video URL, and an optional note.
+-- Titles and lesson text stay on build_items and lessons. This file inserts no rows.
+-- Idempotent: CREATE is IF NOT EXISTS. A second run changes nothing.
+
+CREATE TABLE IF NOT EXISTS youtube_brick_episodes (
+  brick_id text PRIMARY KEY REFERENCES build_items (id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'scripted', 'filmed', 'posted')),
+  video_url text,
+  note text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -428,4 +444,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "021_xrp_vault_reward", sql: XRP_VAULT_REWARD_SQL },
   { id: "022_approvals", sql: APPROVALS_SQL },
   { id: "023_factory_floor", sql: FACTORY_FLOOR_SQL },
+  { id: "024_youtube_bricks", sql: YOUTUBE_BRICKS_SQL },
 ];

@@ -37,6 +37,7 @@ export function systemRouteResolves(href: string): boolean {
   if (href === "/n/youtube") return appPage("n/youtube");
   if (href === "/n/youtube/channel") return appPage("n/youtube/channel");
   if (href === "/n/youtube/gear") return appPage("n/youtube/gear");
+  if (href === "/n/youtube/bricks") return appPage("n/youtube/bricks");
   const parent = /^\/n\/([a-z0-9-]+)$/.exec(href);
   if (parent) return appPage("n/[parent]") && parentById(parent[1]) !== null;
   const child = /^\/n\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(href);
@@ -102,7 +103,7 @@ describe("system map", () => {
     assert.equal(youtube?.href, "/n/youtube");
     assert.deepEqual(
       youtube?.children.map((child) => child.href),
-      ["/n/youtube/channel", "/n/youtube/gear"],
+      ["/n/youtube/channel", "/n/youtube/gear", "/n/youtube/bricks"],
     );
     assert.equal(parseSystemLens(undefined), "nodes");
     assert.equal(parseSystemLens("flow"), "flow");

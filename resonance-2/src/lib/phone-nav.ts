@@ -220,7 +220,9 @@ function catalystPhoneTrail(parts: string[]): PhoneTrail {
   };
 }
 
-/** /n/youtube → Channel or Gear → one device under Gear. */
+const BRICK_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+/** /n/youtube → Channel, Gear, or Brick Tracker. Gear and bricks open one page further down. */
 function youtubePhoneTrail(parts: readonly string[]): PhoneTrail {
   const youtube: PhoneTarget = { href: "/n/youtube", label: "YouTube" };
   if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, youtube] };
@@ -229,13 +231,24 @@ function youtubePhoneTrail(parts: readonly string[]): PhoneTrail {
   if (!viewLabel) return homeTrail();
   const child: PhoneTarget = { href: `/n/youtube/${view}`, label: viewLabel };
   if (parts.length === 3) return { back: youtube, crumbs: [HOME, youtube, child] };
-  if (view !== "gear" || parts.length !== 4) return homeTrail();
-  const item = findGear(parts[3] ?? "");
-  if (!item) return homeTrail();
-  return {
-    back: child,
-    crumbs: [HOME, youtube, child, { href: gearHref(item.id), label: item.name }],
-  };
+  if (parts.length !== 4) return homeTrail();
+  if (view === "gear") {
+    const item = findGear(parts[3] ?? "");
+    if (!item) return homeTrail();
+    return {
+      back: child,
+      crumbs: [HOME, youtube, child, { href: gearHref(item.id), label: item.name }],
+    };
+  }
+  if (view === "bricks") {
+    const id = parts[3] ?? "";
+    if (!BRICK_ID.test(id)) return homeTrail();
+    return {
+      back: child,
+      crumbs: [HOME, youtube, child, { href: `/n/youtube/bricks/${id}`, label: slugLabel(id) }],
+    };
+  }
+  return homeTrail();
 }
 
 /**

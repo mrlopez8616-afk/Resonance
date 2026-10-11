@@ -25,21 +25,28 @@ function appPage(rel: string): boolean {
 }
 
 describe("YouTube node", () => {
-  it("drills down: parent page, Channel and Gear children, one page per device", () => {
+  it("drills down: parent page, Channel, Gear, and Brick Tracker", () => {
     assert.equal(appPage("n/youtube"), true);
     assert.equal(appPage("n/youtube/channel"), true);
     assert.equal(appPage("n/youtube/gear"), true);
     assert.equal(appPage("n/youtube/gear/[device]"), true);
+    assert.equal(appPage("n/youtube/bricks"), true);
+    assert.equal(appPage("n/youtube/bricks/[id]"), true);
     const cards = youtubeParentCards();
     assert.deepEqual(
       cards.map((card) => [card.id, card.href]),
       [
         ["channel", "/n/youtube/channel"],
         ["gear", "/n/youtube/gear"],
+        ["bricks", "/n/youtube/bricks"],
       ],
     );
     assert.equal(isYouTubeChild("gear"), true);
+    assert.equal(isYouTubeChild("bricks"), true);
     assert.equal(isYouTubeChild("analytics"), false);
+    const bricks = cards.find((card) => card.id === "bricks");
+    assert.equal(bricks?.figure, NOT_CONNECTED);
+    assert.equal(bricks?.live, false);
   });
 
   it("shows channel stats as not connected and invents no number", () => {
@@ -49,7 +56,7 @@ describe("YouTube node", () => {
     const channel = youtubeParentCards().find((card) => card.id === "channel");
     assert.equal(channel?.live, false);
     assert.match(channel?.figure ?? "", /not connected/);
-    assert.deepEqual(youtubeHomeLines(), ["Channel not connected", "Gear: 10 devices"]);
+    assert.deepEqual(youtubeHomeLines(), ["Channel not connected", "Gear: 10 devices", "Brick Tracker"]);
     for (const line of youtubeHomeLines()) assert.equal(/\d/.test(line.replace("10 devices", "")), false);
   });
 
@@ -110,5 +117,19 @@ describe("YouTube node", () => {
     assert.deepEqual(phoneTrail("/n/youtube/channel").back, { href: "/n/youtube", label: "YouTube" });
     assert.deepEqual(phoneTrail("/n/youtube/nope").crumbs.map((crumb) => crumb.label), ["Home"]);
     assert.deepEqual(phoneTrail("/n/youtube/gear/nope").crumbs.map((crumb) => crumb.label), ["Home"]);
+    const bricks = phoneTrail("/n/youtube/bricks");
+    assert.deepEqual(bricks.back, { href: "/n/youtube", label: "YouTube" });
+    assert.deepEqual(
+      bricks.crumbs.map((crumb) => crumb.label),
+      ["Home", "YouTube", "Brick Tracker"],
+    );
+    const episode = phoneTrail("/n/youtube/bricks/platform-pwa");
+    assert.deepEqual(episode.back, { href: "/n/youtube/bricks", label: "Brick Tracker" });
+    assert.deepEqual(
+      episode.crumbs.map((crumb) => crumb.label),
+      ["Home", "YouTube", "Brick Tracker", "Platform Pwa"],
+    );
+    assert.deepEqual(phoneTrail("/n/youtube/bricks/NOT-an-id").crumbs.map((crumb) => crumb.label), ["Home"]);
+    assert.deepEqual(phoneTrail("/n/youtube/bricks/platform-pwa/extra").crumbs.map((crumb) => crumb.label), ["Home"]);
   });
 });

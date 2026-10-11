@@ -658,4 +658,88 @@ describe("factory floor layout", () => {
       }
     });
   }
+
+  it("clamps a long lesson inside the card at both TV sizes", async () => {
+    const { chromium } = await import("playwright");
+    const base = dirtyModel();
+    assert.equal(base.lesson.status, "entry");
+    const body =
+      "The wall stays readable from the couch when a lesson runs long. Keep each sentence on the card. Leave private notes off this screen. Stop the body before it covers the next panel. A second paragraph would have spilled past the card edge. The clamp keeps the last visible line and marks the rest. LONG_LESSON_TAIL";
+    const model: FactoryFloorModel = {
+      ...base,
+      lesson: { ...base.lesson, body },
+    };
+    const markup = wallHtml(model);
+    assert.equal(markup.includes("LONG_LESSON_TAIL"), true);
+    assert.equal(markup.includes("$"), false);
+    const browser = await chromium.launch({ headless: true });
+    try {
+      for (const size of [
+        { width: 1920, height: 1080, shot: "tv-lesson-long-1920x1080" },
+        { width: 1280, height: 720, shot: null },
+      ]) {
+        const page = await browser.newPage({
+          viewport: { width: size.width, height: size.height },
+          deviceScaleFactor: 1,
+        });
+        await page.setContent(
+          `<!doctype html><html class="tv-page"><head><style>${css}</style></head><body>${markup}</body></html>`,
+          { waitUntil: "load" },
+        );
+        const fit = (await page.evaluate(() => {
+          const lesson = document.querySelector('[data-panel="Lesson"]');
+          const copy = lesson?.querySelector(".tv-copy");
+          if (!(lesson instanceof HTMLElement) || !(copy instanceof HTMLElement) || !copy.parentElement) {
+            return { ok: false };
+          }
+          const lessonBox = lesson.getBoundingClientRect();
+          const copyBox = copy.getBoundingClientRect();
+          const probe = copy.cloneNode(true);
+          if (!(probe instanceof HTMLElement)) return { ok: false };
+          probe.style.setProperty("-webkit-line-clamp", "unset");
+          probe.style.setProperty("line-clamp", "unset");
+          probe.style.display = "block";
+          probe.style.maxHeight = "none";
+          probe.style.position = "absolute";
+          probe.style.visibility = "hidden";
+          probe.style.height = "auto";
+          probe.style.width = `${copy.clientWidth}px`;
+          copy.parentElement.appendChild(probe);
+          const fullHeight = probe.getBoundingClientRect().height;
+          probe.remove();
+          const style = getComputedStyle(copy);
+          return {
+            ok: true,
+            inside:
+              copyBox.left >= lessonBox.left - 1 &&
+              copyBox.top >= lessonBox.top - 1 &&
+              copyBox.right <= lessonBox.right + 1 &&
+              copyBox.bottom <= lessonBox.bottom + 1,
+            clamped: fullHeight > copyBox.height + 4,
+            lineClamp: style.getPropertyValue("-webkit-line-clamp"),
+            copyH: copyBox.height,
+            fullHeight,
+          };
+        })) as {
+          ok: boolean;
+          inside?: boolean;
+          clamped?: boolean;
+          lineClamp?: string;
+          copyH?: number;
+          fullHeight?: number;
+        };
+        if (size.shot) {
+          mkdirSync("/opt/cursor/artifacts", { recursive: true });
+          await page.screenshot({ path: `/opt/cursor/artifacts/${size.shot}.png` });
+        }
+        assert.equal(fit.ok, true, `${size.width}x${size.height}`);
+        assert.equal(fit.inside, true, JSON.stringify(fit));
+        assert.equal(fit.clamped, true, JSON.stringify(fit));
+        assert.equal(fit.lineClamp, "3");
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  });
 });
