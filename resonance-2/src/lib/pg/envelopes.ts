@@ -42,7 +42,10 @@ export type SaveOptions = {
 export type FightResultRecord = {
   event: string;
   fightSlug: string;
+  /** "" on a draw or a no contest. The column is NOT NULL, so no migration is needed. */
   winner: string;
+  outcome?: string;
+  fighters?: string[];
   method: string;
   round: number;
   time: string;

@@ -538,13 +538,23 @@ export function fightersFromTitle(title: string): string[] {
   return parts;
 }
 
+/** The fields of a stored breakdown row that name a bout. */
+export type BoutRow = {
+  eventSlug: string;
+  fightSlug: string;
+  aName: string | null;
+  bName: string | null;
+};
+
 /**
  * Bouts a result may name. UFC 332 comes from the catalog.
- * Every other card comes from bets on that event slug.
+ * Every other card comes from bets on that event slug, then from stored breakdown rows.
  */
+
 export function knownBouts(
   bets: readonly Bet[],
   events: readonly CalendarEvent[] = [],
+  breakdowns: readonly BoutRow[] = [],
 ): KnownBout[] {
   const map = new Map<string, KnownBout>();
   for (const fight of ufc332Fights) {
@@ -562,6 +572,17 @@ export function knownBouts(
     const fighters = fightersFromTitle(bet.fight);
     if (fighters.length < 2) continue;
     map.set(key, { event, fightSlug: bet.fightSlug, fighters });
+  }
+  // Stored breakdown rows name the card before any bet is placed (any event, not only UFC 332).
+  for (const row of breakdowns) {
+    const event = row.eventSlug.trim().toLowerCase();
+    const fightSlug = row.fightSlug.trim().toLowerCase();
+    const a = row.aName?.trim() ?? "";
+    const b = row.bName?.trim() ?? "";
+    if (!event || !fightSlug || !a || !b || a === b) continue;
+    const key = `${event}\0${fightSlug}`;
+    if (map.has(key)) continue;
+    map.set(key, { event, fightSlug, fighters: [a, b] });
   }
   return [...map.values()];
 }
