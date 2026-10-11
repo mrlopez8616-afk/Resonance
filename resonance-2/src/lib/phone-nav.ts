@@ -1,4 +1,5 @@
 import { FLOOR_NODES } from "@/data/floor-nodes";
+import { findGear, gearHref, youtubeChildLabel } from "@/lib/youtube-node";
 import { NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { buildSectionLabel } from "@/lib/build-tracker";
 
@@ -213,6 +214,24 @@ function catalystPhoneTrail(parts: string[]): PhoneTrail {
   };
 }
 
+/** /n/youtube → Channel or Gear → one device under Gear. */
+function youtubePhoneTrail(parts: readonly string[]): PhoneTrail {
+  const youtube: PhoneTarget = { href: "/n/youtube", label: "YouTube" };
+  if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, youtube] };
+  const view = parts[2] ?? "";
+  const viewLabel = youtubeChildLabel(view);
+  if (!viewLabel) return homeTrail();
+  const child: PhoneTarget = { href: `/n/youtube/${view}`, label: viewLabel };
+  if (parts.length === 3) return { back: youtube, crumbs: [HOME, youtube, child] };
+  if (view !== "gear" || parts.length !== 4) return homeTrail();
+  const item = findGear(parts[3] ?? "");
+  if (!item) return homeTrail();
+  return {
+    back: child,
+    crumbs: [HOME, youtube, child, { href: gearHref(item.id), label: item.name }],
+  };
+}
+
 /**
  * One-level trail for a pathname.
  * `search` may be `?ticker=NVDA` or `ticker=NVDA`. It only changes `/log`.
@@ -236,6 +255,7 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       return homeTrail();
     }
     if (parts[1] === "ai-stocks" && parts[2] === "catalysts") return catalystPhoneTrail(parts);
+    if (parts[1] === "youtube") return youtubePhoneTrail(parts);
     const parentId = parts[1];
     if (!parentId || parts.length > 3) return homeTrail();
     if (parentId === "lessons" && parts.length === 2) {

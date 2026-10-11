@@ -69,7 +69,7 @@ describe("system live graph", () => {
     assert.equal(hub?.label, "Sophia Luna");
     assert.deepEqual([hub?.x, hub?.y, hub?.z], [0, 0, 0]);
     assert.equal(graph.points.filter((point) => point.kind === "node").length, 8);
-    assert.equal(graph.points.some((point) => point.id === "node:youtube" && point.href === null), true);
+    assert.equal(graph.points.some((point) => point.id === "node:youtube" && point.href === "/n/youtube"), true);
     assert.equal(graph.points.find((point) => point.id === "node:lessons")?.href, "/n/lessons");
     assert.equal(graph.points.find((point) => point.id === "node:crypto")?.href, "/n/crypto");
     for (const edge of graph.edges) {

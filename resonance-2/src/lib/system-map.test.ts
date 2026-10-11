@@ -34,6 +34,9 @@ export function systemRouteResolves(href: string): boolean {
   if (href === "/fights") return appPage("fights");
   if (href === "/n/build") return appPage("n/build");
   if (href === "/n/lessons") return appPage("n/lessons");
+  if (href === "/n/youtube") return appPage("n/youtube");
+  if (href === "/n/youtube/channel") return appPage("n/youtube/channel");
+  if (href === "/n/youtube/gear") return appPage("n/youtube/gear");
   const parent = /^\/n\/([a-z0-9-]+)$/.exec(href);
   if (parent) return appPage("n/[parent]") && parentById(parent[1]) !== null;
   const child = /^\/n\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(href);
@@ -95,8 +98,12 @@ describe("system map", () => {
       assert.equal(systemRouteResolves(href), true, href);
     }
     const youtube = SYSTEM_NODES.find((node) => node.id === "youtube");
-    assert.equal(youtube?.status, "coming");
-    assert.equal(youtube?.href, null);
+    assert.equal(youtube?.status, "live");
+    assert.equal(youtube?.href, "/n/youtube");
+    assert.deepEqual(
+      youtube?.children.map((child) => child.href),
+      ["/n/youtube/channel", "/n/youtube/gear"],
+    );
     assert.equal(parseSystemLens(undefined), "nodes");
     assert.equal(parseSystemLens("flow"), "flow");
     assert.equal(parseSystemLens(["nope"]), "nodes");

@@ -4242,3 +4242,18 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
+.youtube-gear-row {
+  color: inherit;
+  text-decoration: none;
+  min-height: 2.75rem;
+}
+
+.youtube-new {
+  margin-left: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ok);
+}
