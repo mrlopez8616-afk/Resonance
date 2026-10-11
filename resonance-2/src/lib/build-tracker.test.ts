@@ -402,6 +402,10 @@ describe("build items api", { concurrency: false }, () => {
     assert.equal(queued[0].title, "System Map: nodes, money flow, data sources, agents, governance lens");
     assert.equal(queued[0].next_step, "Starts after Build Tracker merges");
     assert.equal(queued[1].id, "platform-public-mode");
+    assert.equal(
+      queued.some((row: { id: string }) => row.id === "platform-factory-floor"),
+      true,
+    );
     assert.equal(queued[1].title, "Public mode: a no-dollar screen-share toggle");
     assert.equal(queued[1].next_step, "Starts after System Map");
     assert.equal(queued[1].percent, 0);
@@ -555,6 +559,6 @@ describe("build items api", { concurrency: false }, () => {
       .find((row: { id: string }) => row.id === "platform-build-tracker");
     assert.equal(tracker.percent, 20);
     const count = await sqlQuery<{ n: string }>(`SELECT count(*)::text AS n FROM build_items`);
-    assert.equal(Number(count[0]?.n), 26);
+    assert.equal(Number(count[0]?.n), 27);
   });
 });

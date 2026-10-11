@@ -30,6 +30,12 @@ export const PHONE_TABS = [
 ] as const;
 
 /** Public mode hides the operator log and the whole approval queue. */
+/** The wall has no phone chrome. Back and the tab bar stay off /tv. */
+export function phoneChromeHidden(pathname: string): boolean {
+  const path = (pathname.split("?")[0]?.split("#")[0] ?? "").replace(/\/+$/, "") || "/";
+  return path === "/tv";
+}
+
 export function phoneTabHidden(href: string, publicMode: boolean): boolean {
   if (!publicMode) return false;
   return href === "/log" || href === "/n/approvals";

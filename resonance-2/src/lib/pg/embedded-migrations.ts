@@ -387,6 +387,25 @@ CREATE INDEX IF NOT EXISTS approvals_status_created_idx
   ON approvals (status, created_at DESC);
 `;
 
+export const FACTORY_FLOOR_SQL = `-- Factory Floor wall on /tv. One queued Build Tracker row.
+-- Idempotent. A second run inserts 0 rows.
+
+INSERT INTO build_items (id, title, node, pr_number, status, steps, next_step, sort_order, updated_at)
+SELECT
+  'platform-factory-floor',
+  'Factory Floor TV wall',
+  'platform',
+  NULL,
+  'queued',
+  '[{"id":"spec","label":"spec written","done":false},{"id":"pr-open","label":"PR open","done":false},{"id":"tests-build","label":"local tests and build pass","done":false},{"id":"merged","label":"merged","done":false},{"id":"verified-prod","label":"verified on prod","done":false}]'::jsonb,
+  NULL,
+  95,
+  '2026-10-11 12:00:00-05'::timestamptz
+WHERE NOT EXISTS (
+  SELECT 1 FROM build_items WHERE id = 'platform-factory-floor'
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -408,4 +427,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "020_sui_cb_agentic_transfer", sql: SUI_CB_AGENTIC_TRANSFER_SQL },
   { id: "021_xrp_vault_reward", sql: XRP_VAULT_REWARD_SQL },
   { id: "022_approvals", sql: APPROVALS_SQL },
+  { id: "023_factory_floor", sql: FACTORY_FLOOR_SQL },
 ];

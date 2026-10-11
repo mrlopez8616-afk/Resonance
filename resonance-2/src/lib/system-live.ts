@@ -619,3 +619,33 @@ export function preferStaticLiveView(input: LiveCapability & { choice: LiveViewC
   return false;
 }
 
+/** Wall view gives the 3D map this long to paint, then uses the static map. */
+export const LIVE_WALL_SLOW_MS = 2500;
+
+/**
+ * The TV wall uses the static map when WebGL is already ruled out,
+ * or when the 3D view has not painted before the slow-TV deadline.
+ * A paint that lands in time keeps the 3D map.
+ */
+export function wallShouldUseStatic(input: {
+  preferStatic: boolean;
+  painted: boolean;
+  elapsedMs: number;
+  slowMs?: number;
+}): boolean {
+  if (input.preferStatic) return true;
+  if (input.painted) return false;
+  return input.elapsedMs >= (input.slowMs ?? LIVE_WALL_SLOW_MS);
+}
+
+/** Public map with the Finance point's name removed. The wall does not show Finance. */
+export function presentWallGraph(graph: LiveGraph): LiveGraph {
+  const shown = presentLiveGraph(graph, true);
+  return {
+    points: shown.points.map((point) =>
+      FINANCE_POINT_IDS.has(point.id) ? { ...point, label: "", detail: null, href: null } : point,
+    ),
+    edges: shown.edges,
+  };
+}
+

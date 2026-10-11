@@ -7,6 +7,7 @@ import {
   formatUpdatedTime,
   isStandaloneMode,
   notifyPullRefresh,
+  phoneChromeHidden,
   phoneTrail,
   publicTrailLabel,
   pullDecision,
@@ -290,6 +291,7 @@ export function PhoneNav({ publicMode = false }: { publicMode?: boolean }) {
   const showCrumbs = trail.crumbs.length > 1;
   const showRefresh = installed && (busy || pulling || updated);
   const spin = busy && pullShouldAnimate(reduced);
+  if (phoneChromeHidden(pathname)) return null;
 
   return (
     <>
