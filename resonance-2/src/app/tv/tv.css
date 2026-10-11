@@ -241,6 +241,10 @@ html.tv-idle * {
   flex: 1.35 1 0;
 }
 
+.tv-side > .tv-machine {
+  flex: 2.4 1 0;
+}
+
 .tv-panel {
   display: flex;
   flex-direction: column;
@@ -333,6 +337,79 @@ html.tv-idle * {
   color: #9eb0c6;
   font-size: 1.6vh;
   font-size: clamp(12px, 1.6vh, 20px);
+}
+
+.tv-machine {
+  justify-content: center;
+}
+
+.tv-machine .tv-figure {
+  font-size: 5vh;
+  font-size: clamp(32px, 5.2vh, 72px);
+}
+
+.tv-machine [data-tone="steady"] {
+  color: #3dd68c;
+}
+
+.tv-machine [data-tone="watch"] {
+  color: #f0b45a;
+}
+
+.tv-machine [data-tone="down"] {
+  color: #ff8b7a;
+}
+
+.tv-machine-empty {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 2.6vh;
+  font-size: clamp(18px, 2.8vh, 36px);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.tv-machine-parts {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: space-evenly;
+  min-height: 0;
+  margin: 0.35vh 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tv-machine-parts li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5vw;
+  min-width: 0;
+}
+
+.tv-machine-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #b7c6d8;
+  font-size: 1.9vh;
+  font-size: clamp(14px, 2vh, 28px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tv-machine-pct {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 3.2vh;
+  font-size: clamp(20px, 3.3vh, 44px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
 }
 
 .tv-play {

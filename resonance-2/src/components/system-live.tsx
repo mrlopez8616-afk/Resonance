@@ -58,9 +58,13 @@ export function SystemLive({ publicMode, wall = false }: { publicMode: boolean; 
     () => graph.points.filter((point) => point.kind === "hub" || point.kind === "node"),
     [graph.points],
   );
-  const [capability] = useState<LiveCapability>(readCapability);
+  // Read after mount. A useState initializer runs on the server, where window is missing.
+  const [capability, setCapability] = useState<LiveCapability | null>(null);
+  useEffect(() => {
+    setCapability(readCapability());
+  }, []);
   const [choice, setChoice] = useState<LiveViewChoice>("auto");
-  const staticView = preferStaticLiveView({ ...capability, choice });
+  const staticView = capability ? preferStaticLiveView({ ...capability, choice }) : false;
   const [painted, setPainted] = useState(false);
   const [forcedStatic, setForcedStatic] = useState(false);
   const [pulse, setPulse] = useState<SystemPulse | null>(null);

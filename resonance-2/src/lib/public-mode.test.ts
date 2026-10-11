@@ -291,7 +291,7 @@ function publicBrickRows() {
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi, healthUi, health] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
@@ -310,6 +310,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/components/youtube-node"),
       import("@/lib/youtube-node"),
       import("@/components/youtube-bricks"),
+      import("@/components/machine-health-floor"),
+      import("@/lib/machine-health"),
     ]);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const triggerView = trigger.evaluateXrpTrigger(
@@ -406,6 +408,23 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         live: control.controlHomeLive(publicControl),
       }),
       createElement(youtubeUi.YouTubeHomeCard),
+      createElement(healthUi.HealthHomeCard, {
+        report: health.scoreMachineHealth({
+          floor: model,
+          buildItems: [
+            {
+              steps: [
+                { done: true },
+                { done: true },
+                { done: false },
+              ],
+            },
+          ],
+          control: null,
+          publicMode: true,
+          now: new Date("2026-10-11T18:00:00.000Z"),
+        }),
+      }),
     ),
   );
   const crypto = render(
@@ -511,6 +530,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       map: createElement("div", null, "System map"),
     }),
   );
+  const healthItems = [{ title: "Wire $40", steps: [{ done: true }, { done: false }] }];
   const visible = [
     { path: "/", html: home },
     { path: "/tv", html: tv },
@@ -561,6 +581,20 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       path: "/n/control/feeds",
       html: render(
         createElement(controlUi.ControlChild, { view: "feeds", room: publicControl, now: controlNow }),
+      ),
+    },
+    {
+      path: "/n/health",
+      html: render(
+        createElement(healthUi.HealthFloor, {
+          report: health.scoreMachineHealth({
+            floor: model,
+            buildItems: healthItems,
+            control: null,
+            publicMode: true,
+            now: new Date("2026-10-11T18:00:00.000Z"),
+          }),
+        }),
       ),
     },
     { path: "/n/youtube", html: render(createElement(youtubeUi.YouTubeParent)) },
@@ -750,6 +784,7 @@ describe("public render scan", () => {
       "/n/approvals/[view]/page.tsx",
       "/n/control/page.tsx",
       "/n/control/[view]/page.tsx",
+      "/n/health/page.tsx",
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
@@ -782,6 +817,7 @@ describe("public render scan", () => {
       "/n/fight-desk",
       "/n/build",
       "/n/build/platform",
+      "/n/health",
       "/n/lessons",
       "/n/approvals",
       "/n/approvals/pending",
@@ -860,6 +896,11 @@ describe("public render scan", () => {
     assert.match(controlBots?.html ?? "", /Robinhood Ops/);
     assert.match(controlBots?.html ?? "", /no signal/);
     assert.equal(controlBots?.html.includes("Finance Desk"), false);
+    const healthPage = pages.find((page) => page.path === "/n/health");
+    assert.match(healthPage?.html ?? "", /Allocation/);
+    assert.match(healthPage?.html ?? "", /%/);
+    assert.equal(healthPage?.html.includes("$"), false);
+    assert.equal(healthPage?.html.includes("Wire"), false);
     const lessonsPage = pages.find((page) => page.path === "/n/lessons");
     assert.match(lessonsPage?.html ?? "", /LL-023/);
     assert.equal(lessonsPage?.html.includes("LL-021"), false);
@@ -902,7 +943,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

@@ -15,6 +15,7 @@ import {
   assembleFactoryFloor,
   factoryFloorLeaks,
   type FactoryFloorModel,
+  type MachineHealth,
 } from "@/lib/factory-floor";
 import type { Lesson } from "@/lib/lessons";
 import {
@@ -172,7 +173,7 @@ function room(): ControlRoom {
   };
 }
 
-function dirtyModel(): FactoryFloorModel {
+function dirtyModel(machine: MachineHealth | null = null): FactoryFloorModel {
   const values = [100, 80, 70, 60, 50, 40, 30, 20, 10];
   const floor = toPublicFloor([
     ...NINE.map((ticker, index) => holding(ticker, values[index] ?? 1)),
@@ -408,9 +409,56 @@ describe("factory floor public default", () => {
     });
     assert.deepEqual(model.machine, { score: 88, label: "Steady", tone: "steady" });
     const html = wallHtml(model);
-    assert.match(html, /data-machine-score[^>]*>88</);
+    assert.match(html, /data-machine-score[^>]*>88%</);
     assert.equal(html.includes("$"), false);
     assert.equal(html.includes("coming soon"), false);
+  });
+
+  it("fills the machine slot with the overall percent and five sub-scores", () => {
+    const model = assembleFactoryFloor({
+      now: NOW,
+      floor: null,
+      buildItems: null,
+      control: null,
+      approvalsPending: null,
+      closes: null,
+      lessons: null,
+      events: null,
+      bets: null,
+      machine: {
+        score: 82,
+        label: "4 of 5",
+        tone: "steady",
+        parts: [
+          { label: "Balance", score: 91 },
+          { label: "Growth", score: 66.6 },
+          { label: "Feeds $4", score: null },
+          { label: "Build", score: 40 },
+          { label: "Agents", score: 50 },
+        ],
+      },
+    });
+    assert.equal(model.machine?.score, 82);
+    assert.deepEqual(
+      model.machine?.parts?.map((part) => [part.label, part.score]),
+      [
+        ["Balance", 91],
+        ["Growth", 67],
+        ["Feeds", null],
+        ["Build", 40],
+        ["Agents", 50],
+      ],
+    );
+    const html = wallHtml(model);
+    assert.match(html, /data-machine-score[^>]*>82%</);
+    assert.match(html, /data-machine-part="Balance"[^>]*>91%</);
+    assert.match(html, /data-machine-part="Growth"[^>]*>67%</);
+    assert.match(html, /data-machine-part="Feeds"[^>]*>not connected</);
+    assert.match(html, /data-machine-part="Build"[^>]*>40%</);
+    assert.match(html, /data-machine-part="Agents"[^>]*>50%</);
+    assert.equal(html.includes("coming soon"), false);
+    assert.equal(html.includes("$"), false);
+    assert.deepEqual(factoryFloorLeaks(model), []);
   });
 });
 
@@ -517,7 +565,20 @@ describe("factory floor map fallback", () => {
 
 describe("factory floor layout", () => {
   const css = readFileSync(join(root, "src/app/tv/tv.css"), "utf8");
-  const markup = wallHtml(dirtyModel());
+  const markup = wallHtml(
+    dirtyModel({
+      score: 82,
+      label: "4 of 5",
+      tone: "steady",
+      parts: [
+        { label: "Balance", score: 91 },
+        { label: "Growth", score: 67 },
+        { label: "Feeds", score: 80 },
+        { label: "Build", score: 40 },
+        { label: "Agents", score: 50 },
+      ],
+    }),
+  );
 
   for (const size of [
     { width: 1920, height: 1080, name: "tv-1920x1080" },

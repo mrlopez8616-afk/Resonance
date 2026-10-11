@@ -4138,6 +4138,27 @@ body {
   margin-top: 0.55rem;
 }
 
+.health-overall {
+  font-variant-numeric: tabular-nums;
+}
+
+.health-home-score,
+.health-part-score {
+  margin: 0.15rem 0 0;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.health-home-score {
+  font-size: 1.8rem;
+}
+
+.health-part-score {
+  font-size: 1.45rem;
+}
+
 .control-home article.node-square.is-home.is-parent,
 .control-home article.node-square.is-home.is-parent.is-live {
   width: max-content;

@@ -122,7 +122,7 @@ function spreadPositions(
   const placed = new Map<string, { x: number; y: number; z: number }>();
   for (const group of groups.values()) {
     group.forEach((item, index) => {
-      const offset = (index - (group.length - 1) / 2) * 0.36;
+      const offset = (index - (group.length - 1) / 2) * 0.3;
       placed.set(item.id, onRing(item.angle + offset, radius, y));
     });
   }
