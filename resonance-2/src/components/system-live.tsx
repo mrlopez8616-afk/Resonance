@@ -7,9 +7,12 @@ import { SystemLiveStatic } from "@/components/system-live-static";
 import {
   SYSTEM_EVENT_POLL_MS,
   buildLiveGraph,
+  LIVE_WALL_SLOW_MS,
   preferStaticLiveView,
   presentLiveGraph,
+  presentWallGraph,
   readPulseList,
+  wallShouldUseStatic,
   type LiveCapability,
   type LivePoint,
   type LiveViewChoice,
@@ -45,9 +48,12 @@ function readCapability(): LiveCapability {
   };
 }
 
-export function SystemLive({ publicMode }: { publicMode: boolean }) {
+export function SystemLive({ publicMode, wall = false }: { publicMode: boolean; wall?: boolean }) {
   const router = useRouter();
-  const graph = useMemo(() => presentLiveGraph(buildLiveGraph(), publicMode), [publicMode]);
+  const graph = useMemo(
+    () => (wall ? presentWallGraph(buildLiveGraph()) : presentLiveGraph(buildLiveGraph(), publicMode)),
+    [publicMode, wall],
+  );
   const labeled = useMemo(
     () => graph.points.filter((point) => point.kind === "hub" || point.kind === "node"),
     [graph.points],
@@ -55,6 +61,8 @@ export function SystemLive({ publicMode }: { publicMode: boolean }) {
   const [capability] = useState<LiveCapability>(readCapability);
   const [choice, setChoice] = useState<LiveViewChoice>("auto");
   const staticView = preferStaticLiveView({ ...capability, choice });
+  const [painted, setPainted] = useState(false);
+  const [forcedStatic, setForcedStatic] = useState(false);
   const [pulse, setPulse] = useState<SystemPulse | null>(null);
   const [calm, setCalm] = useState(false);
   const [card, setCard] = useState<LivePoint | null>(null);
@@ -158,8 +166,19 @@ export function SystemLive({ publicMode }: { publicMode: boolean }) {
     };
   }, [enqueue]);
 
+  useEffect(() => {
+    if (!wall || painted) return;
+    if (wallShouldUseStatic({ preferStatic: staticView, painted: false, elapsedMs: 0 })) {
+      setForcedStatic(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setForcedStatic(true), LIVE_WALL_SLOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [painted, staticView, wall]);
+
   const onSelect = useCallback(
     (id: string) => {
+      if (wall) return;
       const point = graph.points.find((item) => item.id === id);
       if (!point) return;
       if (point.href) {
@@ -168,20 +187,22 @@ export function SystemLive({ publicMode }: { publicMode: boolean }) {
       }
       setCard(point);
     },
-    [graph.points, router],
+    [graph.points, router, wall],
   );
+
+  const showStatic = staticView || forcedStatic;
 
   const end = pulse ? graph.points.find((point) => point.id === pulse.nodeIds.at(-1)) : null;
   const status = pulse ? `Pulse · ${end?.label ?? "node"}` : calm ? "Quiet" : "Live";
 
   return (
-    <div className="system-live-view">
+    <div className="system-live-view" data-wall={wall ? "1" : "0"}>
       <div
         className="system-live-stage"
-        data-view={staticView ? "static" : "3d"}
+        data-view={showStatic ? "static" : "3d"}
         data-pulse-id={pulse?.id ?? ""}
       >
-        {staticView ? (
+        {showStatic ? (
           <SystemLiveStatic graph={graph} pulse={pulse} onPulseDone={onPulseDone} onSelect={onSelect} />
         ) : (
           <>
@@ -192,6 +213,8 @@ export function SystemLive({ publicMode }: { publicMode: boolean }) {
               labels={labels}
               onPulseDone={onPulseDone}
               onSelect={onSelect}
+              onFirstFrame={wall ? () => setPainted(true) : undefined}
+              frozen={wall}
             />
             <div className="system-live-labels" aria-hidden="true">
               {labeled.map((point) => (
@@ -222,15 +245,18 @@ export function SystemLive({ publicMode }: { publicMode: boolean }) {
         <p className="system-live-status" data-live-state={pulse ? "pulse" : calm ? "calm" : "live"}>
           {status}
         </p>
-        <button
-          type="button"
-          className="system-live-toggle"
-          aria-pressed={staticView}
-          onClick={() => setChoice(staticView ? "3d" : "static")}
-        >
-          Static view
-        </button>
+        {wall ? null : (
+          <button
+            type="button"
+            className="system-live-toggle"
+            aria-pressed={staticView}
+            onClick={() => setChoice(staticView ? "3d" : "static")}
+          >
+            Static view
+          </button>
+        )}
       </div>
+      {wall ? null : (
       <ul className="system-live-legend">
         <li>
           <i style={{ background: "#f3e2b0" }} /> Hub
@@ -248,7 +274,10 @@ export function SystemLive({ publicMode }: { publicMode: boolean }) {
           <i style={{ background: "#7ef0d6" }} /> Sleeve
         </li>
       </ul>
-      <p className="system-live-hint">Drag to turn. Pinch or scroll to zoom. Tap a node to open it.</p>
+      )}
+      {wall ? null : (
+        <p className="system-live-hint">Drag to turn. Pinch or scroll to zoom. Tap a node to open it.</p>
+      )}
     </div>
   );
 }

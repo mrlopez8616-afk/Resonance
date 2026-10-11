@@ -8,10 +8,12 @@ import { hash } from "@node-rs/argon2";
 import { newDb } from "pg-mem";
 import { POST } from "@/app/api/settings/public-mode/route";
 import { ChildValueCard } from "@/components/child-value-card";
+import { FactoryFloorView } from "@/components/factory-floor";
 import type { CalendarEvent } from "@/data/calendar";
 import { SESSION_COOKIE, setAuthClockForTests } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
 import type { BuildHomeCard, BuildSectionView } from "@/lib/build-tracker";
+import { assembleFactoryFloor } from "@/lib/factory-floor";
 import { visibleLessons, type Lesson } from "@/lib/lessons";
 import { holdingChildModel } from "@/lib/child-card";
 import type { FitnessCard, FitnessNodeDetail } from "@/lib/fitness-board";
@@ -410,8 +412,58 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   const hidden = render(
     createElement("p", { className: "parent-empty", role: "status" }, "Private"),
   );
+  const wall = assembleFactoryFloor({
+    now: new Date("2026-10-11T18:00:00.000Z"),
+    floor: model,
+    buildItems: [
+      {
+        id: "wire",
+        title: "Wire $40",
+        node: "platform",
+        prNumber: null,
+        status: "in_progress",
+        steps: [
+          { id: "spec", label: "spec written", done: true },
+          { id: "pr-open", label: "PR open", done: false },
+        ],
+        nextStep: "Send $40",
+        sortOrder: 1,
+        updatedAt: "2026-10-11T18:00:00.000Z",
+      },
+    ],
+    control: null,
+    approvalsPending: 2,
+    closes: [{ day: "2026-10-10", close: 1.6 }],
+    lessons: [
+      {
+        id: "LL-021",
+        date: "2026-10-08",
+        title: "Private note",
+        category: "build",
+        whatChanged: "Hidden.",
+        why: "Hidden.",
+        lesson: "Keep this off the shared screen.",
+        publicSafe: false,
+        sources: ["owner notebook"],
+        buildItemId: null,
+        prNumber: null,
+        createdAt: "2026-10-08T15:00:00.000Z",
+        updatedAt: "2026-10-08T15:00:00.000Z",
+      },
+    ],
+    events: [moneyCatalyst],
+    bets: null,
+    machine: null,
+  });
+  const tv = render(
+    createElement(FactoryFloorView, {
+      model: wall,
+      map: createElement("div", null, "System map"),
+    }),
+  );
   const visible = [
     { path: "/", html: home },
+    { path: "/tv", html: tv },
     { path: "/n/crypto", html: crypto },
     { path: "/n/ai-stocks", html: `${stocks}${render(createElement(catalysts.CatalystEntry, { events: [moneyCatalyst], now: catalystNow }))}` },
     {
@@ -639,6 +691,7 @@ describe("public render scan", () => {
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
+      "/tv/page.tsx",
       "/n/youtube/page.tsx",
       "/n/youtube/channel/page.tsx",
       "/n/youtube/gear/page.tsx",
@@ -674,6 +727,7 @@ describe("public render scan", () => {
       "/n/control/approvals",
       "/n/system",
       "/n/system/live",
+      "/tv",
       "/n/youtube",
       "/n/youtube/channel",
       "/n/youtube/gear",

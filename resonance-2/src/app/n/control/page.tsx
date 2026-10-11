@@ -31,6 +31,9 @@ export default async function ControlRoomPage() {
       <Link href="/" className="calendar-back">
         Floor
       </Link>
+      <Link href="/tv" className="calendar-back">
+        Factory Floor
+      </Link>
       {room ? <ControlParent view={presentControlRoom(room, publicMode)} now={now} /> : null}
     </OperatorShell>
   );

@@ -10,6 +10,7 @@ import { FINANCE_NODES } from "@/lib/finance/view";
 import { FITNESS_NODES } from "@/lib/fitness-board";
 import {
   PHONE_TABS,
+  phoneChromeHidden,
   phoneTabHidden,
   PULL_COMMIT_PX,
   SWIPE_COMMIT_PX,
@@ -41,6 +42,14 @@ function swipe(overrides: Partial<SwipeSample> = {}): SwipeSample {
     ...overrides,
   };
 }
+
+describe("phone chrome", () => {
+  it("hides the phone bar on the factory floor", () => {
+    assert.equal(phoneChromeHidden("/tv"), true);
+    assert.equal(phoneChromeHidden("/tv/"), true);
+    assert.equal(phoneChromeHidden("/n/system"), false);
+  });
+});
 
 describe("phone back targets", () => {
   it("sends each parent page up to the floor", () => {

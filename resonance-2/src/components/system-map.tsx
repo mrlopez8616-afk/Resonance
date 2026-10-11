@@ -81,6 +81,7 @@ function NodeLinks({ lens, live = false }: { lens: SystemLensId | null; live?: b
       <Link href="/n/system/live" aria-current={live ? "page" : undefined}>
         Live
       </Link>
+      <Link href="/tv">Factory Floor</Link>
     </nav>
   );
 }

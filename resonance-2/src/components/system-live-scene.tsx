@@ -257,6 +257,16 @@ function placeLiveCamera(camera: PerspectiveCamera, distance: number) {
   camera.updateProjectionMatrix();
 }
 
+function FirstFrame({ onFirstFrame }: { onFirstFrame?: () => void }) {
+  const sent = useRef(false);
+  useFrame(() => {
+    if (sent.current || !onFirstFrame) return;
+    sent.current = true;
+    onFirstFrame();
+  });
+  return null;
+}
+
 function FitFrame({ radius }: { radius: number }) {
   const camera = useThree((state) => state.camera) as PerspectiveCamera;
   const size = useThree((state) => state.size);
@@ -283,6 +293,8 @@ export function SystemLiveScene({
   labels,
   onPulseDone,
   onSelect,
+  onFirstFrame,
+  frozen = false,
 }: {
   graph: LiveGraph;
   pulse: SystemPulse | null;
@@ -290,6 +302,8 @@ export function SystemLiveScene({
   labels: { current: Map<string, HTMLSpanElement> };
   onPulseDone: (id: string) => void;
   onSelect: (id: string) => void;
+  onFirstFrame?: () => void;
+  frozen?: boolean;
 }) {
   const [frameloop, setFrameloop] = useState<"always" | "never">("always");
   const radius = useMemo(() => liveGraphRadius(graph.points), [graph.points]);
@@ -313,8 +327,10 @@ export function SystemLiveScene({
       <Starfield />
       <Web graph={graph} pulse={pulse} onPulseDone={onPulseDone} onSelect={onSelect} />
       <LabelLock points={labeled} labels={labels} />
+      <FirstFrame onFirstFrame={onFirstFrame} />
       <OrbitControls
         makeDefault
+        enabled={!frozen}
         enablePan={false}
         enableDamping
         dampingFactor={0.08}
