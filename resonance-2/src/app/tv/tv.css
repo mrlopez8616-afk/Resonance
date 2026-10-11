@@ -314,7 +314,14 @@ html.tv-idle * {
 }
 
 .tv-panel-lesson .tv-copy {
-  max-height: 16vh;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  max-height: 3.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .tv-panel-lesson .tv-sub {
