@@ -299,6 +299,7 @@ export function PositionBook({
   unexplained = false,
   ticker = "",
   publicMode = false,
+  range,
 }: {
   ledger: LotsLedger;
   quantity: string;
@@ -313,6 +314,8 @@ export function PositionBook({
   unexplained?: boolean;
   ticker?: string;
   publicMode?: boolean;
+  /** Chart window from `?range=`. The lots table stays the full book. */
+  range?: string | null;
 }) {
   const totals = positionBookTotals({
     ledger,
@@ -341,7 +344,12 @@ export function PositionBook({
   };
   return (
     <div className="position-book">
-      <LotBarChart model={lotModel} publicMode={publicMode} label={`${ticker || "Position"} lots`} />
+      <LotBarChart
+        model={lotModel}
+        publicMode={publicMode}
+        range={range}
+        label={`${ticker || "Position"} lots`}
+      />
       <LotsTable
         ledger={ledger}
         totals={totals}
@@ -365,16 +373,19 @@ export function PositionRollupView({
   rollup,
   parentId = "node",
   publicMode = false,
+  range,
 }: {
   rollup: PositionRollup;
   parentId?: string;
   publicMode?: boolean;
+  /** Chart window from `?range=`. The holdings list under the chart stays complete. */
+  range?: string | null;
 }) {
   if (rollup.rows.length === 0) return null;
   const lotModel = barsFromRollup(rollup.rows, parentId, publicMode);
   return (
     <section className="position-rollup" aria-label="Holdings roll-up">
-      <LotBarChart model={lotModel} publicMode={publicMode} label="Holdings" />
+      <LotBarChart model={lotModel} publicMode={publicMode} range={range} label="Holdings" />
       <div className="rollup-list">
         {rollup.rows.map((row) =>
           rollupLine({

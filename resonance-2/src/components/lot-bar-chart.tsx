@@ -5,6 +5,14 @@ import {
   type LotBar,
   type LotBarModel,
 } from "@/lib/lot-bars";
+import {
+  filterLotBars,
+  LOT_BAR_CROWDED_AT,
+  LOT_BAR_CROWDED_MAX,
+  LOT_RANGES,
+  parseLotRange,
+  type LotRange,
+} from "@/lib/lot-range";
 
 /** Plot box. The zero line sits in the middle. Dates live outside this box. */
 const PLOT_H = 140;
@@ -54,17 +62,48 @@ function badgeText(bar: LotBar): string | null {
   return bar.first ? "First buy" : `#${bar.sequence}`;
 }
 
+function rangeHref(range: LotRange): string {
+  const hash = "#lot-bars";
+  return range === "All" ? `?${hash}` : `?range=${range}${hash}`;
+}
+
+function LotRangeSwitch({ selected }: { selected: LotRange }) {
+  return (
+    <nav className="lot-range" aria-label="Buy range">
+      {LOT_RANGES.map((item) => {
+        const on = item === selected;
+        return (
+          <a
+            key={item}
+            href={rangeHref(item)}
+            className={on ? "is-selected" : undefined}
+            aria-current={on ? "true" : undefined}
+          >
+            {item}
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function LotBarChart({
   model,
   publicMode = false,
   compact = false,
   label,
+  range,
+  now,
 }: {
   model: LotBarModel;
   publicMode?: boolean;
   /** Parent-card slot: bars only, no labels, badges, or separate taps. */
   compact?: boolean;
   label: string;
+  /** `?range=` value. Unknown values are All. Ignored on a compact card. */
+  range?: string | null;
+  /** Clock for the Chicago window. Defaults to the request time. */
+  now?: Date;
 }) {
   if (compact) {
     const bars = model.bars.filter((bar) => !bar.sold);
@@ -106,22 +145,38 @@ export function LotBarChart({
     );
   }
   if (model.bars.length === 0 && !model.caption) return null;
-  const bars = model.bars;
-  const drawn = barGeometry(bars);
+  if (model.bars.length === 0) {
+    return (
+      <figure className="position-chart lot-bars" aria-label={label}>
+        {model.caption ? <figcaption className="position-caption">{model.caption}</figcaption> : null}
+      </figure>
+    );
+  }
+  const selected = parseLotRange(range);
+  const shown = filterLotBars(model.bars, selected, now ?? new Date());
+  const crowded = shown.length >= LOT_BAR_CROWDED_AT;
+  const drawn = barGeometry(shown);
   return (
-    <figure className="position-chart lot-bars" aria-label={label}>
-      {bars.length > 0 ? (
+    <figure
+      id="lot-bars"
+      className={`position-chart lot-bars${crowded ? " is-crowded" : ""}`}
+      aria-label={label}
+      data-range={selected}
+      data-crowded={crowded ? "true" : "false"}
+    >
+      <LotRangeSwitch selected={selected} />
+      {shown.length > 0 ? (
         <div className="lot-bars-scroll">
           <div
             className="lot-bars-cols"
-            style={{ minWidth: `max(100%, ${bars.length * 44}px)` }}
+            style={{ minWidth: crowded ? "100%" : `max(100%, ${shown.length * 44}px)` }}
           >
-            {bars.map((bar, index) => {
+            {shown.map((bar, index) => {
               const box = drawn[index];
               if (!box) return null;
               const tone = `is-${bar.tone}`;
-              const badge = badgeText(bar);
-              const value = lotBarValueLabel(bar, publicMode);
+              const badge = crowded ? (bar.first ? "First buy" : null) : badgeText(bar);
+              const value = crowded ? null : lotBarValueLabel(bar, publicMode);
               const lines = lotBarPopoverLines(bar, publicMode);
               const name = lines.join(", ");
               const marked = bar.partial || bar.sold;
@@ -138,8 +193,8 @@ export function LotBarChart({
                 >
                   <div className="lot-bar-head">
                     {badge ? <span className="lot-bar-badge">{badge}</span> : null}
-                    {bar.sold ? <span className="lot-bar-tick">Sold</span> : null}
-                    {bar.partial ? <span className="lot-bar-tick">partial</span> : null}
+                    {!crowded && bar.sold ? <span className="lot-bar-tick">Sold</span> : null}
+                    {!crowded && bar.partial ? <span className="lot-bar-tick">partial</span> : null}
                   </div>
                   <div className="lot-bar-plot" style={{ "--lot-zero": `${ZERO}px` } as CSSProperties}>
                     {value ? (
@@ -149,10 +204,10 @@ export function LotBarChart({
                     ) : null}
                     <span
                       className={`lot-bar-fill ${tone}${bar.first ? " is-first" : ""}${marked ? " is-marked" : ""}${bar.sold ? " is-sold" : ""}`}
-                      style={{ top: box.top, height: box.height, maxWidth: MAX_BAR }}
+                      style={{ top: box.top, height: box.height, maxWidth: crowded ? LOT_BAR_CROWDED_MAX : MAX_BAR }}
                     />
                   </div>
-                  <div className="lot-bar-date">{bar.axisLabel}</div>
+                  {crowded ? null : <div className="lot-bar-date">{bar.axisLabel}</div>}
                   {bar.href ? (
                     <a href={bar.href} className="lot-bar-hit" aria-label={name}>
                       <span className="sr-only">{name}</span>
@@ -174,7 +229,11 @@ export function LotBarChart({
             })}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <p className="lot-bars-empty" role="status">
+          No buys in this range
+        </p>
+      )}
       {model.caption ? <figcaption className="position-caption">{model.caption}</figcaption> : null}
     </figure>
   );

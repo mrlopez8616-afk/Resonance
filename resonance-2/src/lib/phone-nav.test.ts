@@ -88,6 +88,10 @@ describe("phone back targets", () => {
     assert.deepEqual(xrp.back, { href: "/n/crypto", label: "Crypto" });
     assert.equal(xrp.crumbs.at(-1)?.label, "XRP");
 
+    assert.deepEqual(phoneTrail("/n/ai-stocks/pwr", "?range=1W"), phoneTrail("/n/ai-stocks/pwr"));
+    assert.deepEqual(phoneTrail("/n/crypto/sui", "?range=1D"), phoneTrail("/n/crypto/sui"));
+    assert.deepEqual(phoneTrail("/n/ai-stocks", "?range=1M"), phoneTrail("/n/ai-stocks"));
+
     const trigger = phoneTrail("/n/crypto/xrp-trigger");
     assert.deepEqual(trigger.back, { href: "/n/crypto", label: "Crypto" });
     assert.equal(trigger.crumbs.at(-1)?.label, "XRP Trigger");

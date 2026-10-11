@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { isValidElement, type ReactNode } from "react";
 import { LotBarChart } from "@/components/lot-bar-chart";
+import { LOT_BAR_CROWDED_AT, LOT_BAR_CROWDED_MAX } from "@/lib/lot-range";
 import {
   barsFromClosedLots,
   barsFromOpenLots,
@@ -114,6 +115,75 @@ function findByClass(node: ReactNode, className: string): ReactNode | null {
     return findByClass((type as (props: unknown) => ReactNode)(node.props), className);
   }
   return findByClass((node.props as { children?: ReactNode }).children, className);
+}
+
+function collectSurface(node: ReactNode, found: string[] = []): string[] {
+  if (node == null || typeof node === "boolean") return found;
+  if (typeof node === "string" || typeof node === "number") {
+    found.push(String(node));
+    return found;
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) collectSurface(child, found);
+    return found;
+  }
+  if (!isValidElement(node)) return found;
+  const type = node.type;
+  if (typeof type === "function") {
+    collectSurface((type as (props: unknown) => ReactNode)(node.props), found);
+    return found;
+  }
+  const props = node.props as { children?: ReactNode; "aria-label"?: string; "aria-current"?: string; title?: string };
+  if (props["aria-label"]) found.push(props["aria-label"]);
+  if (props["aria-current"]) found.push(props["aria-current"]);
+  if (props.title) found.push(props.title);
+  collectSurface(props.children, found);
+  return found;
+}
+
+function anchorsOf(node: ReactNode, found: { href: string; text: string; current?: string }[] = []) {
+  if (node == null || typeof node === "boolean") return found;
+  if (typeof node === "string" || typeof node === "number") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) anchorsOf(child, found);
+    return found;
+  }
+  if (!isValidElement(node)) return found;
+  const type = node.type;
+  if (typeof type === "function") {
+    anchorsOf((type as (props: unknown) => ReactNode)(node.props), found);
+    return found;
+  }
+  const props = node.props as { href?: string; children?: ReactNode; "aria-current"?: string };
+  if (type === "a" && typeof props.href === "string" && props.href.startsWith("?")) {
+    found.push({
+      href: props.href,
+      text: collectText(props.children).join(""),
+      current: props["aria-current"],
+    });
+  }
+  anchorsOf(props.children, found);
+  return found;
+}
+
+function badgesOf(node: ReactNode, found: string[] = []): string[] {
+  if (node == null || typeof node === "boolean") return found;
+  if (typeof node === "string" || typeof node === "number") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) badgesOf(child, found);
+    return found;
+  }
+  if (!isValidElement(node)) return found;
+  const type = node.type;
+  if (typeof type === "function") {
+    badgesOf((type as (props: unknown) => ReactNode)(node.props), found);
+    return found;
+  }
+  if (classNameOf(node).split(" ").includes("lot-bar-badge")) {
+    found.push(collectText(node).join(""));
+  }
+  badgesOf((node.props as { children?: ReactNode }).children, found);
+  return found;
 }
 
 function collectText(node: ReactNode, found: string[] = []): string[] {
@@ -462,6 +532,199 @@ describe("lot bars", () => {
     assert.equal(groupFloor.includes("price-spark"), false);
     assert.equal(groupFloor.includes("IndexChart"), false);
     assert.match(home, /home-visuals/);
+  });
+
+  it("filters the chart by the Chicago buy window and leaves an empty range blank", () => {
+    const now = new Date("2026-10-12T04:30:00.000Z");
+    const bars = barsFromOpenLots(
+      [
+        lot({ time: "2026-10-11T16:00:00-05:00", day: "2026-10-11", pnlUsd: 6, pnlPct: 12 }),
+        lot({ time: "2026-10-12T16:00:00-05:00", day: "2026-10-12", pnlUsd: -4, pnlPct: -8 }),
+        lot({ time: "2026-09-01T16:00:00-05:00", day: "2026-09-01", pnlUsd: 1, pnlPct: 1 }),
+      ],
+      false,
+    );
+    assert.equal(bars.find((bar) => bar.day === "2026-10-11")?.magnitude, 6);
+    const day = LotBarChart({ model: { bars, caption: null }, label: "PWR lots", range: "1D", now });
+    const dayText = collectText(day).join(" ");
+    assert.match(dayText, /Oct 11/);
+    assert.match(dayText, /\+\$6\.00/);
+    assert.equal(dayText.includes("Oct 12"), false);
+    assert.equal(dayText.includes("Sep 1"), false);
+    assert.equal(findByClass(day, "lot-bars-empty"), null);
+    const selected = anchorsOf(day).find((link) => link.current === "true");
+    assert.equal(selected?.text, "1D");
+    assert.equal(selected?.href, "?range=1D#lot-bars");
+    assert.equal(anchorsOf(day).find((link) => link.text === "All")?.href, "?#lot-bars");
+
+    const empty = LotBarChart({ model: { bars, caption: "9 PWR entry unknown, not charted" }, label: "PWR lots", range: "1W", now: new Date("2026-08-01T17:00:00.000Z") });
+    const emptyText = collectText(empty).join(" ");
+    assert.match(emptyText, /No buys in this range/);
+    assert.match(emptyText, /9 PWR entry unknown, not charted/);
+    assert.equal(findByClass(empty, "lot-bar-fill"), null);
+    assert.equal(findByClass(empty, "lot-bar-col"), null);
+    assert.equal(findByClass(empty, "lot-bars-cols"), null);
+
+    const invalid = LotBarChart({ model: { bars, caption: null }, label: "PWR lots", range: "nope", now });
+    assert.equal((isValidElement(invalid) ? (invalid.props as { "data-range"?: string })["data-range"] : ""), "All");
+    const invalidText = collectText(invalid).join(" ");
+    assert.match(invalidText, /Sep 1/);
+    assert.match(invalidText, /Oct 11/);
+    assert.match(invalidText, /Oct 12/);
+    assert.equal(anchorsOf(invalid).find((link) => link.current === "true")?.text, "All");
+
+    const root = fileURLToPath(new URL("..", import.meta.url));
+    const book = readFileSync(`${root}/components/position-book.tsx`, "utf8");
+    const charts = book.match(/<LotBarChart[\s\S]*?\/>/g) ?? [];
+    assert.equal(charts.length, 2);
+    for (const chart of charts) assert.match(chart, /range=/);
+    const tableStart = book.indexOf("<LotsTable");
+    const table = book.slice(tableStart, book.indexOf("/>", tableStart) + 2);
+    assert.equal(table.includes("range"), false);
+    const rollupList = book.slice(book.indexOf("rollup.rows.map"), book.indexOf("rollupLine({", book.indexOf("total: true")));
+    assert.equal(rollupList.includes("filterLotBars"), false);
+  });
+
+  it("draws a crowded year without per-bar labels and keeps the first buy", () => {
+    const count = LOT_BAR_CROWDED_AT;
+    const bars = barsFromOpenLots(
+      Array.from({ length: count }, (_, index) => {
+        const day = new Date(Date.UTC(2026, 0, 1 + index)).toISOString().slice(0, 10);
+        return lot({
+          time: `${day}T15:00:00-05:00`,
+          day,
+          pnlUsd: index % 2 === 0 ? 1.25 : -0.4,
+          pnlPct: index % 2 === 0 ? 3 : -1.5,
+          remainingQty: index === 3 ? "1" : "2",
+          originalQty: "2",
+        });
+      }),
+      false,
+    );
+    assert.equal(bars.length, count);
+    const node = LotBarChart({ model: { bars, caption: null }, label: "PWR lots", range: "All" });
+    assert.match(classNameOf(node), /is-crowded/);
+    assert.equal(findByClass(node, "lot-bar-value"), null);
+    assert.equal(findByClass(node, "lot-bar-date"), null);
+    assert.equal(findByClass(node, "lot-bar-tick"), null);
+    const cols = findByClass(node, "lot-bars-cols");
+    assert.equal(styleOf(cols).minWidth, "100%");
+    const fill = findByClass(node, "lot-bar-fill");
+    assert.equal(styleOf(fill).maxWidth, LOT_BAR_CROWDED_MAX);
+    assert.match(classNameOf(fill), /is-first/);
+    const badges = badgesOf(node);
+    assert.deepEqual(badges, ["First buy"]);
+    assert.match(collectText(node).join(" "), /tone up/);
+    assert.match(collectText(node).join(" "), /tone down/);
+    assert.match(collectText(node).join(" "), /partial true/);
+
+    const open = LotBarChart({
+      model: { bars: bars.slice(0, count - 1), caption: null },
+      label: "PWR lots",
+    });
+    assert.equal(classNameOf(open).includes("is-crowded"), false);
+    assert.ok(findByClass(open, "lot-bar-value"));
+    assert.ok(findByClass(open, "lot-bar-date"));
+    assert.match(styleOf(findByClass(open, "lot-bars-cols")).minWidth ?? "", /^max\(100%, \d+px\)$/);
+
+    const root = fileURLToPath(new URL("..", import.meta.url));
+    const css = readFileSync(`${root}/app/globals.css`, "utf8");
+    assert.match(css, /\.lot-range a \{[^}]*min-height:\s*48px/);
+    assert.match(css, /\.lot-range a \{[^}]*min-width:\s*48px/);
+    assert.match(css, /\.lot-bars\.is-crowded \.lot-bar-col \{[^}]*min-width:\s*0/);
+    const home = readFileSync(`${root}/app/page.tsx`, "utf8");
+    assert.equal(home.includes("lot-range"), false);
+    assert.equal(home.includes("LotBarChart"), false);
+  });
+
+  it("keeps public range text in percent and compact cards unfiltered", () => {
+    const now = new Date("2026-10-12T04:30:00.000Z");
+    const bars = barsFromOpenLots(
+      [
+        lot({ time: "2026-10-11T16:00:00-05:00", day: "2026-10-11", pnlUsd: 12.5, pnlPct: 4.2, valueUsd: 40, entryUsd: 10 }),
+        lot({ time: "2026-09-01T16:00:00-05:00", day: "2026-09-01", pnlUsd: 3, pnlPct: 1.1, valueUsd: 20, entryUsd: 10 }),
+      ],
+      true,
+    );
+    const shown = LotBarChart({
+      model: { bars, caption: null },
+      publicMode: true,
+      label: "PWR lots",
+      range: "1D",
+      now,
+    });
+    const surface = collectSurface(shown).join(" ");
+    assert.match(surface, /Buy range/);
+    assert.match(surface, /\+4\.2%/);
+    assert.match(surface, /Oct 11/);
+    assert.match(surface, /1D/);
+    assert.equal(surface.includes("$"), false);
+    assert.equal(surface.includes("Sep 1"), false);
+
+    const empty = LotBarChart({
+      model: { bars, caption: null },
+      publicMode: true,
+      label: "PWR lots",
+      range: "1W",
+      now: new Date("2026-08-01T17:00:00.000Z"),
+    });
+    const emptySurface = collectSurface(empty).join(" ");
+    assert.match(emptySurface, /No buys in this range/);
+    assert.equal(emptySurface.includes("$"), false);
+    assert.equal(findByClass(empty, "lot-bar-fill"), null);
+
+    const crowded = barsFromOpenLots(
+      Array.from({ length: LOT_BAR_CROWDED_AT }, (_, index) => {
+        const day = new Date(Date.UTC(2026, 0, 1 + index)).toISOString().slice(0, 10);
+        return lot({
+          time: `${day}T15:00:00-05:00`,
+          day,
+          pnlUsd: 9,
+          pnlPct: index % 2 === 0 ? 4.2 : -1.5,
+          valueUsd: 40,
+          entryUsd: 10,
+        });
+      }),
+      true,
+    );
+    const dense = LotBarChart({
+      model: { bars: crowded, caption: null },
+      publicMode: true,
+      label: "PWR lots",
+      range: "All",
+    });
+    const denseSurface = collectSurface(dense).join(" ");
+    assert.match(classNameOf(dense), /is-crowded/);
+    assert.match(denseSurface, /First buy/);
+    assert.match(denseSurface, /%/);
+    assert.equal(denseSurface.includes("$"), false);
+    assert.equal(findByClass(dense, "lot-bar-value"), null);
+
+    const compact = LotBarChart({
+      model: { bars, caption: null },
+      compact: true,
+      publicMode: true,
+      range: "1D",
+      now,
+      label: "PWR lots",
+    });
+    assert.equal(findByClass(compact, "lot-range"), null);
+    const compactText = collectText(compact).join(" ");
+    assert.match(compactText, /tone up/);
+    assert.equal(compactText.includes("1D"), false);
+    assert.equal(collectSurface(compact).join(" ").includes("$"), false);
+
+    const rollup = barsFromRollup(
+      [row({ ticker: "PWR", pnlUsd: 19, pnlPct: 8 }), row({ ticker: "NVDA", pnlUsd: -2, pnlPct: -1 })],
+      "ai-stocks",
+      false,
+    );
+    const parent = LotBarChart({ model: rollup, label: "Holdings", range: "1W", now });
+    assert.match(collectText(parent).join(" "), /No buys in this range/);
+    assert.equal(findByClass(parent, "lot-bar-fill"), null);
+    const parentAll = LotBarChart({ model: rollup, label: "Holdings", range: "All", now });
+    assert.match(collectText(parentAll).join(" "), /PWR/);
+    assert.match(collectText(parentAll).join(" "), /NVDA/);
   });
 });
 

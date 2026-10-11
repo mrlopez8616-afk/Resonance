@@ -35,6 +35,7 @@ import { positionCostFromFills } from "@/lib/position-cost";
 import { assembleNodePosition, displayLotBooks } from "@/lib/position-lots";
 import { isPublicMode } from "@/lib/public-mode-server";
 import { yahooSessionDay } from "@/lib/equity-chart";
+import { parseLotRangeQuery } from "@/lib/lot-range";
 import { loadCryptoCloses, loadEquityCloses, loadEquityHistory } from "@/lib/price-history";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
@@ -85,12 +86,15 @@ export async function generateMetadata({
 
 export default async function NodeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ parent: string; node: string }>;
+  searchParams: Promise<{ range?: string | string[] }>;
 }) {
-  const { parent: parentId, node: nodeId } = await params;
+  const [{ parent: parentId, node: nodeId }, query] = await Promise.all([params, searchParams]);
+  const range = parseLotRangeQuery(query.range);
   const retiredName = retiredEquityTicker(parentId, nodeId);
-  if (retiredName) return retiredEquityPage(retiredName);
+  if (retiredName) return retiredEquityPage(retiredName, range);
   const retired = retiredAiNodeHref(parentId, nodeId) ?? retiredCryptoNodeHref(parentId, nodeId);
   if (retired) redirect(retired);
   const legacy = legacyParentHref(parentId, nodeId);
@@ -126,7 +130,12 @@ export default async function NodeDetailPage({
           <Link href={`/n/${parent.id}`} className="calendar-back">
             {parent.label}
           </Link>
-          <PublicNodePage ticker={node.ticker} holding={holding} bars={floor.nodeBars[node.ticker] ?? []} />
+          <PublicNodePage
+            ticker={node.ticker}
+            holding={holding}
+            bars={floor.nodeBars[node.ticker] ?? []}
+            range={range}
+          />
         </OperatorShell>
       );
     }
@@ -276,6 +285,7 @@ export default async function NodeDetailPage({
               sleeves={sleeves}
               priceUsd={face?.priceUsd ?? null}
               closes={dated[ticker] ?? []}
+              range={range}
             />
           ) : null}
           {showBook && model.role ? <p className="child-role">{model.role}</p> : null}
@@ -333,6 +343,7 @@ export default async function NodeDetailPage({
           priceUsd={face?.priceUsd ?? null}
           closes={dated?.[node.ticker] ?? []}
           vaultQuantity={sleeves?.find((row) => row.id === "flare-vault")?.quantity ?? null}
+          range={range}
         />
       ) : null}
     </OperatorShell>
@@ -346,6 +357,7 @@ async function NodePosition({
   priceUsd,
   closes,
   vaultQuantity = null,
+  range,
 }: {
   fills: Parameters<typeof assembleNodePosition>[0]["fills"];
   ticker: string;
@@ -353,6 +365,7 @@ async function NodePosition({
   priceUsd: number | null;
   closes: { day: string; close: number }[];
   vaultQuantity?: string | null;
+  range?: string | null;
 }) {
   const today = yahooSessionDay(Date.now() / 1000) ?? "";
   const publicMode = await isPublicMode();
@@ -381,6 +394,7 @@ async function NodePosition({
       unexplained={position.unexplained}
       ticker={ticker}
       publicMode={publicMode}
+      range={range}
     />
   );
 }
@@ -392,7 +406,7 @@ function retiredEquityTicker(parentId: string, nodeId: string): "ETN" | "HUBB" |
   return null;
 }
 
-async function retiredEquityPage(ticker: "ETN" | "HUBB") {
+async function retiredEquityPage(ticker: "ETN" | "HUBB", range: string) {
   const parent = parentById("ai-stocks");
   if (!parent) notFound();
   const [floor, book] = await Promise.all([loadOperatorFloor(), loadOperatorFills()]);
@@ -410,6 +424,7 @@ async function retiredEquityPage(ticker: "ETN" | "HUBB") {
           sleeves={sleeves}
           priceUsd={null}
           closes={[]}
+          range={range}
         />
       </div>
     </OperatorShell>
