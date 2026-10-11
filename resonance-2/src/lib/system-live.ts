@@ -638,6 +638,33 @@ export function wallShouldUseStatic(input: {
   return input.elapsedMs >= (input.slowMs ?? LIVE_WALL_SLOW_MS);
 }
 
+/**
+ * Static-map sizes in viewBox units. Strokes and labels scale with the panel
+ * instead of staying at CSS-pixel defaults.
+ */
+export const STATIC_MAP_LABEL = 0.3;
+export const STATIC_MAP_STROKE = 0.02;
+export const STATIC_MAP_STROKE_LIT = 0.045;
+const STATIC_MAP_PAD_X = 1.9;
+const STATIC_MAP_PAD_TOP = 1.75;
+const STATIC_MAP_PAD_BOTTOM = 1.25;
+
+/** Frame that keeps node labels inside the SVG. Y is the graph's z axis. */
+export function staticMapBounds(points: readonly { x: number; z: number }[]): {
+  minX: number;
+  minY: number;
+  width: number;
+  height: number;
+} {
+  const xs = points.map((point) => point.x);
+  const zs = points.map((point) => point.z);
+  const minX = Math.min(...xs) - STATIC_MAP_PAD_X;
+  const maxX = Math.max(...xs) + STATIC_MAP_PAD_X;
+  const minY = Math.min(...zs) - STATIC_MAP_PAD_TOP;
+  const maxY = Math.max(...zs) + STATIC_MAP_PAD_BOTTOM;
+  return { minX, minY, width: maxX - minX, height: maxY - minY };
+}
+
 /** Public map with the Finance point's name removed. The wall does not show Finance. */
 export function presentWallGraph(graph: LiveGraph): LiveGraph {
   const shown = presentLiveGraph(graph, true);

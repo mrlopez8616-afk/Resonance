@@ -70,7 +70,7 @@ export function FactoryFloorView({ model, map }: { model: FactoryFloorModel; map
             ) : null}
           </Panel>
 
-          <Panel title="Lesson" label="Lesson">
+          <Panel title="Lesson" label="Lesson" className="tv-panel-lesson">
             {model.lesson.status === "down" ? <Missing text="not connected" /> : null}
             {model.lesson.status === "empty" ? <Missing text="no public lesson" /> : null}
             {model.lesson.status === "entry" ? (

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createElement, isValidElement, type ReactNode } from "react";
 import { NextRequest } from "next/server";
 import { FactoryFloorView } from "@/components/factory-floor";
+import { SystemLiveStaticSvg } from "@/components/system-live-static";
 import type { CalendarEvent } from "@/data/calendar";
 import { BET_TICKER, BET_VENUE, type Bet } from "@/lib/bets";
 import type { BuildItem } from "@/lib/build-tracker";
@@ -22,7 +23,7 @@ import {
   TREASURY_LINE,
   type PublicHoldingInput,
 } from "@/lib/public-mode";
-import { buildLiveGraph, LIVE_KIND_COLOR, LIVE_WALL_SLOW_MS, presentWallGraph, wallShouldUseStatic } from "@/lib/system-live";
+import { buildLiveGraph, LIVE_WALL_SLOW_MS, presentWallGraph, wallShouldUseStatic } from "@/lib/system-live";
 import {
   acquireScreenWakeLock,
   shouldFullReload,
@@ -53,7 +54,16 @@ function render(node: ReactNode): string {
     if (key === "children") continue;
     const value = props[key];
     if (value == null || value === false || typeof value === "function") continue;
-    const name = key === "className" ? "class" : key;
+    const name =
+      key === "className"
+        ? "class"
+        : key === "fontSize"
+          ? "font-size"
+          : key === "strokeWidth"
+            ? "stroke-width"
+            : key === "textAnchor"
+              ? "text-anchor"
+              : key;
     if (value === true) {
       attrs.push(` ${name}`);
       continue;
@@ -237,75 +247,17 @@ function dirtyModel(): FactoryFloorModel {
 }
 
 function WallMap() {
-  const graph = presentWallGraph(buildLiveGraph());
-  const xs = graph.points.map((point) => point.x);
-  const zs = graph.points.map((point) => point.z);
-  const minX = Math.min(...xs) - 1.35;
-  const maxX = Math.max(...xs) + 1.35;
-  const minZ = Math.min(...zs) - 1.15;
-  const maxZ = Math.max(...zs) + 1.15;
-  const labeled = graph.points.filter(
-    (point) => (point.kind === "hub" || point.kind === "node") && point.label,
-  );
   return createElement(
     "div",
     { className: "system-live-view" },
     createElement(
       "div",
       { className: "system-live-stage", "data-view": "static" },
-      createElement(
-        "svg",
-        {
-          className: "system-live-svg",
-          viewBox: `${minX} ${minZ} ${maxX - minX} ${maxZ - minZ}`,
-          role: "img",
-          "aria-label": "System map",
-        },
-        createElement("rect", {
-          x: minX,
-          y: minZ,
-          width: maxX - minX,
-          height: maxZ - minZ,
-          fill: "#070b14",
-        }),
-        graph.edges.map((edge) => {
-          const start = graph.points.find((point) => point.id === edge.from);
-          const end = graph.points.find((point) => point.id === edge.to);
-          if (!start || !end) return null;
-          return createElement("line", {
-            key: edge.id,
-            x1: start.x,
-            y1: start.z,
-            x2: end.x,
-            y2: end.z,
-            stroke: "#35506e",
-            strokeWidth: 0.025,
-          });
-        }),
-        graph.points.map((point) =>
-          createElement("circle", {
-            key: point.id,
-            cx: point.x,
-            cy: point.z,
-            r: point.kind === "hub" ? 0.2 : point.kind === "node" ? 0.13 : 0.07,
-            fill: LIVE_KIND_COLOR[point.kind],
-          }),
-        ),
-        labeled.map((point) =>
-          createElement(
-            "text",
-            {
-              key: `${point.id}-label`,
-              x: point.x,
-              y: point.z - 0.28,
-              textAnchor: "middle",
-              fill: "#d5deea",
-              fontSize: "0.22",
-            },
-            point.label,
-          ),
-        ),
-      ),
+      createElement(SystemLiveStaticSvg, {
+        graph: presentWallGraph(buildLiveGraph()),
+        pulse: null,
+        onSelect: () => undefined,
+      }),
     ),
   );
 }
@@ -322,6 +274,8 @@ describe("factory floor public default", () => {
     assert.equal(model.nodes.length, 9);
     assert.equal(model.nodes.some((node) => node.ticker === "XRP"), false);
     assert.ok(model.nodes.every((node) => node.weight.endsWith("%")));
+    // Fixture prices are 10 then 12, so every gain is +20.0%. The wall does not hardcode it.
+    assert.ok(model.nodes.every((node) => node.growth === "+20.0%"));
     assert.equal(model.build.percent, "50%");
     assert.deepEqual(
       model.build.items.map((item) => item.title),
@@ -371,12 +325,41 @@ describe("factory floor public default", () => {
     assert.match(html, /1\.55/);
     assert.match(html, /1 of 5/);
     assert.match(html, /Ship the wall/);
-    assert.doesNotMatch(html, /\bFinance\b/);
+    assert.doesNotMatch(html.replace(/aria-label="[^"]*"/g, ""), /\bFinance\b/);
+    assert.match(html, /viewBox="[^"]+"/);
+    assert.match(html, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(html, /stroke-width="0\.02"/);
+    assert.match(html, /font-size="0\.3"/);
+    assert.equal(html.includes("strokeWidth"), false);
+    assert.equal(html.includes("fontSize="), false);
 
     const poisoned = { ...model, stake: "$9" } as FactoryFloorModel;
     assert.ok(factoryFloorLeaks(poisoned).length > 0);
     const dollars = { ...model, clock: "now $4" };
     assert.ok(factoryFloorLeaks(dollars).includes("dollar-char"));
+  });
+
+  it("derives growth and the close from the inputs", () => {
+    const model = assembleFactoryFloor({
+      now: NOW,
+      floor: toPublicFloor([
+        holding("NVDA", 40),
+        { ...holding("SUI", 20), firstBuyPrice: 10, livePrice: 15 },
+      ]),
+      buildItems: null,
+      control: null,
+      approvalsPending: null,
+      closes: [{ day: "2026-10-10", close: 2.4 }],
+      lessons: null,
+      events: null,
+      bets: null,
+    });
+    assert.equal(model.nodes.find((node) => node.ticker === "SUI")?.growth, "+50.0%");
+    assert.equal(model.nodes.find((node) => node.ticker === "NVDA")?.growth, "+20.0%");
+    assert.equal(model.nodes.find((node) => node.ticker === "TSM")?.weight, "not connected");
+    assert.equal(model.nodes.find((node) => node.ticker === "TSM")?.growth, null);
+    assert.equal(model.trigger.close, "2.40");
+    assert.equal(model.trigger.versus, "above 1.55");
   });
 
   it("says not connected when a source is missing and never invents a value", () => {
@@ -605,6 +588,71 @@ describe("factory floor layout", () => {
         assert.ok(Math.abs((metrics.wallW ?? 0) - size.width) <= 2, JSON.stringify(metrics));
         assert.ok(Math.abs((metrics.wallH ?? 0) - size.height) <= 2, JSON.stringify(metrics));
         assert.equal(metrics.text?.includes("$"), false);
+        const mapFit = (await page.evaluate(`(() => {
+          const map = document.querySelector(".tv-map");
+          const svg = document.querySelector(".tv-map svg");
+          const treasury = document.querySelector("[data-treasury]");
+          const lesson = document.querySelector('[data-panel="Lesson"]');
+          if (!(map instanceof HTMLElement) || !(svg instanceof SVGSVGElement)) return { ok: false };
+          if (!(treasury instanceof HTMLElement) || !(lesson instanceof HTMLElement)) return { ok: false };
+          const mapBox = map.getBoundingClientRect();
+          const svgBox = svg.getBoundingClientRect();
+          const labels = [];
+          for (const node of svg.querySelectorAll("text")) {
+            const box = node.getBoundingClientRect();
+            labels.push({
+              text: node.textContent || "",
+              width: box.width,
+              height: box.height,
+              inside: box.width > 8 && box.left >= mapBox.left - 1 && box.top >= mapBox.top - 1 && box.right <= mapBox.right + 1 && box.bottom <= mapBox.bottom + 1,
+            });
+          }
+          const line = svg.querySelector("line");
+          const stroke = line ? Number.parseFloat(getComputedStyle(line).strokeWidth) : 0;
+          const treasuryText = treasury.querySelector(".tv-treasury-line");
+          const lessonText = lesson.querySelector(".tv-copy");
+          const treasuryBox = treasury.getBoundingClientRect();
+          const lessonBox = lesson.getBoundingClientRect();
+          const treasuryRect = treasuryText ? treasuryText.getBoundingClientRect() : null;
+          const lessonRect = lessonText ? lessonText.getBoundingClientRect() : null;
+          return {
+            ok: true,
+            svgInside: svgBox.left >= mapBox.left - 1 && svgBox.top >= mapBox.top - 1 && svgBox.right <= mapBox.right + 1 && svgBox.bottom <= mapBox.bottom + 1,
+            viewBox: svg.getAttribute("viewBox"),
+            aspect: svg.getAttribute("preserveAspectRatio"),
+            stroke,
+            labels,
+            treasurySize: treasuryText ? Number.parseFloat(getComputedStyle(treasuryText).fontSize) : 0,
+            lessonSize: lessonText ? Number.parseFloat(getComputedStyle(lessonText).fontSize) : 0,
+            treasuryInside: treasuryRect ? treasuryRect.left >= treasuryBox.left - 1 && treasuryRect.top >= treasuryBox.top - 1 && treasuryRect.right <= treasuryBox.right + 1 && treasuryRect.bottom <= treasuryBox.bottom + 1 : false,
+            lessonInside: lessonRect ? lessonRect.left >= lessonBox.left - 1 && lessonRect.top >= lessonBox.top - 1 && lessonRect.right <= lessonBox.right + 1 && lessonRect.bottom <= lessonBox.bottom + 1 : false,
+          };
+        })()`)) as {
+          ok: boolean;
+          svgInside?: boolean;
+          viewBox?: string | null;
+          aspect?: string | null;
+          stroke?: number;
+          labels?: { text: string; width: number; height: number; inside: boolean }[];
+          treasurySize?: number;
+          lessonSize?: number;
+          treasuryInside?: boolean;
+          lessonInside?: boolean;
+        };
+        assert.equal(mapFit.ok, true);
+        assert.equal(mapFit.svgInside, true);
+        assert.equal(mapFit.aspect, "xMidYMid meet");
+        assert.ok(mapFit.viewBox && mapFit.viewBox.split(" ").length === 4);
+        assert.ok((mapFit.stroke ?? 0) > 0 && (mapFit.stroke ?? 0) < 6, JSON.stringify(mapFit));
+        assert.ok((mapFit.labels ?? []).length > 3);
+        for (const label of mapFit.labels ?? []) {
+          assert.equal(label.inside, true, `${label.text} ${label.width}x${label.height}`);
+          assert.ok(label.height >= 10 && label.height <= 42, `${label.text} ${label.width}x${label.height}`);
+        }
+        assert.ok((mapFit.treasurySize ?? 0) >= 18, String(mapFit.treasurySize));
+        assert.ok((mapFit.lessonSize ?? 0) >= 15, String(mapFit.lessonSize));
+        assert.equal(mapFit.treasuryInside, true);
+        assert.equal(mapFit.lessonInside, true);
       } finally {
         await browser.close();
       }
