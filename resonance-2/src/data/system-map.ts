@@ -122,6 +122,14 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     connection: "A dated log of what the floor learned.",
     children: [],
   },
+  {
+    id: "health",
+    label: "Health",
+    href: "/n/health",
+    status: "live",
+    connection: "Allocation, growth, feeds, build, and agents, scored as percents.",
+    children: [],
+  },
 ];
 
 export const SYSTEM_AGENTS = [

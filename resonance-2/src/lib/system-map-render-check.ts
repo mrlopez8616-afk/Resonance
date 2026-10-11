@@ -48,6 +48,7 @@ const markers = [
   ">Live<",
   "Lessons",
   "/n/lessons",
+  "/n/health",
 ];
 for (const marker of markers) {
   if (!html.includes(marker)) fail(`missing ${marker}`);

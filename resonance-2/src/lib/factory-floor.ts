@@ -31,18 +31,26 @@ import { evaluateXrpTrigger, type DailyClose } from "@/lib/xrp-trigger";
 export const FACTORY_CATALYST_LIMIT = 5;
 export const FACTORY_PLAY_LIMIT = 3;
 
-/**
- * Health of the Machine. Drop a score in `MACHINE_HEALTH` when the feed exists.
- * Null keeps the reserved slot on "coming soon".
- */
-export type MachineHealth = {
-  /** 0 through 100. */
-  score: number;
+export type MachineHealthPart = {
   label: string;
-  tone: "steady" | "watch" | "down";
+  /** Null is not connected. A number is 0 through 100. */
+  score: number | null;
 };
 
-/** The score is not wired yet. The slot still renders. */
+/**
+ * Health of the Machine slot.
+ * `score` null with parts means the feed is wired and the overall is not connected.
+ * A null slot is still the reserved "coming soon" state.
+ */
+export type MachineHealth = {
+  /** Null when no sub-score had data. */
+  score: number | null;
+  label: string;
+  tone: "steady" | "watch" | "down";
+  parts?: readonly MachineHealthPart[];
+};
+
+/** Fallback when a caller does not pass a score. The loader fills the slot. */
 export const MACHINE_HEALTH: MachineHealth | null = null;
 
 /** False hides the reserved slot. The `MachineHealth` fields stay the contract. */
@@ -370,14 +378,32 @@ function fightPanel(
   };
 }
 
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 function machineSlot(health: MachineHealth | null | undefined): MachineHealth | null {
   if (!health) return null;
-  if (!Number.isFinite(health.score)) return null;
-  const score = Math.max(0, Math.min(100, Math.round(health.score)));
-  const label = cleanText(health.label);
-  if (!label) return null;
   if (health.tone !== "steady" && health.tone !== "watch" && health.tone !== "down") return null;
-  return { score, label, tone: health.tone };
+  const label = cleanText(health.label);
+  const parts = (health.parts ?? []).flatMap((part) => {
+    const name = cleanText(part.label);
+    if (!name) return [];
+    const partScore =
+      typeof part.score === "number" && Number.isFinite(part.score) ? clampScore(part.score) : null;
+    return [{ label: name, score: partScore }];
+  });
+  const raw = health.score;
+  const score = typeof raw === "number" && Number.isFinite(raw) ? clampScore(raw) : null;
+  if (score === null && parts.length === 0) return null;
+  if (!label && parts.length === 0) return null;
+  const next: MachineHealth = {
+    score,
+    label: label || "not connected",
+    tone: health.tone,
+  };
+  if (parts.length > 0) next.parts = parts;
+  return next;
 }
 
 export function assembleFactoryFloor(input: FactoryFloorInput): FactoryFloorModel {

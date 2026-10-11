@@ -38,7 +38,9 @@ export function FactoryFloorView({ model, map }: { model: FactoryFloorModel; map
             {model.nodes.map((node) => (
               <article key={node.ticker} className="tv-node" data-node={node.ticker}>
                 <h2 className="tv-ticker">{node.ticker}</h2>
-                <p className="tv-weight">{node.weight}</p>
+                <p className={node.weight === "not connected" ? "tv-weight is-missing" : "tv-weight"}>
+                  {node.weight}
+                </p>
                 {node.growth ? <p className="tv-growth">{node.growth}</p> : null}
               </article>
             ))}

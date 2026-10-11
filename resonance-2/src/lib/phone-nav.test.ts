@@ -127,6 +127,14 @@ describe("phone back targets", () => {
       ],
     });
     assert.deepEqual(phoneTrail("/n/lessons/extra").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/health"), {
+      back: { href: "/", label: "Floor" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/health", label: "Health" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/health/extra").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/n/approvals"), {
       back: { href: "/", label: "Floor" },
       crumbs: [

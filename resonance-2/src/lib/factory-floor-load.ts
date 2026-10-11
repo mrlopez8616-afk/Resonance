@@ -6,9 +6,9 @@ import { loadControlRoom } from "@/lib/control-room-store";
 import {
   assembleFactoryFloor,
   factoryFloorLeaks,
-  MACHINE_HEALTH,
   type FactoryFloorModel,
 } from "@/lib/factory-floor";
+import { machineSlotPayload, scoreMachineHealth } from "@/lib/machine-health";
 import { readLessons } from "@/lib/lessons-store";
 import { loadXrpTriggerCloses } from "@/lib/price-history";
 import { loadPublicFloor } from "@/lib/public-load";
@@ -50,7 +50,15 @@ export async function loadFactoryFloor(now = new Date()): Promise<FactoryFloorMo
     lessons,
     events: calendar?.events ?? null,
     bets: bets && bets.status !== "unavailable" ? bets.bets : null,
-    machine: MACHINE_HEALTH,
+    machine: machineSlotPayload(
+      scoreMachineHealth({
+        floor: floor?.model ?? null,
+        buildItems: build?.items ?? null,
+        control,
+        publicMode: true,
+        now,
+      }),
+    ),
   });
   const leaks = factoryFloorLeaks(model);
   if (leaks.length > 0) {

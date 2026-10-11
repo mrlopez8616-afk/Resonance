@@ -47,7 +47,7 @@ html.tv-idle * {
   align-items: center;
   justify-content: space-between;
   min-height: 0;
-  padding: 0 1.2vw;
+  padding: 0 9.2vw 0 1.2vw;
   overflow: hidden;
 }
 
@@ -153,6 +153,15 @@ html.tv-idle * {
   font-variant-numeric: tabular-nums;
 }
 
+.tv-weight.is-missing {
+  color: #9eb0c6;
+  font-size: 1.15vh;
+  font-size: clamp(10px, 1.15vh, 14px);
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: normal;
+}
+
 .tv-growth,
 .tv-sub,
 .tv-when {
@@ -239,6 +248,10 @@ html.tv-idle * {
 
 .tv-side > .tv-panel-control {
   flex: 1.35 1 0;
+}
+
+.tv-side > .tv-machine {
+  flex: 2.4 1 0;
 }
 
 .tv-panel {
@@ -335,6 +348,82 @@ html.tv-idle * {
   font-size: clamp(12px, 1.6vh, 20px);
 }
 
+.tv-machine {
+  justify-content: flex-start;
+  gap: 0.15vh;
+}
+
+.tv-machine .tv-figure {
+  flex: 0 0 auto;
+  font-size: 3.6vh;
+  font-size: clamp(20px, 3.6vh, 48px);
+  line-height: 1;
+}
+
+.tv-machine [data-tone="steady"] {
+  color: #3dd68c;
+}
+
+.tv-machine [data-tone="watch"] {
+  color: #f0b45a;
+}
+
+.tv-machine [data-tone="down"] {
+  color: #ff8b7a;
+}
+
+.tv-machine-empty {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 2.6vh;
+  font-size: clamp(18px, 2.8vh, 36px);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.tv-machine-parts {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: space-evenly;
+  min-height: 0;
+  margin: 0.35vh 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tv-machine-parts li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5vw;
+  min-width: 0;
+}
+
+.tv-machine-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #b7c6d8;
+  font-size: 1.45vh;
+  font-size: clamp(11px, 1.45vh, 18px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tv-machine-pct {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 2.05vh;
+  font-size: clamp(13px, 2.05vh, 26px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
 .tv-play {
   flex: 0 0 auto;
   color: #f3e2b0;
@@ -403,15 +492,18 @@ html.tv-idle * {
 }
 
 .tv-full {
-  right: 1vw;
-  bottom: 1.2vh;
-  padding: 0.6vh 0.9vw;
+  top: 0.7vh;
+  right: 0.7vw;
+  bottom: auto;
+  height: 4.6vh;
+  padding: 0 0.7vw;
   border: 1px solid #8ecbff;
   border-radius: 0.5vh;
   background: #101826;
   color: #f4f7fb;
-  font-size: 1.6vh;
-  font-size: clamp(12px, 1.6vh, 18px);
+  font-size: 1.4vh;
+  font-size: clamp(11px, 1.4vh, 16px);
+  line-height: 4.6vh;
   cursor: pointer;
 }
 

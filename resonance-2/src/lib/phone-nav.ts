@@ -281,6 +281,11 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
       return { back: HOME, crumbs: [HOME, lessons] };
     }
+    if (parentId === "health") {
+      if (parts.length !== 2) return homeTrail();
+      const health: PhoneTarget = { href: "/n/health", label: "Health" };
+      return { back: FLOOR, crumbs: [HOME, health] };
+    }
     if (parentId === "approvals") {
       const approvals: PhoneTarget = { href: "/n/approvals", label: "Approvals" };
       if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, approvals] };

@@ -15,6 +15,7 @@ import {
   assembleFactoryFloor,
   factoryFloorLeaks,
   type FactoryFloorModel,
+  type MachineHealth,
 } from "@/lib/factory-floor";
 import type { Lesson } from "@/lib/lessons";
 import {
@@ -172,7 +173,7 @@ function room(): ControlRoom {
   };
 }
 
-function dirtyModel(): FactoryFloorModel {
+function dirtyModel(machine: MachineHealth | null = null): FactoryFloorModel {
   const values = [100, 80, 70, 60, 50, 40, 30, 20, 10];
   const floor = toPublicFloor([
     ...NINE.map((ticker, index) => holding(ticker, values[index] ?? 1)),
@@ -242,7 +243,7 @@ function dirtyModel(): FactoryFloorModel {
       bet("holloway", "Holloway", undefined, "$80"),
       bet("winner", "Winner $20", undefined, "$60"),
     ],
-    machine: null,
+    machine,
   });
 }
 
@@ -408,9 +409,56 @@ describe("factory floor public default", () => {
     });
     assert.deepEqual(model.machine, { score: 88, label: "Steady", tone: "steady" });
     const html = wallHtml(model);
-    assert.match(html, /data-machine-score[^>]*>88</);
+    assert.match(html, /data-machine-score[^>]*>88%</);
     assert.equal(html.includes("$"), false);
     assert.equal(html.includes("coming soon"), false);
+  });
+
+  it("fills the machine slot with the overall percent and five sub-scores", () => {
+    const model = assembleFactoryFloor({
+      now: NOW,
+      floor: null,
+      buildItems: null,
+      control: null,
+      approvalsPending: null,
+      closes: null,
+      lessons: null,
+      events: null,
+      bets: null,
+      machine: {
+        score: 82,
+        label: "4 of 5",
+        tone: "steady",
+        parts: [
+          { label: "Balance", score: 91 },
+          { label: "Growth", score: 66.6 },
+          { label: "Feeds $4", score: null },
+          { label: "Build", score: 40 },
+          { label: "Agents", score: 50 },
+        ],
+      },
+    });
+    assert.equal(model.machine?.score, 82);
+    assert.deepEqual(
+      model.machine?.parts?.map((part) => [part.label, part.score]),
+      [
+        ["Balance", 91],
+        ["Growth", 67],
+        ["Feeds", null],
+        ["Build", 40],
+        ["Agents", 50],
+      ],
+    );
+    const html = wallHtml(model);
+    assert.match(html, /data-machine-score[^>]*>82%</);
+    assert.match(html, /data-machine-part="Balance"[^>]*>91%</);
+    assert.match(html, /data-machine-part="Growth"[^>]*>67%</);
+    assert.match(html, /data-machine-part="Feeds"[^>]*>not connected</);
+    assert.match(html, /data-machine-part="Build"[^>]*>40%</);
+    assert.match(html, /data-machine-part="Agents"[^>]*>50%</);
+    assert.equal(html.includes("coming soon"), false);
+    assert.equal(html.includes("$"), false);
+    assert.deepEqual(factoryFloorLeaks(model), []);
   });
 });
 
@@ -517,7 +565,26 @@ describe("factory floor map fallback", () => {
 
 describe("factory floor layout", () => {
   const css = readFileSync(join(root, "src/app/tv/tv.css"), "utf8");
-  const markup = wallHtml(dirtyModel());
+  const layoutModel = dirtyModel({
+    score: 82,
+    label: "4 of 5",
+    tone: "steady",
+    parts: [
+      { label: "Balance", score: 91 },
+      { label: "Growth", score: 67 },
+      { label: "Feeds", score: 80 },
+      { label: "Build", score: 40 },
+      { label: "Agents", score: 50 },
+    ],
+  });
+  for (const ticker of ["NVDA", "TSM", "TSLA", "SPCX"]) {
+    const node = layoutModel.nodes.find((item) => item.ticker === ticker);
+    if (!node) continue;
+    node.weight = "not connected";
+    node.growth = null;
+  }
+  const markup = wallHtml(layoutModel);
+  assert.match(markup, /class="tv-weight is-missing"/);
 
   for (const size of [
     { width: 1920, height: 1080, name: "tv-1920x1080" },
@@ -532,7 +599,7 @@ describe("factory floor layout", () => {
           deviceScaleFactor: 1,
         });
         await page.setContent(
-          `<!doctype html><html class="tv-page"><head><style>${css}</style></head><body>${markup}</body></html>`,
+          `<!doctype html><html class="tv-page"><head><style>${css}</style></head><body>${markup}<button type="button" class="tv-full">Full screen</button></body></html>`,
           { waitUntil: "load" },
         );
         const metrics = await page.evaluate(() => {
@@ -653,6 +720,90 @@ describe("factory floor layout", () => {
         assert.ok((mapFit.lessonSize ?? 0) >= 15, String(mapFit.lessonSize));
         assert.equal(mapFit.treasuryInside, true);
         assert.equal(mapFit.lessonInside, true);
+        const slotFit = (await page.evaluate(`(() => {
+          const overlaps = (a, b) =>
+            a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+          const percent = document.querySelector(".tv-weight:not(.is-missing)");
+          const percentFont = percent ? Number.parseFloat(getComputedStyle(percent).fontSize) : 0;
+          const missing = [...document.querySelectorAll(".tv-weight.is-missing")].map((el) => {
+            const node = el.closest(".tv-node");
+            if (!(el instanceof HTMLElement) || !(node instanceof HTMLElement)) {
+              return { text: "", font: 0, clipped: true, inside: false };
+            }
+            const box = el.getBoundingClientRect();
+            const nodeBox = node.getBoundingClientRect();
+            return {
+              text: el.textContent || "",
+              font: Number.parseFloat(getComputedStyle(el).fontSize),
+              clipped: el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1,
+              inside:
+                box.left >= nodeBox.left - 1 &&
+                box.top >= nodeBox.top - 1 &&
+                box.right <= nodeBox.right + 1 &&
+                box.bottom <= nodeBox.bottom + 1,
+            };
+          });
+          const machine = document.querySelector('[data-panel="Machine"]');
+          const button = document.querySelector(".tv-full");
+          const header = document.querySelector(".tv-header");
+          const clock = document.querySelector(".tv-clock");
+          if (
+            !(machine instanceof HTMLElement) ||
+            !(button instanceof HTMLElement) ||
+            !(header instanceof HTMLElement) ||
+            !(clock instanceof HTMLElement)
+          ) {
+            return { ok: false, missing, parts: [] };
+          }
+          const machineBox = machine.getBoundingClientRect();
+          const buttonBox = button.getBoundingClientRect();
+          const headerBox = header.getBoundingClientRect();
+          const parts = [...document.querySelectorAll("[data-machine-part]")].map((el) => {
+            const row = el.parentElement;
+            if (!(row instanceof HTMLElement)) return { label: "", text: "", inside: false, covered: true };
+            const box = row.getBoundingClientRect();
+            return {
+              label: el.getAttribute("data-machine-part") || "",
+              text: el.textContent || "",
+              inside:
+                box.top >= machineBox.top - 1 &&
+                box.bottom <= machineBox.bottom + 1 &&
+                box.left >= machineBox.left - 1 &&
+                box.right <= machineBox.right + 1,
+              covered: overlaps(box, buttonBox),
+            };
+          });
+          return {
+            ok: true,
+            percentFont,
+            missing,
+            parts,
+            buttonInHeader: buttonBox.top >= headerBox.top - 1 && buttonBox.bottom <= headerBox.bottom + 1,
+            buttonHitsClock: overlaps(buttonBox, clock.getBoundingClientRect()),
+          };
+        })()`)) as {
+          ok: boolean;
+          percentFont?: number;
+          missing?: { text: string; font: number; clipped: boolean; inside: boolean }[];
+          parts?: { label: string; text: string; inside: boolean; covered: boolean }[];
+          buttonInHeader?: boolean;
+          buttonHitsClock?: boolean;
+        };
+        assert.equal(slotFit.ok, true);
+        assert.equal(slotFit.missing?.length, 4);
+        for (const line of slotFit.missing ?? []) {
+          assert.equal(line.text, "not connected");
+          assert.equal(line.clipped, false, line.text);
+          assert.equal(line.inside, true, line.text);
+          assert.ok(line.font > 0 && line.font < (slotFit.percentFont ?? 0), String(line.font));
+        }
+        assert.equal(slotFit.parts?.length, 5);
+        for (const part of slotFit.parts ?? []) {
+          assert.equal(part.inside, true, part.label);
+          assert.equal(part.covered, false, part.label);
+        }
+        assert.equal(slotFit.buttonInHeader, true);
+        assert.equal(slotFit.buttonHitsClock, false);
       } finally {
         await browser.close();
       }
