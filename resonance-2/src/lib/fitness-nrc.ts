@@ -206,7 +206,11 @@ function collectHeart(root: Record<string, unknown>): HeartSample[] {
   const avgStarts =
     field(root, "avgStarts", "avg_starts", "heartStarts", "heart_starts") ??
     (heartRecord ? field(heartRecord, "avgStarts", "starts") : undefined);
-  const fallback = field(root, "heartDate", "heart_date") ?? (heartRecord ? field(heartRecord, "date", "day") : undefined);
+  const rootDate = field(root, "date");
+  const fallback =
+    field(root, "heartDate", "heart_date") ??
+    (heartRecord ? field(heartRecord, "date", "day") : undefined) ??
+    (typeof rootDate === "string" ? rootDate : undefined);
   const restingObjects = quantitySamples(restingRaw);
   const avgObjects = quantitySamples(avgRaw);
   if (restingObjects) pushPaired(samples, "resting_heart_rate", restingObjects.values, restingObjects.starts, fallback);

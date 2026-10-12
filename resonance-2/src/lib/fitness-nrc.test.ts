@@ -153,6 +153,40 @@ describe("nightly runs and heart", () => {
     assert.equal(heart.runs[0]?.avgHr, "152");
   });
 
+  it("stores one rounded Chicago day from a plain step total", () => {
+    const parsed = parseFitnessIngest({
+      source: "shortcuts",
+      date: "2026-10-12",
+      steps: "12,345.6 steps",
+      restingHr: 58,
+      avgHr: "72,5",
+    });
+    assert.equal(parsed.metrics.length, 1);
+    assert.equal(parsed.metrics[0]?.day, "2026-10-12");
+    assert.equal(parsed.metrics[0]?.qty, "12346");
+    assert.equal(parsed.metrics[0]?.metric, "step_count");
+    const payload = parsed.metrics[0]?.payload as { dailyTotal?: boolean };
+    assert.equal(payload.dailyTotal, true);
+    const heart = readNightlyFitness({
+      source: "shortcuts",
+      date: "2026-10-12",
+      steps: 12345,
+      restingHr: 58,
+      avgHr: "72,5",
+    });
+    assert.equal(heart.heart.find((row) => row.metric === "resting_heart_rate")?.qty, "58");
+    assert.equal(heart.heart.find((row) => row.metric === "heart_rate")?.qty, "72.5");
+    assert.equal(heart.heart.every((row) => row.day === "2026-10-12"), true);
+    const samples = parseFitnessIngest({
+      source: "shortcuts",
+      metric: "steps",
+      values: ["1000", "200"],
+      starts: ["Oct 12, 2026 at 9:00 AM", "Oct 12, 2026 at 10:00 AM"],
+    });
+    assert.equal(samples.metrics[0]?.qty, "1200");
+    assert.equal((samples.metrics[0]?.payload as { dailyTotal?: boolean }).dailyTotal, undefined);
+  });
+
   it("ignores an empty heart list and does not invent a day", () => {
     const parsed = readNightlyFitness({
       restingHr: "0\n",

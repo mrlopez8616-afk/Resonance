@@ -176,6 +176,7 @@ export async function upsertFitnessRows(
          -- Shortcuts keeps the larger quantity, the same rule as GREATEST(existing, new).
          qty = CASE
            WHEN EXCLUDED.metric IN ('resting_heart_rate', 'heart_rate') THEN EXCLUDED.qty
+           WHEN EXCLUDED.payload::text LIKE '%"dailyTotal":true%' THEN EXCLUDED.qty
            WHEN EXCLUDED.source = 'shortcuts' AND fitness_metrics.qty > EXCLUDED.qty THEN fitness_metrics.qty
            ELSE EXCLUDED.qty
          END,
