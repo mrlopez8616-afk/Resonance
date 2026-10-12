@@ -53,6 +53,8 @@ const HIDDEN_PREFIXES = [
   "/n/approvals",
   "/api/approvals",
   "/n/control/approvals",
+  "/n/roundtable",
+  "/api/roundtable",
 ] as const;
 
 export function isHiddenInPublicMode(pathname: string): boolean {

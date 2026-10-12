@@ -531,6 +531,7 @@ describe("login core", { concurrency: false }, () => {
         "023_factory_floor",
         "024_youtube_bricks",
         "025_future_ideas",
+        "026_roundtable",
         "027_future_ideas_seeds",
       ],
     );
@@ -581,6 +582,7 @@ describe("login core", { concurrency: false }, () => {
         "023_factory_floor",
         "024_youtube_bricks",
         "025_future_ideas",
+        "026_roundtable",
         "027_future_ideas_seeds",
       ],
     );

@@ -287,6 +287,22 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
       return { back: HOME, crumbs: [HOME, lessons] };
     }
+    if (parentId === "roundtable") {
+      const roundtable: PhoneTarget = { href: "/n/roundtable", label: "Roundtable" };
+      if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, roundtable] };
+      const threadId = parts[2] ?? "";
+      if (parts.length === 3 && /^[a-z0-9][a-z0-9-]{0,63}$/.test(threadId)) {
+        return {
+          back: roundtable,
+          crumbs: [
+            HOME,
+            roundtable,
+            { href: `/n/roundtable/${threadId}`, label: "Thread" },
+          ],
+        };
+      }
+      return homeTrail();
+    }
     if (parentId === "health") {
       if (parts.length !== 2) return homeTrail();
       const health: PhoneTarget = { href: "/n/health", label: "Health" };
