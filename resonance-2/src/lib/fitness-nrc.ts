@@ -27,12 +27,35 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function compactKey(value: string): string {
+  return value.toLowerCase().replace(/[\s_-]+/g, "");
+}
+
 function field(record: Record<string, unknown>, ...names: string[]): unknown {
-  const wanted = new Set(names.map((name) => name.toLowerCase()));
+  const wanted = new Set(names.map(compactKey));
   for (const [key, value] of Object.entries(record)) {
-    if (wanted.has(key.toLowerCase())) return value;
+    if (wanted.has(compactKey(key))) return value;
   }
   return undefined;
+}
+
+/** Health samples as objects: value plus start. A plain list stays a plain list. */
+function quantitySamples(value: unknown): { values: unknown[]; starts: unknown[] } | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const values: unknown[] = [];
+  const starts: unknown[] = [];
+  for (const item of value) {
+    const record = asRecord(item);
+    if (!record) return null;
+    const qty = field(record, "value", "qty", "quantity", "magnitude");
+    if (qty === undefined) return null;
+    const start = field(record, "start", "startDate", "start_date", "date");
+    const startText = start === undefined || start === null ? "" : String(start).trim();
+    if (!startText) return null;
+    values.push(qty);
+    starts.push(startText);
+  }
+  return { values, starts };
 }
 
 /** Shortcuts joins a Health list with newlines, and sometimes wraps one extra list. */
@@ -169,15 +192,27 @@ function heartKind(name: string): HeartSample["metric"] | null {
 
 function collectHeart(root: Record<string, unknown>): HeartSample[] {
   const samples: HeartSample[] = [];
-  const heart = asRecord(field(root, "heart"));
-  const resting = field(root, "restingHr", "restingHeartRate", "resting_hr") ?? (heart ? field(heart, "resting", "restingHr") : undefined);
-  const avg = field(root, "avgHr", "avgHeartRate", "heartRate", "averageHeartRate") ?? (heart ? field(heart, "avg", "avgHr", "heartRate") : undefined);
+  const heartRecord = asRecord(field(root, "heart"));
+  const restingNamed = field(root, "restingHr", "restingHeartRate", "resting_hr");
+  const restingRaw = restingNamed !== undefined ? restingNamed : field(root, "resting");
+  const avgNamed = field(root, "avgHr", "avgHeartRate", "heartRate", "averageHeartRate");
+  const avgFromHeart = heartRecord ? field(heartRecord, "avg", "avgHr", "heartRate") : undefined;
+  const heartRaw = field(root, "heart");
+  const avgRaw =
+    avgNamed !== undefined ? avgNamed : avgFromHeart !== undefined ? avgFromHeart : heartRecord ? undefined : heartRaw;
   const restingStarts =
-    field(root, "restingStarts", "resting_starts") ?? (heart ? field(heart, "restingStarts", "starts") : undefined);
-  const avgStarts = field(root, "avgStarts", "avg_starts") ?? (heart ? field(heart, "avgStarts", "starts") : undefined);
-  const fallback = field(root, "heartDate", "heart_date") ?? (heart ? field(heart, "date", "day") : undefined);
-  if (resting !== undefined) pushPaired(samples, "resting_heart_rate", resting, restingStarts, fallback);
-  if (avg !== undefined) pushPaired(samples, "heart_rate", avg, avgStarts, fallback);
+    field(root, "restingStarts", "resting_starts") ??
+    (heartRecord ? field(heartRecord, "restingStarts", "starts") : undefined);
+  const avgStarts =
+    field(root, "avgStarts", "avg_starts", "heartStarts", "heart_starts") ??
+    (heartRecord ? field(heartRecord, "avgStarts", "starts") : undefined);
+  const fallback = field(root, "heartDate", "heart_date") ?? (heartRecord ? field(heartRecord, "date", "day") : undefined);
+  const restingObjects = quantitySamples(restingRaw);
+  const avgObjects = quantitySamples(avgRaw);
+  if (restingObjects) pushPaired(samples, "resting_heart_rate", restingObjects.values, restingObjects.starts, fallback);
+  else if (restingRaw !== undefined) pushPaired(samples, "resting_heart_rate", restingRaw, restingStarts, fallback);
+  if (avgObjects) pushPaired(samples, "heart_rate", avgObjects.values, avgObjects.starts, fallback);
+  else if (avgRaw !== undefined) pushPaired(samples, "heart_rate", avgRaw, avgStarts, fallback);
 
   const listed = field(root, "metrics");
   const rows = Array.isArray(listed) ? listed.flat(2) : [];
@@ -361,7 +396,7 @@ function runFromRecord(record: Record<string, unknown>): NrcRunWrite | null {
   return buildRun({
     date: field(record, "date", "day"),
     start: field(record, "start", "startTime", "startedAt", "startDate", "start_time"),
-    distance: field(record, "distance", "miles", "distanceMi", "distance_mi"),
+    distance: field(record, "distance", "miles", "distanceMi", "distance_mi", "totalDistance", "total_distance"),
     distanceUnit: field(record, "distanceUnit", "distance_unit", "distanceUnits"),
     duration: field(record, "duration", "durationSec", "duration_sec", "durationMin", "duration_min"),
     durationUnit:

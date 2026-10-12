@@ -24,7 +24,8 @@ export const maxDuration = 60;
  * cannot shrink a full day. Post the same window again and the totals stay the same.
  * A later post with a higher total replaces the stored one.
  * Health Auto Export still replaces the day.
- * Optional `runs`, `restingHr`, and `avgHr` ride in the same body.
+ * Optional `runs`, `resting` or `restingHr`, and `heart` or `avgHr` ride in the same body.
+ * `steps` plus `stepStarts` is the Find Health Samples list. `metric` plus `values` and `starts` still works.
  * A steps-only post stays valid. Heart rate for a day is replaced, not kept as the larger number.
  * A run posted again with the same day and start, or the same day, distance, and duration, updates that run.
  */

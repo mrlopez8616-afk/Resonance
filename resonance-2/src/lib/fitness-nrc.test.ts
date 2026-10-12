@@ -7,6 +7,7 @@ import { FitnessDetail } from "@/components/fitness-detail";
 import { fitnessCards, fitnessNode, metricSamples, workoutSamples } from "@/lib/fitness-board";
 import { manualFitnessSeed } from "@/lib/fitness-seed";
 import { readNightlyFitness } from "@/lib/fitness-nrc";
+import { parseFitnessIngest } from "@/lib/fitness-shortcuts";
 import { phoneTrail } from "@/lib/phone-nav";
 
 const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
@@ -113,6 +114,45 @@ describe("nightly runs and heart", () => {
     assert.equal(again.runs[0]?.distanceMi, "3.2");
   });
 
+  it("reads the Find Health Samples lists without a metric wrapper", () => {
+    const steps = parseFitnessIngest({
+      source: "shortcuts",
+      steps: "8,432 steps\n1,200 steps",
+      stepStarts: "Oct 11, 2026 at 9:00 PM\nOct 10, 2026 at 9:00 PM",
+    });
+    assert.equal(steps.metrics.length, 2);
+    assert.equal(steps.metrics.find((row) => row.day === "2026-10-11")?.qty, "8432");
+    const objects = parseFitnessIngest({
+      steps: [{ value: "4,200 count", startDate: "Oct 11, 2026 at 9:00 AM" }],
+    });
+    assert.equal(objects.metrics[0]?.qty, "4200");
+    const wrapped = parseFitnessIngest({
+      source: "shortcuts",
+      metric: "steps",
+      values: ["1000"],
+      starts: ["Oct 11, 2026 at 9:00 AM"],
+      steps: "9999",
+      stepStarts: "Oct 11, 2026 at 9:00 AM",
+    });
+    assert.equal(wrapped.metrics.length, 1);
+    assert.equal(wrapped.metrics[0]?.qty, "1000");
+
+    const heart = readNightlyFitness({
+      resting: "58\n60",
+      restingStarts: "Oct 11, 2026 at 8:00 AM",
+      heart: [
+        { value: "72 bpm", "Start Date": "Oct 11, 2026 at 8:00 AM" },
+        { value: 80, startDate: "Oct 11, 2026 at 9:00 AM" },
+      ],
+      runs: [{ "Start Date": "Oct 11, 2026 at 7:12 AM", "Total Distance": "3.1 mi", Duration: "1680", durationUnit: "s", "Average Heart Rate": "152" }],
+    });
+    assert.equal(heart.heart.find((row) => row.metric === "resting_heart_rate")?.qty, "59");
+    assert.equal(heart.heart.find((row) => row.metric === "heart_rate")?.qty, "76");
+    assert.equal(heart.runs.length, 1);
+    assert.equal(heart.runs[0]?.distanceMi, "3.1");
+    assert.equal(heart.runs[0]?.avgHr, "152");
+  });
+
   it("ignores an empty heart list and does not invent a day", () => {
     const parsed = readNightlyFitness({
       restingHr: "0\n",
@@ -173,5 +213,15 @@ describe("nightly runs and heart", () => {
     assert.equal(phoneTrail("/n/fitness/runs").back?.href, "/n/fitness");
     assert.equal(phoneTrail("/n/fitness/heart").back?.href, "/n/fitness");
     assert.equal(phoneTrail("/n/fitness/heart").crumbs.at(-1)?.label, "Heart");
+    const page = readFileSync(new URL("../app/n/[parent]/page.tsx", import.meta.url), "utf8");
+    const copy = readFileSync(new URL("../components/fitness-token-copy.tsx", import.meta.url), "utf8");
+    const fitness = page.slice(page.indexOf('parent.id === "fitness"'));
+    assert.ok(fitness.indexOf("publicMode ? null") < fitness.indexOf("<FitnessTokenCopy"));
+    assert.match(fitness, /FITNESS_INGEST_TOKEN\?\.trim\(\)/);
+    assert.match(copy, /Copy token/);
+    assert.match(copy, /clipboard\.writeText/);
+    assert.equal(copy.includes("FITNESS_INGEST_TOKEN"), false);
+    assert.equal(copy.includes("process.env"), false);
+    assert.equal(copy.includes("setToken"), false);
   });
 });

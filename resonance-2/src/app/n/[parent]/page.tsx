@@ -3,6 +3,7 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { FitnessGrid } from "@/components/fitness-grid";
+import { FitnessTokenCopy } from "@/components/fitness-token-copy";
 import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
 import { PositionRollupView } from "@/components/position-book";
@@ -153,7 +154,11 @@ export default async function ParentNodePage({
 
   if (parent.id === "fitness") {
     await requireRole("owner");
-    const [floor, fitness] = await Promise.all([loadOperatorFloor(), loadFitnessCards()]);
+    const [floor, fitness, publicMode] = await Promise.all([
+      loadOperatorFloor(),
+      loadFitnessCards(),
+      isPublicMode(),
+    ]);
     return (
       <OperatorShell
         storageMessage={
@@ -166,6 +171,9 @@ export default async function ParentNodePage({
           Floor
         </Link>
         <FitnessGrid cards={fitness.cards} />
+        {publicMode ? null : (
+          <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
+        )}
       </OperatorShell>
     );
   }
