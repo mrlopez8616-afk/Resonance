@@ -277,6 +277,12 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     if (parts[1] === "youtube") return youtubePhoneTrail(parts);
     const parentId = parts[1];
     if (!parentId || parts.length > 3) return homeTrail();
+    if (parentId === "ideas") {
+      if (parts.length !== 2) return homeTrail();
+      const build: PhoneTarget = { href: "/n/build", label: "Build" };
+      const ideas: PhoneTarget = { href: "/n/ideas", label: "Future Ideas" };
+      return { back: build, crumbs: [HOME, build, ideas] };
+    }
     if (parentId === "lessons" && parts.length === 2) {
       const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
       return { back: HOME, crumbs: [HOME, lessons] };
@@ -393,12 +399,16 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
 export function phoneTabActive(href: string, pathname: string): boolean {
   const path = segments(pathname).join("/");
   const normalized = path ? `/${path}` : "/";
-  if (href === "/n/build") return normalized === "/n/build" || normalized.startsWith("/n/build/");
+  if (href === "/n/build") {
+    return normalized === "/n/build" || normalized.startsWith("/n/build/") || normalized === "/n/ideas";
+  }
   if (href === "/n/approvals") {
     return normalized === "/n/approvals" || normalized.startsWith("/n/approvals/");
   }
   if (href === "/") {
-    if (normalized === "/n/build" || normalized.startsWith("/n/build/")) return false;
+    if (normalized === "/n/build" || normalized.startsWith("/n/build/") || normalized === "/n/ideas") {
+      return false;
+    }
     if (normalized === "/n/approvals" || normalized.startsWith("/n/approvals/")) return false;
     return normalized === "/" || normalized.startsWith("/n/") || normalized.startsWith("/fights");
   }

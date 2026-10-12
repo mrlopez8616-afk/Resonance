@@ -313,6 +313,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/components/machine-health-floor"),
       import("@/lib/machine-health"),
     ]);
+  const ideasUi = await import("@/components/ideas-board");
+  const ideasLib = await import("@/lib/future-ideas");
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const triggerView = trigger.evaluateXrpTrigger(
     [
@@ -568,6 +570,16 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/build/platform", html: buildSectionHtml },
     { path: "/n/lessons", html: publicLessonsHtml() },
     {
+      path: "/n/ideas",
+      html: render(
+        createElement(ideasUi.IdeasBoard, {
+          cards: ideasLib.presentIdeas(ideasLib.seedIdeas(), { publicMode: true }),
+          filter: "all",
+          archivedView: false,
+        }),
+      ),
+    },
+    {
       path: "/n/control",
       html: render(createElement(controlUi.ControlParent, { view: publicControl, now: controlNow })),
     },
@@ -785,6 +797,7 @@ describe("public render scan", () => {
       "/n/control/page.tsx",
       "/n/control/[view]/page.tsx",
       "/n/health/page.tsx",
+      "/n/ideas/page.tsx",
       "/n/lessons/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
@@ -818,6 +831,7 @@ describe("public render scan", () => {
       "/n/build",
       "/n/build/platform",
       "/n/health",
+      "/n/ideas",
       "/n/lessons",
       "/n/approvals",
       "/n/approvals/pending",
@@ -901,6 +915,19 @@ describe("public render scan", () => {
     assert.match(healthPage?.html ?? "", /%/);
     assert.equal(healthPage?.html.includes("$"), false);
     assert.equal(healthPage?.html.includes("Wire"), false);
+    const ideasPage = pages.find((page) => page.path === "/n/ideas");
+    assert.match(ideasPage?.html ?? "", /Driving-tracker node/);
+    assert.match(ideasPage?.html ?? "", /one dollar a day per-node DCA/);
+    assert.match(ideasPage?.html ?? "", /Jake Claver/);
+    assert.match(ideasPage?.html ?? "", /Not financial advice/);
+    assert.match(ideasPage?.html ?? "", /not queued to build/);
+    assert.match(ideasPage?.html ?? "", /Chart time-range/);
+    assert.match(ideasPage?.html ?? "", /Health of the Machine/);
+    assert.equal(ideasPage?.html.includes("$"), false);
+    assert.equal(ideasPage?.html.includes("Archive"), false);
+    const buildPage = pages.find((page) => page.path === "/n/build");
+    assert.match(buildPage?.html ?? "", /Future Ideas/);
+    assert.match(buildPage?.html ?? "", /\/n\/ideas/);
     const lessonsPage = pages.find((page) => page.path === "/n/lessons");
     assert.match(lessonsPage?.html ?? "", /LL-023/);
     assert.equal(lessonsPage?.html.includes("LL-021"), false);
@@ -943,7 +970,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

@@ -150,6 +150,17 @@ export function BuildParent({
             </NodeSquare>
           );
         })}
+        <NodeSquare parent home live label="Future Ideas">
+          <Link href="/n/ideas" className="node-log-link" title="Open Future Ideas">
+            <div className="live-face parent-face">
+              <h2 className="node-ticker">Future Ideas</h2>
+              <p className="live-units">Board</p>
+              <ul className="parent-lines">
+                <li>What comes next</li>
+              </ul>
+            </div>
+          </Link>
+        </NodeSquare>
       </section>
     </div>
   );
