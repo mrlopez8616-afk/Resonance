@@ -18,8 +18,9 @@ import {
 } from "@/lib/fitness-board";
 import { fitnessLocalFile, readLocalFitness, upsertLocalFitness } from "@/lib/fitness-local";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
-import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites } from "@/lib/fitness-types";
-import { FITNESS_SCHEMA_SQL, FITNESS_WORKOUTS_SQL } from "@/lib/pg/embedded-migrations";
+import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites, NrcRunWrite } from "@/lib/fitness-types";
+import { FITNESS_NRC_SQL, FITNESS_SCHEMA_SQL, FITNESS_WORKOUTS_SQL } from "@/lib/pg/embedded-migrations";
+import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
 import {
   shortcutWorkoutsAsWrites,
   type ShortcutWorkoutWrite,
@@ -35,6 +36,7 @@ export type FitnessRead = {
   metrics: FitnessMetricWrite[];
   workouts: FitnessWorkoutWrite[];
   shortcutWorkouts: ShortcutWorkoutWrite[];
+  nrcRuns: NrcRunWrite[];
   today: string;
 };
 
@@ -81,7 +83,7 @@ function missingFitnessTable(error: unknown): boolean {
       ? error.message
       : "";
   return (
-    /fitness_metrics|fitness_workouts|fitness_shortcut_workouts/i.test(reason) &&
+    /fitness_metrics|fitness_workouts|fitness_shortcut_workouts|fitness_nrc_runs/i.test(reason) &&
     /does not exist|no such/i.test(reason)
   );
 }
@@ -109,7 +111,7 @@ async function manualSeedPresent(): Promise<boolean> {
 }
 
 async function ensureFitnessTables(): Promise<void> {
-  for (const statement of splitSqlStatements(`${FITNESS_SCHEMA_SQL}\n${FITNESS_WORKOUTS_SQL}`)) {
+  for (const statement of splitSqlStatements(`${FITNESS_SCHEMA_SQL}\n${FITNESS_WORKOUTS_SQL}\n${FITNESS_NRC_SQL}`)) {
     await sqlQuery(statement);
   }
 }
@@ -124,8 +126,20 @@ async function shortcutTablePresent(): Promise<boolean> {
   }
 }
 
+async function nrcTablePresent(): Promise<boolean> {
+  try {
+    await sqlQuery(`SELECT 1 AS ok FROM fitness_nrc_runs LIMIT 1`);
+    return true;
+  } catch (error) {
+    if (missingFitnessTable(error)) return false;
+    throw error;
+  }
+}
+
 async function ensureFitnessStoreOnce(): Promise<void> {
-  if (!(await tablesPresent()) || !(await shortcutTablePresent())) await ensureFitnessTables();
+  if (!(await tablesPresent()) || !(await shortcutTablePresent()) || !(await nrcTablePresent())) {
+    await ensureFitnessTables();
+  }
   if (!(await manualSeedPresent())) await upsertFitnessRows(manualFitnessSeed());
 }
 
@@ -161,6 +175,7 @@ export async function upsertFitnessRows(
          recorded_at = EXCLUDED.recorded_at,
          -- Shortcuts keeps the larger quantity, the same rule as GREATEST(existing, new).
          qty = CASE
+           WHEN EXCLUDED.metric IN ('resting_heart_rate', 'heart_rate') THEN EXCLUDED.qty
            WHEN EXCLUDED.source = 'shortcuts' AND fitness_metrics.qty > EXCLUDED.qty THEN fitness_metrics.qty
            ELSE EXCLUDED.qty
          END,
@@ -295,11 +310,66 @@ export async function upsertFitnessRows(
       ],
     );
   }
+  for (const run of rows.nrcRuns ?? []) {
+    await upsertNrcRun(run);
+  }
   return {
     metrics: rows.metrics.length,
     workouts: rows.workouts.length,
-    runs: rows.shortcutWorkouts?.length ?? 0,
+    runs: (rows.shortcutWorkouts?.length ?? 0) + (rows.nrcRuns?.length ?? 0),
   };
+}
+
+async function upsertNrcRun(run: NrcRunWrite): Promise<void> {
+  const matches = await sqlQuery<{
+    id: string;
+    avg_hr: unknown;
+    start_time: unknown;
+    start_key: string | null;
+    pace_sec_per_mi: unknown;
+  }>(
+    `SELECT id::text AS id, avg_hr::text AS avg_hr, start_time, start_key, pace_sec_per_mi::text AS pace_sec_per_mi
+     FROM fitness_nrc_runs
+     WHERE measure_key = $1 OR ($2::text IS NOT NULL AND start_key = $2)
+     ORDER BY id`,
+    [run.measureKey, run.startKey],
+  );
+  const avgHr = run.avgHr ?? text(matches.find((row) => text(row.avg_hr))?.avg_hr);
+  const startTime = run.startTime ?? text(matches.find((row) => text(row.start_time))?.start_time);
+  const startKey = run.startKey ?? matches.find((row) => row.start_key)?.start_key ?? null;
+  const pace = run.paceSecPerMi ?? text(matches.find((row) => text(row.pace_sec_per_mi))?.pace_sec_per_mi);
+  const payload = JSON.stringify({ source: "Nike Run Club", clockKnown: startTime !== null });
+  if (matches.length === 0) {
+    await sqlQuery(
+      `INSERT INTO fitness_nrc_runs (
+         day, start_time, distance_mi, duration_sec, pace_sec_per_mi, avg_hr, start_key, measure_key, payload
+       ) VALUES (
+         $1::date, $2::timestamptz, $3, $4, $5, $6, $7, $8, $9::jsonb
+       )`,
+      [run.day, startTime, run.distanceMi, run.durationSec, pace, avgHr, startKey, run.measureKey, payload],
+    );
+    return;
+  }
+  const keep = matches[0]?.id;
+  if (!keep) return;
+  for (const extra of matches.slice(1)) {
+    await sqlQuery(`DELETE FROM fitness_nrc_runs WHERE id = $1`, [extra.id]);
+  }
+  await sqlQuery(
+    `UPDATE fitness_nrc_runs SET
+       day = $2::date,
+       start_time = $3::timestamptz,
+       distance_mi = $4,
+       duration_sec = $5,
+       pace_sec_per_mi = $6,
+       avg_hr = $7,
+       start_key = $8,
+       measure_key = $9,
+       payload = $10::jsonb,
+       updated_at = now()
+     WHERE id = $1`,
+    [keep, run.day, startTime, run.distanceMi, run.durationSec, pace, avgHr, startKey, run.measureKey, payload],
+  );
 }
 
 async function readMetrics(): Promise<FitnessMetricWrite[]> {
@@ -419,7 +489,42 @@ async function readShortcutWorkouts(): Promise<ShortcutWorkoutWrite[]> {
   });
 }
 
-export async function readFitness(today = chicagoToday()): Promise<FitnessRead> {
+export async function readNrcRuns(): Promise<NrcRunWrite[]> {
+  const rows = await sqlQuery<{
+    day: unknown;
+    start_time: unknown;
+    distance_mi: unknown;
+    duration_sec: unknown;
+    pace_sec_per_mi: unknown;
+    avg_hr: unknown;
+    start_key: string | null;
+    measure_key: string;
+  }>(
+    `SELECT day, start_time, distance_mi::text AS distance_mi, duration_sec::text AS duration_sec,
+            pace_sec_per_mi::text AS pace_sec_per_mi, avg_hr::text AS avg_hr, start_key, measure_key
+     FROM fitness_nrc_runs`,
+  );
+  return rows.flatMap((row) => {
+    const day = dayText(row.day);
+    const distanceMi = text(row.distance_mi);
+    const durationSec = text(row.duration_sec);
+    if (!day || !distanceMi || !durationSec || !row.measure_key) return [];
+    return [
+      {
+        day,
+        startTime: text(row.start_time),
+        distanceMi,
+        durationSec,
+        paceSecPerMi: text(row.pace_sec_per_mi),
+        avgHr: text(row.avg_hr),
+        startKey: row.start_key,
+        measureKey: row.measure_key,
+      },
+    ];
+  });
+}
+
+async function readFitness(today = chicagoToday()): Promise<FitnessRead> {
   if (fitnessLocalFile()) {
     const rows = readLocalFitness();
     return {
@@ -427,6 +532,7 @@ export async function readFitness(today = chicagoToday()): Promise<FitnessRead> 
       metrics: rows.metrics,
       workouts: rows.workouts,
       shortcutWorkouts: rows.shortcutWorkouts ?? [],
+      nrcRuns: rows.nrcRuns ?? [],
       today,
     };
   }
@@ -437,17 +543,19 @@ export async function readFitness(today = chicagoToday()): Promise<FitnessRead> 
       metrics: seed.metrics,
       workouts: seed.workouts,
       shortcutWorkouts: [],
+      nrcRuns: [],
       today,
     };
   }
   try {
     await ensureFitnessStore();
-    const [metrics, workouts, shortcutWorkouts] = await Promise.all([
+    const [metrics, workouts, shortcutWorkouts, nrcRuns] = await Promise.all([
       readMetrics(),
       readWorkouts(),
       readShortcutWorkouts(),
+      readNrcRuns(),
     ]);
-    return { availability: "live", metrics, workouts, shortcutWorkouts, today };
+    return { availability: "live", metrics, workouts, shortcutWorkouts, nrcRuns, today };
   } catch (error) {
     console.error("fitness read failed", fitnessFailureText(error));
     const seed = manualFitnessSeed();
@@ -456,6 +564,7 @@ export async function readFitness(today = chicagoToday()): Promise<FitnessRead> 
       metrics: seed.metrics,
       workouts: seed.workouts,
       shortcutWorkouts: [],
+      nrcRuns: [],
       today,
     };
   }
@@ -468,6 +577,7 @@ function present(read: FitnessRead) {
     workouts: workoutSamples([
       ...read.workouts,
       ...shortcutWorkoutsAsWrites(read.shortcutWorkouts),
+      ...nrcRunsAsWrites(read.nrcRuns),
     ]),
     today: read.today,
   };

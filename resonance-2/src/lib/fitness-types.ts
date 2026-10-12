@@ -49,9 +49,25 @@ export type ShortcutWorkoutWrite = {
   paceSecPerMi: string | null;
 };
 
+/** One Nike Run Club run from the nightly Shortcut. Amounts are decimal strings. */
+export type NrcRunWrite = {
+  day: string;
+  startTime: string | null;
+  distanceMi: string;
+  durationSec: string;
+  paceSecPerMi: string | null;
+  avgHr: string | null;
+  /** Chicago day plus start, when a start was sent. */
+  startKey: string | null;
+  /** Chicago day plus distance and duration. */
+  measureKey: string;
+};
+
 export type FitnessWrites = {
   metrics: FitnessMetricWrite[];
   workouts: FitnessWorkoutWrite[];
   /** Running and walking rows from the Shortcuts `workouts` array. */
   shortcutWorkouts?: ShortcutWorkoutWrite[];
+  /** Runs from the optional `runs` field on the same steps post. */
+  nrcRuns?: NrcRunWrite[];
 };

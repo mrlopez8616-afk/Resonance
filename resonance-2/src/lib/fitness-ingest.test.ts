@@ -756,6 +756,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "025_future_ideas",
         "026_roundtable",
         "027_future_ideas_seeds",
+        "028_fitness_nrc",
       ],
     );
     assert.equal(
@@ -765,6 +766,133 @@ describe("fitness ingest", { concurrency: false }, () => {
     const again = await migrate();
     assert.equal(again.applied.includes("009_reset_rh_agentic_sleeves"), false);
     assert.equal(again.skipped.includes("009_reset_rh_agentic_sleeves"), true);
+  });
+
+  it("keeps a steps post valid and stores runs and heart from the same body", async () => {
+    const stepsOnly = await ingest({
+      source: "shortcuts",
+      metric: "steps",
+      values: ["8000"],
+      starts: ["Oct 11, 2026 at 9:00 AM"],
+    });
+    assert.equal(stepsOnly.status, 200);
+    const stepsBody = await stepsOnly.json();
+    assert.equal(stepsBody.heart, 0);
+    assert.equal(stepsBody.runs, 0);
+
+    const nightly = {
+      source: "shortcuts",
+      metric: "steps",
+      values: "1000",
+      starts: "Oct 11, 2026 at 9:00 PM",
+      restingHr: "58\n60",
+      restingStarts: "Oct 11, 2026 at 8:00 AM",
+      avgHr: "72, 80",
+      avgStarts: "Oct 11, 2026 at 8:00 AM",
+      runs: "2026-10-11 3,1 mi 28 min 9:01 152\n2026-10-10 2.0 mi 16 min",
+    };
+    const first = await ingest(nightly);
+    assert.equal(first.status, 200);
+    const firstBody = await first.json();
+    assert.equal(firstBody.runs, 2);
+    assert.equal(firstBody.heart, 2);
+    const again = await ingest(nightly);
+    assert.equal(again.status, 200);
+
+    const steps = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'step_count' AND day = '2026-10-11'`,
+    );
+    assert.equal(Number(steps[0]?.qty), 8000);
+
+    const resting = await sqlQuery<{ qty: string; n: string }>(
+      `SELECT qty::text AS qty, count(*)::text AS n
+       FROM fitness_metrics WHERE metric = 'resting_heart_rate' AND day = '2026-10-11'
+       GROUP BY qty`,
+    );
+    assert.equal(Number(resting[0]?.n), 1);
+    assert.equal(Number(resting[0]?.qty), 59);
+    const avg = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'heart_rate' AND day = '2026-10-11'`,
+    );
+    assert.equal(Number(avg[0]?.qty), 76);
+
+    const lower = await ingest({
+      source: "shortcuts",
+      restingHr: "55",
+      restingStarts: "Oct 11, 2026 at 8:00 AM",
+    });
+    assert.equal(lower.status, 200);
+    const replaced = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'resting_heart_rate' AND day = '2026-10-11'`,
+    );
+    assert.equal(Number(replaced[0]?.qty), 55);
+
+    const stored = await sqlQuery<{ n: string }>(`SELECT count(*)::text AS n FROM fitness_nrc_runs`);
+    assert.equal(Number(stored[0]?.n), 2);
+
+    const byStart = await ingest({
+      source: "shortcuts",
+      runs: [
+        {
+          date: "2026-10-12",
+          start: "2026-10-12T07:00:00-05:00",
+          distance: "4.0 mi",
+          duration: "36 min",
+          avgHr: "150",
+        },
+      ],
+    });
+    assert.equal(byStart.status, 200);
+    const corrected = await ingest({
+      source: "shortcuts",
+      runs: [
+        {
+          date: "2026-10-12",
+          start: "2026-10-12T07:00:00-05:00",
+          distance: "4.2 mi",
+          duration: "900",
+          durationUnit: "s",
+        },
+      ],
+    });
+    assert.equal(corrected.status, 200);
+    const started = await sqlQuery<{ miles: string; hr: string }>(
+      `SELECT distance_mi::text AS miles, avg_hr::text AS hr
+       FROM fitness_nrc_runs WHERE day = '2026-10-12'`,
+    );
+    assert.equal(started.length, 1);
+    assert.equal(Number(started[0]?.miles), 4.2);
+    assert.equal(Number(started[0]?.hr), 150);
+
+    const measured = await ingest({
+      source: "shortcuts",
+      runs: [{ date: "2026-10-09", distance: "1,5 mi", duration: "15 min" }],
+    });
+    assert.equal(measured.status, 200);
+    await ingest({
+      source: "shortcuts",
+      runs: [
+        {
+          date: "2026-10-09",
+          start: "Oct 9, 2026 at 6:40 AM",
+          distance: "1.5 mi",
+          duration: "900",
+          durationUnit: "s",
+        },
+      ],
+    });
+    const sameDay = await sqlQuery<{ started: unknown }>(
+      `SELECT start_time AS started FROM fitness_nrc_runs WHERE day = '2026-10-09'`,
+    );
+    assert.equal(sameDay.length, 1);
+    assert.equal(sameDay[0]?.started == null, false);
+
+    const heart = await loadFitnessNode("heart", "2026-10-08");
+    assert.equal(heart.detail?.detail, "not recorded");
+    assert.equal(heart.detail?.heart?.length ?? 0, 0);
+    const runsPage = await loadFitnessNode("runs", "2026-10-12");
+    assert.equal((runsPage.detail?.bars ?? []).some((bar) => bar.miles === 4.2), true);
+    assert.equal((runsPage.detail?.rows ?? []).some((row) => row.secondary?.includes("150") || row.primary.includes("4.2")), true);
   });
 });
 

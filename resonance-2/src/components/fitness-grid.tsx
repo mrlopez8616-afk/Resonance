@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { HeartTrend, RunBars } from "@/components/fitness-charts";
 import { NodeSquare } from "@/components/node-square";
-import { FITNESS_EMPTY, type FitnessCard } from "@/lib/fitness-board";
+import { FITNESS_EMPTY, FITNESS_NOT_RECORDED, type FitnessCard } from "@/lib/fitness-board";
 
 export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
-  const visible = cards.filter((card) => card.id !== "runs" || card.headline !== null);
   return (
     <section className="node-grid fitness-grid" aria-label="Fitness nodes">
-      {visible.map((card) => {
+      {cards.map((card) => {
         const live = card.headline !== null;
+        const emptyCopy = card.id === "runs" || card.id === "heart" ? FITNESS_NOT_RECORDED : FITNESS_EMPTY;
         return (
           <NodeSquare
             key={card.id}
@@ -23,10 +24,12 @@ export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
                   {live ? (
                     <p className="value-headline">{card.headline}</p>
                   ) : (
-                    <p className="node-note value-status">{card.detail ?? FITNESS_EMPTY}</p>
+                    <p className="node-note value-status">{card.detail ?? emptyCopy}</p>
                   )}
                   {live && card.detail ? <p className="value-price">{card.detail}</p> : null}
                 </header>
+                {card.id === "runs" ? <RunBars bars={card.bars ?? []} compact /> : null}
+                {card.id === "heart" ? <HeartTrend points={card.heart ?? []} compact /> : null}
               </div>
             </Link>
           </NodeSquare>

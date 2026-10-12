@@ -1,6 +1,7 @@
+import { HeartTrend, RunBars } from "@/components/fitness-charts";
 import {
   FITNESS_EMPTY,
-  FITNESS_RUNS_EMPTY,
+  FITNESS_NOT_RECORDED,
   type FitnessDistanceTotal,
   type FitnessNodeDetail,
   type FitnessPacePoint,
@@ -78,14 +79,16 @@ export function FitnessDetail({ detail }: { detail: FitnessNodeDetail }) {
       </header>
       {detail.id === "runs" ? (
         <>
+          <RunBars bars={detail.bars ?? []} />
           <Totals title="Weeks" rows={detail.weeks} />
           <Totals title="Months" rows={detail.months} />
           <PaceTrend points={detail.pace} />
         </>
       ) : null}
+      {detail.id === "heart" ? <HeartTrend points={detail.heart ?? []} /> : null}
       {empty ? (
         <p className="fitness-empty" role="status">
-          {detail.id === "runs" ? FITNESS_RUNS_EMPTY : (detail.detail ?? FITNESS_EMPTY)}
+          {detail.id === "runs" || detail.id === "heart" ? FITNESS_NOT_RECORDED : (detail.detail ?? FITNESS_EMPTY)}
         </p>
       ) : (
         <ol className="fitness-log">
