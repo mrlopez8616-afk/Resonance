@@ -3,7 +3,13 @@ import { HeartTrend, RunBars } from "@/components/fitness-charts";
 import { NodeSquare } from "@/components/node-square";
 import { FITNESS_EMPTY, FITNESS_NOT_RECORDED, type FitnessCard } from "@/lib/fitness-board";
 
-export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
+export function FitnessGrid({
+  cards,
+  startRun = false,
+}: {
+  cards: readonly FitnessCard[];
+  startRun?: boolean;
+}) {
   return (
     <section className="node-grid fitness-grid" aria-label="Fitness nodes">
       {cards.map((card) => {
@@ -35,6 +41,18 @@ export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
           </NodeSquare>
         );
       })}
+      {startRun ? (
+        <NodeSquare parent live label="Start Run">
+          <Link href="/n/fitness/run" className="node-log-link" title="Open Start Run">
+            <div className="live-face value-card parent-face">
+              <header className="live-head">
+                <h2 className="node-ticker">Start Run</h2>
+                <p className="node-note value-status">GPS on this phone</p>
+              </header>
+            </div>
+          </Link>
+        </NodeSquare>
+      ) : null}
     </section>
   );
 }

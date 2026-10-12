@@ -812,6 +812,7 @@ describe("public render scan", () => {
       "/n/youtube/gear/[device]/page.tsx",
       "/n/youtube/bricks/page.tsx",
       "/n/youtube/bricks/[id]/page.tsx",
+      "/n/fitness/run/page.tsx",
       "/n/[parent]/page.tsx",
       "/n/[parent]/[node]/page.tsx",
       "/settings/page.tsx",
@@ -979,10 +980,12 @@ describe("public render scan", () => {
       "/api/roundtable",
       "/api/roundtable/rt-example",
       "/api/roundtable/rt-example/reply",
+      "/n/fitness/run",
+      "/api/fitness/run",
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/fitness/runs", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/api/fitness/runs"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

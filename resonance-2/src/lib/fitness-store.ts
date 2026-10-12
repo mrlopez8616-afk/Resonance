@@ -20,7 +20,7 @@ import { fitnessLocalFile, readLocalFitness, upsertLocalFitness } from "@/lib/fi
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites, NrcRunWrite } from "@/lib/fitness-types";
 import { FITNESS_NRC_SQL, FITNESS_SCHEMA_SQL, FITNESS_WORKOUTS_SQL } from "@/lib/pg/embedded-migrations";
-import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
+import { nrcRunsAsWrites, nrcSourceLabel } from "@/lib/fitness-nrc";
 import {
   shortcutWorkoutsAsWrites,
   type ShortcutWorkoutWrite,
@@ -74,6 +74,15 @@ function payloadOf(value: unknown): unknown {
     }
   }
   return value ?? {};
+}
+
+function payloadSource(value: unknown): string | null {
+  const payload = payloadOf(value);
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const source = (payload as { source?: unknown }).source;
+  if (typeof source !== "string") return null;
+  const trimmed = source.trim();
+  return trimmed || null;
 }
 
 function missingFitnessTable(error: unknown): boolean {
@@ -328,8 +337,10 @@ async function upsertNrcRun(run: NrcRunWrite): Promise<void> {
     start_time: unknown;
     start_key: string | null;
     pace_sec_per_mi: unknown;
+    payload: unknown;
   }>(
-    `SELECT id::text AS id, avg_hr::text AS avg_hr, start_time, start_key, pace_sec_per_mi::text AS pace_sec_per_mi
+    `SELECT id::text AS id, avg_hr::text AS avg_hr, start_time, start_key, pace_sec_per_mi::text AS pace_sec_per_mi,
+            payload
      FROM fitness_nrc_runs
      WHERE measure_key = $1 OR ($2::text IS NOT NULL AND start_key = $2)
      ORDER BY id`,
@@ -339,7 +350,8 @@ async function upsertNrcRun(run: NrcRunWrite): Promise<void> {
   const startTime = run.startTime ?? text(matches.find((row) => text(row.start_time))?.start_time);
   const startKey = run.startKey ?? matches.find((row) => row.start_key)?.start_key ?? null;
   const pace = run.paceSecPerMi ?? text(matches.find((row) => text(row.pace_sec_per_mi))?.pace_sec_per_mi);
-  const payload = JSON.stringify({ source: "Nike Run Club", clockKnown: startTime !== null });
+  const source = nrcSourceLabel(run.source ?? payloadSource(matches[0]?.payload));
+  const payload = JSON.stringify({ source, clockKnown: startTime !== null });
   if (matches.length === 0) {
     await sqlQuery(
       `INSERT INTO fitness_nrc_runs (
@@ -500,9 +512,10 @@ export async function readNrcRuns(): Promise<NrcRunWrite[]> {
     avg_hr: unknown;
     start_key: string | null;
     measure_key: string;
+    payload: unknown;
   }>(
     `SELECT day, start_time, distance_mi::text AS distance_mi, duration_sec::text AS duration_sec,
-            pace_sec_per_mi::text AS pace_sec_per_mi, avg_hr::text AS avg_hr, start_key, measure_key
+            pace_sec_per_mi::text AS pace_sec_per_mi, avg_hr::text AS avg_hr, start_key, measure_key, payload
      FROM fitness_nrc_runs`,
   );
   return rows.flatMap((row) => {
@@ -510,6 +523,7 @@ export async function readNrcRuns(): Promise<NrcRunWrite[]> {
     const distanceMi = text(row.distance_mi);
     const durationSec = text(row.duration_sec);
     if (!day || !distanceMi || !durationSec || !row.measure_key) return [];
+    const source = payloadSource(row.payload);
     return [
       {
         day,
@@ -520,6 +534,7 @@ export async function readNrcRuns(): Promise<NrcRunWrite[]> {
         avgHr: text(row.avg_hr),
         startKey: row.start_key,
         measureKey: row.measure_key,
+        ...(source ? { source } : {}),
       },
     ];
   });

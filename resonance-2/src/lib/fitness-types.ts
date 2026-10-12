@@ -49,7 +49,12 @@ export type ShortcutWorkoutWrite = {
   paceSecPerMi: string | null;
 };
 
-/** One Nike Run Club run from the nightly Shortcut. Amounts are decimal strings. */
+/**
+ * One run stored in fitness_nrc_runs.
+ * Nightly Shortcut rows and a phone Start Run share this shape.
+ * Amounts are decimal strings. `source` is the payload label.
+ * Absent source stays Nike Run Club.
+ */
 export type NrcRunWrite = {
   day: string;
   startTime: string | null;
@@ -61,6 +66,7 @@ export type NrcRunWrite = {
   startKey: string | null;
   /** Chicago day plus distance and duration. */
   measureKey: string;
+  source?: string;
 };
 
 export type FitnessWrites = {

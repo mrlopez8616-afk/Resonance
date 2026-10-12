@@ -8,6 +8,15 @@ export const NRC_RUN_LIMIT = 400;
 const HEART_SAMPLE_LIMIT = 20000;
 const DURATION_MAX_SEC = 48 * 60 * 60;
 const MILE_METERS = 1609.344;
+
+export const NRC_SOURCE = "Nike Run Club";
+export const RESONANCE_RUN_SOURCE = "resonance";
+
+/** Payload label. A blank source stays the nightly Shortcut label. */
+export function nrcSourceLabel(source: string | null | undefined): string {
+  const trimmed = source?.trim() ?? "";
+  return trimmed || NRC_SOURCE;
+}
 const BPM_MIN = 25;
 const BPM_MAX = 230;
 
@@ -358,6 +367,49 @@ function measureKey(day: string, miles: number, durationSec: number): string {
   return `${day}|${roundedMiles}|${roundedSec}`;
 }
 
+/** A phone run. Average heart rate stays null. Source is resonance. */
+export function resonanceNrcRun(input: {
+  startedAt: string;
+  durationSec: number;
+  distanceM: number;
+}): { ok: true; run: NrcRunWrite } | { ok: false; error: string } {
+  if (typeof input.startedAt !== "string" || !input.startedAt.trim()) {
+    return { ok: false, error: "Start time is missing." };
+  }
+  const startedMs = Date.parse(input.startedAt);
+  if (!Number.isFinite(startedMs)) return { ok: false, error: "Start time is missing." };
+  const startTime = new Date(startedMs).toISOString();
+  const day = chicagoDay(startTime);
+  if (!day) return { ok: false, error: "Start time is missing." };
+  if (!Number.isFinite(input.durationSec) || input.durationSec <= 0) {
+    return { ok: false, error: "This run has no time to save." };
+  }
+  if (input.durationSec > DURATION_MAX_SEC) {
+    return { ok: false, error: "This run is longer than the floor stores." };
+  }
+  if (!Number.isFinite(input.distanceM) || input.distanceM < 0) {
+    return { ok: false, error: "Distance is too short to save." };
+  }
+  const miles = input.distanceM / MILE_METERS;
+  if (miles < 0.05) return { ok: false, error: "Distance is too short to save." };
+  if (miles > 100) return { ok: false, error: "Distance is outside the range this floor stores." };
+  const pace = input.durationSec / miles;
+  return {
+    ok: true,
+    run: {
+      day,
+      startTime,
+      distanceMi: decimalString(miles),
+      durationSec: decimalString(input.durationSec),
+      paceSecPerMi: Number.isFinite(pace) && pace > 0 ? decimalString(pace) : null,
+      avgHr: null,
+      startKey: `${day}|${startTime}`,
+      measureKey: measureKey(day, miles, input.durationSec),
+      source: RESONANCE_RUN_SOURCE,
+    },
+  };
+}
+
 function buildRun(input: {
   date: unknown;
   start: unknown;
@@ -519,6 +571,7 @@ export function mergeNrcRun(previous: NrcRunWrite, next: NrcRunWrite): NrcRunWri
     avgHr: next.avgHr ?? previous.avgHr,
     startKey: next.startKey ?? previous.startKey,
     measureKey: next.measureKey,
+    source: next.source?.trim() || previous.source,
   };
 }
 
@@ -565,8 +618,9 @@ export function nrcRunsAsWrites(rows: readonly NrcRunWrite[]): FitnessWorkoutWri
   return rows.map((row) => {
     const startedAt = row.startTime ?? chicagoInstant(row.day, "12:00").toISOString();
     const day = chicagoDay(startedAt) ?? row.day;
+    const label = nrcSourceLabel(row.source);
     return {
-      source: "shortcuts",
+      source: label === RESONANCE_RUN_SOURCE ? RESONANCE_RUN_SOURCE : "shortcuts",
       externalId: row.startKey ?? row.measureKey,
       name: "Running",
       startedAt,
@@ -580,7 +634,7 @@ export function nrcRunsAsWrites(rows: readonly NrcRunWrite[]): FitnessWorkoutWri
       heartRateMax: null,
       origin: "shortcuts",
       payload: {
-        source: "Nike Run Club",
+        source: label,
         clockKnown: row.startTime !== null,
         day,
       },

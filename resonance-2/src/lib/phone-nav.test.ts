@@ -111,6 +111,9 @@ describe("phone back targets", () => {
       assert.deepEqual(trail.back, { href: "/n/fitness", label: "Fitness" });
       assert.equal(trail.crumbs.at(-1)?.label, node.title);
     }
+    assert.deepEqual(phoneTrail("/n/fitness/run").back, { href: "/n/fitness", label: "Fitness" });
+    assert.equal(phoneTrail("/n/fitness/run").crumbs.at(-1)?.label, "Start Run");
+    assert.equal(phoneTrail("/n/fitness/runs").crumbs.at(-1)?.label, "Runs");
 
     for (const node of FINANCE_NODES) {
       const trail = phoneTrail(`/n/finance/${node.id}`);
