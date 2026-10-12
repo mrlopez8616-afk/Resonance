@@ -396,11 +396,87 @@ function parseShortcutsPayload(body: unknown): FitnessWrites {
   return { metrics, workouts: [] };
 }
 
-/** Health Auto Export keeps its parser. Shortcuts is detected by values + starts. */
+/**
+ * One Chicago day, one step total. `steps` is the number the Shortcut summed,
+ * so it replaces that day instead of being added to stored samples.
+ * `{"source":"shortcuts","date":"yyyy-MM-dd","steps":12345}`
+ */
+function dailyTotalWrites(body: unknown): FitnessWrites | null {
+  const root = asRecord(body);
+  if (!root) return null;
+  const sourceRaw = field(root, "source");
+  if (typeof sourceRaw !== "string" || sourceRaw.trim().toLowerCase() !== "shortcuts") return null;
+  if (field(root, "metrics", "values", "starts", "stepStarts", "stepsStarts") !== undefined) return null;
+  const dateRaw = field(root, "date");
+  if (typeof dateRaw !== "string") return null;
+  const date = dateRaw.trim();
+  if (!isCivilDay(date)) return null;
+  const stepsRaw = field(root, "steps");
+  if (stepsRaw === undefined || Array.isArray(stepsRaw)) return null;
+  if (typeof stepsRaw === "string" && stepsRaw.includes("\n")) return null;
+  const steps = roundedCount(stepsRaw);
+  if (steps === null) return null;
+  const at = parseShortcutInstant(date);
+  return {
+    metrics: [
+      {
+        source: "shortcuts",
+        externalId: `step_count:${date}:count`,
+        metric: "step_count",
+        day: date,
+        recordedAt: at?.iso ?? null,
+        qty: decimalString(steps),
+        units: "count",
+        qtyMin: null,
+        qtyMax: null,
+        origin: "shortcuts",
+        payload: {
+          source: "shortcuts",
+          metric: "step_count",
+          day: date,
+          units: "count",
+          dailyTotal: true,
+        },
+      },
+    ],
+    workouts: [],
+  };
+}
+
+/** A step total may be `12345`, `"12,345.6"`, or `"12345 steps"`. The stored count is rounded. */
+function roundedCount(value: unknown): number | null {
+  let text: string;
+  if (typeof value === "number" && Number.isFinite(value)) text = String(value);
+  else if (typeof value === "string") text = value.trim();
+  else return null;
+  if (!text || text.includes("\n")) return null;
+  text = text.replace(/[\u202f\u00a0]/g, "").replace(/\s+/g, "").replace(/[a-z]+$/i, "");
+  const hasComma = text.includes(",");
+  const hasDot = text.includes(".");
+  if (hasComma && hasDot) {
+    if (text.lastIndexOf(",") > text.lastIndexOf(".")) text = text.replace(/\./g, "").replace(",", ".");
+    else text = text.replace(/,/g, "");
+  } else if (hasComma) {
+    const parts = text.split(",");
+    const grouped = parts.every((part, index) => (index === 0 ? /^\d+$/.test(part) : part.length === 3));
+    if (parts.length === 2 && parts[1] && parts[1].length !== 3) text = `${parts[0]}.${parts[1]}`;
+    else if (grouped) text = parts.join("");
+    else text = text.replace(",", ".");
+  }
+  const match = /^[+-]?(?:\d+\.?\d*|\.\d+)/.exec(text);
+  if (!match) return null;
+  const parsed = Number(match[0]);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1_000_000) return null;
+  return Math.round(parsed);
+}
+
+/** Health Auto Export keeps its parser. A plain daily total is checked before sample lists. */
 export function parseFitnessIngest(
   body: unknown,
   options: { source?: string; origin?: FitnessOrigin } = {},
 ): FitnessWrites {
+  const daily = dailyTotalWrites(body);
+  if (daily) return daily;
   if (isShortcutsPayload(body)) return parseShortcutsPayload(body);
   return parseHealthExport(body, options);
 }

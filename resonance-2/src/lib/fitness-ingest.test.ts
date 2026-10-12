@@ -894,6 +894,58 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.equal((runsPage.detail?.bars ?? []).some((bar) => bar.miles === 4.2), true);
     assert.equal((runsPage.detail?.rows ?? []).some((row) => row.secondary?.includes("150") || row.primary.includes("4.2")), true);
   });
+
+  it("replaces a Chicago day with the plain step total", async () => {
+    const samples = await ingest({
+      source: "shortcuts",
+      metric: "steps",
+      values: ["8000"],
+      starts: ["Oct 12, 2026 at 8:00 AM"],
+    });
+    assert.equal(samples.status, 200);
+    const lower = await ingest({
+      source: "shortcuts",
+      date: "2026-10-12",
+      steps: "5,000.4",
+      restingHr: "58",
+      avgHr: 72,
+    });
+    assert.equal(lower.status, 200);
+    const replaced = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'step_count' AND day = '2026-10-12'`,
+    );
+    assert.equal(replaced.length, 1);
+    assert.equal(Number(replaced[0]?.qty), 5000);
+    const raised = await ingest({
+      source: "shortcuts",
+      date: "2026-10-12",
+      steps: 12345,
+      restingHr: 55,
+    });
+    assert.equal(raised.status, 200);
+    const again = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'step_count' AND day = '2026-10-12'`,
+    );
+    assert.equal(Number(again[0]?.qty), 12345);
+    const resting = await sqlQuery<{ qty: string; n: string }>(
+      `SELECT qty::text AS qty, count(*)::text AS n
+       FROM fitness_metrics WHERE metric = 'resting_heart_rate' AND day = '2026-10-12'
+       GROUP BY qty`,
+    );
+    assert.equal(Number(resting[0]?.n), 1);
+    assert.equal(Number(resting[0]?.qty), 55);
+    const slice = await ingest({
+      source: "shortcuts",
+      metric: "steps",
+      values: ["100"],
+      starts: ["Oct 12, 2026 at 9:00 PM"],
+    });
+    assert.equal(slice.status, 200);
+    const kept = await sqlQuery<{ qty: string }>(
+      `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'step_count' AND day = '2026-10-12'`,
+    );
+    assert.equal(Number(kept[0]?.qty), 12345);
+  });
 });
 
 describe("production migrate gate", () => {

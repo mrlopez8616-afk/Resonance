@@ -3,7 +3,7 @@ import path from "node:path";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import { mergeShortcutWorkout } from "@/lib/fitness-workouts";
 import { absorbNrcRuns } from "@/lib/fitness-nrc";
-import type { FitnessWrites, NrcRunWrite, ShortcutWorkoutWrite } from "@/lib/fitness-types";
+import type { FitnessMetricWrite, FitnessWrites, NrcRunWrite, ShortcutWorkoutWrite } from "@/lib/fitness-types";
 
 /**
  * Dev-only file store so a local ingest can be screenshotted without Neon.
@@ -54,12 +54,18 @@ function keptQty(existing: string, incoming: string): string {
   return next < stored ? existing : incoming;
 }
 
+function dailyTotal(row: FitnessMetricWrite): boolean {
+  const payload = row.payload;
+  if (!payload || typeof payload !== "object") return false;
+  return (payload as { dailyTotal?: unknown }).dailyTotal === true;
+}
+
 function merge(current: FitnessWrites, rows: FitnessWrites): FitnessWrites {
   const metrics = new Map(current.metrics.map((row) => [`${row.source}:${row.externalId}`, row]));
   for (const row of rows.metrics) {
     const key = `${row.source}:${row.externalId}`;
     const existing = metrics.get(key);
-    if (existing && row.source === "shortcuts" && !heartMetric(row.metric)) {
+    if (existing && row.source === "shortcuts" && !heartMetric(row.metric) && !dailyTotal(row)) {
       metrics.set(key, { ...row, qty: keptQty(existing.qty, row.qty) });
       continue;
     }

@@ -26,6 +26,8 @@ export const maxDuration = 60;
  * Health Auto Export still replaces the day.
  * Optional `runs`, `resting` or `restingHr`, and `heart` or `avgHr` ride in the same body.
  * `steps` plus `stepStarts` is the Find Health Samples list. `metric` plus `values` and `starts` still works.
+ * `{"source":"shortcuts","date":"yyyy-MM-dd","steps":12345}` is one Chicago day's total and replaces that day.
+ * Optional `restingHr` and `avgHr` on that body are plain numbers for the same date.
  * A steps-only post stays valid. Heart rate for a day is replaced, not kept as the larger number.
  * A run posted again with the same day and start, or the same day, distance, and duration, updates that run.
  */
