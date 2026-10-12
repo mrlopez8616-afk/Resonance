@@ -753,6 +753,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "022_approvals",
         "023_factory_floor",
         "024_youtube_bricks",
+        "025_future_ideas",
       ],
     );
     assert.equal(

@@ -49,6 +49,8 @@ const markers = [
   "Lessons",
   "/n/lessons",
   "/n/health",
+  "Future Ideas",
+  "/n/ideas",
 ];
 for (const marker of markers) {
   if (!html.includes(marker)) fail(`missing ${marker}`);
