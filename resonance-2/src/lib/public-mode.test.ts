@@ -966,6 +966,7 @@ describe("public render scan", () => {
       "/api/fills",
       "/api/spot-price",
       "/api/settings/fitness-token",
+      "/api/fitness/token",
       "/api/settings/owner-pin",
       "/n/approvals",
       "/n/approvals/pending",

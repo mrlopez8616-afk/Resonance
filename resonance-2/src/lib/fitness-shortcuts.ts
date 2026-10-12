@@ -191,6 +191,52 @@ function seriesFields(record: Record<string, unknown>): { values: unknown; start
   return { values, starts };
 }
 
+function compactKey(value: string): string {
+  return value.toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function loose(record: Record<string, unknown>, ...names: string[]): unknown {
+  const wanted = new Set(names.map(compactKey));
+  for (const [key, value] of Object.entries(record)) {
+    if (wanted.has(compactKey(key))) return value;
+  }
+  return undefined;
+}
+
+/** A Find Health Samples list sometimes arrives as objects with a value and a start. */
+function objectSamples(value: unknown): { values: unknown[]; starts: unknown[] } | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const values: unknown[] = [];
+  const starts: unknown[] = [];
+  for (const item of value) {
+    const record = asRecord(item);
+    if (!record) return null;
+    const qty = loose(record, "value", "qty", "quantity", "magnitude");
+    if (qty === undefined) return null;
+    const start = loose(record, "start", "startDate", "start_date", "date");
+    const startText = start === undefined || start === null ? "" : String(start).trim();
+    if (!startText) return null;
+    values.push(qty);
+    starts.push(startText);
+  }
+  return { values, starts };
+}
+
+/**
+ * The Steps Find Health Samples result is the values (Shortcuts' default
+ * property). Start dates are the one Get Details list, named stepStarts.
+ */
+function stepsShorthand(root: Record<string, unknown>): Record<string, unknown> | null {
+  const steps = field(root, "steps");
+  if (steps === undefined) return null;
+  const objects = objectSamples(steps);
+  if (objects) return { metric: "steps", values: objects.values, starts: objects.starts };
+  if (Array.isArray(steps) && steps.some((item) => asRecord(item))) return null;
+  const starts = field(root, "stepStarts", "stepsStarts", "step_starts");
+  if (starts === undefined) return null;
+  return { metric: "steps", values: steps, starts };
+}
+
 function flattenSeries(value: unknown): Record<string, unknown>[] {
   if (Array.isArray(value)) return value.flatMap((item) => flattenSeries(item));
   const record = asRecord(value);
@@ -200,8 +246,14 @@ function flattenSeries(value: unknown): Record<string, unknown>[] {
 
 function collectSeries(root: Record<string, unknown>): Record<string, unknown>[] {
   const listed = flattenSeries(field(root, "metrics"));
-  if (listed.length > 0) return listed;
-  return seriesFields(root) ? [root] : [];
+  const base = listed.length > 0 ? listed : seriesFields(root) ? [root] : [];
+  const hasSteps = base.some((row) => {
+    const name = field(row, "metric", "name");
+    return typeof name === "string" && metricKind(name)?.metric === "step_count";
+  });
+  if (hasSteps) return base;
+  const extra = stepsShorthand(root);
+  return extra ? [...base, extra] : base;
 }
 
 export function isShortcutsPayload(body: unknown): boolean {

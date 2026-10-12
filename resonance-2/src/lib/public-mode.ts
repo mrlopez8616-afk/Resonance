@@ -49,6 +49,7 @@ const HIDDEN_PREFIXES = [
   "/api/xrp-price",
   "/api/fights",
   "/api/settings/fitness-token",
+  "/api/fitness/token",
   "/api/settings/owner-pin",
   "/n/approvals",
   "/api/approvals",

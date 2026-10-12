@@ -4,7 +4,9 @@ import { readFileSync } from "node:fs";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { Secret, TOTP } from "otpauth";
 import { hash } from "@node-rs/argon2";
+import { POST as copyToken } from "@/app/api/fitness/token/route";
 import { POST } from "@/app/api/settings/fitness-token/route";
+import { PUBLIC_MODE_COOKIE } from "@/lib/public-mode";
 import { SESSION_COOKIE, setAuthClockForTests } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
@@ -180,6 +182,94 @@ describe("fitness sync token", { concurrency: false }, () => {
     const blankBody = (await blank.json()) as { error?: string; token?: string };
     assert.equal(blankBody.error, "not configured");
     assert.equal(blankBody.token, undefined);
+  });
+
+  it("copies the token for a signed-in owner without an authenticator code", async () => {
+    const logs: unknown[][] = [];
+    const originals = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error,
+      debug: console.debug,
+    };
+    for (const key of Object.keys(originals) as (keyof typeof originals)[]) {
+      console[key] = (...args: unknown[]) => {
+        logs.push(args);
+      };
+    }
+    try {
+      const response = await copyToken(
+        new Request(ENDPOINT, {
+          method: "POST",
+          headers: {
+            host: "resonance3.vercel.app",
+            origin: "https://resonance3.vercel.app",
+            "sec-fetch-site": "same-origin",
+            cookie: `${SESSION_COOKIE}=${session}`,
+          },
+        }),
+      );
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      const body = (await response.json()) as { ok: boolean; token?: string };
+      assert.equal(body.ok, true);
+      assert.equal(body.token, TOKEN);
+      assert.equal(JSON.stringify(logs).includes(TOKEN), false);
+    } finally {
+      Object.assign(console, originals);
+    }
+  });
+
+  it("does not copy the token for a stranger, a machine, public mode, or a missing token", async () => {
+    const headers = {
+      host: "resonance3.vercel.app",
+      origin: "https://resonance3.vercel.app",
+      "sec-fetch-site": "same-origin",
+      cookie: `${SESSION_COOKIE}=${session}`,
+    };
+    const send = (extra: Record<string, string>) =>
+      copyToken(
+        new Request("https://resonance3.vercel.app/api/fitness/token", {
+          method: "POST",
+          headers: { ...headers, ...extra },
+        }),
+      );
+
+    const anonymous = await send({ cookie: "" });
+    assert.equal(anonymous.status, 401);
+    assert.equal((await anonymous.text()).includes(TOKEN), false);
+
+    const bearer = await send({ authorization: "Bearer hub-secret" });
+    assert.equal(bearer.status, 401);
+    assert.equal((await bearer.text()).includes(TOKEN), false);
+
+    const fitnessHeader = await send({ "x-fitness-token": TOKEN });
+    assert.equal(fitnessHeader.status, 401);
+    assert.equal((await fitnessHeader.text()).includes(TOKEN), false);
+
+    const cross = await send({ origin: "https://evil.example", "sec-fetch-site": "cross-site" });
+    assert.equal(cross.status, 403);
+    assert.equal((await cross.text()).includes(TOKEN), false);
+
+    const publicMode = await send({
+      cookie: `${SESSION_COOKIE}=${session}; ${PUBLIC_MODE_COOKIE}=1`,
+    });
+    assert.equal(publicMode.status, 404);
+    assert.equal((await publicMode.text()).includes(TOKEN), false);
+
+    delete process.env.FITNESS_INGEST_TOKEN;
+    const missing = await send({});
+    assert.equal(missing.status, 503);
+    const missingBody = (await missing.json()) as { token?: string; error?: string };
+    assert.equal(missingBody.error, "not configured");
+    assert.equal(missingBody.token, undefined);
+
+    process.env.FITNESS_INGEST_TOKEN = TOKEN;
+    await sqlQuery(`UPDATE users SET role = 'operator' WHERE username = 'andres'`);
+    const operator = await send({});
+    assert.equal(operator.status, 403);
+    assert.equal((await operator.text()).includes(TOKEN), false);
   });
 
   it("keeps the token out of the security page HTML", () => {
