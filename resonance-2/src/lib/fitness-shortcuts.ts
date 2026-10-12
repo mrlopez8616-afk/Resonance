@@ -408,8 +408,10 @@ function dailyTotalWrites(body: unknown): FitnessWrites | null {
   if (typeof sourceRaw !== "string" || sourceRaw.trim().toLowerCase() !== "shortcuts") return null;
   if (field(root, "metrics", "values", "starts", "stepStarts", "stepsStarts") !== undefined) return null;
   const dateRaw = field(root, "date");
-  if (typeof dateRaw !== "string") return null;
-  const date = dateRaw.trim();
+  if (dateRaw !== undefined && dateRaw !== null && typeof dateRaw !== "string") return null;
+  const trimmed = typeof dateRaw === "string" ? dateRaw.trim() : "";
+  // No date (or blank) means today in Chicago, so the Shortcut can skip Format Date.
+  const date = trimmed === "" ? chicagoToday(now()) : trimmed;
   if (!isCivilDay(date)) return null;
   const stepsRaw = field(root, "steps");
   if (stepsRaw === undefined || Array.isArray(stepsRaw)) return null;
@@ -441,6 +443,20 @@ function dailyTotalWrites(body: unknown): FitnessWrites | null {
     ],
     workouts: [],
   };
+}
+
+let now = () => new Date();
+export function setFitnessDailyClockForTests(clock: (() => Date) | null) {
+  now = clock ?? (() => new Date());
+}
+
+function chicagoToday(at: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
 }
 
 /** A step total may be `12345`, `"12,345.6"`, or `"12345 steps"`. The stored count is rounded. */

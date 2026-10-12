@@ -1,3 +1,4 @@
+import { setFitnessDailyClockForTests } from "@/lib/fitness-shortcuts";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -893,6 +894,20 @@ describe("fitness ingest", { concurrency: false }, () => {
     const runsPage = await loadFitnessNode("runs", "2026-10-12");
     assert.equal((runsPage.detail?.bars ?? []).some((bar) => bar.miles === 4.2), true);
     assert.equal((runsPage.detail?.rows ?? []).some((row) => row.secondary?.includes("150") || row.primary.includes("4.2")), true);
+  });
+
+  it("defaults a plain step total with no date to today in Chicago", async () => {
+    setFitnessDailyClockForTests(() => new Date("2026-10-13T03:30:00.000Z"));
+    try {
+      const res = await ingest({ source: "shortcuts", steps: "4321" });
+      assert.equal(res.status, 200);
+      const rows = await sqlQuery<{ qty: string }>(
+        `SELECT qty::text AS qty FROM fitness_metrics WHERE metric = 'step_count' AND day = '2026-10-12'`,
+      );
+      assert.equal(rows.some((row) => Number(row.qty) === 4321), true);
+    } finally {
+      setFitnessDailyClockForTests(null);
+    }
   });
 
   it("replaces a Chicago day with the plain step total", async () => {
