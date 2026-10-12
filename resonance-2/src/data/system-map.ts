@@ -268,7 +268,7 @@ export const DATA_SOURCES = [
   {
     id: "health",
     name: "Apple Health",
-    feeds: "Steps and Runs, through iOS Shortcuts to /api/fitness/ingest.",
+    feeds: "Steps, runs, and heart rate, through iOS Shortcuts to /api/fitness/ingest.",
     cadence: "When the shortcut runs.",
   },
   {

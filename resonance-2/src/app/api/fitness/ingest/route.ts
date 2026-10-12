@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fitnessLocalFile } from "@/lib/fitness-local";
 import { sanitizeFitnessSource } from "@/lib/fitness-parse";
+import { readNightlyFitness } from "@/lib/fitness-nrc";
 import { acceptsShortcutWorkouts, parseFitnessIngest } from "@/lib/fitness-shortcuts";
 import { readShortcutWorkouts } from "@/lib/fitness-workouts";
 import { ensureFitnessStore, upsertFitnessRows } from "@/lib/fitness-store";
@@ -23,6 +24,9 @@ export const maxDuration = 60;
  * cannot shrink a full day. Post the same window again and the totals stay the same.
  * A later post with a higher total replaces the stored one.
  * Health Auto Export still replaces the day.
+ * Optional `runs`, `restingHr`, and `avgHr` ride in the same body.
+ * A steps-only post stays valid. Heart rate for a day is replaced, not kept as the larger number.
+ * A run posted again with the same day and start, or the same day, distance, and duration, updates that run.
  */
 export async function POST(request: Request) {
   const auth = authorizeFitnessRequest(request);
@@ -59,11 +63,13 @@ export async function POST(request: Request) {
   const parsed = parseFitnessIngest(body, {
     source: sanitizeFitnessSource(request.headers.get("automation-name")),
   });
+  const nightly = readNightlyFitness(body);
+  const metrics = [...parsed.metrics, ...nightly.heart];
   const runs = readShortcutWorkouts(body, acceptsShortcutWorkouts(body));
   if (!runs.ok) {
     return NextResponse.json({ ok: false, error: runs.error }, { status: 400 });
   }
-  if (parsed.metrics.length === 0 && parsed.workouts.length === 0 && runs.workouts.length === 0) {
+  if (metrics.length === 0 && parsed.workouts.length === 0 && runs.workouts.length === 0 && nightly.runs.length === 0) {
     return NextResponse.json(
       { ok: false, error: "No metrics or workouts in the body." },
       { status: 400 },
@@ -72,12 +78,18 @@ export async function POST(request: Request) {
 
   try {
     await ensureFitnessStore();
-    const written = await upsertFitnessRows({ ...parsed, shortcutWorkouts: runs.workouts });
+    const written = await upsertFitnessRows({
+      ...parsed,
+      metrics,
+      shortcutWorkouts: runs.workouts,
+      nrcRuns: nightly.runs,
+    });
     return NextResponse.json({
       ok: true,
       metrics: written.metrics,
       workouts: written.workouts,
       runs: written.runs,
+      heart: nightly.heart.length,
       totals: parsed.metrics.map((row) => ({
         metric: row.metric,
         day: row.day,

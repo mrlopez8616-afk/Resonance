@@ -152,6 +152,7 @@ export default async function ParentNodePage({
   }
 
   if (parent.id === "fitness") {
+    await requireRole("owner");
     const [floor, fitness] = await Promise.all([loadOperatorFloor(), loadFitnessCards()]);
     return (
       <OperatorShell

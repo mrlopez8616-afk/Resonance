@@ -10,7 +10,8 @@ import { energyKcal } from "@/lib/fitness-parse";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite } from "@/lib/fitness-types";
 
 export const FITNESS_EMPTY = "Data appears once the phone sync runs.";
-export const FITNESS_RUNS_EMPTY = "No runs yet.";
+export const FITNESS_NOT_RECORDED = "not recorded";
+export const FITNESS_RUNS_EMPTY = FITNESS_NOT_RECORDED;
 
 export const FITNESS_NODES = [
   { id: "steps", title: "Steps" },
@@ -42,6 +43,8 @@ export type FitnessCard = {
   href: string;
   headline: string | null;
   detail: string | null;
+  bars?: FitnessRunBar[];
+  heart?: FitnessHeartPoint[];
 };
 
 export type FitnessRow = {
@@ -62,6 +65,20 @@ export type FitnessPacePoint = {
   secPerMile: number;
 };
 
+export type FitnessRunBar = {
+  id: string;
+  label: string;
+  miles: number;
+  caption: string;
+};
+
+export type FitnessHeartPoint = {
+  id: string;
+  label: string;
+  resting: number | null;
+  avg: number | null;
+};
+
 export type FitnessNodeDetail = {
   id: FitnessNodeId;
   title: string;
@@ -71,6 +88,8 @@ export type FitnessNodeDetail = {
   weeks: FitnessDistanceTotal[];
   months: FitnessDistanceTotal[];
   pace: FitnessPacePoint[];
+  bars?: FitnessRunBar[];
+  heart?: FitnessHeartPoint[];
 };
 
 type MetricSample = {
@@ -235,13 +254,47 @@ export function workoutSamples(rows: readonly FitnessWorkoutWrite[]): WorkoutSam
       clockKnown: clockKnown(row.payload, row.origin),
     });
   }
-  return preferLive(parsed, (row) => `${row.kind}:${row.day}`).sort((a, b) => {
+  return dedupeDisplayedRuns(preferLive(parsed, (row) => `${row.kind}:${row.day}`)).sort((a, b) => {
     if (a.day !== b.day) return a.day < b.day ? 1 : -1;
     if (a.clockKnown && b.clockKnown && a.startedAt !== b.startedAt) {
       return a.startedAt < b.startedAt ? 1 : -1;
     }
     return a.id < b.id ? -1 : 1;
   });
+}
+
+function sameDisplayedRun(left: WorkoutSample, right: WorkoutSample): boolean {
+  if (left.kind !== "run" || right.kind !== "run" || left.day !== right.day) return false;
+  if (left.clockKnown && right.clockKnown) {
+    const delta = Math.abs(Date.parse(left.startedAt) - Date.parse(right.startedAt));
+    if (Number.isFinite(delta) && delta < 60_000) return true;
+  }
+  if (left.miles === null || right.miles === null || left.durationSec === null || right.durationSec === null) {
+    return false;
+  }
+  return Math.abs(left.miles - right.miles) < 0.02 && Math.abs(left.durationSec - right.durationSec) < 1.5;
+}
+
+/** Two copies of one run, from the workout list and the runs field, stay one bar. */
+function dedupeDisplayedRuns(rows: WorkoutSample[]): WorkoutSample[] {
+  const kept: WorkoutSample[] = [];
+  for (const row of rows) {
+    if (row.kind !== "run") {
+      kept.push(row);
+      continue;
+    }
+    const match = kept.find((item) => sameDisplayedRun(item, row));
+    if (!match) {
+      kept.push(row);
+      continue;
+    }
+    if (match.heartRateAvg === null && row.heartRateAvg !== null) match.heartRateAvg = row.heartRateAvg;
+    if (!match.clockKnown && row.clockKnown) {
+      match.clockKnown = true;
+      match.startedAt = row.startedAt;
+    }
+  }
+  return kept;
 }
 
 function sumMetric(
@@ -427,7 +480,7 @@ function heartFacts(metrics: readonly MetricSample[], today: string): { headline
       };
     }
   }
-  return { headline: null, detail: FITNESS_EMPTY };
+  return { headline: null, detail: FITNESS_NOT_RECORDED };
 }
 
 export type FitnessStepDay = {
@@ -515,6 +568,45 @@ export function fitnessHomeLine(
   return null;
 }
 
+function runBars(workouts: readonly WorkoutSample[], today: string): FitnessRunBar[] {
+  return workouts
+    .filter((workout) => workout.kind === "run" && workout.day <= today && visibleMiles(workout.miles) !== null)
+    .sort((left, right) => {
+      if (left.day !== right.day) return left.day < right.day ? -1 : 1;
+      if (left.startedAt !== right.startedAt) return left.startedAt < right.startedAt ? -1 : 1;
+      return left.id < right.id ? -1 : 1;
+    })
+    .slice(-40)
+    .map((run) => {
+      const miles = visibleMiles(run.miles) as number;
+      const pace = run.durationSec === null ? null : formatPace(miles, run.durationSec);
+      const caption = [
+        formatMiles(miles),
+        run.durationSec === null ? null : formatDuration(run.durationSec),
+        pace,
+        run.heartRateAvg === null ? null : `${formatCount(run.heartRateAvg)} bpm`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return { id: run.id, label: shortDay(run.day), miles, caption };
+    });
+}
+
+function heartPoints(metrics: readonly MetricSample[], today: string): FitnessHeartPoint[] {
+  const days = [
+    ...new Set([
+      ...daysWith(metrics, "resting_heart_rate", today),
+      ...daysWith(metrics, "heart_rate", today),
+    ]),
+  ].sort();
+  return days.slice(-30).flatMap((day) => {
+    const resting = heartOn(metrics, "resting_heart_rate", day);
+    const avg = heartOn(metrics, "heart_rate", day);
+    if (resting === null && avg === null) return [];
+    return [{ id: day, label: shortDay(day), resting, avg }];
+  });
+}
+
 export function fitnessCards(
   metrics: readonly MetricSample[],
   workouts: readonly WorkoutSample[],
@@ -526,12 +618,16 @@ export function fitnessCards(
     lifting: liftingFacts(workouts, today),
     heart: heartFacts(metrics, today),
   };
+  const bars = runBars(workouts, today);
+  const heart = heartPoints(metrics, today);
   return FITNESS_NODES.map((node) => ({
     id: node.id,
     title: node.title,
     href: `/n/fitness/${node.id}`,
     headline: facts[node.id].headline,
     detail: facts[node.id].detail,
+    bars: node.id === "runs" ? bars : [],
+    heart: node.id === "heart" ? heart : [],
   }));
 }
 
@@ -758,6 +854,8 @@ export function fitnessNode(
       (key) => formatCivilMonth(`${key}-01`),
     ),
     pace: pacePoints(runList),
+    bars: node.id === "runs" ? runBars(workouts, today) : [],
+    heart: node.id === "heart" ? heartPoints(metrics, today) : [],
   };
 }
 

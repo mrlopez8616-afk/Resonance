@@ -164,7 +164,7 @@ describe("shortcut workout parsing", () => {
     assert.equal(cards.find((card) => card.id === "runs")?.headline, "1.5 mi");
     const quiet = fitnessCards([], samples, "2026-08-01");
     assert.equal(quiet.find((card) => card.id === "runs")?.headline, null);
-    assert.equal(fitnessNode("runs", [], samples, "2026-08-01")?.detail, "No runs yet.");
+    assert.equal(fitnessNode("runs", [], samples, "2026-08-01")?.detail, "not recorded");
   });
 });
 

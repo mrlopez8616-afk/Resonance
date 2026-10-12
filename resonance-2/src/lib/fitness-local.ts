@@ -2,7 +2,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import { mergeShortcutWorkout } from "@/lib/fitness-workouts";
-import type { FitnessWrites, ShortcutWorkoutWrite } from "@/lib/fitness-types";
+import { absorbNrcRuns } from "@/lib/fitness-nrc";
+import type { FitnessWrites, NrcRunWrite, ShortcutWorkoutWrite } from "@/lib/fitness-types";
 
 /**
  * Dev-only file store so a local ingest can be screenshotted without Neon.
@@ -28,6 +29,7 @@ function readSnapshot(file: string): FitnessWrites {
       metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [],
       workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
       shortcutWorkouts: Array.isArray(parsed.shortcutWorkouts) ? parsed.shortcutWorkouts : [],
+      nrcRuns: Array.isArray(parsed.nrcRuns) ? parsed.nrcRuns : [],
     };
   } catch {
     return empty();
@@ -39,6 +41,10 @@ function writeSnapshot(file: string, rows: FitnessWrites): void {
   const temp = `${file}.tmp`;
   writeFileSync(temp, JSON.stringify(rows));
   renameSync(temp, file);
+}
+
+function heartMetric(metric: string): boolean {
+  return metric === "resting_heart_rate" || metric === "heart_rate";
 }
 
 function keptQty(existing: string, incoming: string): string {
@@ -53,7 +59,7 @@ function merge(current: FitnessWrites, rows: FitnessWrites): FitnessWrites {
   for (const row of rows.metrics) {
     const key = `${row.source}:${row.externalId}`;
     const existing = metrics.get(key);
-    if (existing && row.source === "shortcuts") {
+    if (existing && row.source === "shortcuts" && !heartMetric(row.metric)) {
       metrics.set(key, { ...row, qty: keptQty(existing.qty, row.qty) });
       continue;
     }
@@ -69,10 +75,12 @@ function merge(current: FitnessWrites, rows: FitnessWrites): FitnessWrites {
     const existing = runs.get(key);
     runs.set(key, existing ? mergeShortcutWorkout(existing, row) : row);
   }
+  const nrcRuns: NrcRunWrite[] = absorbNrcRuns(current.nrcRuns ?? [], rows.nrcRuns ?? []);
   return {
     metrics: [...metrics.values()],
     workouts: [...workouts.values()],
     shortcutWorkouts: [...runs.values()],
+    nrcRuns,
   };
 }
 
@@ -107,6 +115,6 @@ export function upsertLocalFitness(
   return {
     metrics: rows.metrics.length,
     workouts: rows.workouts.length,
-    runs: rows.shortcutWorkouts?.length ?? 0,
+    runs: (rows.shortcutWorkouts?.length ?? 0) + (rows.nrcRuns?.length ?? 0),
   };
 }
