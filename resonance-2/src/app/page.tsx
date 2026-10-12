@@ -2,6 +2,7 @@ import { ControlHomeCard } from "@/components/control-room";
 import { HealthHomeCard } from "@/components/machine-health-floor";
 import { YouTubeHomeCard } from "@/components/youtube-node";
 import { LessonsHomeCard } from "@/components/lessons-floor";
+import { RoundtableHomeCard } from "@/components/roundtable-floor";
 import { ParentGrid } from "@/components/parent-grid";
 import { PublicHomePage } from "@/components/public-home-page";
 import { SystemHomeCard } from "@/components/system-map";
@@ -27,6 +28,8 @@ import { loadControlHome } from "@/lib/control-room-store";
 import { loadMachineHealth } from "@/lib/machine-health-load";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
+import { loadRoundtableHome } from "@/lib/roundtable-store";
+import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { isPublicMode } from "@/lib/public-mode-server";
 import { thisWeekItems } from "@/lib/this-week";
 
@@ -56,9 +59,15 @@ const lessonsHomeFallback: LessonsHomeModel = {
   latestTitle: null,
 };
 
+const roundtableHomeFallback: RoundtableHomeModel = {
+  unavailable: true,
+  count: 0,
+  lines: [],
+};
+
 export default async function Home() {
   if (await isPublicMode()) return <PublicHomePage />;
-  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome] =
+  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome] =
     await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
@@ -78,6 +87,10 @@ export default async function Home() {
     loadMachineHealth({ publicMode: false }).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return null;
+    }),
+    loadRoundtableHome().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return roundtableHomeFallback;
     }),
   ]);
   let financeHome: FinanceHomeFace | null = null;
@@ -154,6 +167,7 @@ export default async function Home() {
       <YouTubeHomeCard />
       <SystemHomeCard />
       <LessonsHomeCard card={lessonsHome} />
+      {session?.role === "owner" ? <RoundtableHomeCard card={roundtableHome} /> : null}
     </OperatorShell>
   );
 }
