@@ -25,6 +25,7 @@ import {
   UFC_332_EVENT,
   fightBySlug,
   fightsInSegment,
+  personSlug,
   type CatalogFight,
   type FighterSide,
 } from "@/lib/ufc332";
@@ -66,13 +67,19 @@ function TierTag({ tier }: { tier?: Bet["tier"] }) {
   return <span className="bet-tier">{tier}</span>;
 }
 
-function FightStakeList({ bets }: { bets: readonly Bet[] }) {
+function shownTicketTier(bet: Bet, fight?: DeskFight): Bet["tier"] | undefined {
+  if (!fight?.tierNote || bet.tier !== "STRONG" || !fight.lean) return bet.tier;
+  if (personSlug(bet.pick) !== personSlug(fight.lean)) return bet.tier;
+  return fight.tier ?? undefined;
+}
+
+function FightStakeList({ bets, fight }: { bets: readonly Bet[]; fight?: DeskFight }) {
   if (bets.length === 0) return null;
   return (
     <ul className="fight-stakes">
       {bets.map((bet) => (
         <li key={bet.id}>
-          <TierTag tier={bet.tier} />
+          <TierTag tier={shownTicketTier(bet, fight)} />
           {ticketLine(bet)}
         </li>
       ))}
@@ -122,11 +129,12 @@ function FightSections({
 }
 
 function analysisLine(fight: DeskFight): string | null {
-  if (!fight.lean && !fight.conf && !fight.tier) return null;
+  if (!fight.lean && !fight.conf && !fight.tier && !fight.stakePlan) return null;
   const parts = [
     fight.lean ? `Lean ${fight.lean}` : null,
     fight.conf ?? null,
     fight.tier ?? null,
+    fight.stakePlan === "PLAY" ? "PLAY" : fight.stakePlan === "free" ? "free" : null,
   ].filter((part): part is string => Boolean(part));
   return parts.length ? parts.join(" · ") : null;
 }
@@ -145,9 +153,10 @@ function DeskFightCard({
       <h3>{fight.title}</h3>
       {fight.detail ? <p>{fight.detail}</p> : null}
       {lean ? <p>{lean}</p> : null}
+      {fight.tierNote ? <p>{fight.tierNote}</p> : null}
       {fight.why ? <p>{fight.why}</p> : null}
       <p className="fight-result">{resultLine}</p>
-      <FightStakeList bets={fight.bets} />
+      <FightStakeList bets={fight.bets} fight={fight} />
     </>
   );
   if (!fight.href) return <div className="fight-card">{body}</div>;
@@ -633,6 +642,11 @@ export function FightDetail({
           {!hideEmpty || fight.confidence ? (
             <Field label="Confidence" value={fight.confidence ?? "—"} />
           ) : null}
+          {fight.tier ? <Field label="Tier" value={fight.tier} /> : null}
+          {fight.stakePlan ? (
+            <Field label="Stake" value={fight.stakePlan === "PLAY" ? "PLAY" : "free"} />
+          ) : null}
+          {fight.tierNote ? <Field label="KO gate" value={fight.tierNote} /> : null}
           {!hideEmpty || fight.why ? <Field label="Why" value={fight.why ?? "—"} /> : null}
           {fight.xFactor ? <Field label="X-factor" value={fight.xFactor} /> : null}
         </dl>
@@ -694,7 +708,19 @@ export function FightDetail({
             {stakes.map((bet) => (
               <li key={bet.id} className="fight-card">
                 <dl>
-                  {bet.tier ? <Field label="Tier" value={bet.tier} /> : null}
+                  {bet.tier ? (
+                    <Field
+                      label="Tier"
+                      value={
+                        fight.tierNote &&
+                        bet.tier === "STRONG" &&
+                        fight.lean &&
+                        personSlug(bet.pick) === personSlug(fight.lean)
+                          ? fight.tier ?? "Pass"
+                          : bet.tier
+                      }
+                    />
+                  ) : null}
                   <Field label="Pick" value={bet.pick} />
                   {bet.hubLean ? <Field label="Hub lean" value={bet.hubLean} /> : null}
                   {typeof bet.agreesWithLean === "boolean" ? (

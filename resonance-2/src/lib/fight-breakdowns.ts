@@ -7,6 +7,17 @@ import {
   type BoutSegment,
   type DeskFight,
 } from "@/lib/fight-desk";
+import {
+  applyKoGate,
+  confAfterGate,
+  enrichFinishStats,
+  historyLines,
+  KO_PCT_LABEL,
+  koPercentFromStats,
+  neverBeenKod,
+  R1_FINISH_LABEL,
+  type PlanTier,
+} from "@/lib/fight-ko-gate";
 import type { FightResult } from "@/lib/fight-results";
 import {
   fightBySlug,
@@ -39,6 +50,9 @@ const STAT_ORDER = [
   "TD defense",
   "Sub attempts/15 min",
   "Wins (KO/Sub/Dec)",
+  "Losses (KO/Sub/Dec)",
+  KO_PCT_LABEL,
+  R1_FINISH_LABEL,
   "Last fight",
   "Days since",
   "Camp",
@@ -393,7 +407,13 @@ function statMapFromFighter(fighter: Record<string, unknown>): Record<string, st
     typeof value === "number" || typeof value === "string" ? String(value).trim() : "",
   );
   if (parts.some(Boolean)) stats["Wins (KO/Sub/Dec)"] = parts.map((part) => part || "—").join(" / ");
-  return stats;
+  const lossParts = [fighter.loss_ko, fighter.loss_sub, fighter.loss_dec].map((value) =>
+    typeof value === "number" || typeof value === "string" ? String(value).trim() : "",
+  );
+  if (lossParts.some(Boolean)) {
+    stats["Losses (KO/Sub/Dec)"] = lossParts.map((part) => part || "—").join(" / ");
+  }
+  return enrichFinishStats(stats, historyLines(fighter.last5) ?? historyLines(fighter.last3), fighter);
 }
 
 function numberAt(value: unknown, index: number): number | undefined {
@@ -735,9 +755,10 @@ function pairedStats(
       .filter((label) => !STAT_ORDER.includes(label))
       .sort(),
   ];
+  const empty = (label: string) => (label === KO_PCT_LABEL || label === R1_FINISH_LABEL ? "n/a" : "—");
   return [
-    labels.map((label) => ({ label, value: a[label] ?? "—" })),
-    labels.map((label) => ({ label, value: b[label] ?? "—" })),
+    labels.map((label) => ({ label, value: a[label] ?? empty(label) })),
+    labels.map((label) => ({ label, value: b[label] ?? empty(label) })),
   ];
 }
 
@@ -789,6 +810,59 @@ function plainEdge(edge: string): string {
   return edge.replace(/\*\*/g, "").trim();
 }
 
+function planTierOf(row: FightBreakdown): PlanTier | null {
+  if (row.tier === "STRONG" || row.tier === "LEAN") return row.tier;
+  const conf = row.conf?.trim().toLowerCase();
+  if (conf === "strong") return "STRONG";
+  if (conf === "lean") return "LEAN";
+  if (conf === "pass") return "PASS";
+  return null;
+}
+
+function matchPickSide(pick: string | null, aName: string | null, bName: string | null): 0 | 1 | null {
+  if (!pick) return null;
+  const pickSlug = personSlug(pick);
+  const a = aName ? personSlug(aName) : "";
+  const b = bName ? personSlug(bName) : "";
+  if (pickSlug && pickSlug === a) return 0;
+  if (pickSlug && pickSlug === b) return 1;
+  const needle = pick.trim().toLowerCase();
+  if (!needle) return null;
+  const aHit = Boolean(aName && aName.toLowerCase().includes(needle));
+  const bHit = Boolean(bName && bName.toLowerCase().includes(needle));
+  if (aHit && !bHit) return 0;
+  if (bHit && !aHit) return 1;
+  return null;
+}
+
+/** Posted tier after the KO gate. The stored row is left as the hub posted it. */
+export function doctrineForBreakdown(row: FightBreakdown): {
+  tier: BetTier | null;
+  conf: string | null;
+  tierNote: string | null;
+  stakePlan: "PLAY" | "free" | null;
+} {
+  const posted = planTierOf(row);
+  const pickName = row.lean || row.odds?.pick || null;
+  const side = matchPickSide(pickName, row.aName, row.bName);
+  const pickStats = side === 0 ? row.stats?.a : side === 1 ? row.stats?.b : undefined;
+  const opponentStats = side === 0 ? row.stats?.b : side === 1 ? row.stats?.a : undefined;
+  const gate = applyKoGate({
+    tier: posted,
+    pickPct: row.odds?.noVigPct ?? null,
+    opponentKoPct: side == null ? null : koPercentFromStats(opponentStats),
+    pickNeverKod: side == null ? null : neverBeenKod(pickStats),
+    opponentStreak: opponentStats?.Streak ?? null,
+  });
+  const hadPlan = posted != null;
+  return {
+    tier: gate.storedTier,
+    conf: confAfterGate(row.conf, posted, gate.tier),
+    tierNote: gate.reason,
+    stakePlan: hadPlan || gate.gated ? gate.stakePlan : null,
+  };
+}
+
 function catalogFromParts(
   eventSlug: string,
   fightSlug: string,
@@ -799,7 +873,11 @@ function catalogFromParts(
   const fromSlug = namesFromSlug(fightSlug);
   const aName = breakdown?.aName || fromTitle[0] || fromSlug?.[0] || "Fighter A";
   const bName = breakdown?.bName || fromTitle[1] || fromSlug?.[1] || "Fighter B";
-  const [aStats, bStats] = pairedStats(breakdown?.stats?.a, breakdown?.stats?.b);
+  const [aStats, bStats] = pairedStats(
+    enrichFinishStats(breakdown?.stats?.a, breakdown?.links?.a?.last3),
+    enrichFinishStats(breakdown?.stats?.b, breakdown?.links?.b?.last3),
+  );
+  const doctrine = breakdown ? doctrineForBreakdown(breakdown) : null;
   const a = sideFromBreakdown(aName, aStats ?? [], breakdown?.links?.a);
   const b = sideFromBreakdown(bName, bStats ?? [], breakdown?.links?.b);
   const pick = breakdown?.odds?.pick ?? null;
@@ -822,7 +900,10 @@ function catalogFromParts(
     A: a,
     B: b,
     lean: breakdown?.lean ?? undefined,
-    confidence: breakdown?.conf ?? undefined,
+    confidence: doctrine?.conf ?? breakdown?.conf ?? undefined,
+    tier: doctrine?.tier ?? undefined,
+    tierNote: doctrine?.tierNote ?? undefined,
+    stakePlan: doctrine?.stakePlan ?? undefined,
     why: breakdown?.why ?? undefined,
     edges: (breakdown?.edges ?? []).map(plainEdge).filter(Boolean),
     xFactor: breakdown?.xFactor ?? undefined,
@@ -896,7 +977,16 @@ export function fightDetailVisibility(
     result: result?.status === "final" || stakes.length > 0,
     matchup: [fight.A, fight.B].some((side) => side.sherdog || side.ufcstats || side.noUfcStats),
     stats: statValues || fight.A.last5.length > 0 || fight.B.last5.length > 0,
-    lean: Boolean(fight.lean || fight.confidence || fight.why || fight.xFactor || fight.edges.length),
+    lean: Boolean(
+      fight.lean ||
+        fight.confidence ||
+        fight.why ||
+        fight.xFactor ||
+        fight.edges.length ||
+        fight.tier ||
+        fight.tierNote ||
+        fight.stakePlan,
+    ),
     odds: sideHasOdds(fight.A) || sideHasOdds(fight.B),
     highlights: Boolean(fight.A.highlight || fight.B.highlight),
     stake: stakes.length > 0,
@@ -908,7 +998,7 @@ export function detailTimeLabel(time: string): string {
   return CLOCK.test(time) ? `${time} CT` : time;
 }
 
-/** Lean, conf, tier, and why on the bet's fight card, plus a link to the fight page. */
+/** Lean, conf, gated tier, and why on the bet's fight card, plus a link to the fight page. */
 export function annotateDeskFights(
   fights: readonly DeskFight[],
   eventSlug: string,
@@ -923,9 +1013,12 @@ export function annotateDeskFights(
       href: `/fights/${eventSlug}/${fight.slug}`,
     };
     if (!row) return next;
+    const doctrine = doctrineForBreakdown(row);
     if (row.lean) next.lean = row.lean;
-    if (row.conf) next.conf = row.conf;
-    if (row.tier) next.tier = row.tier;
+    if (doctrine.conf) next.conf = doctrine.conf;
+    next.tier = doctrine.tier;
+    next.tierNote = doctrine.tierNote;
+    next.stakePlan = doctrine.stakePlan;
     if (row.why) next.why = row.why;
     if (!next.detail && row.division) next.detail = row.division;
     if (!next.kicker && row.slot) next.kicker = row.slot;
