@@ -4,6 +4,7 @@ import bfoFile from "@/data/ufc332/bfo.json";
 import fightFile from "@/data/ufc332/data.json";
 import youtubeFile from "@/data/ufc332/youtube.json";
 import { chicagoInstant, formatChicagoIso } from "@/lib/calendar-time";
+import { alignedFinishStats } from "@/lib/fight-ko-gate";
 
 export const UFC_332_ID = "ufc-332";
 export const UFC_332_DATE = "2026-10-03";
@@ -74,6 +75,9 @@ type RawFighter = {
   loss_sub?: string;
   loss_dec?: string;
   finish_rate?: string;
+  r1_finishes?: string | number;
+  r1_finish_rate?: string | number;
+  ko_pct?: string | number;
   last_fight?: string;
   days_since?: number | string;
   camp?: string;
@@ -158,6 +162,12 @@ export type CatalogFight = {
   why?: string;
   edges: string[];
   xFactor?: string;
+  /** Plan tier after the KO gate. UFC 332 analysis does not post one. */
+  tier?: "STRONG" | "LEAN" | null;
+  /** Short reason when the KO gate drops the posted tier. */
+  tierNote?: string;
+  /** PLAY takes a stake. free is an unstaked pick. */
+  stakePlan?: "PLAY" | "free" | null;
 };
 
 const fightsRaw = fightFile as RawFight[];
@@ -274,6 +284,16 @@ function fighterSide(raw: RawFighter, index: 0 | 1, fight: RawFight): FighterSid
   stats.push(
     { label: "Wins KO / Sub / Dec", value: methodLine(raw, "wins") },
     { label: "Losses KO / Sub / Dec", value: methodLine(raw, "loss") },
+    ...alignedFinishStats({
+      winsKo: raw.wins_ko,
+      winsSub: raw.wins_sub,
+      winsDec: raw.wins_dec,
+      record: raw.record,
+      koPct: raw.ko_pct,
+      history: raw.last5,
+      r1Finishes: raw.r1_finishes,
+      r1Rate: raw.r1_finish_rate,
+    }),
   );
   const side: FighterSide = {
     name: raw.name,

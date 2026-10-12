@@ -110,6 +110,10 @@ export type DeskFight = {
   lean?: string;
   conf?: string;
   tier?: Bet["tier"] | null;
+  /** Set when the KO gate changes the posted tier. */
+  tierNote?: string | null;
+  /** PLAY is the only plan tier that takes money. free is unstaked. */
+  stakePlan?: "PLAY" | "free" | null;
   why?: string;
 };
 
