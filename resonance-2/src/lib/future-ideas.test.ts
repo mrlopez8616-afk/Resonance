@@ -196,6 +196,76 @@ describe("future ideas store", { concurrency: false }, () => {
     );
   });
 
+  it("inserts four ideas when the title is absent and leaves a stored title alone", async () => {
+    const seedsFile = readFileSync(path.join(root, "db/migrations/027_future_ideas_seeds.sql"), "utf8");
+    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "027_future_ideas_seeds");
+    assert.equal(embedded?.sql, seedsFile);
+    assert.equal(/\d{4}-\d{2}-\d{2}/.test(seedsFile), false);
+
+    await sqlQuery(
+      `INSERT INTO future_ideas (id, title, note, status, tags, added_on)
+       VALUES ('already-own-apps', 'Own apps', 'Kept note.', 'someday', '["kept"]'::jsonb, CURRENT_DATE)`,
+    );
+    await sqlQuery(`DELETE FROM schema_migrations WHERE id = '027_future_ideas_seeds'`);
+    const seeded = await applyMigrations([{ id: "027_future_ideas_seeds", sql: seedsFile }]);
+    assert.deepEqual(seeded.applied, ["027_future_ideas_seeds"]);
+
+    const today = await sqlQuery<{ today: string }>(`SELECT CURRENT_DATE::text AS today`);
+    const ideas = await readIdeas();
+    const own = ideas.filter((idea) => idea.title === "Own apps");
+    assert.equal(own.length, 1);
+    assert.equal(own[0]?.id, "already-own-apps");
+    assert.equal(own[0]?.note, "Kept note.");
+    assert.equal(own[0]?.status, "someday");
+    assert.equal(ideas.some((idea) => idea.id === "own-apps"), false);
+
+    const added = [
+      {
+        id: "roundtable",
+        title: "Roundtable",
+        note: "Agents talk to the Founder, later to the YouTube channel.",
+      },
+      {
+        id: "mastermind",
+        title: "Mastermind",
+        note: "A subscription makes buyers Resonance members in a mastermind with the Founder (meetings, events), framed as a mirror to follow, not financial advice.",
+      },
+      {
+        id: "factory-floor-redesign",
+        title: "Factory Floor redesign",
+        note: "",
+      },
+    ];
+    for (const seed of added) {
+      const row = ideas.find((idea) => idea.id === seed.id);
+      assert.equal(row?.title, seed.title);
+      assert.equal(row?.note, seed.note);
+      assert.equal(row?.status, "idea");
+      assert.deepEqual(row?.tags, []);
+      assert.equal(row?.archivedAt, null);
+      assert.equal(row?.addedOn, today[0]?.today.slice(0, 10));
+    }
+    assert.equal(ideas.length, FUTURE_IDEA_SEED.length + added.length + 1);
+
+    await sqlQuery(
+      `UPDATE future_ideas SET title = 'Roundtable, renamed', note = 'Edited.' WHERE id = 'roundtable'`,
+    );
+    await sqlQuery(`DELETE FROM schema_migrations WHERE id = '027_future_ideas_seeds'`);
+    const again = await applyMigrations([{ id: "027_future_ideas_seeds", sql: seedsFile }]);
+    assert.deepEqual(again.applied, ["027_future_ideas_seeds"]);
+    const after = await readIdeas();
+    const renamed = after.filter((idea) => idea.id === "roundtable");
+    assert.equal(renamed.length, 1);
+    assert.equal(renamed[0]?.title, "Roundtable, renamed");
+    assert.equal(renamed[0]?.note, "Edited.");
+    assert.equal(after.some((idea) => idea.title === "Roundtable"), false);
+    assert.equal(after.length, ideas.length);
+
+    const third = await applyMigrations([{ id: "027_future_ideas_seeds", sql: seedsFile }]);
+    assert.deepEqual(third.applied, []);
+    assert.equal(third.skipped.includes("027_future_ideas_seeds"), true);
+  });
+
   it("lets the owner add, edit, and archive, and keeps dollars off the public list", async () => {
     const signedOut = await POST(
       new Request("https://resonance3.vercel.app/api/ideas", {
