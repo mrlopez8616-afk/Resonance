@@ -459,6 +459,8 @@ CREATE INDEX IF NOT EXISTS fitness_nrc_runs_day_idx
   ON fitness_nrc_runs (day);
 `;
 
+export const FUTURE_IDEAS_LEGACY_FITNESS_SQL = "-- Future Ideas seeds. Number 029.\n-- Two Founder ideas from Oct 13, 2026. A row is skipped when that title\n-- or seed id is already stored, so an edit is left alone.\n-- added_on is the day the row is inserted. This file names no date.\n\nINSERT INTO future_ideas (id, title, note, status, added_on)\nSELECT\n  'nuevo-arcabuz',\n  'Legacy / Nuevo Arcabuz',\n  'A new Club de Arcabuz: a building, Saturday dances, scholarships, elder care, and an eventual UBI for about 1,500 people. Pieces: a founding book, charter, endowment, building, living record, and successors. Owned by the Nuevo Arcabuz agent.',\n  'idea',\n  CURRENT_DATE\nWHERE NOT EXISTS (\n  SELECT 1 FROM future_ideas WHERE title = 'Legacy / Nuevo Arcabuz'\n)\nAND NOT EXISTS (\n  SELECT 1 FROM future_ideas WHERE id = 'nuevo-arcabuz'\n);\n\nINSERT INTO future_ideas (id, title, note, status, added_on)\nSELECT\n  'fitness-auto-sync',\n  'Fitness auto-sync (Health Auto Export)',\n  'Automatic steps and runs through the Health Auto Export app''s REST API automation (Premium, $6.99 a year or $24.99 lifetime). Parked for a few weeks.',\n  'someday',\n  CURRENT_DATE\nWHERE NOT EXISTS (\n  SELECT 1 FROM future_ideas WHERE title = 'Fitness auto-sync (Health Auto Export)'\n)\nAND NOT EXISTS (\n  SELECT 1 FROM future_ideas WHERE id = 'fitness-auto-sync'\n);\n";
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -486,4 +488,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "026_roundtable", sql: ROUNDTABLE_SQL },
   { id: "027_future_ideas_seeds", sql: FUTURE_IDEA_SEEDS_SQL },
   { id: "028_fitness_nrc", sql: FITNESS_NRC_SQL },
+  { id: "029_future_ideas_legacy_fitness", sql: FUTURE_IDEAS_LEGACY_FITNESS_SQL },
 ];
