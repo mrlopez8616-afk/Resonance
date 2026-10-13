@@ -758,6 +758,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "026_roundtable",
         "027_future_ideas_seeds",
         "028_fitness_nrc",
+        "029_future_ideas_legacy_fitness",
       ],
     );
     assert.equal(
