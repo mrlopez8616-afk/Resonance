@@ -58,9 +58,16 @@ const HIDDEN_PREFIXES = [
   "/api/roundtable",
 ] as const;
 
+/**
+ * Exact matches. A prefix of `/n/fitness/run` would also hide `/n/fitness/runs`.
+ * The Start Run page and its save stay off a shared screen. The Runs history stays.
+ */
+const HIDDEN_EXACT = new Set(["/n/fitness/run", "/api/fitness/run"]);
+
 export function isHiddenInPublicMode(pathname: string): boolean {
   const path = (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";
   if (path === "/n/fight-desk/bankroll") return true;
+  if (HIDDEN_EXACT.has(path)) return true;
   return HIDDEN_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 

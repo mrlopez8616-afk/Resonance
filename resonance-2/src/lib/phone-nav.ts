@@ -108,6 +108,7 @@ const PARENT_LABELS: Record<string, string> = {
 /** Titles for children that are not floor tickers. Kept aligned by phone-nav tests. */
 const CHILD_TITLES: Record<string, string> = {
   steps: "Steps",
+  run: "Start Run",
   runs: "Runs",
   lifting: "Lifting",
   heart: "Heart",

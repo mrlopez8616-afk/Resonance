@@ -170,7 +170,7 @@ export default async function ParentNodePage({
         <Link href="/" className="calendar-back">
           Floor
         </Link>
-        <FitnessGrid cards={fitness.cards} />
+        <FitnessGrid cards={fitness.cards} startRun={!publicMode} />
         {publicMode ? null : (
           <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
         )}
