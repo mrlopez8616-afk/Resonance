@@ -4333,6 +4333,46 @@ body {
   margin-top: 0.55rem;
 }
 
+.chain-exposure {
+  margin: 0 0 0.85rem;
+}
+
+.chain-exposure article.node-square.is-home.is-parent,
+.chain-exposure article.node-square.is-home.is-parent.is-live {
+  width: 100%;
+  max-width: 36rem;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.chain-watches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.chain-watches li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.chain-watch-name {
+  font-weight: 650;
+}
+
+.chain-watch-note {
+  color: var(--muted);
+}
+
+.chain-watches a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .health-overall {
   font-variant-numeric: tabular-nums;
 }

@@ -157,6 +157,23 @@ describe("phone back targets", () => {
     });
     assert.deepEqual(phoneTrail("/n/roundtable/RT-ABC").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/n/roundtable/rt-abc/extra").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/chain-security"), {
+      back: { href: "/", label: "Floor" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/chain-security", label: "Chain Security" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/chain-security/autheo-theo"), {
+      back: { href: "/n/chain-security", label: "Chain Security" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/chain-security", label: "Chain Security" },
+        { href: "/n/chain-security/autheo-theo", label: "Autheo Theo" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/chain-security/Autheo").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/chain-security/autheo-theo/extra").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/n/health"), {
       back: { href: "/", label: "Floor" },
       crumbs: [
@@ -313,6 +330,9 @@ describe("phone tabs", () => {
     assert.equal(phoneTabActive("/", "/n/lessons"), true);
     assert.equal(phoneTabActive("/", "/n/roundtable"), true);
     assert.equal(phoneTabActive("/", "/n/roundtable/rt-abc"), true);
+    assert.equal(phoneTabActive("/", "/n/chain-security"), true);
+    assert.equal(phoneTabActive("/", "/n/chain-security/autheo-theo"), true);
+    assert.equal(phoneTabActive("/n/build", "/n/chain-security"), false);
     assert.equal(phoneTabActive("/n/build", "/n/roundtable"), false);
     assert.equal(phoneTabActive("/", "/n/approvals"), false);
     assert.equal(phoneTabActive("/", "/n/control"), true);

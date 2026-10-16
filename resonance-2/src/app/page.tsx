@@ -1,6 +1,7 @@
 import { ControlHomeCard } from "@/components/control-room";
 import { HealthHomeCard } from "@/components/machine-health-floor";
 import { YouTubeHomeCard } from "@/components/youtube-node";
+import { ChainSecurityHomeCard } from "@/components/chain-security-floor";
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { RoundtableHomeCard } from "@/components/roundtable-floor";
 import { ParentGrid } from "@/components/parent-grid";
@@ -28,6 +29,8 @@ import { loadControlHome } from "@/lib/control-room-store";
 import { loadMachineHealth } from "@/lib/machine-health-load";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
+import { loadChainSecurityHome } from "@/lib/chain-security-store";
+import type { ChainSecurityHomeModel } from "@/lib/chain-security";
 import { loadRoundtableHome } from "@/lib/roundtable-store";
 import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { isPublicMode } from "@/lib/public-mode-server";
@@ -65,9 +68,15 @@ const roundtableHomeFallback: RoundtableHomeModel = {
   lines: [],
 };
 
+const chainHomeFallback: ChainSecurityHomeModel = {
+  unavailable: true,
+  count: 0,
+  lines: [],
+};
+
 export default async function Home() {
   if (await isPublicMode()) return <PublicHomePage />;
-  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome] =
+  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome, chainHome] =
     await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
@@ -91,6 +100,10 @@ export default async function Home() {
     loadRoundtableHome().catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return roundtableHomeFallback;
+    }),
+    loadChainSecurityHome(false).catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return chainHomeFallback;
     }),
   ]);
   let financeHome: FinanceHomeFace | null = null;
@@ -168,6 +181,7 @@ export default async function Home() {
       <SystemHomeCard />
       <LessonsHomeCard card={lessonsHome} />
       {session?.role === "owner" ? <RoundtableHomeCard card={roundtableHome} /> : null}
+      {session?.role === "owner" ? <ChainSecurityHomeCard card={chainHome} /> : null}
     </OperatorShell>
   );
 }
