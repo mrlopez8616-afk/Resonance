@@ -303,6 +303,22 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       }
       return homeTrail();
     }
+    if (parentId === "chain-security") {
+      const chain: PhoneTarget = { href: "/n/chain-security", label: "Chain Security" };
+      if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, chain] };
+      const incidentId = parts[2] ?? "";
+      if (parts.length === 3 && /^[a-z0-9][a-z0-9-]{0,63}$/.test(incidentId)) {
+        return {
+          back: chain,
+          crumbs: [
+            HOME,
+            chain,
+            { href: `/n/chain-security/${incidentId}`, label: slugLabel(incidentId) },
+          ],
+        };
+      }
+      return homeTrail();
+    }
     if (parentId === "health") {
       if (parts.length !== 2) return homeTrail();
       const health: PhoneTarget = { href: "/n/health", label: "Health" };

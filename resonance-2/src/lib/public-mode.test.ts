@@ -315,6 +315,34 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     ]);
   const ideasUi = await import("@/components/ideas-board");
   const ideasLib = await import("@/lib/future-ideas");
+  const chainUi = await import("@/components/chain-security-floor");
+  const chainLib = await import("@/lib/chain-security");
+  const chainIncidents = [
+    {
+      id: "autheo-theo",
+      occurredOn: "2026-10-12",
+      subject: "Autheo (THEO), Hyperlane bridge on Base",
+      category: "bridge_exploit" as const,
+      cause: "119M THEO minted. Token down 92%. About $730K.",
+      loss: { kind: "range" as const, low: 730000, high: 1760000 },
+      status: "not recorded",
+      sourceUrl: null,
+      exposures: [],
+    },
+    {
+      id: "xrpl-ai-bug",
+      occurredOn: null,
+      subject: "XRPL",
+      category: "chain_bug" as const,
+      cause: "A bug that AI found.",
+      loss: { kind: "none" as const, low: null, high: null },
+      status: "patched",
+      sourceUrl: "https://xrpl.org/blog/2026/vulnerabilitydisclosurereport-bug-20261009",
+      exposures: ["xrpl" as const],
+    },
+  ];
+  const chainFeed = chainLib.presentFeed(chainIncidents, true);
+  const chainDetail = chainLib.presentIncident(chainIncidents[0]!, true);
   const { PublicFightRecord, PublicGroupFloor, PublicHome, PublicNodePage, TreasuryCard } = floor;
   const triggerView = trigger.evaluateXrpTrigger(
     [
@@ -410,6 +438,9 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         live: control.controlHomeLive(publicControl),
       }),
       createElement(youtubeUi.YouTubeHomeCard),
+      createElement(chainUi.ChainSecurityHomeCard, {
+        card: chainLib.chainSecurityHomeModel(chainIncidents, { publicMode: true }),
+      }),
       createElement(healthUi.HealthHomeCard, {
         report: health.scoreMachineHealth({
           floor: model,
@@ -569,6 +600,11 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/build", html: build },
     { path: "/n/build/platform", html: buildSectionHtml },
     { path: "/n/lessons", html: publicLessonsHtml() },
+    { path: "/n/chain-security", html: render(createElement(chainUi.ChainSecurityFloor, { feed: chainFeed })) },
+    {
+      path: "/n/chain-security/autheo-theo",
+      html: render(createElement(chainUi.ChainSecurityDetail, { incident: chainDetail })),
+    },
     {
       path: "/n/ideas",
       html: render(
@@ -801,6 +837,8 @@ describe("public render scan", () => {
       "/n/health/page.tsx",
       "/n/ideas/page.tsx",
       "/n/lessons/page.tsx",
+      "/n/chain-security/page.tsx",
+      "/n/chain-security/[id]/page.tsx",
       "/n/roundtable/page.tsx",
       "/n/roundtable/[thread]/page.tsx",
       "/n/system/page.tsx",
@@ -837,6 +875,8 @@ describe("public render scan", () => {
       "/n/health",
       "/n/ideas",
       "/n/lessons",
+      "/n/chain-security",
+      "/n/chain-security/autheo-theo",
       "/n/roundtable",
       "/n/roundtable/rt-example",
       "/n/approvals",
@@ -871,6 +911,7 @@ describe("public render scan", () => {
       const html =
         page.path === "/n/crypto/xrp-trigger" ? page.html.replaceAll("$1.55", "") : page.html;
       const leaks = publicTextLeaks(html).filter((id) => {
+        if (id === "token" && page.path.startsWith("/n/chain-security")) return false;
         if (id !== "shares" || !page.path.startsWith("/n/system")) return true;
         return /\bshares?\b/i.test(html.replaceAll("SUI share", ""));
       });
@@ -934,6 +975,18 @@ describe("public render scan", () => {
     const buildPage = pages.find((page) => page.path === "/n/build");
     assert.match(buildPage?.html ?? "", /Future Ideas/);
     assert.match(buildPage?.html ?? "", /\/n\/ideas/);
+    const chainPage = pages.find((page) => page.path === "/n/chain-security");
+    assert.match(chainPage?.html ?? "", /My exposure/);
+    assert.match(chainPage?.html ?? "", /Flare FXRP bridge/);
+    assert.match(chainPage?.html ?? "", /no incidents/);
+    assert.match(chainPage?.html ?? "", /XRPL/);
+    assert.equal(chainPage?.html.includes("$"), false);
+    assert.equal(chainPage?.html.includes("119M"), false);
+    const chainDetailPage = pages.find((page) => page.path === "/n/chain-security/autheo-theo");
+    assert.match(chainDetailPage?.html ?? "", /hidden/);
+    assert.match(chainDetailPage?.html ?? "", /source pending/);
+    assert.match(chainDetailPage?.html ?? "", /Token down 92%/);
+    assert.equal(chainDetailPage?.html.includes("$"), false);
     const lessonsPage = pages.find((page) => page.path === "/n/lessons");
     assert.match(lessonsPage?.html ?? "", /LL-023/);
     assert.equal(lessonsPage?.html.includes("LL-021"), false);
@@ -982,7 +1035,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

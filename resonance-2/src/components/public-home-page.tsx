@@ -1,6 +1,7 @@
 import { ControlHomeCard } from "@/components/control-room";
 import { HealthHomeCard } from "@/components/machine-health-floor";
 import { YouTubeHomeCard } from "@/components/youtube-node";
+import { ChainSecurityHomeCard } from "@/components/chain-security-floor";
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { ThisWeek } from "@/components/this-week";
 import { PublicHome } from "@/components/public-floor";
@@ -13,6 +14,8 @@ import { fitnessSecondaryLines, nextAiCatalystLine } from "@/lib/home-lines";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { loadControlHome } from "@/lib/control-room-store";
 import { loadMachineHealth } from "@/lib/machine-health-load";
+import { loadChainSecurityHome } from "@/lib/chain-security-store";
+import type { ChainSecurityHomeModel } from "@/lib/chain-security";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
@@ -34,6 +37,12 @@ const lessonsHomeFallback: LessonsHomeModel = {
   latestTitle: null,
 };
 
+const chainHomeFallback: ChainSecurityHomeModel = {
+  unavailable: true,
+  count: 0,
+  lines: [],
+};
+
 function safeLine(line: string): string | null {
   if (hasMoneyText(line)) return null;
   const next = stripMoneyText(line);
@@ -41,7 +50,7 @@ function safeLine(line: string): string | null {
 }
 
 export async function PublicHomePage() {
-  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome] =
+  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome] =
     await Promise.all([
     loadPublicFloor(),
     loadFitnessHome(),
@@ -60,6 +69,10 @@ export async function PublicHomePage() {
     loadMachineHealth({ publicMode: true }).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return null;
+    }),
+    loadChainSecurityHome(true).catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return chainHomeFallback;
     }),
   ]);
   const bets = betsLoaded.status === "unavailable" ? [] : betsLoaded.bets;
@@ -118,6 +131,15 @@ export async function PublicHomePage() {
             lessonsHome.latestTitle && hasMoneyText(lessonsHome.latestTitle)
               ? null
               : lessonsHome.latestTitle,
+        }}
+      />
+      <ChainSecurityHomeCard
+        card={{
+          ...chainHome,
+          lines: chainHome.lines.flatMap((line) => {
+            const next = safeLine(line);
+            return next ? [next] : [];
+          }),
         }}
       />
     </OperatorShell>
