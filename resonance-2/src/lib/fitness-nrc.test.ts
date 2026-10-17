@@ -241,7 +241,7 @@ describe("nightly runs and heart", () => {
     const node = readFileSync(new URL("../app/n/[parent]/[node]/page.tsx", import.meta.url), "utf8");
     const parentFitness = parent.slice(parent.indexOf('parent.id === "fitness"'));
     const nodeFitness = node.slice(node.indexOf('parent?.id === "fitness"'));
-    assert.ok(parentFitness.indexOf('await requireRole("owner")') < parentFitness.indexOf("loadFitnessCards"));
+    assert.ok(parentFitness.indexOf('await requireRole("owner")') < parentFitness.indexOf("loadFitnessBundle"));
     assert.ok(nodeFitness.indexOf('await requireRole("owner")') < nodeFitness.indexOf("loadFitnessNode"));
     assert.equal(phoneTrail("/n/fitness").back?.href, "/");
     assert.equal(phoneTrail("/n/fitness/runs").back?.href, "/n/fitness");

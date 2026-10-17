@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
-import { FitnessGrid, FitnessWeekPanel } from "@/components/fitness-grid";
+import { FitnessStoryView } from "@/components/fitness-story";
 import { FitnessTokenCopy } from "@/components/fitness-token-copy";
 import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
@@ -18,9 +18,11 @@ import { loadPublicFloor } from "@/lib/public-load";
 import { hasMoneyText, publicRecordLabel, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
-import { withManualImportCard } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
-import { loadFitnessCards, loadFitnessHome } from "@/lib/fitness-store";
+import { buildFitnessStory, parseStoryRange } from "@/lib/fitness-story";
+import { loadFitnessBundle } from "@/lib/fitness-store";
+import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
+import { shortcutWorkoutsAsWrites } from "@/lib/fitness-workouts";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { holdingChildModel, type ChildCardModel } from "@/lib/child-card";
@@ -28,12 +30,11 @@ import {
   CRYPTO_HOME_TICKERS,
   aiChangeBars,
   cryptoChangeBars,
-  fitnessSecondaryLines,
   nextCryptoCatalystLine,
   nextTickerCatalystLine,
   type HomeMove,
 } from "@/lib/home-lines";
-import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
+import { inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
 import { parseLotRangeQuery } from "@/lib/lot-range";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
@@ -65,7 +66,7 @@ export default async function ParentNodePage({
   searchParams,
 }: {
   params: Promise<{ parent: string }>;
-  searchParams: Promise<{ range?: string | string[] }>;
+  searchParams: Promise<{ range?: string | string[]; steps?: string | string[]; runs?: string | string[] }>;
 }) {
   const [{ parent: id }, query] = await Promise.all([params, searchParams]);
   const range = parseLotRangeQuery(query.range);
@@ -190,22 +191,32 @@ export default async function ParentNodePage({
 
   if (parent.id === "fitness") {
     await requireRole("owner");
-    const [floor, fitness, home, publicMode, manual] = await Promise.all([
+    const stepsRange = parseStoryRange(query.steps);
+    const runsRange = parseStoryRange(query.runs);
+    const [floor, bundle, publicMode, manual] = await Promise.all([
       loadOperatorFloor(),
-      loadFitnessCards(),
-      loadFitnessHome(),
+      loadFitnessBundle(),
       isPublicMode(),
       loadFitnessManual(),
     ]);
-    const weekLines = fitnessSecondaryLines(home.week, home.line).filter(
-      (line) => !(publicMode && hasMoneyText(line)),
-    );
-    const cards = withManualImportCard(fitness.cards, manual.entries, { publicMode });
+    const story = buildFitnessStory({
+      metrics: bundle.metrics,
+      workouts: [
+        ...bundle.workouts,
+        ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
+        ...nrcRunsAsWrites(bundle.nrcRuns),
+      ],
+      manuals: manual.entries,
+      today: bundle.today,
+      publicMode,
+      stepsRange,
+      runsRange,
+    });
     return (
       <OperatorShell
         storageMessage={
           floor.storageMessage ??
-          (fitness.availability === "unavailable" || manual.availability === "unavailable"
+          (bundle.availability === "unavailable" || manual.availability === "unavailable"
             ? STORAGE_UNAVAILABLE_BANNER
             : null)
         }
@@ -214,8 +225,7 @@ export default async function ParentNodePage({
         <Link href="/" className="calendar-back">
           Floor
         </Link>
-        <FitnessWeekPanel lines={weekLines} slots={fitnessStepBars(home.stepDays)} />
-        <FitnessGrid cards={cards} />
+        <FitnessStoryView story={story} stepsRange={stepsRange} runsRange={runsRange} />
         {publicMode ? null : (
           <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
         )}

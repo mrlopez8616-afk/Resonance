@@ -603,6 +603,11 @@ function unavailableFitness(today: string): {
   };
 }
 
+/** Day-by-day rows for the fitness story. Manual summaries stay in their own table. */
+export async function loadFitnessBundle(today = chicagoToday()): Promise<FitnessRead> {
+  return readFitness(today);
+}
+
 export async function loadFitnessHome(today = chicagoToday()): Promise<{
   line: FitnessHomeLine | null;
   week: FitnessWeekFacts;
