@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { BookAvailability } from "@/components/bet-scorecard";
-import type { Bet } from "@/lib/bets";
-import { betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd } from "@/lib/bets";
+import { BetWriteError, betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd, type Bet, type CardMoney } from "@/lib/bets";
+import { isDecimalString } from "@/lib/decimal";
 import type { CalendarEvent } from "@/data/calendar";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { detailTimeLabel, fightDetailVisibility } from "@/lib/fight-breakdowns";
@@ -42,13 +42,37 @@ function percent(value: number | undefined): string {
 }
 
 function ticketOdds(bet: Bet): string {
+  if (typeof bet.oddsPct !== "number" || !Number.isFinite(bet.oddsPct)) return "—";
   const pct = `${bet.oddsPct}%`;
   return bet.estimated ? `~${pct}` : pct;
 }
 
+/** A stored amount that is not a decimal is shown as stored. A bad row must not blank the page. */
+function shownUsd(value: unknown): string {
+  if (typeof value === "string" && isDecimalString(value.trim())) return formatUsd(value);
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "—";
+}
+
+function shownSigned(value: unknown): string {
+  if (typeof value === "string" && isDecimalString(value.trim())) return formatSignedUsd(value);
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return "—";
+}
+
+function safeCardMoney(bets: readonly Bet[]): CardMoney {
+  try {
+    return cardMoney(bets);
+  } catch (error) {
+    if (!(error instanceof BetWriteError)) throw error;
+    return { headline: "unavailable", detail: "" };
+  }
+}
+
 function ticketLine(bet: Bet): string {
-  const pnl = bet.realizedPnl ? ` · ${formatSignedUsd(bet.realizedPnl)}` : "";
-  return `${bet.pick} ${formatUsd(bet.stake)} → ${formatUsd(bet.payout)}${bet.estimated ? " est." : ""} @ ${ticketOdds(bet)} · ${betStatusLabel(bet.status)}${pnl}`;
+  const pnl = bet.realizedPnl ? ` · ${shownSigned(bet.realizedPnl)}` : "";
+  return `${bet.pick} ${shownUsd(bet.stake)} → ${shownUsd(bet.payout)}${bet.estimated ? " est." : ""} @ ${ticketOdds(bet)} · ${betStatusLabel(bet.status)}${pnl}`;
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -77,8 +101,8 @@ function FightStakeList({ bets, fight }: { bets: readonly Bet[]; fight?: DeskFig
   if (bets.length === 0) return null;
   return (
     <ul className="fight-stakes">
-      {bets.map((bet) => (
-        <li key={bet.id}>
+      {bets.map((bet, index) => (
+        <li key={`${bet.id}:${index}`}>
           <TierTag tier={shownTicketTier(bet, fight)} />
           {ticketLine(bet)}
         </li>
@@ -106,8 +130,8 @@ function FightSections({
     if (layout.fights.length === 0) return <p className="calendar-quiet">—</p>;
     return (
       <ol className="flex flex-col gap-3">
-        {layout.fights.map((fight) => (
-          <li key={fight.slug}>{renderFight(fight)}</li>
+        {layout.fights.map((fight, index) => (
+          <li key={`${fight.slug}:${index}`}>{renderFight(fight)}</li>
         ))}
       </ol>
     );
@@ -118,8 +142,8 @@ function FightSections({
         <section key={section.id} id={section.id} className="calendar-day-section" aria-label={section.label}>
           <h3>{section.label}</h3>
           <ol className="flex flex-col gap-3">
-            {section.fights.map((fight) => (
-              <li key={fight.slug}>{renderFight(fight)}</li>
+            {section.fights.map((fight, index) => (
+              <li key={`${fight.slug}:${index}`}>{renderFight(fight)}</li>
             ))}
           </ol>
         </section>
@@ -178,7 +202,7 @@ function ValueCard({
   bets: readonly Bet[];
   availability: BookAvailability;
 }) {
-  const face = cardMoney(bets);
+  const face = safeCardMoney(bets);
   const line =
     availability === "unavailable"
       ? "unavailable"
@@ -286,7 +310,7 @@ function EventMoneyHeader({
   bets: readonly Bet[];
   availability: BookAvailability;
 }) {
-  const face = cardMoney(bets);
+  const face = safeCardMoney(bets);
   return (
     <header className="log-header">
       <Link href={backHref} className="calendar-back">
@@ -429,8 +453,8 @@ export function FightEvent({
               </p>
               {stake.length > 0 ? (
                 <ul className="fight-stakes">
-                  {stake.map((bet) => (
-                    <li key={bet.id}>
+                  {stake.map((bet, index) => (
+                    <li key={`${bet.id}:${index}`}>
                       <TierTag tier={bet.tier} />
                       {ticketLine(bet)}
                     </li>
@@ -494,8 +518,8 @@ function OddsColumn({
         {books.map((row) => (
           <Field key={row.book} label={row.book} value={moneyline(row.moneyline)} />
         ))}
-        {bets.map((bet) => (
-          <Field key={bet.id} label="Your ticket" value={ticketLine(bet)} />
+        {bets.map((bet, index) => (
+          <Field key={`${bet.id}:${index}`} label="Your ticket" value={ticketLine(bet)} />
         ))}
       </dl>
     </div>
@@ -605,7 +629,7 @@ export function FightDetail({
             </thead>
             <tbody>
               {labels.map((label, index) => (
-                <tr key={label}>
+                <tr key={`${label}:${index}`}>
                   <th scope="row">{label}</th>
                   <td>{fight.A.stats[index]?.value ?? "—"}</td>
                   <td>{fight.B.stats[index]?.value ?? "—"}</td>
@@ -616,15 +640,15 @@ export function FightDetail({
         </div>
         ) : null}
         <div className="fight-split">
-          {[fight.A, fight.B].filter((side) => !hideEmpty || side.last5.length > 0).map((side) => (
-            <div key={side.slug}>
+          {[fight.A, fight.B].filter((side) => !hideEmpty || side.last5.length > 0).map((side, index) => (
+            <div key={`${side.slug}:${index}`}>
               <h3>Last 5 · {side.name}</h3>
               {side.last5.length === 0 ? (
                 <p className="calendar-quiet">—</p>
               ) : (
                 <ul className="fight-last5">
-                  {side.last5.map((row) => (
-                    <li key={row}>{row}</li>
+                  {side.last5.map((row, rowIndex) => (
+                    <li key={`${rowIndex}:${row}`}>{row}</li>
                   ))}
                 </ul>
               )}
@@ -652,8 +676,8 @@ export function FightDetail({
         </dl>
         {fight.edges.length > 0 ? (
           <ul className="fight-last5">
-            {fight.edges.map((edge) => (
-              <li key={edge}>{edge}</li>
+            {fight.edges.map((edge, index) => (
+              <li key={`${index}:${edge}`}>{edge}</li>
             ))}
           </ul>
         ) : null}
@@ -680,8 +704,8 @@ export function FightDetail({
       <section className="calendar-day-section" aria-label="Highlights">
         <h3>Highlights</h3>
         <ul className="fight-last5">
-          {[fight.A, fight.B].filter((side) => !hideEmpty || side.highlight).map((side) => (
-            <li key={side.slug}>
+          {[fight.A, fight.B].filter((side) => !hideEmpty || side.highlight).map((side, index) => (
+            <li key={`${side.slug}:${index}`}>
               {side.highlight ? (
                 <a href={side.highlight.url} rel="noreferrer">
                   {side.name}: {side.highlight.title}
@@ -705,8 +729,8 @@ export function FightDetail({
           <p className="calendar-quiet">—</p>
         ) : (
           <ol className="flex flex-col gap-3">
-            {stakes.map((bet) => (
-              <li key={bet.id} className="fight-card">
+            {stakes.map((bet, index) => (
+              <li key={`${bet.id}:${index}`} className="fight-card">
                 <dl>
                   {bet.tier ? (
                     <Field
@@ -726,16 +750,16 @@ export function FightDetail({
                   {typeof bet.agreesWithLean === "boolean" ? (
                     <Field label="Agrees" value={bet.agreesWithLean ? "yes" : "no"} />
                   ) : null}
-                  <Field label="Stake" value={formatUsd(bet.stake)} />
+                  <Field label="Stake" value={shownUsd(bet.stake)} />
                   <Field label="Odds" value={ticketOdds(bet)} />
                   <Field
                     label="Payout"
-                    value={`${formatUsd(bet.payout)}${bet.estimated ? " est." : ""}`}
+                    value={`${shownUsd(bet.payout)}${bet.estimated ? " est." : ""}`}
                   />
                   <Field label="Status" value={betStatusLabel(bet.status)} />
                   {bet.note ? <Field label="Note" value={bet.note} /> : null}
                   {bet.realizedPnl ? (
-                    <Field label="P&L" value={formatSignedUsd(bet.realizedPnl)} />
+                    <Field label="P&L" value={shownSigned(bet.realizedPnl)} />
                   ) : null}
                   <Field label="Venue" value="Coinbase Predict" />
                 </dl>

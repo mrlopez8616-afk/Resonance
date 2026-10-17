@@ -807,6 +807,7 @@ function catalogSegment(card: string | null): FightSegmentId {
 }
 
 function plainEdge(edge: string): string {
+  if (typeof edge !== "string") return "";
   return edge.replace(/\*\*/g, "").trim();
 }
 

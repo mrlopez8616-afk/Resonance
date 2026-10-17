@@ -1929,6 +1929,8 @@ body {
 .log-canvas {
   width: 100%;
   max-width: 52rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .node-log-link {
@@ -3134,12 +3136,15 @@ body {
 
 .fight-card {
   display: block;
+  max-width: 100%;
+  min-width: 0;
   padding: 0.9rem 1rem;
   border: 1px solid var(--border);
   border-radius: 0.9rem;
   background: var(--surface);
   color: inherit;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .fight-card:hover,
@@ -3219,11 +3224,13 @@ body {
 }
 
 .fight-table-wrap {
+  max-width: 100%;
   overflow-x: auto;
 }
 
 .fight-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.86rem;
 }
@@ -3234,6 +3241,7 @@ body {
   padding: 0.42rem 0.5rem;
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
 .fight-table thead th {
