@@ -250,9 +250,9 @@ describe("Edmonton fight desk render", () => {
 
   it("keeps fight text inside the page width", () => {
     const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8");
-    assert.match(css, /\.log-canvas \{[^}]*overflow-wrap:\s*anywhere/s);
-    assert.match(css, /\.fight-card \{[^}]*overflow-wrap:\s*anywhere/s);
-    assert.match(css, /\.fight-table \{[^}]*table-layout:\s*fixed/s);
-    assert.match(css, /\.fight-table th,\s*\.fight-table td \{[^}]*overflow-wrap:\s*anywhere/s);
+    assert.match(css, /\.log-canvas \{[^}]*overflow-wrap:\s*anywhere/);
+    assert.match(css, /\.fight-card \{[^}]*overflow-wrap:\s*anywhere/);
+    assert.match(css, /\.fight-table \{[^}]*table-layout:\s*fixed/);
+    assert.match(css, /\.fight-table th,\s*\.fight-table td \{[^}]*overflow-wrap:\s*anywhere/);
   });
 });
