@@ -33,6 +33,7 @@ import type { ChainSecurityHomeModel } from "@/lib/chain-security";
 import { loadRoundtableHome } from "@/lib/roundtable-store";
 import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { isPublicMode } from "@/lib/public-mode-server";
+import { privateHomeNodeCount } from "@/lib/home-faces";
 import { thisWeekItems } from "@/lib/this-week";
 
 export const dynamic = "force-dynamic";
@@ -132,7 +133,12 @@ export default async function Home() {
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={floor.storageDetail}>
       <ThisWeek items={thisWeekItems(calendar.events, asOf, fightLinkTargets(bets, calendar.events))} />
-      <NodeFaceGrid>
+      <NodeFaceGrid
+        count={privateHomeNodeCount({
+          owner: session?.role === "owner",
+          health: healthHome !== null,
+        })}
+      >
       <ParentGrid
         faceTotals={faceTotals}
         fightDesk={floor.fightDesk}
