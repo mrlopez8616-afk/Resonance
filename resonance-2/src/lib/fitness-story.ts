@@ -865,7 +865,7 @@ function runBars(runs: readonly RunSample[], range: StoryRange, today: string): 
 }
 
 function recentRuns(runs: readonly RunSample[], manuals: readonly ManualSummary[], today: string): StoryRun[] {
-  const listed: StoryRun[] = runs
+  const listed: (StoryRun & { day: string })[] = runs
     .filter((run) => run.kind === "run" && run.day <= today)
     .map((run) => {
       const pace = run.miles !== null && run.durationSec !== null ? formatPaceSeconds(run.durationSec / run.miles) : null;
