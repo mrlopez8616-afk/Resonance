@@ -219,6 +219,13 @@ function marked(value: string, approx: boolean): string {
   return approx ? `~${value}` : value;
 }
 
+/** A tilde means the whole figure was written down. A mix keeps the number plain and says approx beside the source. */
+function tilde(value: string, approx: boolean, sources: readonly string[]): string {
+  const names = sortSources(sources);
+  if (!approx || names.length === 0 || names.some((name) => name !== "Manual import")) return value;
+  return marked(value, true);
+}
+
 function daysIn(start: string, end: string): string[] {
   const days: string[] = [];
   for (let day = start; day <= end; day = addCivilDays(day, 1)) days.push(day);
@@ -480,6 +487,7 @@ type MilesMerge = {
   updated: { day: string; at: string | null; clock: boolean }[];
   paceUpdated: { day: string; at: string | null; clock: boolean }[];
   approx: boolean;
+  runsApprox: boolean;
   paceApprox: boolean;
   longestApprox: boolean;
   aside: string | null;
@@ -527,6 +535,7 @@ function mergeMiles(
     .filter((run) => run.miles !== null && run.durationSec !== null)
     .map(runStamp);
   let approx = false;
+  let runsApprox = false;
   let paceApprox = false;
   let longestApprox = false;
   let aside = false;
@@ -555,6 +564,11 @@ function mergeMiles(
         longestApprox = entry.approx;
         longestSource = ["Manual import"];
       }
+      if (entry.periodStart === entry.periodEnd) {
+        runCount += 1;
+        runsSeen = true;
+        runsApprox = runsApprox || entry.approx;
+      }
       uses.set(entry.id, "used");
       continue;
     }
@@ -568,9 +582,9 @@ function mergeMiles(
       }
       runCount += extra;
       runsSeen = true;
+      runsApprox = runsApprox || entry.approx;
       for (const day of daysIn(entry.periodStart, entry.periodEnd)) runDays.add(day);
       sources.push("Manual import");
-      approx = approx || entry.approx;
       uses.set(entry.id, "used");
       continue;
     }
@@ -610,6 +624,7 @@ function mergeMiles(
     updated,
     paceUpdated,
     approx,
+    runsApprox,
     paceApprox,
     longestApprox,
     aside: aside ? asideSentence(keptSources) : null,
@@ -715,7 +730,7 @@ function buildPeriod(
     ? null
     : metaLine([
         fromSources(mileMerge.sources),
-        mileMerge.approx ? "approx" : null,
+        mileMerge.runsApprox ? "approx" : null,
         describeUpdated(mileMerge.updated),
       ]);
   const mileMeta = mileMerge.miles === null
@@ -746,28 +761,30 @@ function buildPeriod(
     figure(
       "average-steps",
       "Average steps",
-      stepMerge.average === null ? NOT_RECORDED : marked(formatCount(stepMerge.average), stepMerge.approx),
+      stepMerge.average === null ? NOT_RECORDED : tilde(formatCount(stepMerge.average), stepMerge.approx, stepMerge.sources),
       stepMeta,
       publicMode,
     ),
     figure(
       "runs",
       "Runs",
-      mileMerge.runs === null ? NOT_RECORDED : marked(formatCount(mileMerge.runs), mileMerge.approx),
+      mileMerge.runs === null ? NOT_RECORDED : tilde(formatCount(mileMerge.runs), mileMerge.runsApprox, mileMerge.sources),
       runMeta,
       publicMode,
     ),
     figure(
       "miles",
       "Miles",
-      mileMerge.miles === null ? NOT_RECORDED : marked(formatMiles(mileMerge.miles), mileMerge.approx),
+      mileMerge.miles === null ? NOT_RECORDED : tilde(formatMiles(mileMerge.miles), mileMerge.approx, mileMerge.sources),
       mileMeta,
       publicMode,
     ),
     figure(
       "pace",
       "Average pace",
-      mileMerge.pace === null ? NOT_RECORDED : marked(formatPaceSeconds(mileMerge.pace) ?? NOT_RECORDED, mileMerge.paceApprox),
+      mileMerge.pace === null
+        ? NOT_RECORDED
+        : tilde(formatPaceSeconds(mileMerge.pace) ?? NOT_RECORDED, mileMerge.paceApprox, mileMerge.paceSources),
       paceMeta,
       publicMode,
     ),
@@ -781,7 +798,9 @@ function buildPeriod(
     figure(
       "longest-run",
       "Longest run",
-      mileMerge.longest === null ? NOT_RECORDED : marked(formatMiles(mileMerge.longest), mileMerge.longestApprox),
+      mileMerge.longest === null
+        ? NOT_RECORDED
+        : tilde(formatMiles(mileMerge.longest), mileMerge.longestApprox, mileMerge.longestSource),
       longestMeta,
       publicMode,
     ),

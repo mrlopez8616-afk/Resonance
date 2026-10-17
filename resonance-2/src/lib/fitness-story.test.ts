@@ -187,6 +187,7 @@ describe("fitness story", () => {
     assert.match(figure(written, "week", "average-steps").meta ?? "", /Manual import/);
     assert.equal(written.steps.bars.length, 0);
     assert.equal(figure(written, "month", "average-steps").value, "~11,451");
+    assert.match(figure(written, "month", "average-steps").meta ?? "", /approx/);
     assert.match(figure(written, "month", "average-steps").meta ?? "", /Apple Health|Manual import/);
   });
 
@@ -299,7 +300,7 @@ describe("fitness story", () => {
       stepsRange: "w",
       runsRange: "w",
     });
-    assert.equal(figure(story, "week", "average-steps").value, "~7,333");
+    assert.equal(figure(story, "week", "average-steps").value, "7,333");
     assert.match(figure(story, "week", "average-steps").meta ?? "", /Apple Health and Manual import/);
     assert.match(figure(story, "week", "average-steps").meta ?? "", /approx/);
     assert.equal(figure(story, "week", "miles").value, "~6.0 mi");
