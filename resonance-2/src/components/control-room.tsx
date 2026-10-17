@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { NodeFace } from "@/components/node-face";
 import { NodeSquare } from "@/components/node-square";
+import { controlHomeFace } from "@/lib/home-faces";
 import {
   FEED_THRESHOLD_LINE,
   NO_SIGNAL,
@@ -12,25 +14,16 @@ import {
   type ControlView,
 } from "@/lib/control-room";
 
-export function ControlHomeCard({ lines, live }: { lines: readonly string[]; live: boolean }) {
-  return (
-    <section className="control-home" aria-label="Control Room">
-      <NodeSquare parent home live={live} dashed={!live} label="Control Room">
-        <Link href="/n/control" className="node-log-link" title="Open Control Room">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">Control Room</h2>
-            {lines.length > 0 ? (
-              <ul className="parent-lines">
-                {lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+export function ControlHomeCard({
+  lines,
+  live,
+  publicMode = false,
+}: {
+  lines: readonly string[];
+  live: boolean;
+  publicMode?: boolean;
+}) {
+  return <NodeFace face={controlHomeFace(lines, live, publicMode)} />;
 }
 
 export function ControlParent({ view, now }: { view: ControlRoomView; now: Date }) {

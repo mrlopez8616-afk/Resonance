@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { NodeFace } from "@/components/node-face";
 import { NodeSquare } from "@/components/node-square";
+import { chainHomeFace } from "@/lib/home-faces";
 import {
-  CHAIN_SECURITY_HREF,
   type ChainSecurityFeed,
   type ChainSecurityHomeModel,
   type ExposureWatch,
@@ -55,31 +56,14 @@ function ExposureCard({ watches }: { watches: readonly ExposureWatch[] }) {
   );
 }
 
-export function ChainSecurityHomeCard({ card }: { card: ChainSecurityHomeModel }) {
-  const empty = card.unavailable || card.count === 0;
-  return (
-    <section className="control-home" aria-label="Chain Security">
-      <NodeSquare parent home live={!empty} dashed={empty} label="Chain Security">
-        <Link href={CHAIN_SECURITY_HREF} className="node-log-link" title="Open Chain Security">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">Chain Security</h2>
-            {card.unavailable ? (
-              <p className="node-note">unavailable</p>
-            ) : (
-              <p className="live-units">{card.count}</p>
-            )}
-            {card.lines.length > 0 ? (
-              <ul className="parent-lines">
-                {card.lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+export function ChainSecurityHomeCard({
+  card,
+  publicMode = false,
+}: {
+  card: ChainSecurityHomeModel;
+  publicMode?: boolean;
+}) {
+  return <NodeFace face={chainHomeFace(card, publicMode)} />;
 }
 
 export function ChainSecurityFloor({ feed }: { feed: ChainSecurityFeed }) {

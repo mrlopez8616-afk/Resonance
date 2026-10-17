@@ -379,7 +379,10 @@ describe("lot bars", () => {
     assert.equal(book.includes("PositionChartView"), false);
     assert.equal(book.includes("position-mark"), false);
     assert.equal(book.includes("<circle"), false);
-    assert.equal(home.includes("home-visuals"), true);
+    assert.equal(parentPage.includes("home-visuals"), true);
+    assert.match(home, /NodeFaceGrid/);
+    assert.equal(home.includes("PositionChartView"), false);
+    assert.equal(home.includes("IndexChart"), false);
     const floor = readFileSync(`${root}/components/public-floor.tsx`, "utf8");
     const holdingFace = floor.slice(
       floor.indexOf("export function PublicHoldingFace"),
@@ -531,7 +534,9 @@ describe("lot bars", () => {
     assert.equal(groupFloor.includes("priceSpark"), false);
     assert.equal(groupFloor.includes("price-spark"), false);
     assert.equal(groupFloor.includes("IndexChart"), false);
-    assert.match(home, /home-visuals/);
+    assert.match(parentPage, /home-visuals/);
+    assert.match(home, /NodeFaceGrid/);
+    assert.equal(home.includes("AiChangeVisual"), false);
   });
 
   it("filters the chart by the Chicago buy window and leaves an empty range blank", () => {

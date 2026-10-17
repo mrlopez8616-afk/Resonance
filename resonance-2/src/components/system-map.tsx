@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
+import { NodeFace } from "@/components/node-face";
+import { systemHomeFace } from "@/lib/home-faces";
 import {
   DATA_SOURCES,
   GOVERNANCE,
   MONEY_FLOW,
   SYSTEM_AGENTS,
   SYSTEM_FEED,
-  SYSTEM_HOME_LINE,
   SYSTEM_LENSES,
   SYSTEM_NODES,
   SYSTEM_PAGE,
@@ -247,16 +247,5 @@ export function SystemMap({ lens }: { lens: SystemLensId }) {
 }
 
 export function SystemHomeCard() {
-  return (
-    <section className={styles.home} aria-label="System">
-      <NodeSquare parent home live label="System">
-        <Link href="/n/system" className="node-log-link" title="Open System">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">System</h2>
-            <p className={styles.homeLine}>{SYSTEM_HOME_LINE}</p>
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+  return <NodeFace face={systemHomeFace(SYSTEM_AGENTS.length, SYSTEM_NODES.length)} />;
 }

@@ -93,16 +93,26 @@ export function BuildParent({
   totalPercent,
   githubFresh,
   sections,
+  notes = [],
 }: {
   totalPercent: number | null;
   githubFresh: boolean;
   sections: readonly BuildSectionView[];
+  /** Home-tile lines that do not fit the one status slot, such as the next queued title. */
+  notes?: readonly string[];
 }) {
   return (
     <div className={`build-floor ${styles.floor}`}>
       <header className={styles.heading}>
         <p className={styles.total}>{totalPercent === null ? "—" : `${totalPercent}%`}</p>
         <p className={styles.totalNote}>complete</p>
+        {notes.length > 0 ? (
+          <ul className="parent-lines">
+            {notes.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
       </header>
       {githubFresh ? null : (
         <p className={styles.note}>GitHub didn&apos;t answer. Showing the last stored steps.</p>

@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
-import { FitnessGrid } from "@/components/fitness-grid";
+import { FitnessGrid, FitnessWeekPanel } from "@/components/fitness-grid";
 import { FitnessTokenCopy } from "@/components/fitness-token-copy";
 import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
+import { ParentGlance } from "@/components/parent-glance";
 import { PositionRollupView } from "@/components/position-book";
 import { PublicFightRecord, PublicGroupFloor } from "@/components/public-floor";
 import { PrivatePage } from "@/components/private-notice";
@@ -14,14 +15,23 @@ import { PredictionsFloor } from "@/components/predictions-floor";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadPublicFloor } from "@/lib/public-load";
-import { publicRecordLabel, scrubTextFields } from "@/lib/public-mode";
+import { hasMoneyText, publicRecordLabel, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
-import { loadFitnessCards } from "@/lib/fitness-store";
+import { loadFitnessCards, loadFitnessHome } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { holdingChildModel, type ChildCardModel } from "@/lib/child-card";
-import { CRYPTO_HOME_TICKERS, nextTickerCatalystLine } from "@/lib/home-lines";
+import {
+  CRYPTO_HOME_TICKERS,
+  aiChangeBars,
+  cryptoChangeBars,
+  fitnessSecondaryLines,
+  nextCryptoCatalystLine,
+  nextTickerCatalystLine,
+  type HomeMove,
+} from "@/lib/home-lines";
+import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
 import { barsFromOpenLots, type LotBarModel } from "@/lib/lot-bars";
 import { parseLotRangeQuery } from "@/lib/lot-range";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
@@ -31,7 +41,7 @@ import { isPublicMode } from "@/lib/public-mode-server";
 import { loadCryptoCloses, loadEquityCloses, loadXrpTriggerCloses } from "@/lib/price-history";
 import { evaluateXrpTrigger } from "@/lib/xrp-trigger";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
-import { loadCalendarForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { valueCardFromFace } from "@/lib/value-card";
 
@@ -85,21 +95,32 @@ export default async function ParentNodePage({
     if (parent.id === "crypto" || parent.id === "ai-stocks") {
       const [floor, calendar, triggerCloses] = await Promise.all([
         loadPublicFloor(),
-        parent.id === "ai-stocks" ? loadCalendarForPage() : Promise.resolve(null),
+        loadCalendarForPage(),
         parent.id === "crypto" ? loadXrpTriggerCloses() : Promise.resolve(null),
       ]);
       const group = parent.id === "crypto" ? floor.model.crypto : floor.model.aiStocks;
+      const now = new Date();
+      const catalyst =
+        parent.id === "crypto" ? nextCryptoCatalystLine(calendar.events, now) : null;
+      const safeCatalyst = catalyst && !hasMoneyText(catalyst) ? catalyst : null;
       const trigger =
         parent.id === "crypto" ? (
-          <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], new Date())} publicMode />
+          <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], now)} publicMode />
         ) : null;
       return (
         <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
           <Link href="/" className="calendar-back">
             Floor
           </Link>
-          {calendar ? (
-            <CatalystEntry events={calendar.events.map((event) => scrubTextFields(event))} now={new Date()} />
+          {parent.id === "ai-stocks" ? (
+            <CatalystEntry events={calendar.events.map((event) => scrubTextFields(event))} now={now} />
+          ) : null}
+          {safeCatalyst ? (
+            <p className="parent-retiring">
+              <Link href="/calendar" className="parent-line-link">
+                {safeCatalyst}
+              </Link>
+            </p>
           ) : null}
           <PublicGroupFloor
             group={group}
@@ -114,20 +135,35 @@ export default async function ParentNodePage({
     }
   }
 
-  if (parent.id === "fight-desk") {
-    const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
-    return (
-      <OperatorShell
-        storageMessage={
-          floor.storageMessage ??
-          (bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
-        }
-        storageDetail={floor.storageDetail ?? bankroll.storageDetail}
-      >
-        <PredictionsFloor ledger={bankroll.ledger} />
-      </OperatorShell>
-    );
-  }
+    if (parent.id === "fight-desk") {
+      const [floor, bankroll, calendar, book] = await Promise.all([
+        loadOperatorFloor(),
+        loadBankroll(),
+        loadCalendarForPage(),
+        loadBetsForPage(),
+      ]);
+      const bets = book.status === "unavailable" ? [] : book.bets;
+      const ledger = bankroll.ledger;
+      return (
+        <OperatorShell
+          storageMessage={
+            floor.storageMessage ??
+            (bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+          }
+          storageDetail={floor.storageDetail ?? bankroll.storageDetail}
+        >
+          <PredictionsFloor
+            ledger={ledger}
+            segments={
+              ledger
+                ? predictionsTierBar(ledger.tiers.map((tier) => ({ id: tier.id, atRiskLabel: tier.atRiskLabel })))
+                : null
+            }
+            bankrollLine={inScopeBankrollPoints(bets, calendar.events)}
+          />
+        </OperatorShell>
+      );
+    }
 
   if (parent.id === "finance") {
     await requireRole("owner");
@@ -154,11 +190,15 @@ export default async function ParentNodePage({
 
   if (parent.id === "fitness") {
     await requireRole("owner");
-    const [floor, fitness, publicMode] = await Promise.all([
+    const [floor, fitness, home, publicMode] = await Promise.all([
       loadOperatorFloor(),
       loadFitnessCards(),
+      loadFitnessHome(),
       isPublicMode(),
     ]);
+    const weekLines = fitnessSecondaryLines(home.week, home.line).filter(
+      (line) => !(publicMode && hasMoneyText(line)),
+    );
     return (
       <OperatorShell
         storageMessage={
@@ -170,6 +210,7 @@ export default async function ParentNodePage({
         <Link href="/" className="calendar-back">
           Floor
         </Link>
+        <FitnessWeekPanel lines={weekLines} slots={fitnessStepBars(home.stepDays)} />
         <FitnessGrid cards={fitness.cards} />
         {publicMode ? null : (
           <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
@@ -230,7 +271,20 @@ export default async function ParentNodePage({
     }
   }
   const lotTickers = parent.id === "crypto" ? CRYPTO_HOME_TICKERS : parent.id === "ai-stocks" ? AI_STOCK_TICKERS : [];
-  const today = yahooSessionDay(Date.now() / 1000) ?? "";
+  const glanceBars =
+    parent.id === "crypto"
+      ? cryptoChangeBars(
+          CRYPTO_HOME_TICKERS.map((ticker) => quoteMove(ticker, floor.spotQuotes[ticker])),
+          now,
+        )
+      : parent.id === "ai-stocks"
+        ? aiChangeBars(
+            AI_STOCK_TICKERS.map((ticker) => quoteMove(ticker, floor.equityQuotes[ticker])),
+            now,
+          )
+        : null;
+  const cryptoCatalyst = parent.id === "crypto" ? nextCryptoCatalystLine(events, now) : null;
+  const today = yahooSessionDay(now.getTime() / 1000) ?? "";
   const lotBars: Record<string, LotBarModel | null> = {};
   if (book && dated) {
     for (const ticker of lotTickers) {
@@ -254,6 +308,7 @@ export default async function ParentNodePage({
       </Link>
       {retiring ? <p className="parent-retiring">{retiring}</p> : null}
       {parent.id === "ai-stocks" ? <CatalystEntry events={events} now={now} /> : null}
+      <ParentGlance bars={glanceBars} catalyst={cryptoCatalyst} catalystHref="/calendar" />
       <NodeGrid
         parentId={parent.id}
         parentLabel={parent.label}
@@ -292,6 +347,18 @@ export default async function ParentNodePage({
 }
 
 /** One bar per open lot with a real entry and P/L. Unknown entry stays off the card. */
+function quoteMove(
+  ticker: string,
+  quote: { change24hPct?: number | null; fetchedAt?: string | null } | null | undefined,
+): HomeMove {
+  return {
+    id: ticker.toLowerCase(),
+    ticker,
+    changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
+    fetchedAt: quote?.fetchedAt ?? null,
+  };
+}
+
 function compactCardLots(
   ticker: string,
   fills: readonly LedgerFill[],

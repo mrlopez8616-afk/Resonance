@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { NodeFace } from "@/components/node-face";
 import { NodeSquare } from "@/components/node-square";
+import { youtubeHomeFace } from "@/lib/home-faces";
 import {
   YOUTUBE_GEAR,
   YOUTUBE_GEAR_SOURCE,
-  YOUTUBE_HREF,
   channelStatRows,
   gearFields,
   gearHref,
@@ -14,23 +15,7 @@ import {
 } from "@/lib/youtube-node";
 
 export function YouTubeHomeCard() {
-  const lines = youtubeHomeLines();
-  return (
-    <section className="control-home" aria-label="YouTube">
-      <NodeSquare parent home live label="YouTube">
-        <Link href={YOUTUBE_HREF} className="node-log-link" title="Open YouTube">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">YouTube</h2>
-            <ul className="parent-lines">
-              {lines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+  return <NodeFace face={youtubeHomeFace(youtubeHomeLines())} />;
 }
 
 export function YouTubeParent({ brick }: { brick?: YouTubeBrickCard }) {

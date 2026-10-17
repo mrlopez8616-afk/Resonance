@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSyncExternalStore } from "react";
-import { NodeSquare } from "@/components/node-square";
-import { ValueCard } from "@/components/value-card";
+import { NodeFace } from "@/components/node-face";
 import { PARENTS, type ParentId } from "@/data/node-parents";
 import type { FightDeskSummary } from "@/lib/bets";
 import type { FitnessHomeLine, FitnessWeekFacts } from "@/lib/fitness-board";
@@ -13,74 +10,23 @@ import {
   parseHiddenIds,
   subscribeHiddenIds,
 } from "@/lib/floor-registry";
-import { AiChangeVisual, FitnessStepVisual, PredictionsVisual } from "@/components/home-visual";
 import {
-  aiStockSecondaryLines,
-  aiChangeBars,
-  cryptoChangeBars,
-  cryptoHomeSecondaryLines,
-  cryptoSecondaryLines,
-  FINANCE_HOME_LABEL,
+  bookHomeFace,
+  buildHomeFace,
+  fightHomeFace,
+  financeHomeFaceTile,
+  fitnessHomeFace,
+} from "@/lib/home-faces";
+import {
   fitnessSecondaryLines,
   predictionsHeadline,
-  predictionsSecondaryLines,
+  topMoverLine,
   visibleHomeMoves,
   type HomeMove,
-  type HomeQuote,
-  type PredictionsHomeFacts,
 } from "@/lib/home-lines";
-import { XRP_TRIGGER_HREF } from "@/lib/xrp-trigger";
 import type { FinanceHomeFace } from "@/lib/finance/view";
-import type { StepSlot, TierSegment } from "@/lib/home-visuals";
-import { CATALYST_CALENDAR_HREF } from "@/lib/catalyst-calendar";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
-
-function ParentLines({ lines }: { lines: readonly string[] }) {
-  if (lines.length === 0) return null;
-  return (
-    <ul className="parent-lines">
-      {lines.map((line) => (
-        <li key={line}>{line}</li>
-      ))}
-    </ul>
-  );
-}
-
-function linesFor(
-  parentId: ParentId,
-  input: {
-    hiddenIds: readonly string[];
-    asOf: Date;
-    moves: readonly HomeMove[];
-    cryptoMoves: readonly HomeMove[];
-    catalystLine: string | null;
-    cryptoCatalystLine: string | null;
-    retiringLine: string | null;
-    fitnessWeek: FitnessWeekFacts | null;
-    fitnessLine: FitnessHomeLine | null;
-    predictions: PredictionsHomeFacts | null;
-  },
-): string[] {
-  if (parentId === "crypto") {
-    return cryptoHomeSecondaryLines({
-      moves: visibleHomeMoves(input.cryptoMoves, input.hiddenIds),
-      catalystLine: input.cryptoCatalystLine,
-      now: input.asOf,
-    });
-  }
-  if (parentId === "ai-stocks") {
-    return aiStockSecondaryLines({
-      moves: visibleHomeMoves(input.moves, input.hiddenIds),
-      catalystLine: input.catalystLine,
-      retiringLine: input.retiringLine,
-      now: input.asOf,
-    });
-  }
-  if (parentId === "fitness") return fitnessSecondaryLines(input.fitnessWeek, input.fitnessLine);
-  if (parentId === "finance") return [];
-  if (parentId === "fight-desk") return predictionsSecondaryLines(input.predictions);
-  return [];
-}
+import { useSyncExternalStore } from "react";
 
 export function ParentGrid({
   faceTotals,
@@ -89,16 +35,8 @@ export function ParentGrid({
   fitnessLine = null,
   fitnessWeek = null,
   bankroll = null,
-  predictions = null,
   moves = [],
   cryptoMoves = [],
-  xrpQuote = null,
-  catalystLine = null,
-  cryptoCatalystLine = null,
-  retiringLine = null,
-  stepSlots = null,
-  tierBar = null,
-  bankrollLine = null,
   financeHome = null,
   asOf,
   buildHome = null,
@@ -106,25 +44,14 @@ export function ParentGrid({
   faceTotals: FaceTotals;
   fightDesk: FightDeskSummary | null;
   fightDeskAvailability?: "live" | "seed-only" | "unavailable";
-  /** One real fitness line. Null keeps the card on "not connected yet" unless a week line exists. */
+  /** One real fitness line. Null keeps the card on "not connected" unless a week line exists. */
   fitnessLine?: FitnessHomeLine | null;
   fitnessWeek?: FitnessWeekFacts | null;
   /** Fight Desk bankroll headline. Null when the bet book cannot be read. */
   bankroll?: { headline: string; priceLine: string } | null;
-  predictions?: PredictionsHomeFacts | null;
   moves?: readonly HomeMove[];
   /** XRP and SUI day changes from the same spot quotes the crypto faces already use. */
   cryptoMoves?: readonly HomeMove[];
-  /** Live XRP quote already loaded for the floor. Feeds the $1.55 close line. */
-  xrpQuote?: HomeQuote | null;
-  catalystLine?: string | null;
-  /** Next crypto calendar or catalyst line. Null when none is upcoming. */
-  cryptoCatalystLine?: string | null;
-  /** Retired AI names that still have shares. Null when both books are closed. */
-  retiringLine?: string | null;
-  stepSlots?: readonly StepSlot[] | null;
-  tierBar?: readonly TierSegment[] | null;
-  bankrollLine?: readonly number[] | null;
   /** Owner snapshot only. Null keeps the static private label. */
   financeHome?: FinanceHomeFace | null;
   /** Render instant. Quote age is measured from this, so server and client agree. */
@@ -132,221 +59,82 @@ export function ParentGrid({
   /** Build tracker headline. Null percent means the checklist could not be read. */
   buildHome?: { unavailable: boolean; percentLabel: string | null; lines: readonly string[] } | null;
 }) {
-  const hiddenRaw = useSyncExternalStore(
-    subscribeHiddenIds,
-    hiddenIdsSnapshot,
-    hiddenIdsServerSnapshot,
-  );
+  const hiddenRaw = useSyncExternalStore(subscribeHiddenIds, hiddenIdsSnapshot, hiddenIdsServerSnapshot);
   const hiddenIds = parseHiddenIds(hiddenRaw);
   const asOfDate = new Date(asOf);
-  const changeBars = aiChangeBars(visibleHomeMoves(moves, hiddenIds), asOfDate);
-  const cryptoBars = cryptoChangeBars(visibleHomeMoves(cryptoMoves, hiddenIds), asOfDate);
-  const closeLine =
-    cryptoSecondaryLines(xrpQuote, asOfDate).find((line) => line.startsWith("$1.55 close:")) ?? null;
+  const cryptoMover = topMoverLine(visibleHomeMoves(cryptoMoves, hiddenIds), asOfDate);
+  const stockMover = topMoverLine(visibleHomeMoves(moves, hiddenIds), asOfDate);
 
   return (
-    <section className="node-grid home-floor" aria-label="Node floor">
+    <>
       {PARENTS.map((parent) => {
-        const lines = linesFor(parent.id, {
-          hiddenIds,
-          asOf: asOfDate,
-          moves,
-          cryptoMoves,
-          catalystLine,
-          cryptoCatalystLine,
-          retiringLine,
-          fitnessWeek,
-          fitnessLine,
-          predictions,
-        });
         if (parent.id === "finance") {
-          return (
-            <NodeSquare
-              key={parent.id}
-              parent
-              home
-              live={financeHome !== null}
-              dashed={financeHome === null}
-              label={parent.label}
-            >
-              <Link
-                href={parentCardHref(parent.id)}
-                className="node-log-link"
-                title={`Open ${parent.label}`}
-              >
-                {financeHome ? (
-                  <ValueCard
-                    ticker={parent.label}
-                    compact
-                    model={{ headline: financeHome.headline, priceLine: financeHome.asOfLine, label: null }}
-                  />
-                ) : (
-                  <div className="live-face parent-face">
-                    <h2 className="node-ticker">{parent.label}</h2>
-                    <p className="live-units finance-status">{FINANCE_HOME_LABEL}</p>
-                  </div>
-                )}
-              </Link>
-            </NodeSquare>
-          );
+          return <NodeFace key={parent.id} face={financeHomeFaceTile(financeHome)} />;
         }
         if (parent.id === "fight-desk") {
-          const headline = bankroll ? predictionsHeadline(bankroll.headline) : null;
-          const live = bankroll !== null && (headline !== null || lines.length > 0);
-          return (
-            <NodeSquare
-              key={parent.id}
-              parent
-              home
-              live={live}
-              dashed={!live}
-              label={parent.label}
-            >
-              <Link
-                href={parentCardHref(parent.id)}
-                className="node-log-link"
-                title={`Open ${parent.label}`}
-              >
-                {live ? (
-                  <ValueCard
-                    ticker={parent.label}
-                    compact
-                    model={{ headline, priceLine: null, label: null }}
-                  >
-                    <ParentLines lines={lines} />
-                    <PredictionsVisual segments={tierBar} bankroll={bankrollLine} />
-                  </ValueCard>
-                ) : (
-                  <div className="live-face parent-face">
-                    <h2 className="node-ticker">{parent.label}</h2>
-                    <p className="node-note">unavailable</p>
-                  </div>
-                )}
-              </Link>
-            </NodeSquare>
-          );
+          const face = fightHomeFace({
+            publicMode: false,
+            headline: bankroll ? predictionsHeadline(bankroll.headline) : null,
+            priceLine: bankroll?.priceLine ?? null,
+            record: null,
+          });
+          return face ? <NodeFace key={parent.id} face={face} /> : null;
         }
-        const aggregate = parentAggregate(
-          parent.id,
-          hiddenIds,
-          faceTotals,
-          fightDesk,
-          fightDeskAvailability,
-        );
-        const summary =
-          parent.id === "fitness" && fitnessLine
-            ? { value: fitnessLine.value, unit: fitnessLine.unit, coverage: false }
-            : parentSummaryLine(aggregate);
-        const connected =
-          parent.id === "fitness"
-            ? fitnessLine !== null || lines.length > 0
-            : aggregate.connected;
-        const showNote = !summary && lines.length === 0;
-        const dayBars =
-          parent.id === "crypto" ? cryptoBars : parent.id === "ai-stocks" ? changeBars : null;
-        const visual = dayBars ? (
-          <AiChangeVisual bars={dayBars} />
-        ) : parent.id === "fitness" && stepSlots ? (
-          <FitnessStepVisual slots={stepSlots} />
-        ) : null;
-        const href = parentCardHref(parent.id);
-        const headline = (
-          <>
-            <h2 className="node-ticker">{parent.label}</h2>
-            {summary ? (
-              <p className={`live-units${summary.coverage ? " is-coverage" : ""}`}>
-                {summary.value}
-                {summary.unit ? <span> {summary.unit}</span> : null}
-              </p>
-            ) : showNote ? (
-              <p className="node-note">not connected yet</p>
-            ) : null}
-          </>
-        );
-        if (parent.id === "ai-stocks") {
-          const catalyst = catalystLine?.trim() ? catalystLine : null;
-          const index = catalyst ? lines.indexOf(catalyst) : -1;
-          const before = index >= 0 ? lines.slice(0, index) : lines;
-          const after = index >= 0 ? lines.slice(index + 1) : [];
+        if (parent.id === "fitness") {
           return (
-            <NodeSquare
+            <NodeFace
               key={parent.id}
-              parent
-              home
-              wide
-              live={connected}
-              dashed={!connected}
-              label={parent.label}
-            >
-              <div className="live-face parent-face">
-                <Link href={href} className="node-log-link" title={`Open ${parent.label}`}>
-                  {headline}
-                  <ParentLines lines={before} />
-                </Link>
-                {catalyst ? (
-                  <ul className="parent-lines">
-                    <li>
-                      <Link href={CATALYST_CALENDAR_HREF} className="parent-line-link">
-                        {catalyst}
-                      </Link>
-                    </li>
-                  </ul>
-                ) : null}
-                {after.length > 0 || visual ? (
-                  <Link href={href} className="node-log-link" title={`Open ${parent.label}`}>
-                    <ParentLines lines={after} />
-                    {visual}
-                  </Link>
-                ) : null}
-              </div>
-            </NodeSquare>
+              face={fitnessHomeFace({
+                value: fitnessLine?.value ?? null,
+                unit: fitnessLine?.unit ?? null,
+                lines: fitnessSecondaryLines(fitnessWeek, fitnessLine),
+                publicMode: false,
+              })}
+            />
           );
         }
         return (
-          <NodeSquare
+          <NodeFace
             key={parent.id}
-            parent
-            home
-            live={connected}
-            dashed={!connected}
-            label={parent.label}
-          >
-            <Link href={href} className="node-log-link" title={`Open ${parent.label}`}>
-              <div className="live-face parent-face">
-                {headline}
-                <ParentLines lines={lines} />
-                {visual}
-              </div>
-            </Link>
-            {parent.id === "crypto" && closeLine ? (
-              <Link href={XRP_TRIGGER_HREF} className="parent-line-link">
-                {closeLine}
-              </Link>
-            ) : null}
-          </NodeSquare>
+            face={bookFace(parent.id, parent.label, hiddenIds, faceTotals, fightDesk, fightDeskAvailability, {
+              crypto: cryptoMover,
+              stocks: stockMover,
+            })}
+          />
         );
       })}
       {buildHome ? (
-        <NodeSquare
-          parent
-          home
-          live={!buildHome.unavailable && buildHome.percentLabel !== null}
-          dashed={buildHome.unavailable || buildHome.percentLabel === null}
-          label="Build"
-        >
-          <Link href="/n/build" className="node-log-link" title="Open Build">
-            <div className="live-face parent-face">
-              <h2 className="node-ticker">Build</h2>
-              {buildHome.unavailable || buildHome.percentLabel === null ? (
-                <p className="node-note">unavailable</p>
-              ) : (
-                <p className="live-units">{buildHome.percentLabel}</p>
-              )}
-              <ParentLines lines={buildHome.lines} />
-            </div>
-          </Link>
-        </NodeSquare>
+        <NodeFace
+          face={buildHomeFace({
+            unavailable: buildHome.unavailable,
+            percentLabel: buildHome.percentLabel,
+            lines: buildHome.lines,
+            publicMode: false,
+          })}
+        />
       ) : null}
-    </section>
+    </>
   );
+}
+
+function bookFace(
+  parentId: ParentId,
+  label: string,
+  hiddenIds: readonly string[],
+  faceTotals: FaceTotals,
+  fightDesk: FightDeskSummary | null,
+  fightDeskAvailability: "live" | "seed-only" | "unavailable",
+  movers: { crypto: string | null; stocks: string | null },
+) {
+  const aggregate = parentAggregate(parentId, hiddenIds, faceTotals, fightDesk, fightDeskAvailability);
+  const id = parentId === "crypto" ? "crypto" : "ai-stocks";
+  return bookHomeFace({
+    id,
+    name: label,
+    href: parentCardHref(parentId),
+    publicMode: false,
+    summary: parentSummaryLine(aggregate),
+    connected: aggregate.connected,
+    mover: id === "crypto" ? movers.crypto : movers.stocks,
+  });
 }

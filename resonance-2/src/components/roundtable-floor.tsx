@@ -1,39 +1,15 @@
 import Link from "next/link";
+import { NodeFace } from "@/components/node-face";
 import { NodeSquare } from "@/components/node-square";
+import { roundtableHomeFace } from "@/lib/home-faces";
 import {
   ROUNDTABLE_EMPTY,
-  ROUNDTABLE_HREF,
   type RoundtableCard,
   type RoundtableHomeModel,
 } from "@/lib/roundtable";
 
 export function RoundtableHomeCard({ card }: { card: RoundtableHomeModel }) {
-  const empty = card.unavailable || card.count === 0;
-  return (
-    <section className="control-home" aria-label="Roundtable">
-      <NodeSquare parent home live={!empty} dashed={empty} label="Roundtable">
-        <Link href={ROUNDTABLE_HREF} className="node-log-link" title="Open Roundtable">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">Roundtable</h2>
-            {card.unavailable ? (
-              <p className="node-note">unavailable</p>
-            ) : card.count === 0 ? (
-              <p className="live-units">{ROUNDTABLE_EMPTY}</p>
-            ) : (
-              <p className="live-units">{card.count}</p>
-            )}
-            {card.count > 0 && card.lines.length > 0 ? (
-              <ul className="parent-lines">
-                {card.lines.map((line, index) => (
-                  <li key={`${line}-${index}`}>{line}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+  return <NodeFace face={roundtableHomeFace(card)} />;
 }
 
 export function RoundtableParent({ cards }: { cards: RoundtableCard[] }) {

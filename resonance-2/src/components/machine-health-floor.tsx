@@ -1,33 +1,13 @@
-import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
-import { healthHomeLines, type MachineHealthReport, type MachineScore } from "@/lib/machine-health";
+import { NodeFace } from "@/components/node-face";
+import { healthHomeFace } from "@/lib/home-faces";
+import { type MachineHealthReport, type MachineScore } from "@/lib/machine-health";
 
 function percentText(percent: number | null): string {
   return percent === null ? "not connected" : `${percent}%`;
 }
 
 export function HealthHomeCard({ report }: { report: MachineHealthReport }) {
-  const lines = healthHomeLines(report);
-  const live = report.percent !== null;
-  return (
-    <section className="control-home" aria-label="Health of the Machine">
-      <NodeSquare parent home live={live} dashed={!live} label="Health">
-        <Link href="/n/health" className="node-log-link" title="Open Health of the Machine">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">Health</h2>
-            <p className="health-home-score">{percentText(report.percent)}</p>
-            {lines.length > 0 ? (
-              <ul className="parent-lines">
-                {lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+  return <NodeFace face={healthHomeFace(report)} />;
 }
 
 function ScoreCard({ score }: { score: MachineScore }) {
