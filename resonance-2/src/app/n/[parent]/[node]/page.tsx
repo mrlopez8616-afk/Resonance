@@ -319,14 +319,28 @@ export default async function NodeDetailPage({
   }
 
   const cryptoChild = node.ticker === "XRP" || node.ticker === "SUI";
-  const [floor, book, dated] = await Promise.all([
+  const [floor, book, dated, calendar] = await Promise.all([
     loadOperatorFloor(),
     cryptoChild ? loadOperatorFills() : Promise.resolve(null),
     cryptoChild ? loadCryptoCloses([node.ticker as "XRP" | "SUI"]) : Promise.resolve(null),
+    cryptoChild ? loadCalendarForPage() : Promise.resolve(null),
   ]);
   const sleeves = sleevesFor(floor, node.ticker);
   const face = floor.faces[node.ticker];
   const ready = Boolean(face && sleeves);
+  const now = new Date();
+  const quote = cryptoChild ? floor.spotQuotes[node.ticker as "XRP" | "SUI"] : null;
+  const detailLines =
+    cryptoChild && face
+      ? holdingChildModel({
+          face,
+          changePct: typeof quote?.change24hPct === "number" ? quote.change24hPct : null,
+          fetchedAt: quote?.fetchedAt ?? null,
+          now,
+          catalyst: nextTickerCatalystLine(calendar?.events ?? [], node.ticker, now),
+          treasury: node.ticker === "XRP",
+        }).lines
+      : [];
 
   return (
     <OperatorShell
@@ -359,6 +373,15 @@ export default async function NodeDetailPage({
           )}
         </NodeSquare>
       </section>
+      {detailLines.length > 0 ? (
+        <ul className="parent-lines">
+          {detailLines.map((line, index) => (
+            <li key={`${line.text}-${index}`} className={line.tone ? `is-${line.tone}` : undefined}>
+              {line.text}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {cryptoChild && book ? (
         <NodePosition
           fills={book.fills}

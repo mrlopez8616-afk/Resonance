@@ -61,6 +61,7 @@ export type RoundtableThreadView = {
   id: string;
   agentName: string;
   title: string;
+  countLabel: string;
   messages: RoundtableMessageView[];
 };
 
@@ -185,6 +186,7 @@ export function presentRoundtableThread(
     id: thread.id,
     agentName: roundtableAgentName(thread.agentId) ?? "Agent",
     title: thread.title.trim(),
+    countLabel: roundtableCountLabel(thread.messageCount),
     messages: thread.messages.map((message) => ({
       id: message.id,
       authorLabel: roundtableAuthorLabel(message.authorKind, message.authorId),

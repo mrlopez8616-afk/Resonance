@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { tileFace } from "@/lib/home-faces";
 import type { CalendarEvent } from "@/data/calendar";
 import {
   CATALYST_CALENDAR_HREF,
@@ -16,26 +17,19 @@ import {
 } from "@/lib/catalyst-calendar";
 
 function CountCard({ bucket }: { bucket: CatalystBucketView }) {
+  const first = bucket.preview[0];
   return (
-    <NodeSquare parent home wide live label={bucket.label}>
-      <Link href={bucket.href} className="node-log-link" title={`Open ${bucket.label}`}>
-        <div className="live-face parent-face">
-          <h2 className="node-ticker">{bucket.label}</h2>
-          <p className="live-units">{bucket.count}</p>
-          {bucket.preview.length > 0 ? (
-            <ul className="parent-lines">
-              {bucket.preview.map((event) => (
-                <li key={event.id}>
-                  {event.when} · {event.title}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="node-note">Nothing scheduled</p>
-          )}
-        </div>
-      </Link>
-    </NodeSquare>
+    <NodeFace
+      face={tileFace({
+        id: bucket.id,
+        glyph: "ai-stocks",
+        href: bucket.href,
+        name: bucket.label,
+        headline: String(bucket.count),
+        status: first ? `${first.when} · ${first.title}` : "Nothing scheduled",
+        live: true,
+      })}
+    />
   );
 }
 
@@ -50,11 +44,11 @@ export function CatalystWeekCards({
     (bucket) => bucket.id !== "later" || bucket.count > 0,
   );
   return (
-    <section className="node-grid home-floor" aria-label="Catalyst weeks">
+    <NodeFaceGrid label="Catalyst weeks">
       {buckets.map((bucket) => (
         <CountCard key={bucket.id} bucket={bucket} />
       ))}
-    </section>
+    </NodeFaceGrid>
   );
 }
 
@@ -68,23 +62,19 @@ export function CatalystEntry({
   const count = catalystUpcomingCount(events, now);
   const line = catalystEntryLine(events, now);
   return (
-    <section className="node-grid home-floor catalyst-entry" aria-label="Catalyst calendar">
-      <NodeSquare parent home wide live label="Catalysts">
-        <Link href={CATALYST_CALENDAR_HREF} className="node-log-link" title="Open Catalysts">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">Catalysts</h2>
-            <p className="live-units">{count}</p>
-            {line ? (
-              <ul className="parent-lines">
-                <li>{line}</li>
-              </ul>
-            ) : (
-              <p className="node-note">Nothing scheduled</p>
-            )}
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
+    <NodeFaceGrid label="Catalyst calendar">
+      <NodeFace
+        face={tileFace({
+          id: "catalysts",
+          glyph: "ai-stocks",
+          href: CATALYST_CALENDAR_HREF,
+          name: "Catalysts",
+          headline: String(count),
+          status: line || "Nothing scheduled",
+          live: true,
+        })}
+      />
+    </NodeFaceGrid>
   );
 }
 

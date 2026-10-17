@@ -1,9 +1,7 @@
-import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
-import { ValueCard } from "@/components/value-card";
-import { CashFlowBars } from "@/components/home-visual";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { formatCivilDate } from "@/lib/calendar-time";
 import { FINANCE_EMPTY_LINE, type FinanceCardModel } from "@/lib/finance/view";
+import { tileFace } from "@/lib/home-faces";
 
 export function FinanceAsOf({ asOf, stale }: { asOf: string; stale: boolean }) {
   return (
@@ -34,38 +32,22 @@ export function FinanceFloor({
   return (
     <>
       <FinanceAsOf asOf={asOf} stale={stale} />
-      <section className="node-grid finance-floor" aria-label="Finance nodes">
-        {cards.map((card) => {
-          const live = card.headline !== null;
-          return (
-            <NodeSquare
-              key={card.id}
-              parent
-              home
-              live={live}
-              dashed={!live}
-              label={`${card.title} node`}
-            >
-              <Link href={card.href} className="node-log-link" title={`Open ${card.title}`}>
-                <ValueCard
-                  ticker={card.title}
-                  compact
-                  model={{ headline: card.headline, priceLine: null, label: null }}
-                >
-                  {card.lines.length > 0 ? (
-                    <ul className="parent-lines">
-                      {card.lines.map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {card.bars && card.bars.length > 0 ? <CashFlowBars months={card.bars} /> : null}
-                </ValueCard>
-              </Link>
-            </NodeSquare>
-          );
-        })}
-      </section>
+      <NodeFaceGrid label="Finance nodes">
+        {cards.map((card) => (
+          <NodeFace
+            key={card.id}
+            face={tileFace({
+              id: card.id,
+              glyph: "finance",
+              href: card.href,
+              name: card.title,
+              headline: card.headline,
+              status: card.lines[0] ?? null,
+              live: card.headline !== null,
+            })}
+          />
+        ))}
+      </NodeFaceGrid>
     </>
   );
 }

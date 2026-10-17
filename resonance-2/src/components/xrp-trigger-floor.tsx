@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
+import { NodeFace } from "@/components/node-face";
+import { tileFace } from "@/lib/home-faces";
 import { formatSpotPrice } from "@/lib/live-face";
 import {
   XRP_TRIGGER_HREF,
@@ -89,18 +89,18 @@ export function XrpTriggerCard({
 }) {
   const title = publicMode ? "Trigger" : "XRP Trigger";
   return (
-    <NodeSquare parent home live label={title}>
-      <Link href={XRP_TRIGGER_HREF} className="node-log-link" title={`Open ${title}`}>
-        <div className="live-face parent-face">
-          <h2 className="node-ticker">{title}</h2>
-          <p className="trigger-state">{view.stateLabel}</p>
-          <ul className="parent-lines">
-            <li>{distanceCopy(view, publicMode)}</li>
-            <li>{`${view.streak} of ${view.holdDays}`}</li>
-          </ul>
-        </div>
-      </Link>
-    </NodeSquare>
+    <NodeFace
+      face={tileFace({
+        id: "xrp-trigger",
+        glyph: "crypto",
+        href: XRP_TRIGGER_HREF,
+        name: title,
+        headline: view.stateLabel,
+        status: `${distanceCopy(view, publicMode)} · ${view.streak} of ${view.holdDays}`,
+        live: true,
+        publicMode,
+      })}
+    />
   );
 }
 

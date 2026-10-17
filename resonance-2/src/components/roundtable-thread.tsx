@@ -7,6 +7,7 @@ export function RoundtableThread({ view }: { view: RoundtableThreadView }) {
       <header className="log-header">
         <p className="log-kicker">{view.agentName}</p>
         <h2 className="log-title">{view.title}</h2>
+        <p className="log-meta">{view.countLabel}</p>
       </header>
       {view.messages.length === 0 ? (
         <p className="parent-empty" role="status">

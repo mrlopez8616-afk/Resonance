@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { LotBarChart } from "@/components/lot-bar-chart";
-import { NodeFace } from "@/components/node-face";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { NodeSquare } from "@/components/node-square";
 import type { BuildHomeCard } from "@/lib/build-tracker";
-import { bookHomeFace, buildHomeFace, fightHomeFace, fitnessHomeFace } from "@/lib/home-faces";
+import { bookHomeFace, buildHomeFace, fightHomeFace, fitnessHomeFace, tileFace } from "@/lib/home-faces";
 import { publicLotChartModel, type PublicLotBar } from "@/lib/lot-bars";
 import {
   TREASURY_LINE,
@@ -50,11 +49,18 @@ export function PublicHoldingFace({
 
 export function TreasuryCard() {
   return (
-    <NodeSquare parent home live label="Digital asset treasury">
-      <div className="live-face parent-face">
-        <p className="node-note">{TREASURY_LINE}</p>
-      </div>
-    </NodeSquare>
+    <NodeFace
+      face={tileFace({
+        id: "treasury",
+        glyph: "crypto",
+        href: "",
+        name: "Treasury",
+        headline: TREASURY_LINE,
+        status: "manual",
+        live: true,
+        publicMode: true,
+      })}
+    />
   );
 }
 
@@ -131,46 +137,45 @@ export function PublicHome({
 export function PublicGroupFloor({
   group,
   bars = [],
-  cardBars,
   treasury = false,
   extra = null,
   range,
 }: {
   group: PublicGroup;
   bars?: readonly PublicLotBar[];
-  /** One open-lot series per child ticker. Empty means the card spark slot stays blank. */
-  cardBars?: Readonly<Record<string, readonly PublicLotBar[]>>;
   treasury?: boolean;
   extra?: ReactNode;
-  /** Holdings chart window. Child-card bars stay the full series. */
+  /** Holdings chart window. Child faces stay the weight and the gain. */
   range?: string | null;
 }) {
   const chart = publicLotChartModel(bars);
   return (
-    <section className="node-grid child-floor" aria-label={`${group.label} nodes`}>
-      {group.holdings.map((holding) => (
-        <NodeSquare key={holding.id} parent home live label={`${holding.ticker} node`}>
-          <Link
-            href={`/n/${group.id}/${holding.id}`}
-            className="node-log-link"
-            title={`Open ${holding.ticker}`}
-          >
-            <PublicHoldingFace
-              holding={holding}
-              bars={cardBars?.[holding.ticker] ?? []}
-              compact
-            />
-          </Link>
-        </NodeSquare>
-      ))}
-      {extra}
+    <>
+      <NodeFaceGrid label={`${group.label} nodes`}>
+        {group.holdings.map((holding) => (
+          <NodeFace
+            key={holding.id}
+            face={tileFace({
+              id: holding.id,
+              glyph: group.id,
+              href: `/n/${group.id}/${holding.id}`,
+              name: holding.ticker,
+              headline: holding.weightLabel,
+              status: holding.gainLabel ? `${holding.gainLabel} since first buy` : null,
+              live: Boolean(holding.weightLabel),
+              publicMode: true,
+            })}
+          />
+        ))}
+        {extra}
+        {treasury ? <TreasuryCard /> : null}
+      </NodeFaceGrid>
       {chart.bars.length > 0 ? (
         <div className="public-lot-bars">
           <LotBarChart model={chart} publicMode range={range} label={`${group.label} holdings`} />
         </div>
       ) : null}
-      {treasury ? <TreasuryCard /> : null}
-    </section>
+    </>
   );
 }
 
@@ -207,13 +212,18 @@ export function PublicNodePage({
 
 export function PublicFightRecord({ record }: { record: string | null }) {
   return (
-    <section className="node-grid node-detail" aria-label="Fight Desk">
-      <NodeSquare parent home live={record !== null} label="Fight Desk">
-        <div className="live-face parent-face">
-          <h2 className="node-ticker">Fight Desk</h2>
-          <p className={record ? "value-headline" : "node-note"}>{record ?? "unavailable"}</p>
-        </div>
-      </NodeSquare>
-    </section>
+    <NodeFaceGrid label="Fight Desk">
+      <NodeFace
+        face={tileFace({
+          id: "fight-desk",
+          href: "",
+          name: "Fight Desk",
+          headline: record ?? "unavailable",
+          status: record ? "record" : null,
+          live: record !== null,
+          publicMode: true,
+        })}
+      />
+    </NodeFaceGrid>
   );
 }

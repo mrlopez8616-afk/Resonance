@@ -22,6 +22,8 @@ import {
   lessonsHomeFace,
   roundtableHomeFace,
   systemHomeFace,
+  tileFace,
+  valueTileFace,
   youtubeHomeFace,
   type HomeFace,
 } from "@/lib/home-faces";
@@ -329,5 +331,65 @@ describe("uniform home tiles", () => {
     assert.match(css, /data-node-count="11"\] \{ --face-cols: 4; --face-rows: 3; \}/);
     assert.match(css, /--face-cols: 3;/);
     assert.match(css, /data-node-count="13"\] \{ --face-rows: 5; \}/);
+  });
+
+  it("uses the same face on node pages and leaves the fitness parent alone", async () => {
+    const ui = await faceUi();
+    const priced = valueTileFace({
+      id: "pwr",
+      glyph: "ai-stocks",
+      href: "/n/ai-stocks/pwr",
+      name: "PWR",
+      headline: "~$4.20k",
+      priceLine: "$412.18 live",
+      label: null,
+    });
+    assert.equal(priced.headline, "~$4.20k");
+    assert.equal(priced.status, "$412.18 live");
+    assert.equal(priced.glyph, "ai-stocks");
+    const quiet = valueTileFace({
+      id: "sui",
+      glyph: "crypto",
+      href: "/n/crypto/sui",
+      name: "SUI",
+      headline: null,
+      priceLine: "$2.184 live",
+      label: "no position",
+    });
+    assert.equal(quiet.headline, "no position");
+    assert.equal(quiet.status, "$2.184 live");
+    const hidden = tileFace({
+      id: "pwr",
+      glyph: "ai-stocks",
+      href: "/n/ai-stocks/pwr",
+      name: "PWR",
+      headline: "~$4.20k",
+      status: "$412 live",
+      publicMode: true,
+    });
+    assert.equal(hidden.headline, "not recorded");
+    assert.equal(hidden.status, "not recorded");
+    assert.equal(markup(ui, hidden).includes("$"), false);
+    const pages = [
+      "src/components/node-grid.tsx",
+      "src/components/build-floor.tsx",
+      "src/components/finance-floor.tsx",
+      "src/components/predictions-floor.tsx",
+      "src/components/youtube-node.tsx",
+      "src/components/control-room.tsx",
+      "src/components/chain-security-floor.tsx",
+      "src/components/roundtable-floor.tsx",
+      "src/components/approvals-parent.tsx",
+      "src/components/public-floor.tsx",
+      "src/components/catalyst-calendar.tsx",
+      "src/components/xrp-trigger-floor.tsx",
+    ];
+    for (const file of pages) {
+      const source = readFileSync(path.join(root, file), "utf8");
+      assert.match(source, /NodeFace/, file);
+    }
+    const fitness = readFileSync(path.join(root, "src/components/fitness-grid.tsx"), "utf8");
+    assert.equal(fitness.includes("NodeFace"), false);
+    assert.match(fitness, /NodeSquare/);
   });
 });

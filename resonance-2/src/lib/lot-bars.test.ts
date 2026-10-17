@@ -524,13 +524,15 @@ describe("lot bars", () => {
     assert.equal(parentPage.includes("loadCryptoHistory"), false);
     assert.equal(parentPage.includes("price-spark"), false);
     assert.equal(parentPage.includes("sparkLine"), false);
-    assert.match(parentPage, /lotBars/);
-    assert.match(parentPage, /cardBars/);
+    assert.match(parentPage, /NodeGrid/);
+    assert.equal(parentPage.includes("lotBars"), false);
+    assert.equal(parentPage.includes("cardBars"), false);
     const groupFloor = floor.slice(
       floor.indexOf("export function PublicGroupFloor"),
       floor.indexOf("export function PublicNodePage"),
     );
-    assert.match(groupFloor, /compact/);
+    assert.match(groupFloor, /NodeFaceGrid/);
+    assert.equal(groupFloor.includes("compact"), false);
     assert.equal(groupFloor.includes("priceSpark"), false);
     assert.equal(groupFloor.includes("price-spark"), false);
     assert.equal(groupFloor.includes("IndexChart"), false);

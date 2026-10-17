@@ -11,6 +11,8 @@ export type HomeFaceTone = "" | "up" | "down" | "flat";
 
 export type HomeFace = {
   id: string;
+  /** Icon key. Defaults to `id`, so a child tile can keep its own id and the parent glyph. */
+  glyph?: string;
   href: string;
   name: string;
   headline: string;
@@ -78,6 +80,62 @@ function toneFromStatus(status: string): HomeFaceTone {
   if (value > 0) return "up";
   if (value < 0) return "down";
   return "flat";
+}
+
+/**
+ * One node-page tile. Same slots as a home face.
+ * An empty headline is "not connected". An empty status is "not recorded".
+ * Public mode replaces any dollar line with "not recorded".
+ */
+export function tileFace(input: {
+  id: string;
+  glyph?: string;
+  href: string;
+  name: string;
+  headline: string | null | undefined;
+  status: string | null | undefined;
+  live?: boolean;
+  publicMode?: boolean;
+}): HomeFace {
+  return finish(
+    {
+      id: input.id,
+      glyph: input.glyph,
+      href: input.href,
+      name: input.name,
+      headline: input.headline?.trim() || "",
+      status: input.status?.trim() || "",
+      live: input.live ?? true,
+    },
+    input.publicMode ?? false,
+  );
+}
+
+/**
+ * A value child. The headline is the dollar position when one exists.
+ * The live price is the status. No position: the label is the headline and the price stays under it.
+ */
+export function valueTileFace(input: {
+  id: string;
+  glyph: string;
+  href: string;
+  name: string;
+  headline: string | null;
+  priceLine: string | null;
+  label: string | null;
+  publicMode?: boolean;
+}): HomeFace {
+  const headline = input.headline?.trim() || "";
+  return tileFace({
+    id: input.id,
+    glyph: input.glyph,
+    href: input.href,
+    name: input.name,
+    headline: headline || input.label,
+    status: input.priceLine,
+    live: headline.length > 0 || Boolean(input.priceLine?.trim()),
+    publicMode: input.publicMode,
+  });
 }
 
 function finish(face: Omit<HomeFace, "tone">, publicMode: boolean): HomeFace {

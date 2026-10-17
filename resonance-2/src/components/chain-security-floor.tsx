@@ -1,7 +1,5 @@
-import Link from "next/link";
-import { NodeFace } from "@/components/node-face";
-import { NodeSquare } from "@/components/node-square";
-import { chainHomeFace } from "@/lib/home-faces";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { chainHomeFace, tileFace } from "@/lib/home-faces";
 import {
   type ChainSecurityFeed,
   type ChainSecurityHomeModel,
@@ -11,47 +9,46 @@ import {
 
 function IncidentCard({ incident }: { incident: IncidentView }) {
   return (
-    <NodeSquare parent home live label={incident.subject}>
-      <Link href={incident.href} className="node-log-link" title={`Open ${incident.subject}`}>
-        <div className="live-face parent-face">
-          <h2 className="node-ticker">{incident.subject}</h2>
-          <ul className="parent-lines">
-            <li>{incident.categoryLabel}</li>
-            <li>{incident.dateLabel}</li>
-            <li>{incident.status}</li>
-          </ul>
-        </div>
-      </Link>
-    </NodeSquare>
+    <NodeFace
+      face={tileFace({
+        id: incident.id,
+        glyph: "chain-security",
+        href: incident.href,
+        name: incident.subject,
+        headline: incident.categoryLabel,
+        status: `${incident.dateLabel} · ${incident.status}`,
+        live: true,
+      })}
+    />
   );
 }
 
 function ExposureCard({ watches }: { watches: readonly ExposureWatch[] }) {
   return (
     <section className="chain-exposure" aria-label="My exposure">
-      <NodeSquare parent home live label="My exposure">
-        <div className="live-face parent-face">
-          <h2 className="node-ticker">My exposure</h2>
-          <ul className="parent-lines chain-watches">
-            {watches.map((watch) => (
-              <li key={watch.id}>
-                <span className="chain-watch-name">{watch.label}</span>
-                {watch.incidents.length === 0 ? (
-                  <span className="chain-watch-note">no incidents</span>
-                ) : (
-                  watch.incidents.map((incident) => (
-                    <Link key={incident.id} href={incident.href}>
-                      {incident.subject}
-                      {" \u00b7 "}
-                      {incident.status}
-                    </Link>
-                  ))
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </NodeSquare>
+      <h3 className="brick-group">My exposure</h3>
+      <NodeFaceGrid label="My exposure">
+        {watches.map((watch) => {
+          const first = watch.incidents[0];
+          return (
+            <NodeFace
+              key={watch.id}
+              face={tileFace({
+                id: watch.id,
+                glyph: "chain-security",
+                href: first?.href ?? "",
+                name: watch.label,
+                headline: watch.incidents.length === 0 ? "clear" : String(watch.incidents.length),
+                status:
+                  watch.incidents.length === 0 || !first
+                    ? "no incidents"
+                    : `${first.subject} · ${first.status}`,
+                live: watch.incidents.length > 0,
+              })}
+            />
+          );
+        })}
+      </NodeFaceGrid>
     </section>
   );
 }
@@ -83,11 +80,11 @@ export function ChainSecurityFloor({ feed }: { feed: ChainSecurityFeed }) {
         feed.groups.map((group) => (
           <section key={group.category} aria-label={group.label}>
             <h3 className="brick-group">{group.label}</h3>
-            <div className="node-grid home-floor">
+            <NodeFaceGrid label={group.label}>
               {group.incidents.map((incident) => (
                 <IncidentCard key={incident.id} incident={incident} />
               ))}
-            </div>
+            </NodeFaceGrid>
           </section>
         ))
       )}

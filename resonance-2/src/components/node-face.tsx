@@ -3,35 +3,66 @@ import Link from "next/link";
 import type { HomeFace } from "@/lib/home-faces";
 
 /**
- * Shared geometric face for every home tile.
+ * Shared geometric face for every home tile and every node-page tile.
  * Glyph, name, one headline, one status line. The grid gives each face the same box.
  */
-export function NodeFace({ face }: { face: HomeFace }) {
+export function NodeFace({ face, onRemove }: { face: HomeFace; onRemove?: () => void }) {
   const tone = face.tone ? ` is-${face.tone}` : "";
+  const body = (
+    <>
+      <span className="node-face-glyph" aria-hidden="true">
+        <NodeGlyph id={face.glyph || face.id} />
+      </span>
+      <h2 className="node-face-name">{face.name}</h2>
+      <p className="node-face-headline">{face.headline}</p>
+      <p className={`node-face-status${tone}`}>{face.status}</p>
+    </>
+  );
   return (
     <article
       className={`node-face${face.live ? " is-live" : " is-offline"}`}
       aria-label={face.name}
       data-node-face={face.id}
     >
-      <Link href={face.href} className="node-face-link" title={`Open ${face.name}`}>
-        <span className="node-face-glyph" aria-hidden="true">
-          <NodeGlyph id={face.id} />
-        </span>
-        <h2 className="node-face-name">{face.name}</h2>
-        <p className="node-face-headline">{face.headline}</p>
-        <p className={`node-face-status${tone}`}>{face.status}</p>
-      </Link>
+      {onRemove ? (
+        <button
+          type="button"
+          className="node-delete"
+          aria-label="Delete node"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+        >
+          <span aria-hidden>×</span>
+        </button>
+      ) : null}
+      {face.href ? (
+        <Link href={face.href} className="node-face-link" title={`Open ${face.name}`}>
+          {body}
+        </Link>
+      ) : (
+        <div className="node-face-link">{body}</div>
+      )}
     </article>
   );
 }
 
-export function NodeFaceGrid({ children, count }: { children: ReactNode; count?: number }) {
+export function NodeFaceGrid({
+  children,
+  count,
+  label = "Node floor",
+}: {
+  children: ReactNode;
+  count?: number;
+  label?: string;
+}) {
   const nodes = count ?? Children.toArray(children).length;
   return (
     <section
       className="node-face-grid"
-      aria-label="Node floor"
+      aria-label={label}
       data-node-face-grid
       data-node-count={nodes}
       style={{ "--face-count": nodes } as CSSProperties}
