@@ -101,7 +101,7 @@ describe("future ideas copy", () => {
     assert.equal(shared.find((card) => card.id === "driving-tracker")?.addedLabel, "Oct 11, 2026");
     assert.equal(publicIdeaText("$40"), "");
     assert.equal(ideaSlug("$1/day per-node DCA"), "1-day-per-node-dca");
-    assert.match(readFileSync(path.join(root, "src/components/build-floor.tsx"), "utf8"), /href="\/n\/ideas"/);
+    assert.match(readFileSync(path.join(root, "src/components/build-floor.tsx"), "utf8"), /href: "\/n\/ideas"/);
     assert.match(readFileSync(path.join(root, "src/app/n/ideas/page.tsx"), "utf8"), /href="\/n\/build"/);
   });
 
