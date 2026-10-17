@@ -348,7 +348,7 @@ describe("fitness story", () => {
     assert.match(html, /node-face-glyph/);
     assert.match(html, /Apple Health/);
     assert.match(html, /Manual import/);
-    assert.match(html, /updated /);
+    assert.match(html, /7 Oct|6 Oct/);
     assert.equal(html.includes("fitness-figure"), false);
     assert.equal(html.includes("$"), false);
     assert.equal(html.includes("streak"), false);

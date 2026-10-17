@@ -29,8 +29,13 @@ function isLive(value: string): boolean {
   return /\d/.test(text);
 }
 
+/** Drop the year and the word "updated" so the source and the day fit one tile line. */
+function shortUpdated(value: string): string {
+  return value.replace(/ CT$/, "").replace(/ \d{4}$/, "").replace(/^updated /, "");
+}
+
 /** One status line: source, approx, and the last update. The day count stays off the tile. */
-function tileStatus(meta: string | null, fallback: string): string {
+function tileStatus(meta: string | null, fallback: string, headline = ""): string {
   if (!meta?.trim()) return fallback;
   const sources: string[] = [];
   const extras: string[] = [];
@@ -38,12 +43,13 @@ function tileStatus(meta: string | null, fallback: string): string {
   for (const part of meta.split(" · ")) {
     const text = part.trim();
     if (!text || /^across \d+ days?$/.test(text)) continue;
+    if (text === "approx" && headline.trim().startsWith("~")) continue;
     if (text.startsWith("from ")) {
       sources.push(...text.slice(5).split(/, and |, | and /).map((name) => name.trim()).filter(Boolean));
       continue;
     }
     if (text.startsWith("updated ")) {
-      updated = text;
+      updated = shortUpdated(text);
       continue;
     }
     extras.push(text);
@@ -65,7 +71,7 @@ function figureFace(periodId: string, item: StoryFigure): HomeFace {
     href: figureHref(item.id),
     name: item.label,
     headline: item.value,
-    status: tileStatus(item.meta, fallback),
+    status: tileStatus(item.meta, fallback, item.value),
     live,
     tone: item.id === "versus-last-week" ? toneOf(item.value) : "",
   };
