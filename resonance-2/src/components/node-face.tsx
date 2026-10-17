@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import type { HomeFace } from "@/lib/home-faces";
 
@@ -26,9 +26,16 @@ export function NodeFace({ face }: { face: HomeFace }) {
   );
 }
 
-export function NodeFaceGrid({ children }: { children: ReactNode }) {
+export function NodeFaceGrid({ children, count }: { children: ReactNode; count?: number }) {
+  const nodes = count ?? Children.toArray(children).length;
   return (
-    <section className="node-face-grid" aria-label="Node floor" data-node-face-grid>
+    <section
+      className="node-face-grid"
+      aria-label="Node floor"
+      data-node-face-grid
+      data-node-count={nodes}
+      style={{ "--face-count": nodes } as CSSProperties}
+    >
       {children}
     </section>
   );

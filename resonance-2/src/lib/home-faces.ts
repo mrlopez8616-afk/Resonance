@@ -21,6 +21,52 @@ export type HomeFace = {
 
 export const HOME_FACE_SLOTS = ["glyph", "name", "headline", "status"] as const;
 
+/**
+ * Desktop content box at 1440×900 after the toolbar, header, week strip, and footer.
+ * The column pick is the one whose square still fits that box.
+ */
+export const DESKTOP_FACE_BOX = { width: 1324, height: 738, gap: 6.4 } as const;
+
+export function privateHomeNodeCount(input: { owner: boolean; health: boolean }): number {
+  return 10 + (input.owner && input.health ? 1 : 0) + (input.owner ? 2 : 0);
+}
+
+export function publicHomeNodeCount(input: { fight: boolean; health: boolean }): number {
+  return 9 + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
+}
+
+/** Columns and rows that keep every square inside the box. Phone stays on 3. */
+export function faceGridPlan(
+  count: number,
+  box: { width: number; height: number; gap: number },
+  phone = false,
+): { columns: number; rows: number; size: number } {
+  const n = Math.max(1, Math.floor(count));
+  if (phone) {
+    const columns = Math.min(3, n);
+    const rows = Math.ceil(n / columns);
+    const size = Math.min(
+      (box.width - box.gap * (columns - 1)) / columns,
+      (box.height - box.gap * (rows - 1)) / rows,
+    );
+    return { columns, rows, size };
+  }
+  let columns = 1;
+  let size = 0;
+  for (let cols = 1; cols <= n; cols += 1) {
+    const rows = Math.ceil(n / cols);
+    const next = Math.min(
+      (box.width - box.gap * (cols - 1)) / cols,
+      (box.height - box.gap * (rows - 1)) / rows,
+    );
+    if (next > size) {
+      size = next;
+      columns = cols;
+    }
+  }
+  return { columns, rows: Math.ceil(n / columns), size };
+}
+
 const NOT_CONNECTED = "not connected";
 const NOT_RECORDED = "not recorded";
 

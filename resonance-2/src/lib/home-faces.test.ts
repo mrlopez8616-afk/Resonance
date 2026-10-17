@@ -7,6 +7,10 @@ import { fileURLToPath } from "node:url";
 import { createElement, isValidElement, type ReactNode } from "react";
 import {
   HOME_FACE_SLOTS,
+  DESKTOP_FACE_BOX,
+  faceGridPlan,
+  privateHomeNodeCount,
+  publicHomeNodeCount,
   bookHomeFace,
   buildHomeFace,
   chainHomeFace,
@@ -300,5 +304,30 @@ describe("uniform home tiles", () => {
     const round = roundtableHomeFace({ unavailable: false, count: 0, lines: [] });
     assert.equal(round.headline, "0");
     assert.equal(round.status, "no messages yet");
+  });
+
+  it("fits the square grid to the node count", () => {
+    assert.equal(privateHomeNodeCount({ owner: true, health: true }), 13);
+    assert.equal(privateHomeNodeCount({ owner: true, health: false }), 12);
+    assert.equal(privateHomeNodeCount({ owner: false, health: false }), 10);
+    assert.equal(publicHomeNodeCount({ fight: true, health: true }), 11);
+    assert.equal(publicHomeNodeCount({ fight: false, health: false }), 9);
+    const owner = faceGridPlan(13, DESKTOP_FACE_BOX);
+    const pub = faceGridPlan(11, DESKTOP_FACE_BOX);
+    const phone = faceGridPlan(13, { width: 361, height: 586, gap: 5.6 }, true);
+    assert.deepEqual({ columns: owner.columns, rows: owner.rows }, { columns: 5, rows: 3 });
+    assert.deepEqual({ columns: pub.columns, rows: pub.rows }, { columns: 4, rows: 3 });
+    assert.deepEqual({ columns: phone.columns, rows: phone.rows }, { columns: 3, rows: 5 });
+    assert.ok(owner.size * owner.rows + DESKTOP_FACE_BOX.gap * (owner.rows - 1) <= DESKTOP_FACE_BOX.height + 0.5);
+    assert.ok(phone.size >= 100, `phone tile ${phone.size}`);
+    const css = readFileSync(path.join(root, "src/app/globals.css"), "utf8");
+    const home = readFileSync(path.join(root, "src/app/page.tsx"), "utf8");
+    const pubPage = readFileSync(path.join(root, "src/components/public-home-page.tsx"), "utf8");
+    assert.match(home, /privateHomeNodeCount/);
+    assert.match(pubPage, /publicHomeNodeCount/);
+    assert.match(css, /data-node-count="13"\] \{ --face-cols: 5; --face-rows: 3; \}/);
+    assert.match(css, /data-node-count="11"\] \{ --face-cols: 4; --face-rows: 3; \}/);
+    assert.match(css, /--face-cols: 3;/);
+    assert.match(css, /data-node-count="13"\] \{ --face-rows: 5; \}/);
   });
 });

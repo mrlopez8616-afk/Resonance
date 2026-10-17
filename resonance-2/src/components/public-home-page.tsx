@@ -20,6 +20,7 @@ import type { ChainSecurityHomeModel } from "@/lib/chain-security";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
+import { publicHomeNodeCount } from "@/lib/home-faces";
 import { hasMoneyText, publicHref, publicRecordLabel, stripMoneyText } from "@/lib/public-mode";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -83,6 +84,7 @@ export async function PublicHomePage() {
       if (!title) return [];
       return [{ ...item, title, href: publicHref(item.href) }];
     });
+  const fightRecord = publicRecordLabel(bankroll.ledger?.recordLabel);
   const lines = [
     ...fitnessSecondaryLines(fitness.week, fitness.line),
   ].flatMap((line) => {
@@ -99,7 +101,12 @@ export async function PublicHomePage() {
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={floor.storageDetail}>
       <ThisWeek items={week} />
-      <NodeFaceGrid>
+      <NodeFaceGrid
+        count={publicHomeNodeCount({
+          fight: fightRecord !== null,
+          health: healthHome !== null,
+        })}
+      >
       <PublicHome
         crypto={floor.model.crypto}
         aiStocks={floor.model.aiStocks}
@@ -108,7 +115,7 @@ export async function PublicHomePage() {
           unit: headline?.unit ?? null,
           lines,
         }}
-        fightRecord={publicRecordLabel(bankroll.ledger?.recordLabel)}
+        fightRecord={fightRecord}
         buildHome={{
           ...buildHome,
           lines: buildHome.lines.flatMap((line) => {
