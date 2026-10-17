@@ -58,6 +58,16 @@ function tileStatus(meta: string | null, fallback: string, headline = ""): strin
   return line || fallback;
 }
 
+const GLYPH: Record<string, string> = {
+  "average-steps": "steps",
+  runs: "runs",
+  miles: "miles",
+  pace: "pace",
+  "active-days": "active",
+  "longest-run": "longest",
+  "versus-last-week": "versus",
+};
+
 function figureHref(id: string): string {
   if (id === "average-steps") return "/n/fitness/steps";
   return "/n/fitness/runs";
@@ -68,6 +78,7 @@ function figureFace(periodId: string, item: StoryFigure): HomeFace {
   const fallback = item.id === "active-days" && item.value !== "not recorded" ? "no run or workout" : "not recorded";
   return {
     id: `${periodId}-${item.id}`,
+    glyph: GLYPH[item.id] ?? item.id,
     href: figureHref(item.id),
     name: item.label,
     headline: item.value,
@@ -80,6 +91,7 @@ function figureFace(periodId: string, item: StoryFigure): HomeFace {
 function liftingFace(story: FitnessStory): HomeFace {
   return {
     id: "lifting",
+    glyph: "lifting",
     href: story.lifting.href,
     name: story.lifting.title,
     headline: story.lifting.value,
@@ -94,6 +106,7 @@ function manualFace(manual: FitnessStory["manual"]): HomeFace {
     const folded = manual.text === "";
     return {
       id: "manual",
+      glyph: "manual",
       href: manual.href,
       name: "Manual import",
       headline: folded ? "in the totals" : "not recorded",
@@ -111,6 +124,7 @@ function manualFace(manual: FitnessStory["manual"]): HomeFace {
   if (rows.length > 1) rest.push(`${rows.length} written down`);
   return {
     id: "manual",
+    glyph: "manual",
     href: manual.href,
     name: "Manual import",
     headline,

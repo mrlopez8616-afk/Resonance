@@ -3414,15 +3414,6 @@ button.node-face-link {
   min-width: 0;
 }
 
-/* The shared status is one line. A fitness source plus its update needs the second line on a square. */
-.fitness-story .node-face-status {
-  white-space: normal;
-  text-overflow: unset;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .fitness-period-head,
 .fitness-chart-head {
   display: flex;
