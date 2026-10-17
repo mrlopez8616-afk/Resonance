@@ -736,6 +736,7 @@ body {
 .node-face-grid[data-node-count="16"] { --face-cols: 6; --face-rows: 3; }
 
 .node-face {
+  position: relative;
   --row-size: calc((100dvh - var(--face-chrome) - (var(--face-rows) - 1) * var(--face-gap)) / var(--face-rows));
   aspect-ratio: 1;
   width: min(100%, var(--row-size), 16rem);
@@ -768,6 +769,22 @@ body {
   padding: 0.5rem 0.55rem 0.42rem;
   color: inherit;
   text-decoration: none;
+}
+
+button.node-face-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.node-face > .node-add {
+  align-items: stretch;
+  justify-content: flex-start;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .node-face-link:hover,

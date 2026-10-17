@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
-import { ValueCard } from "@/components/value-card";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { PredictionsVisual } from "@/components/home-visual";
 import { formatUsd } from "@/lib/bets";
 import { bankrollHomeFace, type BankrollLedger } from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
+import { tileFace } from "@/lib/home-faces";
 import type { TierSegment } from "@/lib/home-visuals";
 import { parentById, parentCardHref } from "@/lib/node-parents";
 
@@ -40,40 +40,30 @@ export function PredictionsFloor({
         )}
       </header>
       <PredictionsVisual segments={segments} bankroll={bankrollLine} />
-      <section className="node-grid" aria-label="Fight Desk nodes">
-        <NodeSquare parent live={face !== null} dashed={face === null} label="Bankroll node">
-          <Link href={`${parentCardHref("fight-desk")}/bankroll`} className="node-log-link" title="Open Bankroll">
-            {face && ledger ? (
-              <ValueCard
-                ticker="Bankroll"
-                compact
-                model={{
-                  headline: ledger.bankrollLabel,
-                  priceLine: `${ledger.atRiskLabel} at risk`,
-                  label: null,
-                }}
-              />
-            ) : (
-              <div className="live-face value-card parent-face">
-                <header className="live-head">
-                  <h2 className="node-ticker">Bankroll</h2>
-                  <p className="node-note value-status">unavailable</p>
-                </header>
-              </div>
-            )}
-          </Link>
-        </NodeSquare>
-        <NodeSquare parent live label="Fights node">
-          <Link href="/fights" className="node-log-link" title="Open Fights">
-            <div className="live-face value-card parent-face">
-              <header className="live-head">
-                <h2 className="node-ticker">Fights</h2>
-                {fightsOpen ? <p className="value-price">{fightsOpen}</p> : null}
-              </header>
-            </div>
-          </Link>
-        </NodeSquare>
-      </section>
+      <NodeFaceGrid label="Fight Desk nodes">
+        <NodeFace
+          face={tileFace({
+            id: "bankroll",
+            glyph: "fight-desk",
+            href: `${parentCardHref("fight-desk")}/bankroll`,
+            name: "Bankroll",
+            headline: ledger?.bankrollLabel ?? "unavailable",
+            status: ledger ? `${ledger.atRiskLabel} at risk` : null,
+            live: face !== null,
+          })}
+        />
+        <NodeFace
+          face={tileFace({
+            id: "fights",
+            glyph: "fight-desk",
+            href: "/fights",
+            name: "Fights",
+            headline: fightsOpen,
+            status: fightsOpen ? "open" : null,
+            live: fightsOpen !== null,
+          })}
+        />
+      </NodeFaceGrid>
     </>
   );
 }

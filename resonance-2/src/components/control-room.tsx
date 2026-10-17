@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { NodeFace } from "@/components/node-face";
-import { NodeSquare } from "@/components/node-square";
-import { controlHomeFace } from "@/lib/home-faces";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { controlHomeFace, tileFace } from "@/lib/home-faces";
 import {
   FEED_THRESHOLD_LINE,
   NO_SIGNAL,
@@ -29,30 +28,22 @@ export function ControlHomeCard({
 export function ControlParent({ view, now }: { view: ControlRoomView; now: Date }) {
   const cards = controlParentCards(view, now);
   return (
-    <section className="node-grid home-floor" aria-label="Control Room">
+    <NodeFaceGrid label="Control Room">
       {cards.map((card) => (
-        <NodeSquare
+        <NodeFace
           key={card.id}
-          parent
-          home
-          live={card.live}
-          dashed={!card.live}
-          label={card.label}
-        >
-          <Link href={card.href} className="node-log-link" title={`Open ${card.label}`}>
-            <div className="live-face parent-face">
-              <h2 className="node-ticker">{card.label}</h2>
-              <p className="live-units">{card.figure}</p>
-              <ul className="parent-lines">
-                {card.lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          </Link>
-        </NodeSquare>
+          face={tileFace({
+            id: card.id,
+            glyph: "control",
+            href: card.href,
+            name: card.label,
+            headline: card.figure,
+            status: card.lines.join(" · ") || null,
+            live: card.live,
+          })}
+        />
       ))}
-    </section>
+    </NodeFaceGrid>
   );
 }
 

@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { NodeFace } from "@/components/node-face";
-import { NodeSquare } from "@/components/node-square";
-import { youtubeHomeFace } from "@/lib/home-faces";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { tileFace, youtubeHomeFace } from "@/lib/home-faces";
 import {
   YOUTUBE_GEAR,
   YOUTUBE_GEAR_SOURCE,
@@ -21,25 +20,22 @@ export function YouTubeHomeCard() {
 export function YouTubeParent({ brick }: { brick?: YouTubeBrickCard }) {
   const cards = youtubeParentCards(undefined, brick);
   return (
-    <section className="node-grid home-floor" aria-label="YouTube">
+    <NodeFaceGrid label="YouTube">
       {cards.map((card) => (
-        <NodeSquare key={card.id} parent home live={card.live} dashed={!card.live} label={card.label}>
-          <Link href={card.href} className="node-log-link" title={`Open ${card.label}`}>
-            <div className="live-face parent-face">
-              <h2 className="node-ticker">{card.label}</h2>
-              <p className="live-units">{card.figure}</p>
-              {card.lines.length > 0 ? (
-                <ul className="parent-lines">
-                  {card.lines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </Link>
-        </NodeSquare>
+        <NodeFace
+          key={card.id}
+          face={tileFace({
+            id: card.id,
+            glyph: "youtube",
+            href: card.href,
+            name: card.label,
+            headline: card.figure,
+            status: card.lines.join(" · ") || null,
+            live: card.live,
+          })}
+        />
       ))}
-    </section>
+    </NodeFaceGrid>
   );
 }
 

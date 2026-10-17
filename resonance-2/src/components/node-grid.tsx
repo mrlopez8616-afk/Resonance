@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
-import { ChildValueCard } from "@/components/child-value-card";
 import { FloorDialog } from "@/components/floor-dialog";
-import { NodeSquare } from "@/components/node-square";
-import { ValueCard } from "@/components/value-card";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import type { FloorNode } from "@/data/floor-nodes";
 import {
   hiddenIdsServerSnapshot,
@@ -16,7 +13,7 @@ import {
 } from "@/lib/floor-registry";
 import { isZeroCryptoHolding, nodesOnParent, removedOnParent } from "@/lib/node-parents";
 import type { ChildCardModel } from "@/lib/child-card";
-import type { LotBarModel } from "@/lib/lot-bars";
+import { valueTileFace } from "@/lib/home-faces";
 import type { ValueCardModel } from "@/lib/value-card";
 import type { ParentId } from "@/data/node-parents";
 
@@ -32,7 +29,6 @@ export function NodeGrid({
   cards,
   heldUsd,
   childCards,
-  lotBars,
   extra = null,
 }: {
   parentId: ParentId;
@@ -41,10 +37,8 @@ export function NodeGrid({
   cards: Readonly<Record<string, ValueCardModel>>;
   /** Position value in dollars. A crypto card at exactly zero is not painted. */
   heldUsd?: Readonly<Record<string, number | null | undefined>>;
-  /** Content-sized child cards. When a ticker is present, it replaces the plain value card. */
+  /** Child value facts. When a ticker is present, its headline and price replace the plain card. */
   childCards?: Readonly<Record<string, ChildCardModel>>;
-  /** Open-lot bars for a parent card. Present (even as null) replaces that card's sparkline. */
-  lotBars?: Readonly<Record<string, LotBarModel | null>>;
   /** One more child card, such as the XRP trigger watch. */
   extra?: ReactNode;
 }) {
@@ -78,77 +72,60 @@ export function NodeGrid({
         </p>
       );
     }
-    return (
-      <section className={`node-grid${childCards ? " child-floor" : ""}`} aria-label={`${parentLabel} nodes`}>
-        {extra}
-      </section>
-    );
+    return <NodeFaceGrid label={`${parentLabel} nodes`}>{extra}</NodeFaceGrid>;
   }
 
   return (
     <>
-      <section
-        className={`node-grid${childCards ? " child-floor" : ""}`}
-        aria-label={`${parentLabel} nodes`}
-      >
+      <NodeFaceGrid label={`${parentLabel} nodes`}>
         {nodes.map((node) => {
           if (node.status === "live") {
             if (isZeroCryptoHolding(node.ticker, heldUsd?.[node.ticker])) return null;
             const child = childCards?.[node.ticker];
-            const card = cards[node.ticker] ?? NOT_CONNECTED;
-            const shown = child
-              ? child.headline !== null ||
-                child.priceLine !== null ||
-                child.lines.length > 0 ||
-                child.spark !== null
-              : card.headline !== null || card.priceLine !== null;
+            const card = child
+              ? { headline: child.headline, priceLine: child.priceLine, label: child.label }
+              : (cards[node.ticker] ?? NOT_CONNECTED);
             return (
-              <NodeSquare
+              <NodeFace
                 key={node.id}
-                parent
-                home={Boolean(child)}
-                live={shown}
-                dashed={!shown}
-                label={`${node.ticker} node`}
-                onDelete={() => setPending(node)}
-              >
-                <Link
-                  href={`/n/${parentId}/${node.id}`}
-                  className="node-log-link"
-                  title={`Open ${node.ticker}`}
-                >
-                  {child ? (
-                    <ChildValueCard
-                      model={lotBars ? { ...child, spark: null } : child}
-                      lots={lotBars ? (lotBars[node.ticker] ?? null) : undefined}
-                    />
-                  ) : (
-                    <ValueCard ticker={node.ticker} model={card} compact />
-                  )}
-                </Link>
-              </NodeSquare>
+                onRemove={() => setPending(node)}
+                face={valueTileFace({
+                  id: node.id,
+                  glyph: parentId,
+                  href: `/n/${parentId}/${node.id}`,
+                  name: node.ticker,
+                  headline: card.headline,
+                  priceLine: card.priceLine,
+                  label: card.label,
+                })}
+              />
             );
           }
 
           if (node.status === "empty") {
             return (
-              <NodeSquare key={node.id} dashed empty label="Empty node slot">
+              <article key={node.id} className="node-face is-offline" aria-label="Empty node slot">
                 <button
                   type="button"
-                  className="node-add"
+                  className="node-face-link node-add"
                   aria-label="Add node"
                   onClick={() => setAdding(true)}
                 >
-                  <span aria-hidden>+</span>
+                  <span className="node-face-glyph" aria-hidden="true">
+                    +
+                  </span>
+                  <h2 className="node-face-name">Empty</h2>
+                  <p className="node-face-headline">+</p>
+                  <p className="node-face-status">add</p>
                 </button>
-              </NodeSquare>
+              </article>
             );
           }
 
           return null;
         })}
         {extra}
-      </section>
+      </NodeFaceGrid>
 
       <FloorDialog
         open={pending !== null}

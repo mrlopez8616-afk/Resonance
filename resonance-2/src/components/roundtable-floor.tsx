@@ -1,7 +1,5 @@
-import Link from "next/link";
-import { NodeFace } from "@/components/node-face";
-import { NodeSquare } from "@/components/node-square";
-import { roundtableHomeFace } from "@/lib/home-faces";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { roundtableHomeFace, tileFace } from "@/lib/home-faces";
 import {
   ROUNDTABLE_EMPTY,
   type RoundtableCard,
@@ -21,22 +19,22 @@ export function RoundtableParent({ cards }: { cards: RoundtableCard[] }) {
     );
   }
   return (
-    <section className="node-grid home-floor" aria-label="Roundtable">
+    <NodeFaceGrid label="Roundtable">
       {cards.map((card) => (
-        <NodeSquare key={card.id} parent home live label={card.agentName}>
-          <Link href={card.href} className="node-log-link" title={`Open ${card.title}`}>
-            <div className="live-face parent-face">
-              <h2 className="node-ticker">{card.agentName}</h2>
-              <p className="live-units">{card.title}</p>
-              <ul className="parent-lines">
-                {card.when ? <li>{card.when}</li> : null}
-                <li>{card.countLabel}</li>
-              </ul>
-            </div>
-          </Link>
-        </NodeSquare>
+        <NodeFace
+          key={card.id}
+          face={tileFace({
+            id: card.id,
+            glyph: "roundtable",
+            href: card.href,
+            name: card.agentName,
+            headline: card.title,
+            status: [card.when, card.countLabel].filter(Boolean).join(" · "),
+            live: true,
+          })}
+        />
       ))}
-    </section>
+    </NodeFaceGrid>
   );
 }
 

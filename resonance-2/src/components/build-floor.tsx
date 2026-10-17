@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { NodeSquare } from "@/components/node-square";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { tileFace } from "@/lib/home-faces";
 import {
   buildSectionLabel,
   buildShowsPrivateText,
@@ -117,61 +118,40 @@ export function BuildParent({
       {githubFresh ? null : (
         <p className={styles.note}>GitHub didn&apos;t answer. Showing the last stored steps.</p>
       )}
-      <section className={`node-grid home-floor ${styles.sections}`} aria-label="Build sections">
+      <NodeFaceGrid label="Build sections">
         {sections.map((section) => {
-          const width = section.percent ?? 0;
           const lines = [
             countLine(section.counts.live, "live"),
             countLine(section.counts.inProgress, "in progress"),
             countLine(section.counts.queued, "queued"),
           ];
           return (
-            <NodeSquare
+            <NodeFace
               key={section.id}
-              parent
-              home
-              live={section.percent !== null}
-              dashed={section.percent === null}
-              label={section.label}
-            >
-              <Link href={`/n/build/${section.id}`} className="node-log-link" title={`Open ${section.label}`}>
-                <div className="live-face parent-face">
-                  <h2 className="node-ticker">{section.label}</h2>
-                  <p className="live-units">
-                    {section.percent === null ? "no steps" : `${section.percent}%`}
-                  </p>
-                  <ul className="parent-lines">
-                    {lines.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                  <div
-                    className={styles.mini}
-                    role="progressbar"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={width}
-                    aria-label={`${section.label} percent`}
-                  >
-                    <span style={{ width: `${width}%` }} />
-                  </div>
-                </div>
-              </Link>
-            </NodeSquare>
+              face={tileFace({
+                id: section.id,
+                glyph: "build",
+                href: `/n/build/${section.id}`,
+                name: section.label,
+                headline: section.percent === null ? "no steps" : `${section.percent}%`,
+                status: lines.join(" · "),
+                live: section.percent !== null,
+              })}
+            />
           );
         })}
-        <NodeSquare parent home live label="Future Ideas">
-          <Link href="/n/ideas" className="node-log-link" title="Open Future Ideas">
-            <div className="live-face parent-face">
-              <h2 className="node-ticker">Future Ideas</h2>
-              <p className="live-units">Board</p>
-              <ul className="parent-lines">
-                <li>What comes next</li>
-              </ul>
-            </div>
-          </Link>
-        </NodeSquare>
-      </section>
+        <NodeFace
+          face={tileFace({
+            id: "ideas",
+            glyph: "build",
+            href: "/n/ideas",
+            name: "Future Ideas",
+            headline: "Board",
+            status: "What comes next",
+            live: true,
+          })}
+        />
+      </NodeFaceGrid>
     </div>
   );
 }
@@ -195,6 +175,13 @@ export function BuildSectionBody({
       <header className={styles.heading}>
         <h2 className={styles.sectionName}>{section.label}</h2>
         <p className={styles.total}>{section.percent === null ? "—" : `${section.percent}%`}</p>
+        <p className={styles.totalNote}>
+          {countLine(section.counts.live, "live")}
+          {" · "}
+          {countLine(section.counts.inProgress, "in progress")}
+          {" · "}
+          {countLine(section.counts.queued, "queued")}
+        </p>
       </header>
       {active.length > 0 ? (
         <ItemList items={active} showPr={showPr} showSection={queue} lessonHrefs={lessonHrefs} />
