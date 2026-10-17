@@ -4,6 +4,7 @@ import { YouTubeHomeCard } from "@/components/youtube-node";
 import { ChainSecurityHomeCard } from "@/components/chain-security-floor";
 import { LessonsHomeCard } from "@/components/lessons-floor";
 import { RoundtableHomeCard } from "@/components/roundtable-floor";
+import { NodeFaceGrid } from "@/components/node-face";
 import { ParentGrid } from "@/components/parent-grid";
 import { PublicHomePage } from "@/components/public-home-page";
 import { SystemHomeCard } from "@/components/system-map";
@@ -15,10 +16,8 @@ import { loadFinancePage } from "@/lib/finance/store";
 import { financeHomeForRole, type FinanceHomeFace } from "@/lib/finance/view";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFitnessHome } from "@/lib/fitness-store";
-import { retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
 import { EQUITY_FACE_TICKERS } from "@/lib/live-face";
-import { CRYPTO_HOME_TICKERS, nextAiCatalystLine, nextCryptoCatalystLine, type HomeMove } from "@/lib/home-lines";
-import { fitnessStepBars, inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
+import { CRYPTO_HOME_TICKERS, type HomeMove } from "@/lib/home-lines";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -133,6 +132,7 @@ export default async function Home() {
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={floor.storageDetail}>
       <ThisWeek items={thisWeekItems(calendar.events, asOf, fightLinkTargets(bets, calendar.events))} />
+      <NodeFaceGrid>
       <ParentGrid
         faceTotals={faceTotals}
         fightDesk={floor.fightDesk}
@@ -140,37 +140,8 @@ export default async function Home() {
         fitnessLine={fitness.line}
         fitnessWeek={fitness.week}
         bankroll={ledger ? bankrollHomeFace(ledger) : null}
-        predictions={
-          ledger
-            ? {
-                atRisk: ledger.atRisk,
-                atRiskLabel: ledger.atRiskLabel,
-                open: ledger.open,
-                recordLabel: ledger.recordLabel,
-              }
-            : null
-        }
         moves={moves}
         cryptoMoves={cryptoMoves}
-        xrpQuote={
-          floor.spotQuotes.XRP
-            ? {
-                usd: floor.spotQuotes.XRP.usd,
-                change24hPct: floor.spotQuotes.XRP.change24hPct ?? null,
-                fetchedAt: floor.spotQuotes.XRP.fetchedAt,
-              }
-            : null
-        }
-        catalystLine={nextAiCatalystLine(calendar.events, asOf)}
-        cryptoCatalystLine={nextCryptoCatalystLine(calendar.events, asOf)}
-        retiringLine={retiringHeldLine(retiringHeldTickers(floor.sleeves))}
-        stepSlots={fitnessStepBars(fitness.stepDays)}
-        tierBar={
-          ledger
-            ? predictionsTierBar(ledger.tiers.map((tier) => ({ id: tier.id, atRiskLabel: tier.atRiskLabel })))
-            : null
-        }
-        bankrollLine={inScopeBankrollPoints(bets, calendar.events)}
         financeHome={financeHome}
         asOf={asOf.toISOString()}
         buildHome={buildHome}
@@ -182,6 +153,7 @@ export default async function Home() {
       <LessonsHomeCard card={lessonsHome} />
       {session?.role === "owner" ? <RoundtableHomeCard card={roundtableHome} /> : null}
       {session?.role === "owner" ? <ChainSecurityHomeCard card={chainHome} /> : null}
+      </NodeFaceGrid>
     </OperatorShell>
   );
 }

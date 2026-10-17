@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { BuildParent } from "@/components/build-floor";
 import { OperatorShell } from "@/components/operator-shell";
-import { deriveBuildSections } from "@/lib/build-tracker";
+import { buildHomeCard, deriveBuildSections } from "@/lib/build-tracker";
 import { loadBuildView } from "@/lib/build-store";
+import { hasMoneyText } from "@/lib/public-mode";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,10 @@ export default async function BuildPage() {
     if (!isStorageUnavailable(error)) throw error;
     unavailable = true;
   }
+  const pub = await isPublicMode();
+  const notes = view
+    ? buildHomeCard(view.items).lines.filter((line) => !(pub && hasMoneyText(line)))
+    : [];
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
@@ -31,6 +37,7 @@ export default async function BuildPage() {
           totalPercent={view.totalPercent}
           githubFresh={view.githubFresh}
           sections={deriveBuildSections(view.items)}
+          notes={notes}
         />
       ) : null}
     </OperatorShell>

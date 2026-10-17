@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NodeSquare } from "@/components/node-square";
+import { NodeFace } from "@/components/node-face";
+import { lessonsHomeFace } from "@/lib/home-faces";
 import { lessonCategories, type LessonCard, type LessonsHomeModel } from "@/lib/lessons";
 import styles from "@/components/lessons-floor.module.css";
 
@@ -118,28 +119,6 @@ export function LessonsFloor({
   );
 }
 
-export function LessonsHomeCard({ card }: { card: LessonsHomeModel }) {
-  return (
-    <section className="lessons-home" aria-label="Lessons">
-      <NodeSquare
-        parent
-        home
-        live={!card.unavailable && card.count > 0}
-        dashed={card.unavailable || card.count === 0}
-        label="Lessons"
-      >
-        <Link href="/n/lessons" className="node-log-link" title="Open Lessons">
-          <div className="live-face parent-face">
-            <h2 className="node-ticker">Lessons</h2>
-            {card.unavailable ? (
-              <p className="node-note">unavailable</p>
-            ) : (
-              <p className="live-units">{card.count}</p>
-            )}
-            {card.latestTitle ? <p className="lessons-homeLatest">{card.latestTitle}</p> : null}
-          </div>
-        </Link>
-      </NodeSquare>
-    </section>
-  );
+export function LessonsHomeCard({ card, publicMode = false }: { card: LessonsHomeModel; publicMode?: boolean }) {
+  return <NodeFace face={lessonsHomeFace(card, publicMode)} />;
 }

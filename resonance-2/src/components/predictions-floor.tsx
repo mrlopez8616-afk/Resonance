@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { NodeSquare } from "@/components/node-square";
 import { ValueCard } from "@/components/value-card";
+import { PredictionsVisual } from "@/components/home-visual";
 import { formatUsd } from "@/lib/bets";
 import { bankrollHomeFace, type BankrollLedger } from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
+import type { TierSegment } from "@/lib/home-visuals";
 import { parentById, parentCardHref } from "@/lib/node-parents";
 
-export function PredictionsFloor({ ledger }: { ledger: BankrollLedger | null }) {
+export function PredictionsFloor({
+  ledger,
+  segments = null,
+  bankrollLine = null,
+}: {
+  ledger: BankrollLedger | null;
+  segments?: readonly TierSegment[] | null;
+  bankrollLine?: readonly number[] | null;
+}) {
   const face = ledger ? bankrollHomeFace(ledger) : null;
   const fightsOpen = ledger ? (ledger.deskOpen === 1 ? "1 open" : `${ledger.deskOpen} open`) : null;
   const label = parentById("fight-desk")?.label ?? "Fight Desk";
@@ -29,6 +39,7 @@ export function PredictionsFloor({ ledger }: { ledger: BankrollLedger | null }) 
           </>
         )}
       </header>
+      <PredictionsVisual segments={segments} bankroll={bankrollLine} />
       <section className="node-grid" aria-label="Fight Desk nodes">
         <NodeSquare parent live={face !== null} dashed={face === null} label="Bankroll node">
           <Link href={`${parentCardHref("fight-desk")}/bankroll`} className="node-log-link" title="Open Bankroll">

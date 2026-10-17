@@ -3,6 +3,7 @@ import { HealthHomeCard } from "@/components/machine-health-floor";
 import { YouTubeHomeCard } from "@/components/youtube-node";
 import { ChainSecurityHomeCard } from "@/components/chain-security-floor";
 import { LessonsHomeCard } from "@/components/lessons-floor";
+import { NodeFaceGrid } from "@/components/node-face";
 import { ThisWeek } from "@/components/this-week";
 import { PublicHome } from "@/components/public-floor";
 import { SystemHomeCard } from "@/components/system-map";
@@ -10,7 +11,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadBuildHomeCard } from "@/lib/build-store";
 import type { BuildHomeCard } from "@/lib/build-tracker";
-import { fitnessSecondaryLines, nextAiCatalystLine } from "@/lib/home-lines";
+import { fitnessSecondaryLines } from "@/lib/home-lines";
 import { loadFitnessHome } from "@/lib/fitness-store";
 import { loadControlHome } from "@/lib/control-room-store";
 import { loadMachineHealth } from "@/lib/machine-health-load";
@@ -98,10 +99,10 @@ export async function PublicHomePage() {
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={floor.storageDetail}>
       <ThisWeek items={week} />
+      <NodeFaceGrid>
       <PublicHome
         crypto={floor.model.crypto}
         aiStocks={floor.model.aiStocks}
-        aiCatalystLine={safeLine(nextAiCatalystLine(calendar.events, new Date()) ?? "")}
         fitness={{
           headline: headline?.value ?? null,
           unit: headline?.unit ?? null,
@@ -120,11 +121,12 @@ export async function PublicHomePage() {
               : buildHome.percentLabel,
         }}
       />
-      <ControlHomeCard lines={controlHome.lines} live={controlHome.live} />
+      <ControlHomeCard lines={controlHome.lines} live={controlHome.live} publicMode />
       {healthHome ? <HealthHomeCard report={healthHome.report} /> : null}
       <YouTubeHomeCard />
       <SystemHomeCard />
       <LessonsHomeCard
+        publicMode
         card={{
           ...lessonsHome,
           latestTitle:
@@ -134,6 +136,7 @@ export async function PublicHomePage() {
         }}
       />
       <ChainSecurityHomeCard
+        publicMode
         card={{
           ...chainHome,
           lines: chainHome.lines.flatMap((line) => {
@@ -142,6 +145,7 @@ export async function PublicHomePage() {
           }),
         }}
       />
+      </NodeFaceGrid>
     </OperatorShell>
   );
 }

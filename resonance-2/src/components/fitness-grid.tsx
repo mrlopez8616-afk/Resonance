@@ -1,7 +1,32 @@
 import Link from "next/link";
 import { HeartTrend, RunBars } from "@/components/fitness-charts";
+import { FitnessStepVisual } from "@/components/home-visual";
 import { NodeSquare } from "@/components/node-square";
 import { FITNESS_EMPTY, FITNESS_NOT_RECORDED, type FitnessCard } from "@/lib/fitness-board";
+import type { StepSlot } from "@/lib/home-visuals";
+
+/** Week lines and the step chart that used to sit on the home tile. */
+export function FitnessWeekPanel({
+  lines,
+  slots,
+}: {
+  lines: readonly string[];
+  slots: readonly StepSlot[] | null;
+}) {
+  if (lines.length === 0 && !slots) return null;
+  return (
+    <section className="parent-glance" aria-label="This week">
+      {lines.length > 0 ? (
+        <ul className="parent-lines">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
+      {slots ? <FitnessStepVisual slots={slots} /> : null}
+    </section>
+  );
+}
 
 export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
   return (
