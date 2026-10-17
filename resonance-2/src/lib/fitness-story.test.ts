@@ -32,9 +32,18 @@ function render(node: ReactNode): string {
   if (!isValidElement(node)) return "";
   const type = node.type;
   if (typeof type === "function") return render((type as (props: unknown) => ReactNode)(node.props));
-  const props = node.props as { children?: ReactNode; href?: string };
+  const props = node.props as {
+    children?: ReactNode;
+    href?: string;
+    className?: string;
+    "data-node-face"?: string;
+    "data-node-face-grid"?: boolean;
+  };
   const href = typeof props.href === "string" ? props.href : "";
-  return `${href}${render(props.children)}`;
+  const face = props["data-node-face"] ? ` data-node-face="${props["data-node-face"]}"` : "";
+  const grid = props["data-node-face-grid"] ? " data-node-face-grid" : "";
+  const className = props.className ? ` ${props.className}` : "";
+  return `${href}${face}${grid}${className}${render(props.children)}`;
 }
 
 function figure(story: FitnessStory, period: "week" | "month", id: string): StoryFigure {
@@ -331,6 +340,16 @@ describe("fitness story", () => {
     assert.match(html, /\/n\/fitness\/lifting/);
     assert.match(html, /\/n\/fitness\/manual/);
     assert.match(html, /not connected yet/);
+    assert.match(html, /data-node-face-grid/);
+    assert.match(html, /data-node-face="week-average-steps"/);
+    assert.match(html, /data-node-face="month-miles"/);
+    assert.match(html, /data-node-face="lifting"/);
+    assert.match(html, /data-node-face="manual"/);
+    assert.match(html, /node-face-glyph/);
+    assert.match(html, /Apple Health/);
+    assert.match(html, /Manual import/);
+    assert.match(html, /updated /);
+    assert.equal(html.includes("fitness-figure"), false);
     assert.equal(html.includes("$"), false);
     assert.equal(html.includes("streak"), false);
   });

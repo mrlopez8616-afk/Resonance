@@ -72,7 +72,39 @@ export function NodeFaceGrid({
   );
 }
 
+const HOME_GLYPHS = new Set([
+  "crypto",
+  "ai-stocks",
+  "fitness",
+  "finance",
+  "fight-desk",
+  "build",
+  "control",
+  "health",
+  "youtube",
+  "system",
+  "lessons",
+  "roundtable",
+  "chain-security",
+]);
+
+/** Home ids stay exact. Week and month fitness tiles share a mark by suffix. */
+function glyphKind(id: string): string {
+  if (HOME_GLYPHS.has(id)) return id;
+  if (id.includes("average-steps")) return "steps";
+  if (id.includes("longest-run")) return "longest";
+  if (id.includes("active-days")) return "active";
+  if (id.includes("versus-last-week")) return "versus";
+  if (/(^|-)runs$/.test(id)) return "runs";
+  if (id === "miles" || id.endsWith("-miles")) return "miles";
+  if (id === "pace" || id.endsWith("-pace")) return "pace";
+  if (id === "lifting" || id.endsWith("-lifting")) return "lifting";
+  if (id === "manual" || id.endsWith("-manual")) return "manual";
+  return id;
+}
+
 function NodeGlyph({ id }: { id: string }) {
+  const kind = glyphKind(id);
   const stroke = {
     fill: "none",
     stroke: "currentColor",
@@ -80,7 +112,7 @@ function NodeGlyph({ id }: { id: string }) {
     strokeLinejoin: "round" as const,
     strokeLinecap: "round" as const,
   };
-  if (id === "crypto") {
+  if (kind === "crypto") {
     return (
       <svg viewBox="0 0 24 24">
         <polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" {...stroke} />
@@ -88,7 +120,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "ai-stocks") {
+  if (kind === "ai-stocks") {
     return (
       <svg viewBox="0 0 24 24">
         <path d="M4 17h16" {...stroke} />
@@ -98,14 +130,14 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "fitness") {
+  if (kind === "fitness") {
     return (
       <svg viewBox="0 0 24 24">
         <path d="M4 12h3l2-4 3 8 2-4h6" {...stroke} />
       </svg>
     );
   }
-  if (id === "finance") {
+  if (kind === "finance") {
     return (
       <svg viewBox="0 0 24 24">
         <rect x="5" y="4" width="14" height="16" rx="1.5" {...stroke} />
@@ -113,14 +145,14 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "fight-desk") {
+  if (kind === "fight-desk") {
     return (
       <svg viewBox="0 0 24 24">
         <polygon points="12,3 21,12 12,21 3,12" {...stroke} />
       </svg>
     );
   }
-  if (id === "build") {
+  if (kind === "build") {
     return (
       <svg viewBox="0 0 24 24">
         <rect x="4" y="4" width="7" height="7" {...stroke} />
@@ -130,7 +162,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "control") {
+  if (kind === "control") {
     return (
       <svg viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="7.5" {...stroke} />
@@ -139,7 +171,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "health") {
+  if (kind === "health") {
     return (
       <svg viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="7.5" {...stroke} />
@@ -147,7 +179,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "youtube") {
+  if (kind === "youtube") {
     return (
       <svg viewBox="0 0 24 24">
         <rect x="3.5" y="6" width="17" height="12" rx="2.5" {...stroke} />
@@ -155,7 +187,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "system") {
+  if (kind === "system") {
     return (
       <svg viewBox="0 0 24 24">
         <circle cx="6" cy="8" r="2" {...stroke} />
@@ -165,7 +197,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "lessons") {
+  if (kind === "lessons") {
     return (
       <svg viewBox="0 0 24 24">
         <path d="M5 5.5h6.5a2 2 0 0 1 2 2V19a2 2 0 0 0-2-1.5H5z" {...stroke} />
@@ -173,7 +205,7 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "roundtable") {
+  if (kind === "roundtable") {
     return (
       <svg viewBox="0 0 24 24">
         <circle cx="8" cy="9" r="2.2" {...stroke} />
@@ -182,11 +214,87 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
-  if (id === "chain-security") {
+  if (kind === "chain-security") {
     return (
       <svg viewBox="0 0 24 24">
         <path d="M12 3.5l7 2.5v6.2c0 3.6-2.6 6.4-7 8.3-4.4-1.9-7-4.7-7-8.3V6z" {...stroke} />
         <path d="M9 12l2 2 4-4" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "steps") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M4 18h5.5V13H15V8H20" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "runs") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M5 16.5c1.6-5.2 4.2-7.5 7-7.5s5.4 2.3 7 7.5" {...stroke} />
+        <circle cx="5" cy="16.5" r="1.25" fill="currentColor" stroke="none" />
+        <circle cx="19" cy="16.5" r="1.25" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (kind === "miles") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M7 20V4.5" {...stroke} />
+        <path d="M7 5h9l-2.3 3.3L16 11.6H7" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "pace") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="13" r="6.5" {...stroke} />
+        <path d="M12 13V9.2M10 4.2h4" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "active") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <circle cx="3" cy="12" r="1.15" {...stroke} />
+        <circle cx="6" cy="12" r="1.15" {...stroke} />
+        <circle cx="9" cy="12" r="1.15" {...stroke} />
+        <circle cx="12" cy="12" r="1.15" {...stroke} />
+        <circle cx="15" cy="12" r="1.15" {...stroke} />
+        <circle cx="18" cy="12" r="1.15" {...stroke} />
+        <circle cx="21" cy="12" r="1.15" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "longest") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M4 12h13" {...stroke} />
+        <path d="M14 8l4 4-4 4" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "versus") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M7 10l5-4 5 4M7 18l5-4 5 4" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "lifting") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M3 12h18" {...stroke} />
+        <path d="M6 8v8M8.6 9.4v5.2M15.4 9.4v5.2M18 8v8" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "manual") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M4.5 19.5l1.4-4.4L16.2 4.8l3.2 3.2-10.3 10.3z" {...stroke} />
+        <path d="M13.8 7.2l3.2 3.2" {...stroke} />
       </svg>
     );
   }
