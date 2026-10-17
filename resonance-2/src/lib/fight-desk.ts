@@ -36,12 +36,16 @@ export function eventSlugFromTitle(title: string): string {
   return SLUG.test(slug) ? slug : "";
 }
 
+/**
+ * UFC 332 is the named card, or a blank event whose fight is on that catalog.
+ * A different event title stays on its own slug. A catalog fight slug does not
+ * pull that card onto ufc-332.
+ */
 export function isUfc332Bet(bet: Pick<Bet, "event" | "fightSlug">): boolean {
-  return (
-    bet.event.trim() === UFC_332_EVENT.name ||
-    bet.event.trim().toLowerCase() === UFC_332_ID ||
-    fightBySlug(bet.fightSlug) !== null
-  );
+  const event = bet.event.trim();
+  if (event === UFC_332_EVENT.name || event.toLowerCase() === UFC_332_ID) return true;
+  if (event) return false;
+  return fightBySlug(bet.fightSlug) !== null;
 }
 
 function isFightRow(event: Pick<CalendarEvent, "kind" | "lane">): boolean {
@@ -233,6 +237,21 @@ export function sortCardFights<T extends { segment: BoutSegment | null; boutOrde
 
 const BOUT =
   /([a-z0-9][a-z0-9.'’-]*(?:\s+[a-z0-9][a-z0-9.'’-]*)*)\s+vs\.?\s+([a-z0-9][a-z0-9.'’-]*(?:\s+[a-z0-9][a-z0-9.'’-]*)*)/i;
+const BOUT_OF = /\bbout\s+(\d+)\s+of\s+\d+\b/i;
+
+/** Running order written on the ticket, such as "bout 3 of 13". Disagreeing notes stay unknown. */
+function noteBoutOrder(bets: readonly Bet[]): number | null {
+  let order: number | null = null;
+  for (const bet of bets) {
+    const match = BOUT_OF.exec(bet.note ?? "");
+    if (!match?.[1]) continue;
+    const n = Number(match[1]);
+    if (!Number.isInteger(n) || n < 1) continue;
+    if (order == null) order = n;
+    else if (order !== n) return null;
+  }
+  return order;
+}
 
 function boutKey(title: string): string | null {
   const match = BOUT.exec(title.toLowerCase());
@@ -297,11 +316,9 @@ function listedFights(
     });
   }
   for (const fight of fights.values()) {
-    const catalog = fightBySlug(fight.slug);
-    fight.segment = catalog
-      ? catalog.segment
-      : segmentForListedFight(fight.title, fight.bets, calendarTexts);
-    if (catalog) fight.boutOrder = catalog.n;
+    fight.segment = segmentForListedFight(fight.title, fight.bets, calendarTexts);
+    const noted = noteBoutOrder(fight.bets);
+    if (noted != null) fight.boutOrder = noted;
   }
   return [...fights.values()];
 }

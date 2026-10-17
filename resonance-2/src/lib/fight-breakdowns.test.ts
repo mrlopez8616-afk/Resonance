@@ -94,10 +94,11 @@ function siteFight() {
 
 describe("breakdown validation", () => {
   it("rejects unknown tiers and a slug that is not lowercase", () => {
-    assert.throws(() => parseBreakdownBody([camel({ tier: "LOCK" })]), /tier must be STRONG, LEAN, or null/);
-    assert.throws(() => parseBreakdownBody([camel({ tier: "strong" })]), /tier must be STRONG, LEAN, or null/);
-    assert.throws(() => parseBreakdownBody([camel({ tier: "PASS" })]), /tier must be STRONG, LEAN, or null/);
-    assert.throws(() => parseBreakdownBody([camel({ eventSlug: "UFC-332" })]), /eventSlug must be a lowercase slug/);
+    assert.throws(() => parseBreakdownBody([camel({ tier: "LOCK" })]), /tier must be STRONG, LEAN, PASS, or null/);
+    assert.equal(parseBreakdownBody([camel({ tier: "strong" })])[0]?.tier, "STRONG");
+    assert.equal(parseBreakdownBody([camel({ tier: "PASS" })])[0]?.tier, null);
+    assert.equal(parseBreakdownBody([camel({ eventSlug: "UFC-332" })])[0]?.eventSlug, "ufc-332");
+    assert.throws(() => parseBreakdownBody([camel({ eventSlug: "UFC 332: Silva vs Wang" })]), /eventSlug must be a lowercase slug/);
   });
 
   it("accepts STRONG, LEAN, null, a bare array, and {breakdowns}", () => {
@@ -149,6 +150,26 @@ describe("breakdown validation", () => {
     assert.equal(main?.odds?.medianMl?.a, -143);
     assert.equal(main?.links?.a?.books?.FanDuel, -154);
     assert.equal(main?.links?.a?.noVigPct, 56);
+  });
+
+  it("derives a slug from the event title when the card is not in a slug map", () => {
+    const rows = parseBreakdownBody({
+      event: "UFC Fight Night: Buckley vs Malott",
+      fights: {
+        "13": {
+          slug: "joaquin-buckley-vs-mike-malott",
+          lean: "Mike Malott",
+          tier: "PASS",
+          ourNoVigPct: "56",
+        },
+      },
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.eventSlug, "ufc-fight-night-buckley-vs-malott");
+    assert.equal(rows[0]?.fightSlug, "joaquin-buckley-vs-mike-malott");
+    assert.equal(rows[0]?.fightN, 13);
+    assert.equal(rows[0]?.tier, null);
+    assert.equal(rows[0]?.odds?.noVigPct, 56);
   });
 
   it("refuses a bare data.json array", () => {
@@ -524,7 +545,7 @@ describe("breakdown route", { concurrency: false }, () => {
     const bad = await POST(request("POST", [camel({ tier: "LOCK" })]));
     assert.equal(bad.status, 400);
     const payload = (await bad.json()) as { error?: string };
-    assert.match(payload.error ?? "", /tier must be STRONG, LEAN, or null/);
+    assert.match(payload.error ?? "", /tier must be STRONG, LEAN, PASS, or null/);
   });
 
   it("upserts on the file store and dedupes the same body", async () => {

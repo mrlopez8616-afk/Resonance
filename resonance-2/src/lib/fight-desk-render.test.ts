@@ -5,8 +5,13 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { createElement, isValidElement, type ReactNode } from "react";
 import { parseBetPostBody, placeBet, type Bet } from "@/lib/bets";
+import { parseBetsEnvelope } from "@/lib/bets-store-core";
+import { cardInBankroll, computeBankroll, fightCardDay } from "@/lib/bankroll";
+import { chicagoDay } from "@/lib/calendar-time";
+import prodBetsBody from "@/lib/fixtures/prod-bets-2026-10-17.json";
 import { deskFightsForEvent, parseBreakdownBody, resolveFightView } from "@/lib/fight-breakdowns";
-import { resolveFightEventPage } from "@/lib/fight-desk";
+import { isUfc332Bet, resolveFightEventPage, sortCardFights } from "@/lib/fight-desk";
+import { fightBySlug } from "@/lib/ufc332";
 
 const EVENT = "UFC Fight Night: Buckley vs Malott";
 const EVENT_SLUG = "ufc-fight-night-buckley-vs-malott";
@@ -246,6 +251,98 @@ describe("Edmonton fight desk render", () => {
     );
     assert.match(oddCard, /unavailable/);
     assert.doesNotMatch(oddCard, /\$1,024/);
+  });
+
+  it("files the prod Buckley card from the title, including a breakdown with no mapped slug", () => {
+    const envelope = parseBetsEnvelope(prodBetsBody);
+    assert.ok(envelope);
+    assert.equal(envelope.bets.length, 51);
+    const buckley = envelope.bets.filter((bet) => bet.event === EVENT);
+    assert.equal(buckley.length, 13);
+    for (const bet of buckley) {
+      assert.equal(isUfc332Bet(bet), false);
+      assert.equal(fightBySlug(bet.fightSlug), null);
+      assert.equal(chicagoDay(bet.time), "2026-10-17");
+      assert.equal(bet.time.endsWith("-05:00"), true);
+      assert.equal(bet.status, "open");
+      assert.equal(bet.settledAt, undefined);
+      assert.equal(bet.settledPayout, undefined);
+      assert.equal(bet.realizedPnl, undefined);
+      assert.equal(bet.orderId, undefined);
+    }
+    const stolen = {
+      ...buckley[0]!,
+      id: "buckley-catalog-slug",
+      fightSlug: "natalia-silva-vs-wang-cong",
+    };
+    assert.equal(isUfc332Bet(stolen), false);
+    assert.equal(fightBySlug(stolen.fightSlug)?.slug, "natalia-silva-vs-wang-cong");
+
+    const resolved = resolveFightEventPage(EVENT_SLUG, envelope.bets, []);
+    assert.equal(resolved?.kind, "listed");
+    if (resolved?.kind !== "listed") return;
+    assert.equal(resolved.bets.length, 13);
+    const ordered = sortCardFights(resolved.fights);
+    assert.deepEqual(
+      ordered.map((fight) => fight.slug),
+      [
+        "cody-chovancek-vs-suyoung-you",
+        "melissa-croden-vs-chelsea-chandler",
+        "chad-anheliger-vs-steven-koslow",
+        "katlyn-cerminara-vs-mackenzie-stiller",
+        "javad-mahjoub-vs-joel-faglier",
+        "julien-leblanc-vs-nick-galanti",
+        "tanner-boser-vs-jhonata-diniz",
+        "mandel-nallo-vs-nate-landwehr",
+        "louis-jourdain-vs-timmy-cuamba",
+        "marc-andre-barriault-vs-kyle-daukaus",
+        "kyle-nelson-vs-cristian-perez",
+        "erin-blanchfield-vs-jasmine-jasudavicius",
+        "joaquin-buckley-vs-mike-malott",
+      ],
+    );
+    assert.equal(fightCardDay(EVENT_SLUG, EVENT, []), null);
+    assert.equal(cardInBankroll(null, buckley), true);
+    const ledger = computeBankroll(envelope.bets, []);
+    assert.equal(ledger.cards.some((card) => card.slug === EVENT_SLUG), true);
+
+    const posted = parseBreakdownBody({
+      event: EVENT,
+      fights: {
+        "13": {
+          fightSlug: "joaquin-buckley-vs-mike-malott",
+          lean: "Mike Malott",
+          tier: "PASS",
+          ourNoVigPct: 56,
+        },
+      },
+    });
+    assert.equal(posted[0]?.eventSlug, EVENT_SLUG);
+    assert.equal(posted[0]?.tier, null);
+    const mismatched = parseBreakdownBody({
+      eventSlug: "ufc-edmonton",
+      fights: {
+        "joaquin-buckley-vs-mike-malott": {
+          lean: "Mike Malott",
+          tier: "Strong",
+          ourNoVigPct: 56,
+        },
+      },
+    });
+    const fights = deskFightsForEvent(EVENT_SLUG, resolved.fights, mismatched);
+    const main = fights.find((fight) => fight.slug === "joaquin-buckley-vs-mike-malott");
+    assert.equal(main?.lean, "Mike Malott");
+    assert.equal(main?.tier, "STRONG");
+    const view = resolveFightView({
+      eventSlug: EVENT_SLUG,
+      fightSlug: "joaquin-buckley-vs-mike-malott",
+      breakdowns: mismatched,
+      bets: envelope.bets,
+    });
+    assert.equal(view.status, "ready");
+    if (view.status !== "ready") return;
+    assert.equal(view.bets.length, 1);
+    assert.equal(view.fight.lean, "Mike Malott");
   });
 
   it("keeps fight text inside the page width", () => {

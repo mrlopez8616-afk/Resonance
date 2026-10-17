@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eventSlugFromTitle } from "@/lib/fight-desk";
 import { fillRowKey, formatFillTime } from "@/lib/fills";
 import type { BetFill, Fill } from "@/data/fills";
 import { betStatusLabel, formatUsd } from "@/lib/bets";
@@ -18,6 +19,7 @@ function oddsLabel(fill: BetFill): string {
 
 export function BetFillCard({ fill }: { fill: BetFill }) {
   const payout = fill.estimated ? `${formatUsd(fill.payout)} est.` : formatUsd(fill.payout);
+  const eventSlug = eventSlugFromTitle(fill.event);
   return (
     <article className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 sm:px-5">
       <dl>
@@ -51,7 +53,10 @@ export function BetFillCard({ fill }: { fill: BetFill }) {
         {fill.note ? <Field label="note" value={fill.note} /> : null}
       </dl>
       <p className="mt-3 text-sm">
-        <Link href={`/fights/ufc-332/${fill.fightSlug}`} className="text-[color:var(--live)]">
+        <Link
+          href={eventSlug ? `/fights/${eventSlug}/${fill.fightSlug}` : "/fights"}
+          className="text-[color:var(--live)]"
+        >
           Open fight
         </Link>
       </p>
