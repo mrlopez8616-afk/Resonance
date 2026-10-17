@@ -2,15 +2,15 @@
 
 Summaries typed in from an app that does not post on its own. Resonance stores the rows. The site does not invent a figure.
 
-These rows never feed Steps, Runs, Lifting, Heart, the daily totals, or the run totals.
+These rows never feed the daily step rows, the run rows, or the steps and runs charts. A week or month figure can use a summary when those days have no day-by-day record. If a day-by-day record covers the same days, that record is kept and the summary is not added again.
 
 | Piece | Path | Use |
 | --- | --- | --- |
 | Table | `fitness_manual_summaries` (migration `031_fitness_manual_summaries`) | One row per period, app, and metric |
 | Read | `GET /api/fitness/manual` | Owner session or `Authorization: Bearer $RESONANCE_SYNC_SECRET` |
 | Write | `POST /api/fitness/manual` | Bearer only. A session cookie cannot write |
-| Card | `/n/fitness` | Manual import. The latest period |
-| Entries | `/n/fitness/manual` | That period's rows, each labeled manual |
+| Story | `/n/fitness` | Week and month figures. A summary sits in those figures, tagged manual import |
+| Entries | `/n/fitness/manual` | The stored rows, each labeled manual |
 
 The unique key is `(period_start, period_end, app, metric)`. Posting that same entry again updates the row.
 
@@ -20,7 +20,7 @@ The unique key is `(period_start, period_end, app, metric)`. Posting that same e
 
 `note` is optional. `source` defaults to `manual-import`.
 
-The page shows the latest period: the greatest `period_end`, then the greatest `period_start`. Each entry is labeled `manual`. An approximate entry is marked `approx`. An empty table says `not recorded`.
+The fitness story shows a summary inside the week or month it belongs to, tagged Manual import. An approximate entry is marked `~` and `approx`. The steps and runs charts stay on day-by-day rows and never plot a summary as a daily point. `/n/fitness/manual` still lists the latest period: the greatest `period_end`, then the greatest `period_start`. An empty table says `not recorded`.
 
 GET returns every stored row, newest period first. Public mode strips `$` and dollar amounts from `app`, `metric`, `unit`, `note`, and `source`. A Bearer read is not public mode.
 
