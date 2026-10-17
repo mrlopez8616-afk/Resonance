@@ -111,6 +111,7 @@ const CHILD_TITLES: Record<string, string> = {
   runs: "Runs",
   lifting: "Lifting",
   heart: "Heart",
+  manual: "Manual import",
   "cash-flow": "Cash Flow",
   bills: "Bills & Subscriptions",
   debt: "Debt",

@@ -38,6 +38,7 @@ export const READ_ROUTES = [
   "GET /api/lessons",
   "GET /api/approvals",
   "GET /api/roundtable",
+  "GET /api/fitness/manual",
 ] as const;
 
 export const MACHINE_ROUTES = [
@@ -56,6 +57,7 @@ export const MACHINE_ROUTES = [
   "PATCH /api/lessons",
   "POST /api/approvals",
   "POST /api/roundtable",
+  "POST /api/fitness/manual",
 ] as const;
 
 const SESSION_TOKEN = /^[A-Za-z0-9_-]{43}$/;

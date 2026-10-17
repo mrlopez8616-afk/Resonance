@@ -18,6 +18,7 @@ export const FITNESS_NODES = [
   { id: "runs", title: "Runs" },
   { id: "lifting", title: "Lifting" },
   { id: "heart", title: "Heart" },
+  { id: "manual", title: "Manual import" },
 ] as const;
 
 /** Old child slug. `/n/fitness/activity` redirects here permanently. */
@@ -620,15 +621,28 @@ export function fitnessCards(
   };
   const bars = runBars(workouts, today);
   const heart = heartPoints(metrics, today);
-  return FITNESS_NODES.map((node) => ({
-    id: node.id,
-    title: node.title,
-    href: `/n/fitness/${node.id}`,
-    headline: facts[node.id].headline,
-    detail: facts[node.id].detail,
-    bars: node.id === "runs" ? bars : [],
-    heart: node.id === "heart" ? heart : [],
-  }));
+  return FITNESS_NODES.map((node) => {
+    if (node.id === "manual") {
+      return {
+        id: node.id,
+        title: node.title,
+        href: `/n/fitness/${node.id}`,
+        headline: null,
+        detail: FITNESS_NOT_RECORDED,
+        bars: [] as FitnessRunBar[],
+        heart: [] as FitnessHeartPoint[],
+      };
+    }
+    return {
+      id: node.id,
+      title: node.title,
+      href: `/n/fitness/${node.id}`,
+      headline: facts[node.id].headline,
+      detail: facts[node.id].detail,
+      bars: node.id === "runs" ? bars : [],
+      heart: node.id === "heart" ? heart : [],
+    };
+  });
 }
 
 function originLabel(origin: FitnessOrigin): string | null {
@@ -826,7 +840,7 @@ export function fitnessNode(
   today: string,
 ): FitnessNodeDetail | null {
   const node = FITNESS_NODES.find((item) => item.id === id);
-  if (!node) return null;
+  if (!node || node.id === "manual") return null;
   const cards = fitnessCards(metrics, workouts, today);
   const card = cards.find((item) => item.id === node.id);
   const rows =

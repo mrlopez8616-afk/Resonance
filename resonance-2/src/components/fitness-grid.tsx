@@ -33,7 +33,10 @@ export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
     <section className="node-grid fitness-grid" aria-label="Fitness nodes">
       {cards.map((card) => {
         const live = card.headline !== null;
-        const emptyCopy = card.id === "runs" || card.id === "heart" ? FITNESS_NOT_RECORDED : FITNESS_EMPTY;
+        const emptyCopy =
+          card.id === "runs" || card.id === "heart" || card.id === "manual"
+            ? FITNESS_NOT_RECORDED
+            : FITNESS_EMPTY;
         return (
           <NodeSquare
             key={card.id}
