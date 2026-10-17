@@ -166,7 +166,8 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.deepEqual(home.line, { value: "3.9", unit: "mi this week" });
     const cards = await loadFitnessCards("2026-10-07");
     assert.equal(cards.availability, "unavailable");
-    assert.equal(cards.cards.length, 4);
+    assert.equal(cards.cards.length, 5);
+    assert.equal(cards.cards.find((card) => card.id === "manual")?.detail, "not recorded");
   });
 
   it("seeds the manual day through the store once", async () => {
@@ -760,6 +761,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "028_fitness_nrc",
         "029_future_ideas_legacy_fitness",
         "030_chain_security",
+        "031_fitness_manual_summaries",
       ],
     );
     assert.equal(

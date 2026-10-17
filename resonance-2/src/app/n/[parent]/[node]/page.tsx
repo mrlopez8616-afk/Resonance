@@ -7,6 +7,8 @@ import { PrivatePage } from "@/components/private-notice";
 import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { FitnessDetail } from "@/components/fitness-detail";
+import { manualImportDetail } from "@/lib/fitness-manual";
+import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { LiveNodeFace } from "@/components/live-node-face";
 import { NodeSquare } from "@/components/node-square";
 import { BankrollLedgerView } from "@/components/predictions-floor";
@@ -163,6 +165,27 @@ export default async function NodeDetailPage({
   }
   if (parent?.id === "fitness") {
     await requireRole("owner");
+    if (nodeId === "manual") {
+      const [floor, manual, publicMode] = await Promise.all([
+        loadOperatorFloor(),
+        loadFitnessManual(),
+        isPublicMode(),
+      ]);
+      return (
+        <OperatorShell
+          storageMessage={
+            floor.storageMessage ??
+            (manual.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+          }
+          storageDetail={floor.storageDetail}
+        >
+          <Link href={`/n/${parent.id}`} className="calendar-back">
+            {parent.label}
+          </Link>
+          <FitnessDetail detail={manualImportDetail(manual.entries, { publicMode })} />
+        </OperatorShell>
+      );
+    }
     const [floor, fitness] = await Promise.all([
       loadOperatorFloor(),
       loadFitnessNode(nodeId),

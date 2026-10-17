@@ -18,6 +18,8 @@ import { loadPublicFloor } from "@/lib/public-load";
 import { hasMoneyText, publicRecordLabel, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
+import { withManualImportCard } from "@/lib/fitness-manual";
+import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { loadFitnessCards, loadFitnessHome } from "@/lib/fitness-store";
 import { loadOperatorFloor } from "@/lib/operator-floor";
 import { AI_STOCK_TICKERS, retiringHeldLine, retiringHeldTickers } from "@/lib/ai-stocks";
@@ -190,20 +192,24 @@ export default async function ParentNodePage({
 
   if (parent.id === "fitness") {
     await requireRole("owner");
-    const [floor, fitness, home, publicMode] = await Promise.all([
+    const [floor, fitness, home, publicMode, manual] = await Promise.all([
       loadOperatorFloor(),
       loadFitnessCards(),
       loadFitnessHome(),
       isPublicMode(),
+      loadFitnessManual(),
     ]);
     const weekLines = fitnessSecondaryLines(home.week, home.line).filter(
       (line) => !(publicMode && hasMoneyText(line)),
     );
+    const cards = withManualImportCard(fitness.cards, manual.entries, { publicMode });
     return (
       <OperatorShell
         storageMessage={
           floor.storageMessage ??
-          (fitness.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+          (fitness.availability === "unavailable" || manual.availability === "unavailable"
+            ? STORAGE_UNAVAILABLE_BANNER
+            : null)
         }
         storageDetail={floor.storageDetail}
       >
@@ -211,7 +217,7 @@ export default async function ParentNodePage({
           Floor
         </Link>
         <FitnessWeekPanel lines={weekLines} slots={fitnessStepBars(home.stepDays)} />
-        <FitnessGrid cards={fitness.cards} />
+        <FitnessGrid cards={cards} />
         {publicMode ? null : (
           <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
         )}
