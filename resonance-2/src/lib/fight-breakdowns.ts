@@ -1,6 +1,7 @@
 import type { Bet, BetTier } from "@/lib/bets";
 import {
   betEventSlug,
+  eventSlugFromTitle,
   fightersFromTitle,
   segmentHint,
   sortCardFights,
@@ -174,11 +175,30 @@ export function sameBreakdown(left: FightBreakdown, right: FightBreakdown): bool
 }
 
 function readSlug(value: unknown, label: string): string {
-  const text = typeof value === "string" ? value.trim() : "";
-  if (!SLUG.test(text)) {
+  const text = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!SLUG.test(text) || (typeof value === "string" && /\s/.test(value))) {
     throw new BreakdownWriteError(`${label} must be a lowercase slug.`);
   }
   return text;
+}
+
+/**
+ * A mapped event posts eventSlug. An event that is not in that map posts the
+ * title on `event` and leaves the slug blank or equal to the title.
+ */
+function postedEventSlug(body: Record<string, unknown>): string {
+  const explicit = body.eventSlug ?? body.event_slug;
+  const explicitText = typeof explicit === "string" ? explicit.trim() : "";
+  if (explicitText && !/\s/.test(explicitText) && SLUG.test(explicitText.toLowerCase())) {
+    return explicitText.toLowerCase();
+  }
+  const title =
+    (typeof body.event === "string" && body.event.trim()) ||
+    (typeof body.title === "string" && body.title.trim()) ||
+    explicitText;
+  const derived = title ? eventSlugFromTitle(title) : "";
+  if (SLUG.test(derived)) return derived;
+  throw new BreakdownWriteError("eventSlug must be a lowercase slug.");
 }
 
 function readText(value: unknown, label: string): string | null {
@@ -206,7 +226,8 @@ function readBoutOrder(value: unknown): number | null {
 }
 
 function readNumber(value: unknown, label: string): number | null {
-  if (value == null) return null;
+  if (value == null || value === "") return null;
+  if (typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value.trim())) return Number(value.trim());
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new BreakdownWriteError(`${label} must be a number.`);
   }
@@ -214,9 +235,12 @@ function readNumber(value: unknown, label: string): number | null {
 }
 
 function readTier(value: unknown): BetTier | null {
-  if (value == null) return null;
-  if (value === "STRONG" || value === "LEAN") return value;
-  throw new BreakdownWriteError("tier must be STRONG, LEAN, or null.");
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") throw new BreakdownWriteError("tier must be STRONG, LEAN, PASS, or null.");
+  const tier = value.trim().toUpperCase();
+  if (tier === "STRONG" || tier === "LEAN") return tier;
+  if (tier === "PASS" || tier === "NONE" || tier === "FREE") return null;
+  throw new BreakdownWriteError("tier must be STRONG, LEAN, PASS, or null.");
 }
 
 function readEdges(value: unknown): string[] {
@@ -474,11 +498,11 @@ function dataByNumber(value: unknown): Map<number, Record<string, unknown>> {
 
 function breakdownFromSiteFight(
   eventSlug: string,
-  fightN: number,
+  fightN: number | null,
   fight: Record<string, unknown>,
   card: Record<string, unknown> | null,
 ): FightBreakdown {
-  const row = blankBreakdown(eventSlug, readSlug(fight.fightSlug, "fightSlug"));
+  const row = blankBreakdown(eventSlug, readSlug(fight.fightSlug ?? fight.slug ?? fight.fight_slug, "fightSlug"));
   row.fightN = fightN;
   row.boutOrder = readBoutOrder(fight.boutOrder);
   row.lean = readText(fight.lean, "lean");
@@ -532,10 +556,31 @@ function looksLikeDataFile(body: unknown[]): boolean {
   return isRecord(first) && isRecord(first.A) && isRecord(first.B) && typeof first.n === "number" && first.fightSlug == null;
 }
 
+function fightsRecord(value: unknown): Record<string, unknown> | null {
+  if (isRecord(value)) return value;
+  if (!Array.isArray(value)) return null;
+  const record: Record<string, unknown> = {};
+  for (const fight of value) {
+    if (!isRecord(fight)) throw new BreakdownWriteError("each fight must be an object.");
+    const n = fight.n ?? fight.fightN;
+    const slug = fight.fightSlug ?? fight.slug ?? fight.fight_slug;
+    const key = typeof n === "number" && Number.isInteger(n) ? String(n) : typeof slug === "string" ? slug : "";
+    if (!key) throw new BreakdownWriteError("each fight needs an integer n or a fightSlug.");
+    record[key] = fight;
+  }
+  return record;
+}
+
+function siteFightNumber(key: string, fight: Record<string, unknown>): number | null {
+  if (/^\d+$/.test(key)) return Number(key);
+  return readInt(fight.n, "n") ?? readInt(fight.fightN, "fightN");
+}
+
 /**
  * Accepts `{breakdowns:[...]}`, a bare camelCase array, or a site_analysis.json
- * object (`eventSlug` + `fights` keyed by fight number). An optional `data`
- * array on that object is the data.json card (names, stats, books).
+ * object (`event` or `eventSlug`, plus `fights` keyed by fight number or slug).
+ * An optional `data` array on that object is the data.json card (names, stats, books).
+ * An event that is not in a slug map can omit eventSlug and send the event title.
  */
 export function parseBreakdownBody(body: unknown): FightBreakdown[] {
   if (Array.isArray(body)) {
@@ -552,20 +597,31 @@ export function parseBreakdownBody(body: unknown): FightBreakdown[] {
     if (body.breakdowns.length === 0) throw new BreakdownWriteError("at least one breakdown is required.");
     return body.breakdowns.map((row) => breakdownFromCamel(row));
   }
-  const fights = body.fights;
-  if (typeof body.eventSlug === "string" && isRecord(fights)) {
-    const eventSlug = readSlug(body.eventSlug, "eventSlug");
+  const fights = fightsRecord(body.fights);
+  const hasEvent =
+    typeof body.eventSlug === "string" ||
+    typeof body.event_slug === "string" ||
+    typeof body.event === "string" ||
+    typeof body.title === "string";
+  if (hasEvent && fights) {
+    const eventSlug = postedEventSlug(body);
     const cards = dataByNumber(body.data);
     const keys = Object.keys(fights);
     if (keys.length === 0) throw new BreakdownWriteError("at least one breakdown is required.");
     return keys.map((key) => {
-      const fightN = Number(key);
-      if (!Number.isInteger(fightN)) {
-        throw new BreakdownWriteError(`fight key ${key} must be an integer.`);
-      }
       const fight = fights[key];
       if (!isRecord(fight)) throw new BreakdownWriteError(`fight ${key} must be an object.`);
-      return breakdownFromSiteFight(eventSlug, fightN, fight, cards.get(fightN) ?? null);
+      const numbered = /^\d+$/.test(key);
+      const slugKey = !numbered && !/\s/.test(key) && SLUG.test(key.toLowerCase());
+      if (!numbered && !slugKey) {
+        throw new BreakdownWriteError(`fight key ${key} must be an integer or a fight slug.`);
+      }
+      const fightN = siteFightNumber(key, fight);
+      const withSlug =
+        fight.fightSlug == null && fight.slug == null && fight.fight_slug == null && slugKey
+          ? { ...fight, fightSlug: key.toLowerCase() }
+          : fight;
+      return breakdownFromSiteFight(eventSlug, fightN, withSlug, fightN == null ? null : cards.get(fightN) ?? null);
     });
   }
   throw new BreakdownWriteError(
@@ -706,6 +762,35 @@ function rowSegment(row: FightBreakdown): BoutSegment | null {
   return row.card ? segmentHint(row.card) : null;
 }
 
+/**
+ * Breakdowns for one event page.
+ * Rows stored under that slug come first.
+ * A row stored under some other slug still joins when its fight is on this card's bets
+ * and not on another card. UFC 332 rows stay on the catalog.
+ */
+function rowsForEventPage(
+  eventSlug: string,
+  breakdowns: readonly FightBreakdown[],
+  bets: readonly Bet[],
+  events: Parameters<typeof betEventSlug>[1] = [],
+): FightBreakdown[] {
+  const id = eventSlug.trim().toLowerCase();
+  const direct = breakdowns.filter((row) => row.eventSlug === id);
+  const have = new Set(direct.map((row) => row.fightSlug));
+  const onThis = new Set(
+    bets.filter((bet) => betEventSlug(bet, events) === id).map((bet) => bet.fightSlug),
+  );
+  const onOther = new Set(
+    bets.filter((bet) => betEventSlug(bet, events) !== id).map((bet) => bet.fightSlug),
+  );
+  const extra = breakdowns.filter((row) => {
+    if (row.eventSlug === id || row.eventSlug === UFC_332_ID) return false;
+    if (have.has(row.fightSlug) || !onThis.has(row.fightSlug) || onOther.has(row.fightSlug)) return false;
+    return true;
+  });
+  return [...direct, ...extra.map((row) => ({ ...row, eventSlug: id }))];
+}
+
 export function breakdownsForEvent(
   rows: readonly FightBreakdown[],
   eventSlug: string,
@@ -807,6 +892,7 @@ function catalogSegment(card: string | null): FightSegmentId {
 }
 
 function plainEdge(edge: string): string {
+  if (typeof edge !== "string") return "";
   return edge.replace(/\*\*/g, "").trim();
 }
 
@@ -933,8 +1019,8 @@ export function resolveFightView(input: {
     return fight ? { status: "static", fight } : { status: "missing" };
   }
   const breakdown =
-    (input.breakdowns ?? []).find(
-      (row) => row.eventSlug === eventSlug && row.fightSlug === fightSlug,
+    rowsForEventPage(eventSlug, input.breakdowns ?? [], input.bets ?? [], input.events ?? []).find(
+      (row) => row.fightSlug === fightSlug,
     ) ?? null;
   const bets = betsOnThisFight(input.bets ?? [], eventSlug, fightSlug, input.events ?? []);
   if (!breakdown && bets.length === 0) return { status: "missing" };
@@ -1060,9 +1146,16 @@ export function deskFightsForEvent(
   eventSlug: string,
   betFights: readonly DeskFight[],
   breakdowns: readonly FightBreakdown[],
+  events: Parameters<typeof betEventSlug>[1] = [],
 ): DeskFight[] {
-  const fromBreakdowns = fightsFromBreakdowns(eventSlug, breakdowns);
-  const annotated = annotateDeskFights(betFights, eventSlug, breakdowns);
+  const rows = rowsForEventPage(
+    eventSlug,
+    breakdowns,
+    betFights.flatMap((fight) => fight.bets),
+    events,
+  );
+  const fromBreakdowns = fightsFromBreakdowns(eventSlug, rows);
+  const annotated = annotateDeskFights(betFights, eventSlug, rows);
   const bySlug = new Map(annotated.map((fight) => [fight.slug, fight]));
   const seen = new Set<string>();
   const merged: DeskFight[] = [];

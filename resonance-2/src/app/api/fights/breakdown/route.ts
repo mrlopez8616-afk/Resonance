@@ -33,7 +33,8 @@ function notConfigured() {
 
 /**
  * One event's breakdowns. Session or hub Bearer.
- * Fight Desk posts site_analysis.json as the body (eventSlug + fights).
+ * Fight Desk posts site_analysis.json as the body (event or eventSlug, plus fights).
+ * An event that is not in a slug map can send the event title and omit eventSlug.
  * Add `data` (the data.json array) on that object to store per-side stats and books.
  * `{breakdowns:[...]}` and a bare camelCase array are the same write.
  */
