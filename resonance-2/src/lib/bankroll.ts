@@ -98,6 +98,7 @@ export type BankrollDeposit = {
 type Tally = {
   wins: number;
   losses: number;
+  draws: number;
   sold: number;
   voids: number;
   open: number;
@@ -110,6 +111,7 @@ function emptyTally(): Tally {
   return {
     wins: 0,
     losses: 0,
+    draws: 0,
     sold: 0,
     voids: 0,
     open: 0,
@@ -147,6 +149,7 @@ function addBet(tally: Tally, bet: Bet): void {
   if (bet.status === "won") tally.wins += 1;
   else if (bet.status === "lost") tally.losses += 1;
   else if (bet.status === "sold") tally.sold += 1;
+  else if (bet.status === "draw") tally.draws += 1;
   else tally.voids += 1;
 }
 
@@ -156,8 +159,14 @@ function tallyBets(bets: readonly Bet[]): Tally {
   return tally;
 }
 
-export function recordLabel(tally: Pick<Tally, "wins" | "losses" | "sold" | "voids">): string {
-  return `${tally.wins}-${tally.losses} · ${tally.sold} sold · ${tally.voids} void`;
+export function recordLabel(
+  tally: Pick<Tally, "wins" | "losses" | "draws" | "sold" | "voids">,
+): string {
+  const record =
+    tally.draws > 0
+      ? `${tally.wins}-${tally.losses}-${tally.draws}`
+      : `${tally.wins}-${tally.losses}`;
+  return `${record} · ${tally.sold} sold · ${tally.voids} void`;
 }
 
 /** Deposit total divided by the current bankroll. Null when the bankroll is zero. */

@@ -165,7 +165,15 @@ export function inScopeBankrollPoints(
       if (!cardInBankroll(day, event.bets)) continue;
       for (const bet of event.bets) {
         const status = bet.status;
-        if (status !== "won" && status !== "lost" && status !== "sold" && status !== "void") continue;
+        if (
+          status !== "won" &&
+          status !== "lost" &&
+          status !== "sold" &&
+          status !== "void" &&
+          status !== "draw"
+        ) {
+          continue;
+        }
         const pnl =
           bet.realizedPnl && isDecimalString(bet.realizedPnl)
             ? money(bet.realizedPnl)

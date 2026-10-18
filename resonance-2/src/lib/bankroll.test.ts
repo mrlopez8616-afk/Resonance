@@ -151,6 +151,37 @@ describe("bankroll", () => {
     assert.equal(ledger.cards[0]?.pnlLabel, "+$7.00");
   });
 
+  it("books a draw into P&L, ROI, bankroll, and cash without a win or a loss", () => {
+    const won = settleBet(
+      allen({ id: "win", stake: "4.00", payout: "10.00" }),
+      { id: "win", status: "won", payout: "10.00" },
+      NOW,
+    ).bet;
+    const drawn = settleBet(
+      allen({ id: "draw-partial", stake: "0.96", payout: "1.80" }),
+      { id: "draw-partial", status: "draw", payout: "0.92" },
+      NOW,
+    ).bet;
+    assert.equal(drawn.realizedPnl, "-0.04");
+    assert.equal(drawn.status, "draw");
+
+    const before = computeBankroll([won]);
+    const ledger = computeBankroll([won, drawn]);
+    assert.equal(before.recordLabel, "1-0 · 0 sold · 0 void");
+    assert.equal(ledger.recordLabel, "1-0-1 · 0 sold · 0 void");
+    assert.equal(ledger.open, 0);
+    assert.equal(ledger.bankroll, "23.02");
+    assert.equal(ledger.cash, "23.02");
+    assert.equal(ledger.atRisk, "0.00");
+    assert.equal(ledger.realizedLabel, "+$5.96");
+    assert.equal(ledger.roiLabel, "+120.16%");
+    assert.equal(ledger.cards[0]?.recordLabel, "1-0-1 · 0 sold · 0 void");
+    assert.equal(ledger.cards[0]?.pnlLabel, "+$5.96");
+    assert.equal(ledger.tiers.find((tier) => tier.id === "untiered")?.recordLabel, "1-0-1 · 0 sold · 0 void");
+    assert.notEqual(ledger.bankroll, before.bankroll);
+    assert.notEqual(ledger.cash, before.cash);
+  });
+
   it("uses stored settlement fields when the row already carries realized P/L", () => {
     const sold = allen({
       id: "stored-sold",

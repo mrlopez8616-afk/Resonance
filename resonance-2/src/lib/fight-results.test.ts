@@ -304,6 +304,8 @@ describe("UFC 332 fight results", () => {
     );
     assert.equal(formatBoutLine(null, ["lost", "lost"]), "lost");
     assert.equal(formatBoutLine(null, ["won", "sold"]), "won · sold");
+    assert.equal(formatBoutLine(null, ["draw"]), "draw");
+    assert.equal(formatBoutLine(null, ["won", "draw"]), "won · draw");
     assert.equal(formatBoutLine(null, ["open"]), "Pending");
     assert.equal(formatBoutLine(null, ["won", "open"]), "Pending");
     assert.equal(formatBoutLine(result, ["lost"]), formatFightResult(result));

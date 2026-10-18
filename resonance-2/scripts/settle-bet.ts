@@ -5,6 +5,7 @@
  *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- ufc-332-nolan won
  *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- ufc-332-coria won --payout 42.51
  *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- ufc-332-ribovics sold --payout 13.64 --stake 14.54 --override
+ *   RESONANCE_SYNC_SECRET=... npm run bets:settle -- some-id draw --payout 0.92
  */
 import { parseSettleRequest } from "../src/lib/bets";
 
@@ -28,7 +29,7 @@ async function main(): Promise<void> {
   const override = argv.includes("--override");
   if (!id || !status) {
     console.error(
-      "Usage: npm run bets:settle -- <id> <won|lost|void|sold> [--payout 12.34] [--stake 19.99 --override] [--settledAt 2026-10-03T23:00:00-05:00]",
+      "Usage: npm run bets:settle -- <id> <won|lost|void|sold|draw> [--payout 12.34] [--stake 19.99 --override] [--settledAt 2026-10-03T23:00:00-05:00]",
     );
     process.exit(1);
   }

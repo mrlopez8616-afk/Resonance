@@ -128,7 +128,7 @@ export type FounderBetSeed = {
   hubLean?: string;
   agreesWithLean?: boolean;
   /** Omitted seeds are open. A settled seed is inserted as written and is not a correction. */
-  status?: "open" | "won" | "lost" | "void" | "sold";
+  status?: "open" | "won" | "lost" | "void" | "sold" | "draw";
 };
 
 export type FighterSide = {
