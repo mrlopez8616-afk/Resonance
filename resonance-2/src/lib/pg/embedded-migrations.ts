@@ -490,6 +490,20 @@ CREATE INDEX IF NOT EXISTS fitness_manual_summaries_period_idx
   ON fitness_manual_summaries (period_end, period_start);
 `;
 
+export const BANKROLL_DEPOSITS_SQL = `-- Bankroll deposits. Number 032.
+-- 031 is manual fitness summaries. This file inserts no rows.
+-- A deposit dated on or after 2026-10-07 adds to the bankroll.
+-- A negative amount is a withdrawal. The same id is stored once.
+
+CREATE TABLE IF NOT EXISTS bankroll_deposits (
+  id text PRIMARY KEY,
+  "date" date NOT NULL,
+  amount numeric(12,2) NOT NULL,
+  note text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -520,4 +534,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "029_future_ideas_legacy_fitness", sql: FUTURE_IDEAS_LEGACY_FITNESS_SQL },
   { id: "030_chain_security", sql: CHAIN_SECURITY_SQL },
   { id: "031_fitness_manual_summaries", sql: FITNESS_MANUAL_SUMMARIES_SQL },
+  { id: "032_bankroll_deposits", sql: BANKROLL_DEPOSITS_SQL },
 ];

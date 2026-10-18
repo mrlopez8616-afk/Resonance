@@ -8,7 +8,7 @@ export type BetVenue = "coinbase-predict";
 /** Writable sleeve prints. `flare-vault` is founder-typed and is not a FillSleeveId. */
 export type FillSleeveId = "rh-main" | "rh-agentic" | "coinbase" | "cb-agentic";
 
-export type BetFillStatus = "open" | "won" | "lost" | "void" | "sold";
+export type BetFillStatus = "open" | "won" | "lost" | "void" | "sold" | "draw";
 
 type FillBase = {
   time: string;

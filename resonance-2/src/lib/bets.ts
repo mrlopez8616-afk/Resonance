@@ -4,7 +4,7 @@ import { addDecimal, isDecimalString, subtractDecimal } from "@/lib/decimal";
 
 export const BET_VENUE = "coinbase-predict" as const;
 export const BET_TICKER = "UFC" as const;
-export const BET_STATUSES = ["open", "won", "lost", "void", "sold"] as const;
+export const BET_STATUSES = ["open", "won", "lost", "void", "sold", "draw"] as const;
 export const BET_TIERS = ["STRONG", "LEAN"] as const;
 
 export type BetStatus = (typeof BET_STATUSES)[number];
@@ -35,7 +35,10 @@ export type Bet = {
   payout: string;
   estimated?: boolean;
   status: BetStatus;
-  /** Set on won or sold when the settle call sends an actual payout. */
+  /**
+   * Cash returned on won, sold, or draw.
+   * A draw omits this and the settle stores the stake, so P&L is 0.00.
+   */
   settledPayout?: string;
   realizedPnl?: string;
   settledAt?: string;
@@ -56,6 +59,7 @@ export type FightDeskSummary = {
   potentialLabel: string;
   wins: number;
   losses: number;
+  draws: number;
   record: string;
   estimated: boolean;
 };
@@ -106,8 +110,17 @@ export function realizedPnl(
 ): string {
   if (status === "lost") return money(`-${money(stake).replace(/^-/, "")}`);
   if (status === "void") return "0.00";
-  // won and sold: proceeds minus stake. Sold proceeds live in payout.
+  // won, sold, and draw: proceeds minus stake. A draw at the stake is 0.00.
   return money(subtractDecimal(money(payout), money(stake)));
+}
+
+/** W-L, or W-L-D when at least one ticket drew. Draws are not wins or losses. */
+export function recordMark(wins: number, losses: number, draws: number): string {
+  return draws > 0 ? `${wins}-${losses}-${draws}` : `${wins}-${losses}`;
+}
+
+function drawCountLabel(draws: number): string {
+  return draws === 1 ? "1 draw" : `${draws} draws`;
 }
 
 /** Log and fight pages say sold early. The stored status stays sold. */
@@ -122,6 +135,7 @@ export function summarizeBets(bets: readonly Bet[]): FightDeskSummary {
   const potential = sumMoney(open.map((bet) => bet.payout));
   const wins = bets.filter((bet) => bet.status === "won").length;
   const losses = bets.filter((bet) => bet.status === "lost").length;
+  const draws = bets.filter((bet) => bet.status === "draw").length;
   return {
     open: open.length,
     staked: money(staked),
@@ -130,7 +144,8 @@ export function summarizeBets(bets: readonly Bet[]): FightDeskSummary {
     potentialLabel: formatUsd(potential),
     wins,
     losses,
-    record: `${wins}-${losses}`,
+    draws,
+    record: recordMark(wins, losses, draws),
     estimated: open.some((bet) => bet.estimated),
   };
 }
@@ -148,17 +163,19 @@ function settledPnlOf(bet: Bet): string | null {
   return realizedPnl(bet.stake, bet.status, bet.settledPayout ?? bet.payout);
 }
 
-function recordDetail(wins: number, losses: number, sold: number): string {
-  if (wins + losses === 0 && sold > 0) return `${sold} sold`;
-  const record = `${wins}-${losses}`;
-  return sold > 0 ? `${record} · ${sold} sold` : record;
+function recordDetail(wins: number, losses: number, sold: number, draws: number): string {
+  if (wins + losses + draws === 0 && sold > 0) return `${sold} sold`;
+  const parts = [recordMark(wins, losses, draws)];
+  if (draws > 0) parts.push(drawCountLabel(draws));
+  if (sold > 0) parts.push(`${sold} sold`);
+  return parts.join(" · ");
 }
 
 /**
  * Promotion and event card face.
  * Open stake is the headline while any ticket is open.
  * A fully settled card leads with realized P/L and a W-L record.
- * Sold changes P/L and is counted on its own. It is not a win or a loss.
+ * Sold and draw change P/L and are counted on their own. Neither is a win or a loss.
  */
 export function cardMoney(bets: readonly Bet[]): CardMoney {
   if (bets.length === 0) return { headline: "No bets", detail: "" };
@@ -166,7 +183,8 @@ export function cardMoney(bets: readonly Bet[]): CardMoney {
   const wins = bets.filter((bet) => bet.status === "won").length;
   const losses = bets.filter((bet) => bet.status === "lost").length;
   const sold = bets.filter((bet) => bet.status === "sold").length;
-  const record = recordDetail(wins, losses, sold);
+  const draws = bets.filter((bet) => bet.status === "draw").length;
+  const record = recordDetail(wins, losses, sold, draws);
   if (open.length === 0) {
     const pnl = sumMoney(
       bets.flatMap((bet) => {
@@ -208,11 +226,13 @@ export type LeanScorecard = {
   voids: number;
   /** Closed early. Not a win or a loss. */
   sold: number;
+  /** Bout drawn. Not a win or a loss. P&L is settled separately. */
+  draws: number;
   open: number;
 };
 
 /**
- * Settled tickets only. A void is neither a win nor a loss.
+ * Settled tickets only. A void, a sale, and a draw are neither a win nor a loss.
  * Hub lean won when the lean fighter won: the bet result when the pick
  * agreed, and the inverse when the founder went against the lean.
  */
@@ -227,6 +247,7 @@ export function scoreBets(bets: readonly Bet[]): LeanScorecard {
   let againstLosses = 0;
   let voids = 0;
   let sold = 0;
+  let draws = 0;
   let open = 0;
 
   for (const bet of bets) {
@@ -240,6 +261,10 @@ export function scoreBets(bets: readonly Bet[]): LeanScorecard {
     }
     if (bet.status === "sold") {
       sold += 1;
+      continue;
+    }
+    if (bet.status === "draw") {
+      draws += 1;
       continue;
     }
     const won = bet.status === "won";
@@ -263,6 +288,7 @@ export function scoreBets(bets: readonly Bet[]): LeanScorecard {
     againstLean: winLoss(againstWins, againstLosses),
     voids,
     sold,
+    draws,
     open,
   };
 }
@@ -273,6 +299,7 @@ export type UfcBookSummary = {
   losses: number;
   voids: number;
   sold: number;
+  draws: number;
   record: string;
   totalStaked: string;
   totalStakedLabel: string;
@@ -299,6 +326,7 @@ export function summarizeUfcBook(bets: readonly Bet[]): UfcBookSummary {
   const losses = bets.filter((bet) => bet.status === "lost").length;
   const voids = bets.filter((bet) => bet.status === "void").length;
   const sold = bets.filter((bet) => bet.status === "sold").length;
+  const draws = bets.filter((bet) => bet.status === "draw").length;
   const openBets = bets.filter((bet) => bet.status === "open");
   const totalStaked = money(sumMoney(bets.map((bet) => bet.stake)));
   const openStake = money(sumMoney(openBets.map((bet) => bet.stake)));
@@ -311,7 +339,7 @@ export function summarizeUfcBook(bets: readonly Bet[]): UfcBookSummary {
       }),
     ),
   );
-  const record = `${wins}-${losses}`;
+  const record = recordMark(wins, losses, draws);
   const realizedPnlLabel = formatSignedUsd(realized);
   return {
     count: bets.length,
@@ -319,6 +347,7 @@ export function summarizeUfcBook(bets: readonly Bet[]): UfcBookSummary {
     losses,
     voids,
     sold,
+    draws,
     record,
     totalStaked,
     totalStakedLabel: formatUsd(totalStaked),
@@ -506,8 +535,12 @@ export function settleBet(
     throw new BetWriteError("Changing stake requires override: true.");
   }
   const stake = request.stake ? money(request.stake) : bet.stake;
-  const usesPayout = request.status === "won" || request.status === "sold";
-  const proceeds = usesPayout ? money(request.payout ?? bet.payout) : undefined;
+  const proceeds =
+    request.status === "draw"
+      ? money(request.payout ?? stake)
+      : request.status === "won" || request.status === "sold"
+        ? money(request.payout ?? bet.payout)
+        : undefined;
   const next: Bet = {
     ...bet,
     stake,
@@ -602,8 +635,14 @@ export function parseSettleRequest(raw: unknown): SettleRequest {
     throw new BetWriteError("id must be a lowercase slug.");
   }
   const status = asTrimmed(raw.status).toLowerCase();
-  if (status !== "won" && status !== "lost" && status !== "void" && status !== "sold") {
-    throw new BetWriteError("status must be won, lost, void, or sold.");
+  if (
+    status !== "won" &&
+    status !== "lost" &&
+    status !== "void" &&
+    status !== "sold" &&
+    status !== "draw"
+  ) {
+    throw new BetWriteError("status must be won, lost, void, sold, or draw.");
   }
   const request: SettleRequest = { id, status };
   if (raw.override !== undefined && raw.override !== true && raw.override !== false) {
@@ -618,17 +657,27 @@ export function parseSettleRequest(raw: unknown): SettleRequest {
     request.settledAt = settledAt;
   }
   const payout = asTrimmed(raw.payout);
-  if (status === "sold" && !payout) {
+  const settledPayout = asTrimmed(raw.settledPayout);
+  if (status === "sold" && !payout && !settledPayout) {
     throw new BetWriteError("payout is required when status is sold.");
   }
-  if (payout) {
-    if (status !== "won" && status !== "sold") {
-      throw new BetWriteError("payout is only used when status is won or sold.");
+  if (status === "draw") {
+    const amount = settledPayout || payout;
+    if (amount) {
+      if (!isDecimalString(amount) || amount.startsWith("-")) {
+        throw new BetWriteError("settledPayout must be a non-negative decimal string.");
+      }
+      request.payout = money(amount);
     }
-    if (!isDecimalString(payout) || payout.startsWith("-")) {
+  } else if (payout || settledPayout) {
+    if (status !== "won" && status !== "sold") {
+      throw new BetWriteError("payout is only used when status is won, sold, or draw.");
+    }
+    const amount = payout || settledPayout;
+    if (!isDecimalString(amount) || amount.startsWith("-")) {
       throw new BetWriteError("payout must be a non-negative decimal string.");
     }
-    request.payout = money(payout);
+    request.payout = money(amount);
   }
   if (raw.stake !== undefined && raw.stake !== null && asTrimmed(raw.stake) !== "") {
     if (request.override !== true) {
@@ -753,7 +802,7 @@ export function parseBetPost(raw: unknown): BetPost {
 
   const statusRaw = asTrimmed(raw.status).toLowerCase() || "open";
   if (!BET_STATUSES.includes(statusRaw as BetStatus)) {
-    throw new BetWriteError("status must be open, won, lost, void, or sold.");
+    throw new BetWriteError("status must be open, won, lost, void, sold, or draw.");
   }
   const status = statusRaw as BetStatus;
   if (raw.override !== undefined && raw.override !== true && raw.override !== false) {
@@ -780,7 +829,7 @@ export function parseBetPost(raw: unknown): BetPost {
   const settledAt = asTrimmed(raw.settledAt);
   if (settledAt) {
     if (status === "open") {
-      throw new BetWriteError("settledAt is only used when status is won, lost, void, or sold.");
+      throw new BetWriteError("settledAt is only used when status is won, lost, void, sold, or draw.");
     }
     if (!ISO_ZONED.test(settledAt) || Number.isNaN(Date.parse(settledAt))) {
       throw new BetWriteError("settledAt must be an ISO-8601 timestamp with an offset or Z.");
@@ -883,7 +932,7 @@ function correctPlacedBet(
 ): { bets: Bet[]; bet: Bet; deduped: boolean } {
   const status = post.status;
   if (status === "open") {
-    throw new BetWriteError("override status must be won, lost, void, or sold.");
+    throw new BetWriteError("override status must be won, lost, void, sold, or draw.");
   }
   const base = post.tier ? { ...existing, tier: post.tier } : existing;
   const written = settleBet(

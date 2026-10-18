@@ -18,8 +18,13 @@ function soldLabel(count: number): string {
   return count === 1 ? "1 sold early" : `${count} sold early`;
 }
 
-function recordLabel(record: string, voids: number, sold: number): string {
+function drawLabel(count: number): string {
+  return count === 1 ? "1 draw" : `${count} draws`;
+}
+
+function recordLabel(record: string, voids: number, sold: number, draws: number): string {
   const parts = [record];
+  if (draws > 0) parts.push(drawLabel(draws));
   if (voids > 0) parts.push(voidLabel(voids));
   if (sold > 0) parts.push(soldLabel(sold));
   return parts.join(" · ");
@@ -55,6 +60,7 @@ export function BetScorecard({
         <Stat label="Hub lean" value={card.hub.record} />
         <Stat label="With lean" value={card.withLean.record} />
         <Stat label="Against lean" value={card.againstLean.record} />
+        {card.draws > 0 ? <Stat label="Draw" value={drawLabel(card.draws)} /> : null}
         {card.voids > 0 ? <Stat label="Void" value={voidLabel(card.voids)} /> : null}
         {card.sold > 0 ? <Stat label="Sold" value={soldLabel(card.sold)} /> : null}
         <Stat label="Open" value={String(card.open)} />
@@ -73,7 +79,7 @@ export function UfcBookPanel({
 }) {
   if (availability === "unavailable") return <UnavailableScore label="Book" />;
   const book = summarizeUfcBook(bets);
-  const record = recordLabel(book.record, book.voids, book.sold);
+  const record = recordLabel(book.record, book.voids, book.sold, book.draws);
   const potential = book.estimated
     ? `${book.openPotentialLabel} return est.`
     : `${book.openPotentialLabel} return`;

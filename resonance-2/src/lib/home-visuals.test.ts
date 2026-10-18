@@ -276,6 +276,16 @@ describe("home visuals", () => {
       settledAt: "2026-10-11T02:00:00.000Z",
     });
     assert.deepEqual(inScopeBankrollPoints([two, one]), [18.06, 16.06]);
+    const drawn = allen({
+      id: "drawn",
+      stake: "0.96",
+      status: "draw",
+      payout: "1.80",
+      settledPayout: "0.92",
+      realizedPnl: "-0.04",
+      settledAt: "2026-10-11T03:00:00.000Z",
+    });
+    assert.deepEqual(inScopeBankrollPoints([one, drawn]), [18.06, 18.02]);
     const before = allen({
       id: "before",
       stake: "4.00",

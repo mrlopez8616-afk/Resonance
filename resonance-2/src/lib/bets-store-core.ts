@@ -58,7 +58,7 @@ function applyBetCorrection(bet: Bet, correction: BetCorrection): Bet {
     if (status === "sold") {
       next.payout = payout;
       next.settledPayout = payout;
-    } else if (status === "won") {
+    } else if (status === "won" || status === "draw") {
       next.settledPayout = payout;
     } else {
       next.payout = payout;

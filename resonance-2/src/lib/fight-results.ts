@@ -39,7 +39,8 @@ type FightResultSeed = {
 
 const TIME = /^(\d{1,2}):(\d{2})$/;
 const EVENT_SLUG = /^[a-z0-9][a-z0-9-]*$/;
-const SETTLED_STATUSES = ["won", "lost", "sold", "void"] as const;
+/** Ticket statuses. A bout draw is a fight result and does not settle these. */
+const SETTLED_STATUSES = ["won", "lost", "sold", "void", "draw"] as const;
 
 export type KnownBout = {
   event: string;
@@ -284,7 +285,7 @@ export function formatFightResult(result: FightResult | null | undefined): strin
 
 /**
  * Result line for one bout.
- * A posted final wins. With no final, settled tickets show won, lost, sold, or void.
+ * A posted final wins. With no final, settled tickets show won, lost, sold, void, or draw.
  * Open tickets stay Pending. This does not invent a winner or a method.
  */
 export function formatBoutLine(

@@ -5,6 +5,7 @@ import {
   BANKROLL_AS_OF,
   BANKROLL_FIRST_EVENT,
   BANKROLL_START,
+  bankrollDepositLine,
   bankrollHomeFace,
   bankrollRoi,
   betConviction,
@@ -148,6 +149,37 @@ describe("bankroll", () => {
     assert.equal(ledger.suggestedStake, "1.20");
     assert.equal(ledger.cards[0]?.recordLabel, "1-1 · 1 sold · 1 void");
     assert.equal(ledger.cards[0]?.pnlLabel, "+$7.00");
+  });
+
+  it("books a draw into P&L, ROI, bankroll, and cash without a win or a loss", () => {
+    const won = settleBet(
+      allen({ id: "win", stake: "4.00", payout: "10.00" }),
+      { id: "win", status: "won", payout: "10.00" },
+      NOW,
+    ).bet;
+    const drawn = settleBet(
+      allen({ id: "draw-partial", stake: "0.96", payout: "1.80" }),
+      { id: "draw-partial", status: "draw", payout: "0.92" },
+      NOW,
+    ).bet;
+    assert.equal(drawn.realizedPnl, "-0.04");
+    assert.equal(drawn.status, "draw");
+
+    const before = computeBankroll([won]);
+    const ledger = computeBankroll([won, drawn]);
+    assert.equal(before.recordLabel, "1-0 · 0 sold · 0 void");
+    assert.equal(ledger.recordLabel, "1-0-1 · 0 sold · 0 void");
+    assert.equal(ledger.open, 0);
+    assert.equal(ledger.bankroll, "23.02");
+    assert.equal(ledger.cash, "23.02");
+    assert.equal(ledger.atRisk, "0.00");
+    assert.equal(ledger.realizedLabel, "+$5.96");
+    assert.equal(ledger.roiLabel, "+120.16%");
+    assert.equal(ledger.cards[0]?.recordLabel, "1-0-1 · 0 sold · 0 void");
+    assert.equal(ledger.cards[0]?.pnlLabel, "+$5.96");
+    assert.equal(ledger.tiers.find((tier) => tier.id === "untiered")?.recordLabel, "1-0-1 · 0 sold · 0 void");
+    assert.notEqual(ledger.bankroll, before.bankroll);
+    assert.notEqual(ledger.cash, before.cash);
   });
 
   it("uses stored settlement fields when the row already carries realized P/L", () => {
@@ -372,5 +404,50 @@ describe("bankroll", () => {
     assert.equal(ledger.bankroll, "17.06");
     assert.equal(ledger.atRisk, "2.00");
     assert.equal(ledger.realizedLabel, "$0.00");
+    assert.equal(ledger.depositTotal, "0.00");
+    assert.equal(ledger.depositTotalLabel, "$0.00");
+    assert.equal(ledger.depositShareLabel, "0.00%");
+  });
+
+  it("adds deposits to bankroll, cash, and the suggested stake only", () => {
+    const won = settleBet(
+      allen({ id: "win", stake: "4.00", payout: "10.00" }),
+      { id: "win", status: "won", payout: "10.00" },
+      NOW,
+    ).bet;
+    const lost = settleBet(
+      allen({ id: "loss", stake: "2.00", payout: "5.00" }),
+      { id: "loss", status: "lost" },
+      NOW,
+    ).bet;
+    const before = computeBankroll([won, lost]);
+    const after = computeBankroll(
+      [won, lost],
+      [],
+      [
+        { date: "2026-10-18", amount: "6.84" },
+        { date: BANKROLL_AS_OF, amount: "1.00" },
+        { date: "2026-10-06", amount: "100.00" },
+        { date: "2026-10-18", amount: "-1.00" },
+      ],
+    );
+    assert.equal(after.recordLabel, before.recordLabel);
+    assert.equal(after.realizedLabel, before.realizedLabel);
+    assert.equal(after.roiLabel, before.roiLabel);
+    assert.deepEqual(after.tiers, before.tiers);
+    assert.equal(after.atRisk, before.atRisk);
+    assert.equal(after.open, before.open);
+    assert.equal(after.cards[0]?.pnlLabel, before.cards[0]?.pnlLabel);
+    assert.equal(after.depositTotal, "6.84");
+    assert.equal(after.bankroll, "27.90");
+    assert.equal(after.cash, "27.90");
+    assert.equal(after.suggestedStake, "1.40");
+    assert.notEqual(after.bankroll, before.bankroll);
+    assert.notEqual(after.cash, before.cash);
+    assert.notEqual(after.suggestedStake, before.suggestedStake);
+    assert.equal(after.depositShareLabel, "+24.52%");
+    assert.equal(bankrollDepositLine(after, false), "+$6.84");
+    assert.equal(bankrollDepositLine(after, true), "+24.52%");
+    assert.equal(bankrollDepositLine(after, true)?.includes("$"), false);
   });
 });

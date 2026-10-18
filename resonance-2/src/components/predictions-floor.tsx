@@ -2,7 +2,7 @@ import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { PredictionsVisual } from "@/components/home-visual";
 import { formatUsd } from "@/lib/bets";
-import { bankrollHomeFace, type BankrollLedger } from "@/lib/bankroll";
+import { bankrollDepositLine, bankrollHomeFace, type BankrollLedger } from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
 import { tileFace } from "@/lib/home-faces";
 import type { TierSegment } from "@/lib/home-visuals";
@@ -68,63 +68,92 @@ export function PredictionsFloor({
   );
 }
 
-export function BankrollLedgerView({ ledger }: { ledger: BankrollLedger }) {
+export function BankrollLedgerView({
+  ledger,
+  publicMode = false,
+}: {
+  ledger: BankrollLedger;
+  publicMode?: boolean;
+}) {
+  const deposits = bankrollDepositLine(ledger, publicMode);
   return (
     <div className="log-canvas">
       <header className="log-header">
         <p className="log-kicker">Bankroll</p>
-        <h2 className="log-title">{ledger.bankrollLabel}</h2>
+        <h2 className="log-title">{publicMode ? ledger.recordLabel : ledger.bankrollLabel}</h2>
         <p className="log-meta">
-          From {formatUsd(ledger.start)} on {formatCivilDate(ledger.asOf)}
+          {publicMode
+            ? "record"
+            : `From ${formatUsd(ledger.start)} on ${formatCivilDate(ledger.asOf)}`}
         </p>
       </header>
       <dl className="bankroll-stats">
-        <div>
-          <dt>At risk</dt>
-          <dd>{ledger.atRiskLabel}</dd>
-        </div>
-        <div>
-          <dt>Available cash</dt>
-          <dd>{ledger.cashLabel}</dd>
-        </div>
-        <div>
-          <dt>Record</dt>
-          <dd>{ledger.recordLabel}</dd>
-        </div>
-        <div>
-          <dt>ROI</dt>
-          <dd>{ledger.roiLabel}</dd>
-        </div>
-        <div>
-          <dt>Suggested stake</dt>
-          <dd>{ledger.suggestedStakeLabel}</dd>
-        </div>
+        {publicMode ? null : (
+          <div>
+            <dt>At risk</dt>
+            <dd>{ledger.atRiskLabel}</dd>
+          </div>
+        )}
+        {publicMode ? null : (
+          <div>
+            <dt>Available cash</dt>
+            <dd>{ledger.cashLabel}</dd>
+          </div>
+        )}
+        {deposits ? (
+          <div>
+            <dt>Deposits</dt>
+            <dd>{deposits}</dd>
+          </div>
+        ) : null}
+        {publicMode ? null : (
+          <div>
+            <dt>Record</dt>
+            <dd>{ledger.recordLabel}</dd>
+          </div>
+        )}
+        {publicMode ? null : (
+          <div>
+            <dt>ROI</dt>
+            <dd>{ledger.roiLabel}</dd>
+          </div>
+        )}
+        {publicMode ? null : (
+          <div>
+            <dt>Suggested stake</dt>
+            <dd>{ledger.suggestedStakeLabel}</dd>
+          </div>
+        )}
       </dl>
-      <section className="bankroll-section" aria-label="Card history">
-        <h3>Cards</h3>
-        <CardList cards={ledger.cards} empty="No in-scope cards yet" />
-      </section>
-      <section className="bankroll-section" aria-label="STRONG vs LEAN">
-        <h3>STRONG vs LEAN</h3>
-        <ol>
-          {ledger.tiers.map((tier) => (
-            <li key={tier.id} className="fight-card">
-              <h3>{tier.label}</h3>
-              <p className="fight-result">
-                {tier.recordLabel} · {tier.pnlLabel}
-              </p>
-              <p>
-                {tier.atRiskLabel} at risk · {tier.open === 1 ? "1 open" : `${tier.open} open`}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
-      <section className="bankroll-section" aria-label="Before bankroll">
-        <h3>Before bankroll</h3>
-        <p className="log-meta">Excluded from the bankroll.</p>
-        <CardList cards={ledger.before} empty="No earlier cards" />
-      </section>
+      {publicMode ? null : (
+        <>
+          <section className="bankroll-section" aria-label="Card history">
+            <h3>Cards</h3>
+            <CardList cards={ledger.cards} empty="No in-scope cards yet" />
+          </section>
+          <section className="bankroll-section" aria-label="STRONG vs LEAN">
+            <h3>STRONG vs LEAN</h3>
+            <ol>
+              {ledger.tiers.map((tier) => (
+                <li key={tier.id} className="fight-card">
+                  <h3>{tier.label}</h3>
+                  <p className="fight-result">
+                    {tier.recordLabel} · {tier.pnlLabel}
+                  </p>
+                  <p>
+                    {tier.atRiskLabel} at risk · {tier.open === 1 ? "1 open" : `${tier.open} open`}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section className="bankroll-section" aria-label="Before bankroll">
+            <h3>Before bankroll</h3>
+            <p className="log-meta">Excluded from the bankroll.</p>
+            <CardList cards={ledger.before} empty="No earlier cards" />
+          </section>
+        </>
+      )}
     </div>
   );
 }

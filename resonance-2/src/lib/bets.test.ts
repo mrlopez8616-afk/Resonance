@@ -7,6 +7,7 @@ import {
   betStatusLabel,
   betToFill,
   betsOnFight,
+  cardMoney,
   formatSignedUsd,
   formatUsd,
   isBetSettleOverride,
@@ -19,6 +20,7 @@ import {
   settleBet,
   summarizeBets,
   summarizeUfcBook,
+  type Bet,
 } from "@/lib/bets";
 import {
   applyStoredBetCorrections,
@@ -160,6 +162,89 @@ describe("UFC 332 bets", () => {
     assert.equal(parseSettleBody({ bets: [{ id: "ufc-332-smith", status: "void" }] }).length, 1);
     assert.throws(() => parseSettleBody({ id: "ufc-332-nolan", status: "open" }));
     assert.throws(() => parseSettleBody({ id: "ufc-332-nolan", status: "lost", payout: "1.00" }));
+  });
+
+  it("settles a draw at a partial payout without changing wins or losses", () => {
+    const open: Bet = {
+      id: "draw-partial",
+      event: "Test Card",
+      fight: "A vs B",
+      fightSlug: "a-vs-b",
+      pick: "A",
+      stake: "0.96",
+      oddsPct: 50,
+      payout: "1.80",
+      status: "open",
+      venue: "coinbase-predict",
+      ticker: "UFC",
+      time: "2026-10-18T12:00:00-05:00",
+    };
+    const won: Bet = {
+      ...open,
+      id: "win-row",
+      status: "won",
+      stake: "1.00",
+      payout: "2.00",
+      settledPayout: "2.00",
+      realizedPnl: "1.00",
+    };
+    const before = summarizeBets([won, open]);
+    assert.equal(before.wins, 1);
+    assert.equal(before.losses, 0);
+    assert.equal(before.record, "1-0");
+    assert.equal(before.open, 1);
+
+    const [request] = parseSettleBody({
+      id: "draw-partial",
+      status: "draw",
+      settledPayout: "0.92",
+      settledAt: "2026-10-18T20:00:00-05:00",
+    });
+    assert.equal(request?.payout, "0.92");
+    assert.equal(request?.settledAt, "2026-10-18T20:00:00-05:00");
+    assert.equal(realizedPnl("0.96", "draw", "0.92"), "-0.04");
+
+    const first = settleBet(open, request, "2026-10-18T21:00:00.000Z");
+    assert.equal(first.deduped, false);
+    assert.equal(first.bet.status, "draw");
+    assert.equal(first.bet.stake, "0.96");
+    assert.equal(first.bet.payout, "1.80");
+    assert.equal(first.bet.settledPayout, "0.92");
+    assert.equal(first.bet.realizedPnl, "-0.04");
+    assert.equal(first.bet.settledAt, "2026-10-18T20:00:00-05:00");
+    assert.equal(betStatusLabel(first.bet.status), "draw");
+
+    const after = summarizeBets([won, first.bet]);
+    assert.equal(after.wins, before.wins);
+    assert.equal(after.losses, before.losses);
+    assert.equal(after.draws, 1);
+    assert.equal(after.open, 0);
+    assert.equal(after.record, "1-0-1");
+    const scored = scoreBets([won, first.bet]);
+    assert.equal(scored.founder.record, "1-0");
+    assert.equal(scored.draws, 1);
+    const book = summarizeUfcBook([won, first.bet]);
+    assert.equal(book.wins, 1);
+    assert.equal(book.losses, 0);
+    assert.equal(book.draws, 1);
+    assert.equal(book.record, "1-0-1");
+    assert.equal(book.realizedPnl, "0.96");
+    const face = cardMoney([first.bet]);
+    assert.equal(face.headline, "-$0.04");
+    assert.equal(face.detail, "0-0-1 · 1 draw");
+
+    const again = settleBet(first.bet, request, "2026-10-18T22:00:00.000Z");
+    assert.equal(again.deduped, true);
+    assert.equal(again.bet, first.bet);
+    assert.equal(again.bet.realizedPnl, "-0.04");
+
+    const [push] = parseSettleBody({ id: "draw-partial", status: "draw" });
+    const flat = settleBet(open, push, "2026-10-18T21:00:00.000Z");
+    assert.equal(flat.bet.realizedPnl, "0.00");
+    assert.equal(flat.bet.settledPayout, "0.96");
+    const flatAgain = settleBet(flat.bet, push, "2026-10-18T22:00:00.000Z");
+    assert.equal(flatAgain.deduped, true);
+    assert.equal(flatAgain.bet.realizedPnl, "0.00");
   });
 
   it("shows bets on the UFC log and leaves node totals alone", () => {

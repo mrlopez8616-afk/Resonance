@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { createElement, isValidElement, type ReactNode } from "react";
-import { parseBetPostBody, placeBet, type Bet } from "@/lib/bets";
+import { betToFill, parseBetPostBody, parseSettleBody, placeBet, settleBet, type Bet } from "@/lib/bets";
 import { parseBetsEnvelope } from "@/lib/bets-store-core";
 import { cardInBankroll, computeBankroll, fightCardDay } from "@/lib/bankroll";
 import { chicagoDay } from "@/lib/calendar-time";
@@ -343,6 +343,68 @@ describe("Edmonton fight desk render", () => {
     if (view.status !== "ready") return;
     assert.equal(view.bets.length, 1);
     assert.equal(view.fight.lean, "Mike Malott");
+  });
+
+  it("shows a draw count and the word draw on the log, fight, and event", async () => {
+    const open: Bet = {
+      id: "draw-partial",
+      event: "Test Card",
+      fight: "A vs B",
+      fightSlug: "a-vs-b",
+      pick: "A",
+      stake: "0.96",
+      oddsPct: 50,
+      payout: "1.80",
+      status: "open",
+      venue: "coinbase-predict",
+      ticker: "UFC",
+      time: "2026-10-18T12:00:00-05:00",
+    };
+    const [request] = parseSettleBody({
+      id: open.id,
+      status: "draw",
+      settledPayout: "0.92",
+      settledAt: "2026-10-18T20:00:00-05:00",
+    });
+    const drawn = settleBet(open, request, "2026-10-18T21:00:00.000Z").bet;
+    const { ListedFightEvent } = await import("@/components/fight-board");
+    const eventHtml = render(
+      createElement(ListedFightEvent, {
+        title: "Test Card",
+        meta: "Arena",
+        fights: [
+          {
+            slug: "a-vs-b",
+            title: "A vs B",
+            kicker: "Main",
+            detail: "",
+            segment: null,
+            bets: [drawn],
+          },
+        ],
+        bets: [drawn],
+        results: [],
+        eventSlug: "test-card",
+        backHref: "/fights",
+        backLabel: "Fights",
+      }),
+    );
+    assert.match(eventHtml, /0-0-1/);
+    assert.match(eventHtml, /1 draw/);
+    assert.match(eventHtml, /· draw/);
+    assert.match(eventHtml, /-\$0\.04/);
+
+    const { BetFillCard } = await import("@/components/fill-log");
+    const logHtml = render(createElement(BetFillCard, { fill: betToFill(drawn) }));
+    assert.match(logHtml, /statusdraw/);
+
+    const { BetScorecard, UfcBookPanel } = await import("@/components/bet-scorecard");
+    const bookHtml = render(createElement(UfcBookPanel, { bets: [drawn] }));
+    assert.match(bookHtml, /0-0-1/);
+    assert.match(bookHtml, /1 draw/);
+    const scoreHtml = render(createElement(BetScorecard, { bets: [drawn] }));
+    assert.match(scoreHtml, /0-0/);
+    assert.match(scoreHtml, /1 draw/);
   });
 
   it("keeps fight text inside the page width", () => {
