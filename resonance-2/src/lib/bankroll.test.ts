@@ -5,6 +5,7 @@ import {
   BANKROLL_AS_OF,
   BANKROLL_FIRST_EVENT,
   BANKROLL_START,
+  bankrollDepositLine,
   bankrollHomeFace,
   bankrollRoi,
   betConviction,
@@ -372,5 +373,50 @@ describe("bankroll", () => {
     assert.equal(ledger.bankroll, "17.06");
     assert.equal(ledger.atRisk, "2.00");
     assert.equal(ledger.realizedLabel, "$0.00");
+    assert.equal(ledger.depositTotal, "0.00");
+    assert.equal(ledger.depositTotalLabel, "$0.00");
+    assert.equal(ledger.depositShareLabel, "0.00%");
+  });
+
+  it("adds deposits to bankroll, cash, and the suggested stake only", () => {
+    const won = settleBet(
+      allen({ id: "win", stake: "4.00", payout: "10.00" }),
+      { id: "win", status: "won", payout: "10.00" },
+      NOW,
+    ).bet;
+    const lost = settleBet(
+      allen({ id: "loss", stake: "2.00", payout: "5.00" }),
+      { id: "loss", status: "lost" },
+      NOW,
+    ).bet;
+    const before = computeBankroll([won, lost]);
+    const after = computeBankroll(
+      [won, lost],
+      [],
+      [
+        { date: "2026-10-18", amount: "6.84" },
+        { date: BANKROLL_AS_OF, amount: "1.00" },
+        { date: "2026-10-06", amount: "100.00" },
+        { date: "2026-10-18", amount: "-1.00" },
+      ],
+    );
+    assert.equal(after.recordLabel, before.recordLabel);
+    assert.equal(after.realizedLabel, before.realizedLabel);
+    assert.equal(after.roiLabel, before.roiLabel);
+    assert.deepEqual(after.tiers, before.tiers);
+    assert.equal(after.atRisk, before.atRisk);
+    assert.equal(after.open, before.open);
+    assert.equal(after.cards[0]?.pnlLabel, before.cards[0]?.pnlLabel);
+    assert.equal(after.depositTotal, "6.84");
+    assert.equal(after.bankroll, "27.90");
+    assert.equal(after.cash, "27.90");
+    assert.equal(after.suggestedStake, "1.40");
+    assert.notEqual(after.bankroll, before.bankroll);
+    assert.notEqual(after.cash, before.cash);
+    assert.notEqual(after.suggestedStake, before.suggestedStake);
+    assert.equal(after.depositShareLabel, "+24.52%");
+    assert.equal(bankrollDepositLine(after, false), "+$6.84");
+    assert.equal(bankrollDepositLine(after, true), "+24.52%");
+    assert.equal(bankrollDepositLine(after, true)?.includes("$"), false);
   });
 });

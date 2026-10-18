@@ -14,8 +14,8 @@ import { UFC_332_DATE, UFC_332_ID } from "@/lib/ufc332";
 
 /**
  * Coinbase Predict balance on the as-of date: $17.05 already in open bets
- * plus $0.01 cash. The ledger adds realized P/L after this moment.
- * No migration. Settlements recompute the number on the next read.
+ * plus $0.01 cash. The ledger adds realized P/L after this moment, plus
+ * deposits dated on or after the as-of date. Settlements recompute on read.
  */
 export const BANKROLL_START = "17.06";
 export const BANKROLL_AS_OF = "2026-10-07";
@@ -79,9 +79,20 @@ export type BankrollLedger = {
   roiLabel: string;
   suggestedStake: string;
   suggestedStakeLabel: string;
+  /** Net deposits dated on or after the as-of date. A withdrawal is negative. */
+  depositTotal: string;
+  depositTotalLabel: string;
+  /** Deposit total as a share of the bankroll. Null when the bankroll is zero. No dollar sign. */
+  depositShareLabel: string | null;
   cards: BankrollCard[];
   tiers: BankrollTier[];
   before: BankrollCard[];
+};
+
+/** A stored deposit. Only date and amount move the bankroll. */
+export type BankrollDeposit = {
+  date: string;
+  amount: string;
 };
 
 type Tally = {
@@ -147,6 +158,46 @@ function tallyBets(bets: readonly Bet[]): Tally {
 
 export function recordLabel(tally: Pick<Tally, "wins" | "losses" | "sold" | "voids">): string {
   return `${tally.wins}-${tally.losses} · ${tally.sold} sold · ${tally.voids} void`;
+}
+
+/** Deposit total divided by the current bankroll. Null when the bankroll is zero. */
+export function formatDepositShare(deposits: string, bankroll: string): string | null {
+  const base = money(bankroll);
+  const added = money(deposits);
+  if (base === "0.00" || base === "-0.00") return null;
+  const baseNegative = base.startsWith("-");
+  const addedNegative = added.startsWith("-");
+  const baseCents = BigInt((baseNegative ? base.slice(1) : base).replace(".", ""));
+  const addedCents = BigInt((addedNegative ? added.slice(1) : added).replace(".", ""));
+  if (baseCents === BigInt(0)) return null;
+  const negative = baseNegative !== addedNegative;
+  const rounded = (addedCents * TEN_THOUSAND + baseCents / BigInt(2)) / baseCents;
+  const whole = rounded / HUNDRED;
+  const frac = (rounded % HUNDRED).toString().padStart(2, "0");
+  const body = `${whole.toString()}.${frac}`;
+  if (body === "0.00") return "0.00%";
+  return `${negative ? "-" : "+"}${body}%`;
+}
+
+/**
+ * Dollar total on the private bankroll card.
+ * Public mode gets the percent share, or nothing when that share cannot be named.
+ */
+export function bankrollDepositLine(
+  ledger: Pick<BankrollLedger, "depositTotalLabel" | "depositShareLabel">,
+  publicMode: boolean,
+): string | null {
+  if (publicMode) return ledger.depositShareLabel;
+  return ledger.depositTotalLabel;
+}
+
+function inScopeDepositTotal(deposits: readonly BankrollDeposit[]): string {
+  let total = "0.00";
+  for (const deposit of deposits) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(deposit.date) || deposit.date < BANKROLL_AS_OF) continue;
+    total = money(addDecimal(total, money(deposit.amount)));
+  }
+  return total;
 }
 
 /** Flat 5% of the current bankroll, rounded to the nearest cent. */
@@ -291,6 +342,7 @@ function tierRow(id: BankrollTierId, label: string, bets: readonly Bet[]): Bankr
 export function computeBankroll(
   bets: readonly Bet[],
   events: readonly CalendarEvent[] = [],
+  deposits: readonly BankrollDeposit[] = [],
 ): BankrollLedger {
   const cards: BankrollCard[] = [];
   const before: BankrollCard[] = [];
@@ -314,7 +366,8 @@ export function computeBankroll(
   before.sort(compareCards);
 
   const tally = tallyBets(inScope);
-  const bankroll = money(addDecimal(BANKROLL_START, tally.pnl));
+  const depositTotal = inScopeDepositTotal(deposits);
+  const bankroll = money(addDecimal(addDecimal(BANKROLL_START, depositTotal), tally.pnl));
   const cash = money(subtractDecimal(bankroll, tally.atRisk));
   const stake = suggestedStake(bankroll);
   const roi = bankrollRoi(tally.pnl, tally.settledStake);
@@ -335,6 +388,9 @@ export function computeBankroll(
     roiLabel: roi ?? "—",
     suggestedStake: stake,
     suggestedStakeLabel: formatUsd(stake),
+    depositTotal,
+    depositTotalLabel: formatSignedUsd(depositTotal),
+    depositShareLabel: formatDepositShare(depositTotal, bankroll),
     cards,
     tiers: TIER_ROWS.map((tier) =>
       tierRow(
