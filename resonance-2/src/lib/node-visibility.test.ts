@@ -63,9 +63,7 @@ describe("shelved nodes", () => {
     assert.equal(restored.points.filter((point) => point.kind === "node").length, 9);
     assert.equal(restored.edges.some((edge) => edge.to === "node:fitness"), true);
 
-    assert.equal(
-      PUBLIC_BOOK.some((row) => row.id === "fitness" || row.parent === "fitness"),
-      false,
-    );
+    const book = PUBLIC_BOOK.map((row) => `${row.parent}:${row.id}`).join(",");
+    assert.equal(book.includes("fitness"), false);
   });
 });
