@@ -14,6 +14,7 @@ import {
 import { PublicModeToggle } from "@/components/public-mode-toggle";
 import { approvalsLabel } from "@/lib/approvals";
 import type { PublicModeClientStatus } from "@/lib/owner-pin";
+import { visibleNavHrefs } from "@/lib/node-visibility";
 import { PHONE_TABS, phoneTabActive, phoneTabHidden } from "@/lib/phone-nav";
 
 const PRIMARY = [
@@ -99,7 +100,7 @@ export function OperatorToolbar({
   pendingApprovals?: number | null;
 }) {
   const pathname = usePathname();
-  const primary = publicMode ? PRIMARY.filter((item) => item.href !== "/log") : PRIMARY;
+  const primary = visibleNavHrefs(PRIMARY).filter((item) => !(publicMode && item.href === "/log"));
   const settingsHref = publicMode ? "/settings" : "/settings/security";
   const settingsLabel = publicMode ? "Settings" : "Security";
   const approvalsActive = pathname === "/n/approvals" || pathname.startsWith("/n/approvals/");
@@ -144,7 +145,7 @@ export function OperatorToolbar({
         <SettingsIcon />
       </RailButton>
       <nav className="phone-tabbar" aria-label="Phone">
-        {PHONE_TABS.map((tab) => {
+        {visibleNavHrefs(PHONE_TABS).map((tab) => {
           if (phoneTabHidden(tab.href, publicMode)) return null;
           const href = publicMode && tab.href === "/settings/security" ? "/settings" : tab.href;
           const Icon = PHONE_ICONS[tab.href];

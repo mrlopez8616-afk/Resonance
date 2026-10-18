@@ -5,6 +5,7 @@ import { NodeSquare } from "@/components/node-square";
 import type { BuildHomeCard } from "@/lib/build-tracker";
 import { bookHomeFace, buildHomeFace, fightHomeFace, fitnessHomeFace, tileFace } from "@/lib/home-faces";
 import { publicLotChartModel, type PublicLotBar } from "@/lib/lot-bars";
+import { nodeShelved } from "@/lib/node-visibility";
 import {
   TREASURY_LINE,
   type PublicGroup,
@@ -111,14 +112,16 @@ export function PublicHome({
           growthLabel: aiStocks.growthLabel,
         })}
       />
-      <NodeFace
-        face={fitnessHomeFace({
-          value: fitness.headline,
-          unit: fitness.unit,
-          lines: fitness.lines,
-          publicMode: true,
-        })}
-      />
+      {nodeShelved("fitness") ? null : (
+        <NodeFace
+          face={fitnessHomeFace({
+            value: fitness.headline,
+            unit: fitness.unit,
+            lines: fitness.lines,
+            publicMode: true,
+          })}
+        />
+      )}
       {fight ? <NodeFace face={fight} /> : null}
       {buildHome ? (
         <NodeFace

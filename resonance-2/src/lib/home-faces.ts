@@ -1,3 +1,4 @@
+import { nodeShelved } from "@/lib/node-visibility";
 import { hasMoneyText } from "@/lib/public-mode";
 import type { ParentSummaryLine } from "@/lib/node-parents";
 
@@ -29,12 +30,31 @@ export const HOME_FACE_SLOTS = ["glyph", "name", "headline", "status"] as const;
  */
 export const DESKTOP_FACE_BOX = { width: 1324, height: 738, gap: 6.4 } as const;
 
-export function privateHomeNodeCount(input: { owner: boolean; health: boolean }): number {
-  return 10 + (input.owner && input.health ? 1 : 0) + (input.owner ? 2 : 0);
+/**
+ * Private home paints five parents plus build, control, YouTube, system, and lessons.
+ * Owner adds roundtable and chain security. Health is owner-only.
+ * A shelved parent is one fewer square. Pass `shelved: []` to count the full floor.
+ */
+export function privateHomeNodeCount(input: {
+  owner: boolean;
+  health: boolean;
+  shelved?: readonly string[];
+}): number {
+  const shelvedParent = nodeShelved("fitness", input.shelved) ? 1 : 0;
+  return 10 - shelvedParent + (input.owner && input.health ? 1 : 0) + (input.owner ? 2 : 0);
 }
 
-export function publicHomeNodeCount(input: { fight: boolean; health: boolean }): number {
-  return 9 + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
+/**
+ * Public home paints the same floor without finance, roundtable, or the owner gate.
+ * Fight Desk and Health are optional. Fitness was one of the nine always-on tiles.
+ */
+export function publicHomeNodeCount(input: {
+  fight: boolean;
+  health: boolean;
+  shelved?: readonly string[];
+}): number {
+  const shelvedParent = nodeShelved("fitness", input.shelved) ? 1 : 0;
+  return 9 - shelvedParent + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
 }
 
 /** Columns and rows that keep every square inside the box. Phone stays on 3. */

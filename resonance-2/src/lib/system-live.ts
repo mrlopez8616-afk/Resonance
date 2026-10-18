@@ -5,6 +5,7 @@ import {
   SYSTEM_NODES,
   SYSTEM_SLEEVES,
 } from "@/data/system-map";
+import { SHELVED_NODES, nodeShelved } from "@/lib/node-visibility";
 
 export const SYSTEM_EVENT_POLL_MS = 25_000;
 export const SYSTEM_EVENT_REPLAY_LIMIT = 6;
@@ -144,11 +145,14 @@ export function safeLiveDetail(value: string | null | undefined): string | null 
   return firstSentence(text);
 }
 
-function nodeIdsForLabels(labels: readonly string[]): string[] {
-  if (labels.includes("All nodes")) return SYSTEM_NODES.map((node) => node.id);
+function nodeIdsForLabels(
+  labels: readonly string[],
+  nodes: readonly { id: string; label: string }[],
+): string[] {
+  if (labels.includes("All nodes")) return nodes.map((node) => node.id);
   const ids: string[] = [];
   for (const label of labels) {
-    const node = SYSTEM_NODES.find((item) => item.label === label);
+    const node = nodes.find((item) => item.label === label);
     if (node) ids.push(node.id);
   }
   return ids;
@@ -158,10 +162,11 @@ function nodeIdsForLabels(labels: readonly string[]): string[] {
  * Points and edges drawn from the system map.
  * The hub is Sophia Luna. Floor nodes, the other agents, data sources, and sleeves sit around her.
  */
-export function buildLiveGraph(): LiveGraph {
+export function buildLiveGraph(shelved: readonly string[] = SHELVED_NODES): LiveGraph {
+  const nodes = SYSTEM_NODES.filter((node) => !nodeShelved(node.id, shelved));
   const nodeAngles = new Map<string, number>();
-  SYSTEM_NODES.forEach((node, index) => {
-    nodeAngles.set(node.id, -Math.PI / 2 + (index * 2 * Math.PI) / SYSTEM_NODES.length);
+  nodes.forEach((node, index) => {
+    nodeAngles.set(node.id, -Math.PI / 2 + (index * 2 * Math.PI) / nodes.length);
   });
   const angleOf = (ids: readonly string[]): number =>
     averageAngle(ids.map((id) => nodeAngles.get(id) ?? -Math.PI / 2));
@@ -179,7 +184,7 @@ export function buildLiveGraph(): LiveGraph {
     },
   ];
 
-  SYSTEM_NODES.forEach((node, index) => {
+  nodes.forEach((node, index) => {
     const spot = onRing(nodeAngles.get(node.id) ?? index, 2.55, 0);
     points.push({
       id: livePointId("node", node.id),
@@ -212,7 +217,7 @@ export function buildLiveGraph(): LiveGraph {
   const agentSpots = spreadPositions(
     otherAgents.map((agent) => ({
       id: agent.id,
-      angle: angleOf(nodeIdsForLabels(agent.nodes)),
+      angle: angleOf(nodeIdsForLabels(agent.nodes, nodes)),
     })),
     3.7,
     0.38,
@@ -259,19 +264,25 @@ export function buildLiveGraph(): LiveGraph {
   };
 
   const hub = livePointId("hub", "sophia");
-  for (const node of SYSTEM_NODES) link(hub, livePointId("node", node.id));
+  for (const node of nodes) link(hub, livePointId("node", node.id));
   for (const agent of otherAgents) {
-    for (const nodeId of nodeIdsForLabels(agent.nodes)) {
+    for (const nodeId of nodeIdsForLabels(agent.nodes, nodes)) {
       link(livePointId("agent", agent.id), livePointId("node", nodeId));
     }
   }
   for (const source of DATA_SOURCES) {
-    for (const nodeId of SOURCE_REACH[source.id]) link(livePointId("source", source.id), livePointId("node", nodeId));
+    for (const nodeId of SOURCE_REACH[source.id]) {
+      if (!nodes.some((node) => node.id === nodeId)) continue;
+      link(livePointId("source", source.id), livePointId("node", nodeId));
+    }
   }
   link(livePointId("source", "calendar"), hub);
   for (const sleeve of SYSTEM_SLEEVES) {
     link(livePointId("source", sleeve.sourceId), livePointId("sleeve", sleeve.id));
-    for (const nodeId of sleeve.nodes) link(livePointId("sleeve", sleeve.id), livePointId("node", nodeId));
+    for (const nodeId of sleeve.nodes) {
+      if (!nodes.some((node) => node.id === nodeId)) continue;
+      link(livePointId("sleeve", sleeve.id), livePointId("node", nodeId));
+    }
   }
 
   return { points, edges };
