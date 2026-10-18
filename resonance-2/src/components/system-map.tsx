@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NodeFace } from "@/components/node-face";
 import { systemHomeFace } from "@/lib/home-faces";
+import { navHrefShelved, visibleById } from "@/lib/node-visibility";
 import {
   DATA_SOURCES,
   GOVERNANCE,
@@ -90,7 +91,13 @@ export function SystemLensNav({ live = false }: { live?: boolean }) {
   return <NodeLinks lens={null} live={live} />;
 }
 
+function FeedLink({ href, label }: { href: string; label: string }) {
+  if (navHrefShelved(href)) return null;
+  return <Link href={href}>{label}</Link>;
+}
+
 function NodesLens() {
+  const nodes = visibleById(SYSTEM_NODES);
   return (
     <>
       <figure className={styles.feed}>
@@ -98,15 +105,13 @@ function NodesLens() {
         <FlowArrow />
         <div className={styles.feedTargets}>
           {SYSTEM_FEED.to.map((target) => (
-            <Link key={target.id} href={target.href}>
-              {target.label}
-            </Link>
+            <FeedLink key={target.id} href={target.href} label={target.label} />
           ))}
         </div>
         <figcaption className={styles.caption}>{SYSTEM_FEED.summary}</figcaption>
       </figure>
       <div className={styles.cards}>
-        {SYSTEM_NODES.map((node) => (
+        {nodes.map((node) => (
           <article key={node.id} className={styles.card}>
             <div className={styles.cardHead}>
               <h3 className={styles.cardTitle}>
@@ -117,11 +122,13 @@ function NodesLens() {
             <p className={styles.detail}>{node.connection}</p>
             {node.children.length > 0 ? (
               <ul className={styles.chips}>
-                {node.children.map((child) => (
+                {node.children.map((child) =>
+                  child.href && navHrefShelved(child.href) ? null : (
                   <li key={child.id}>
                     {child.href ? <Link href={child.href}>{child.label}</Link> : <span>{child.label}</span>}
                   </li>
-                ))}
+                  ),
+                )}
               </ul>
             ) : null}
           </article>
@@ -231,14 +238,19 @@ const LENSES = {
   timeline: TimelineLens,
 } as const;
 
+function paintedNodeCount(): number {
+  return visibleById(SYSTEM_NODES).length;
+}
+
 export function SystemMap({ lens }: { lens: SystemLensId }) {
   const Lens = LENSES[lens];
+  const line = `${SYSTEM_AGENTS.length} agents · ${paintedNodeCount()} nodes · all protections on`;
   return (
     <div className={styles.root} data-lens={lens}>
       <header className="log-header">
         <p className="log-kicker">{SYSTEM_PAGE.kicker}</p>
         <h2 className="log-title">{SYSTEM_PAGE.title}</h2>
-        <p className="log-meta">{SYSTEM_PAGE.line}</p>
+        <p className="log-meta">{line}</p>
       </header>
       <NodeLinks lens={lens} />
       <Lens />
@@ -247,5 +259,5 @@ export function SystemMap({ lens }: { lens: SystemLensId }) {
 }
 
 export function SystemHomeCard() {
-  return <NodeFace face={systemHomeFace(SYSTEM_AGENTS.length, SYSTEM_NODES.length)} />;
+  return <NodeFace face={systemHomeFace(SYSTEM_AGENTS.length, paintedNodeCount())} />;
 }

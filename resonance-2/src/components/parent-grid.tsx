@@ -26,6 +26,7 @@ import {
 } from "@/lib/home-lines";
 import type { FinanceHomeFace } from "@/lib/finance/view";
 import { parentAggregate, parentCardHref, parentSummaryLine, type FaceTotals } from "@/lib/node-parents";
+import { nodeShelved } from "@/lib/node-visibility";
 import { useSyncExternalStore } from "react";
 
 export function ParentGrid({
@@ -81,6 +82,7 @@ export function ParentGrid({
           return face ? <NodeFace key={parent.id} face={face} /> : null;
         }
         if (parent.id === "fitness") {
+          if (nodeShelved(parent.id)) return null;
           return (
             <NodeFace
               key={parent.id}

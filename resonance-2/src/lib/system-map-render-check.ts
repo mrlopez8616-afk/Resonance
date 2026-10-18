@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SystemHomeCard, SystemMap } from "@/components/system-map";
 import { SYSTEM_LENSES } from "@/data/system-map";
+import { nodeShelved } from "@/lib/node-visibility";
 
 const SECRET_ENV = [
   "AUTH_PASSWORD_HASH",
@@ -54,6 +55,13 @@ const markers = [
 ];
 for (const marker of markers) {
   if (!html.includes(marker)) fail(`missing ${marker}`);
+}
+
+if (nodeShelved("fitness") && /href="\/n\/fitness/.test(html)) {
+  fail("shelved fitness link is painted");
+}
+if (!nodeShelved("fitness") && !html.includes('href="/n/fitness"')) {
+  fail("restored fitness link is missing");
 }
 
 process.stdout.write("ok\n");

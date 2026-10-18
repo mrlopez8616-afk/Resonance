@@ -1,4 +1,5 @@
 import { FLOOR_NODES } from "@/data/floor-nodes";
+import { navHrefShelved } from "@/lib/node-visibility";
 import { findGear, gearHref, youtubeChildLabel } from "@/lib/youtube-node";
 import { NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { buildSectionLabel } from "@/lib/build-tracker";
@@ -36,7 +37,12 @@ export function phoneChromeHidden(pathname: string): boolean {
   return path === "/tv";
 }
 
-export function phoneTabHidden(href: string, publicMode: boolean): boolean {
+export function phoneTabHidden(
+  href: string,
+  publicMode: boolean,
+  shelved?: readonly string[],
+): boolean {
+  if (navHrefShelved(href, shelved)) return true;
   if (!publicMode) return false;
   return href === "/log" || href === "/n/approvals";
 }
