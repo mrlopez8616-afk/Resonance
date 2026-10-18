@@ -1,4 +1,5 @@
 import {
+  BET_STATUSES,
   BET_TICKER,
   BET_VENUE,
   betOrderKey,
@@ -27,7 +28,7 @@ export interface BetsStoreEnvelope {
 }
 
 const BET_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
-const STATUSES = new Set<BetStatus>(["open", "won", "lost", "void", "sold"]);
+const STATUSES = new Set<BetStatus>(BET_STATUSES);
 
 /**
  * One-shot book fixes. Applied on read when the row's correctionVersion
