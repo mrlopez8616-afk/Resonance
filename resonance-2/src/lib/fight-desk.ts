@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@/data/calendar";
 import type { Bet } from "@/lib/bets";
+import type { SubmissionBoard } from "@/lib/fight-submission";
 import type { KnownBout } from "@/lib/fight-results";
 import {
   fightBySlug,
@@ -119,6 +120,8 @@ export type DeskFight = {
   /** PLAY is the only plan tier that takes money. free is unstaked. */
   stakePlan?: "PLAY" | "free" | null;
   why?: string;
+  /** Opponent grappling lines. Missing figures are already "not recorded". */
+  submission?: SubmissionBoard[];
 };
 
 export type DeskEvent = {

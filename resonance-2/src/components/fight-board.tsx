@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { BookAvailability } from "@/components/bet-scorecard";
 import { BetWriteError, betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd, type Bet, type CardMoney } from "@/lib/bets";
+import { SubmissionTiles } from "@/components/submission-tiles";
+import { submissionBoards } from "@/lib/fight-submission";
 import { isDecimalString } from "@/lib/decimal";
 import type { CalendarEvent } from "@/data/calendar";
 import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
@@ -183,11 +185,22 @@ function DeskFightCard({
       <FightStakeList bets={fight.bets} fight={fight} />
     </>
   );
-  if (!fight.href) return <div className="fight-card">{body}</div>;
+  const tiles = fight.submission?.length ? <SubmissionTiles boards={fight.submission} /> : null;
+  if (!fight.href) {
+    return (
+      <div className="fight-card">
+        {body}
+        {tiles}
+      </div>
+    );
+  }
   return (
-    <Link href={fight.href} className="fight-card">
-      {body}
-    </Link>
+    <div className="fight-card">
+      <Link href={fight.href} className="fight-card-link">
+        {body}
+      </Link>
+      {tiles}
+    </div>
   );
 }
 
@@ -435,33 +448,45 @@ export function FightEvent({
         renderFight={(fight) => {
           const catalog = fightBySlug(fight.slug);
           const stake = fight.bets;
+          const boards = catalog
+            ? submissionBoards({
+                aName: catalog.A.name,
+                bName: catalog.B.name,
+                lean: catalog.lean,
+                aStats: catalog.A.stats,
+                bStats: catalog.B.stats,
+              })
+            : [];
           return (
-            <Link href={fight.href ?? `/fights/${UFC_332_EVENT.id}`} className="fight-card">
-              {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
-              <h3>{fight.title}</h3>
-              {fight.detail ? <p>{fight.detail}</p> : null}
-              {catalog?.lean ? (
-                <p>
-                  Lean {catalog.lean}
-                  {catalog.confidence ? ` · ${catalog.confidence}` : ""}
+            <div className="fight-card">
+              <Link href={fight.href ?? `/fights/${UFC_332_EVENT.id}`} className="fight-card-link">
+                {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
+                <h3>{fight.title}</h3>
+                {fight.detail ? <p>{fight.detail}</p> : null}
+                {catalog?.lean ? (
+                  <p>
+                    Lean {catalog.lean}
+                    {catalog.confidence ? ` · ${catalog.confidence}` : ""}
+                  </p>
+                ) : null}
+                <p className="fight-result">
+                  {resultsAvailability === "unavailable"
+                    ? "unavailable"
+                    : boutLine(resultForFight(results, fight.slug, UFC_332_EVENT.id), stake)}
                 </p>
-              ) : null}
-              <p className="fight-result">
-                {resultsAvailability === "unavailable"
-                  ? "unavailable"
-                  : boutLine(resultForFight(results, fight.slug, UFC_332_EVENT.id), stake)}
-              </p>
-              {stake.length > 0 ? (
-                <ul className="fight-stakes">
-                  {stake.map((bet, index) => (
-                    <li key={`${bet.id}:${index}`}>
-                      <TierTag tier={bet.tier} />
-                      {ticketLine(bet)}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </Link>
+                {stake.length > 0 ? (
+                  <ul className="fight-stakes">
+                    {stake.map((bet, index) => (
+                      <li key={`${bet.id}:${index}`}>
+                        <TierTag tier={bet.tier} />
+                        {ticketLine(bet)}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </Link>
+              <SubmissionTiles boards={boards} />
+            </div>
           );
         }}
       />
@@ -613,6 +638,16 @@ export function FightDetail({
         </div>
       </section>
       ) : null}
+
+      <SubmissionTiles
+        boards={submissionBoards({
+          aName: fight.A.name,
+          bName: fight.B.name,
+          lean: fight.lean,
+          aStats: fight.A.stats,
+          bStats: fight.B.stats,
+        })}
+      />
 
       {show("stats") ? (
       <section className="calendar-day-section" aria-label="Stats">

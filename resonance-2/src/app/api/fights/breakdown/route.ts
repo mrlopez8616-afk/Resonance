@@ -36,6 +36,7 @@ function notConfigured() {
  * Fight Desk posts site_analysis.json as the body (event or eventSlug, plus fights).
  * An event that is not in a slug map can send the event title and omit eventSlug.
  * Add `data` (the data.json array) on that object to store per-side stats and books.
+ * Optional submission fields (`wins_sub`, `subavg`, `tdavg`, `control`, and the rest in cabinet/fight-breakdowns.md) may sit on each fighter or on `opponent`.
  * `{breakdowns:[...]}` and a bare camelCase array are the same write.
  */
 export async function GET(request: Request) {
