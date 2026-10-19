@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { BookAvailability } from "@/components/bet-scorecard";
 import { BetWriteError, betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd, type Bet, type CardMoney } from "@/lib/bets";
+import { FighterLink } from "@/components/fighter-link";
 import { SubmissionTiles } from "@/components/submission-tiles";
 import { submissionBoards } from "@/lib/fight-submission";
 import { isDecimalString } from "@/lib/decimal";
@@ -10,6 +11,7 @@ import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { detailTimeLabel, fightDetailVisibility } from "@/lib/fight-breakdowns";
 import {
   eventBoutSections,
+  fightersFromTitle,
   fightPromotions,
   type DeskFight,
   type DeskPromotion,
@@ -77,7 +79,7 @@ function ticketLine(bet: Bet): string {
   return `${bet.pick} ${shownUsd(bet.stake)} → ${shownUsd(bet.payout)}${bet.estimated ? " est." : ""} @ ${ticketOdds(bet)} · ${betStatusLabel(bet.status)}${pnl}`;
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-t border-[color:var(--border)] py-2.5 first:border-t-0 first:pt-0">
       <dt className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-[color:var(--muted)]">
@@ -165,6 +167,18 @@ function analysisLine(fight: DeskFight): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
+function BoutNames({ title }: { title: string }) {
+  const names = fightersFromTitle(title);
+  if (names.length !== 2) return <h3>{title}</h3>;
+  return (
+    <h3>
+      <FighterLink name={names[0] ?? ""} />
+      {" vs "}
+      <FighterLink name={names[1] ?? ""} />
+    </h3>
+  );
+}
+
 function DeskFightCard({
   fight,
   resultLine,
@@ -176,7 +190,6 @@ function DeskFightCard({
   const body = (
     <>
       {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
-      <h3>{fight.title}</h3>
       {fight.detail ? <p>{fight.detail}</p> : null}
       {lean ? <p>{lean}</p> : null}
       {fight.tierNote ? <p>{fight.tierNote}</p> : null}
@@ -189,6 +202,7 @@ function DeskFightCard({
   if (!fight.href) {
     return (
       <div className="fight-card">
+        <BoutNames title={fight.title} />
         {body}
         {tiles}
       </div>
@@ -196,6 +210,7 @@ function DeskFightCard({
   }
   return (
     <div className="fight-card">
+      <BoutNames title={fight.title} />
       <Link href={fight.href} className="fight-card-link">
         {body}
       </Link>
@@ -459,9 +474,9 @@ export function FightEvent({
             : [];
           return (
             <div className="fight-card">
+              <BoutNames title={fight.title} />
               <Link href={fight.href ?? `/fights/${UFC_332_EVENT.id}`} className="fight-card-link">
                 {fight.kicker ? <p className="log-kicker">{fight.kicker}</p> : null}
-                <h3>{fight.title}</h3>
                 {fight.detail ? <p>{fight.detail}</p> : null}
                 {catalog?.lean ? (
                   <p>
@@ -497,7 +512,9 @@ export function FightEvent({
 function SideHead({ side }: { side: FighterSide }) {
   return (
     <div>
-      <h3>{side.name}</h3>
+      <h3>
+        <FighterLink name={side.name} />
+      </h3>
       <p className="fight-links">
         {side.sherdog ? (
           <a href={side.sherdog} rel="noreferrer">
@@ -529,7 +546,9 @@ function OddsColumn({
   const books = hideEmpty ? side.books.filter((row) => row.moneyline != null) : side.books;
   return (
     <div>
-      <h3>{side.name}</h3>
+      <h3>
+        <FighterLink name={side.name} />
+      </h3>
       <dl>
         {!hideEmpty || side.coinbasePct != null ? (
           <Field label="Coinbase" value={percent(side.coinbasePct)} />
@@ -592,7 +611,7 @@ export function FightDetail({
           </p>
         ) : null}
         <h2 className="log-title">
-          {fight.A.name} vs {fight.B.name}
+          <FighterLink name={fight.A.name} /> vs <FighterLink name={fight.B.name} />
         </h2>
         <p className="log-meta">
           {resultsAvailability === "unavailable"
@@ -616,12 +635,12 @@ export function FightDetail({
             {hasNoWinner(result) ? (
               <Field label="Outcome" value={fightOutcomeLabel(fightOutcome(result))} />
             ) : (
-              <Field label="Winner" value={result.winner} />
+              <Field label="Winner" value={<FighterLink name={result.winner} />} />
             )}
             <Field label="Method" value={result.method} />
             <Field label="Round" value={String(result.round)} />
             <Field label="Time" value={result.time} />
-            {result.opponent ? <Field label="Opponent" value={result.opponent} /> : null}
+            {result.opponent ? <Field label="Opponent" value={<FighterLink name={result.opponent} />} /> : null}
           </dl>
         ) : (
           <p>{boutLine(result, stakes)}</p>
@@ -658,8 +677,12 @@ export function FightDetail({
             <thead>
               <tr>
                 <th scope="col">Stat</th>
-                <th scope="col">{fight.A.name}</th>
-                <th scope="col">{fight.B.name}</th>
+                <th scope="col">
+                  <FighterLink name={fight.A.name} />
+                </th>
+                <th scope="col">
+                  <FighterLink name={fight.B.name} />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -677,7 +700,9 @@ export function FightDetail({
         <div className="fight-split">
           {[fight.A, fight.B].filter((side) => !hideEmpty || side.last5.length > 0).map((side, index) => (
             <div key={`${side.slug}:${index}`}>
-              <h3>Last 5 · {side.name}</h3>
+              <h3>
+                Last 5 · <FighterLink name={side.name} />
+              </h3>
               {side.last5.length === 0 ? (
                 <p className="calendar-quiet">—</p>
               ) : (
@@ -697,7 +722,20 @@ export function FightDetail({
       <section className="calendar-day-section" aria-label="Lean">
         <h3>Lean</h3>
         <dl>
-          {!hideEmpty || fight.lean ? <Field label="Lean" value={fight.lean ?? "—"} /> : null}
+          {!hideEmpty || fight.lean ? (
+            <Field
+              label="Lean"
+              value={
+                fight.lean &&
+                (personSlug(fight.lean) === personSlug(fight.A.name) ||
+                  personSlug(fight.lean) === personSlug(fight.B.name)) ? (
+                  <FighterLink name={fight.lean} />
+                ) : (
+                  fight.lean ?? "—"
+                )
+              }
+            />
+          ) : null}
           {!hideEmpty || fight.confidence ? (
             <Field label="Confidence" value={fight.confidence ?? "—"} />
           ) : null}
@@ -741,15 +779,17 @@ export function FightDetail({
         <ul className="fight-last5">
           {[fight.A, fight.B].filter((side) => !hideEmpty || side.highlight).map((side, index) => (
             <li key={`${side.slug}:${index}`}>
+              <FighterLink name={side.name} />
               {side.highlight ? (
-                <a href={side.highlight.url} rel="noreferrer">
-                  {side.name}: {side.highlight.title}
-                  {side.highlight.channel !== "—" ? ` · ${side.highlight.channel}` : ""}
-                </a>
+                <>
+                  {": "}
+                  <a href={side.highlight.url} rel="noreferrer">
+                    {side.highlight.title}
+                    {side.highlight.channel !== "—" ? ` · ${side.highlight.channel}` : ""}
+                  </a>
+                </>
               ) : (
-                <span>
-                  {side.name}: —
-                </span>
+                ": —"
               )}
             </li>
           ))}

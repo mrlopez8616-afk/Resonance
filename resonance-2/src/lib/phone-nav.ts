@@ -416,6 +416,14 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       };
       return { back: fights, crumbs: [HOME, desk, fights, promo] };
     }
+    if (second === "fighters") {
+      if (parts.length !== 3) return homeTrail();
+      const fighter = parts[2] ?? "";
+      return {
+        back: fights,
+        crumbs: [HOME, desk, fights, { href: `/fights/fighters/${fighter}`, label: slugLabel(fighter) }],
+      };
+    }
     if (second === "main-card" || second === "prelims") {
       const ufc: PhoneTarget = { href: "/fights/ufc", label: "UFC" };
       return { back: ufc, crumbs: [HOME, fights, ufc] };

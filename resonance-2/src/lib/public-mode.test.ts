@@ -819,6 +819,7 @@ describe("public render scan", () => {
       "/fights/[event]/page.tsx",
       "/fights/[event]/[fight]/page.tsx",
       "/fights/contender-series/page.tsx",
+      "/fights/fighters/[slug]/page.tsx",
       "/fights/main-card/page.tsx",
       "/fights/prelims/page.tsx",
       "/fights/ufc/page.tsx",
