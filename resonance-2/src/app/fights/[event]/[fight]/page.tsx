@@ -5,7 +5,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { resolveFightView } from "@/lib/fight-breakdowns";
 import { resultForFight } from "@/lib/fight-results";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { loadBetsForPage, loadBreakdownsForPage, loadFightResultsForPage } from "@/lib/store-page";
+import { betBookLine, loadBetsForPage, loadBreakdownsForPage, loadFightResultsForPage } from "@/lib/store-page";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +62,7 @@ export default async function FightPage({
     const storageMessage =
       book.status === "unavailable" || card.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
     const storageDetail = [
-      book.status === "unavailable" ? "Bet book is unavailable." : null,
+      await betBookLine(book),
       card.status === "unavailable" ? "Fight results are unavailable." : null,
     ]
       .filter((line): line is string => line !== null)
@@ -103,7 +103,7 @@ export default async function FightPage({
       ? STORAGE_UNAVAILABLE_BANNER
       : null;
   const storageDetail = [
-    book.status === "unavailable" ? "Bet book is unavailable." : null,
+    await betBookLine(book),
     card.status === "unavailable" ? "Fight results are unavailable." : null,
     breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
   ]

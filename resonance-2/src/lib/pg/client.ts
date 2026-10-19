@@ -122,7 +122,9 @@ export async function sqlQuery<T extends Record<string, unknown> = Record<string
     return await client.query<T>(text, params);
   } catch (error) {
     if (error instanceof StorageUnavailableError) throw error;
-    throw new StorageUnavailableError("postgres", postgresFailureReason(error));
+    const reason = postgresFailureReason(error);
+    console.error("postgres query failed", reason);
+    throw new StorageUnavailableError("postgres", reason);
   }
 }
 

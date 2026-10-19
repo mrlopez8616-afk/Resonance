@@ -2,7 +2,7 @@ import { FightIndex } from "@/components/fight-board";
 import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { betBookLine, loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export default async function FightsPage() {
   const storageMessage = book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
   const storageDetail =
     book.status === "unavailable"
-      ? "Bet book is unavailable."
+      ? await betBookLine(book)
       : book.status === "unconfigured"
         ? "Bet book is seed-only."
         : null;

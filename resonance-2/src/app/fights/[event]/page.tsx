@@ -7,6 +7,7 @@ import { deskFightsForEvent } from "@/lib/fight-breakdowns";
 import { eventBackHref, legacyFightNodeHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import {
+  betBookLine,
   loadBetsForPage,
   loadBreakdownsForPage,
   loadCalendarForPage,
@@ -77,7 +78,7 @@ export default async function FightEventPage({
       ? STORAGE_UNAVAILABLE_BANNER
       : null;
   const storageDetail = [
-    book.status === "unavailable" ? "Bet book is unavailable." : null,
+    await betBookLine(book),
     card.status === "unavailable" ? "Fight results are unavailable." : null,
     breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
   ]
