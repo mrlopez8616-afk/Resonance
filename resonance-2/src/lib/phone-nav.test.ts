@@ -310,6 +310,9 @@ describe("phone back targets", () => {
       href: "/fights/contender-series",
       label: "Contender Series",
     });
+    assert.deepEqual(phoneTrail("/fights/fighters/eric-nolan").back, { href: "/fights", label: "Fights" });
+    assert.equal(phoneTrail("/fights/fighters/eric-nolan").crumbs.at(-1)?.label, "Eric Nolan");
+    assert.deepEqual(phoneTrail("/fights/fighters").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/fights/ufc-332/silva-wang").back, {
       href: "/fights/ufc-332",
       label: "UFC 332",

@@ -490,6 +490,47 @@ CREATE INDEX IF NOT EXISTS fitness_manual_summaries_period_idx
   ON fitness_manual_summaries (period_end, period_start);
 `;
 
+export const FIGHTER_CAREERS_SQL = `-- Fighter careers. Number 033.
+-- 032 is bankroll deposits. This file inserts no rows.
+-- One fighter, and one row per UFC fight. Stats stay null until Fight Desk posts them.
+-- The same fighter, date, and opponent is stored once.
+
+CREATE TABLE IF NOT EXISTS fighters (
+  slug text PRIMARY KEY,
+  name text NOT NULL,
+  metadata jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS fighter_fights (
+  fighter_slug text NOT NULL REFERENCES fighters (slug),
+  "date" date NOT NULL,
+  event text,
+  opponent text NOT NULL,
+  result text,
+  method text,
+  round integer,
+  "time" text,
+  sig_strikes_landed integer,
+  sig_strikes_attempted integer,
+  total_strikes_landed integer,
+  total_strikes_attempted integer,
+  takedowns_landed integer,
+  takedowns_attempted integer,
+  sub_attempts integer,
+  control_time_seconds integer,
+  knockdowns integer,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (fighter_slug, "date", opponent),
+  CONSTRAINT fighter_fights_result_chk CHECK (
+    result IS NULL OR result IN ('win', 'loss', 'draw', 'nc')
+  )
+);
+
+CREATE INDEX IF NOT EXISTS fighter_fights_slug_date_idx
+  ON fighter_fights (fighter_slug, "date" DESC);
+`;
+
 export const BANKROLL_DEPOSITS_SQL = `-- Bankroll deposits. Number 032.
 -- 031 is manual fitness summaries. This file inserts no rows.
 -- A deposit dated on or after 2026-10-07 adds to the bankroll.
@@ -535,4 +576,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "030_chain_security", sql: CHAIN_SECURITY_SQL },
   { id: "031_fitness_manual_summaries", sql: FITNESS_MANUAL_SUMMARIES_SQL },
   { id: "032_bankroll_deposits", sql: BANKROLL_DEPOSITS_SQL },
+  { id: "033_fighter_careers", sql: FIGHTER_CAREERS_SQL },
 ];

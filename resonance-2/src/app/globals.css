@@ -3239,6 +3239,23 @@ button.node-face-link {
   text-decoration: none;
 }
 
+a.fighter-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.career-note {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.career-table {
+  table-layout: auto;
+  min-width: 64rem;
+}
+
 .submission-stats {
   display: flex;
   flex-direction: column;
