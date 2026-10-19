@@ -10,6 +10,8 @@ import type { FightBreakdown } from "@/lib/fight-breakdowns";
 import { loadFightBreakdownsStore } from "@/lib/fight-breakdowns-store";
 import type { FightResult } from "@/lib/fight-results";
 import { loadFightResultsStore } from "@/lib/fight-results-store";
+import { getSession } from "@/lib/auth-session";
+import { isPublicMode } from "@/lib/public-mode-server";
 import {
   isStorageUnavailable,
   type StoreAvailability,
@@ -75,6 +77,22 @@ export const loadBreakdownsForPage = cache(async (): Promise<BreakdownsPage> => 
     return { status: "unavailable", reason: error.reason };
   }
 });
+
+/** Owner sees the Postgres reason. Public mode and every other viewer get the generic line. */
+export function ownerBetFailureDetail(
+  reason: string,
+  viewer: { role?: string | null; publicMode: boolean },
+): string {
+  if (viewer.publicMode || viewer.role !== "owner") return "Bet book is unavailable.";
+  const text = reason.trim();
+  return text || "Bet book is unavailable.";
+}
+
+export async function betBookLine(book: BetsPage): Promise<string | null> {
+  if (book.status !== "unavailable") return null;
+  const [session, publicMode] = await Promise.all([getSession(), isPublicMode()]);
+  return ownerBetFailureDetail(book.reason, { role: session?.role, publicMode });
+}
 
 export const loadBetsForPage = cache(async (): Promise<BetsPage> => {
   try {

@@ -37,6 +37,7 @@ import {
   type BetsStoreBackend,
   type BetsStoreEnvelope,
 } from "@/lib/bets-store-core";
+import { postgresFailureReason } from "@/lib/pg/client";
 import { loadBetsEnvelope, saveBetsEnvelope } from "@/lib/pg/envelopes";
 
 export {
@@ -136,20 +137,27 @@ type CachedBets =
   | { status: "ok"; envelope: BetsStoreEnvelope; seeded: boolean }
   | { status: "unavailable"; reason: string };
 
+function loggedReason(error: unknown): string {
+  if (isStorageUnavailable(error) && error.reason.trim()) return error.reason;
+  return postgresFailureReason(error);
+}
+
 async function readBetsPostgres(revalidateWrites: boolean): Promise<CachedBets> {
   try {
     const raw = await loadBetsEnvelope();
     const finalized = finalizeBets(raw);
-    if (finalized.dirty) await persistEnvelope(finalized.envelope, revalidateWrites);
+    if (finalized.dirty) {
+      try {
+        await persistEnvelope(finalized.envelope, revalidateWrites);
+      } catch (error) {
+        console.error("bets write failed", loggedReason(error));
+      }
+    }
     return { status: "ok", envelope: finalized.envelope, seeded: finalized.seeded };
   } catch (error) {
-    if (error instanceof StorageUnavailableError) {
-      return { status: "unavailable", reason: error.reason };
-    }
-    return {
-      status: "unavailable",
-      reason: error instanceof Error ? error.message : "Bet database could not be read.",
-    };
+    const reason = loggedReason(error);
+    console.error("bets read failed", reason);
+    return { status: "unavailable", reason };
   }
 }
 
