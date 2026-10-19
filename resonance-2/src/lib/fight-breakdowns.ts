@@ -19,6 +19,14 @@ import {
   R1_FINISH_LABEL,
   type PlanTier,
 } from "@/lib/fight-ko-gate";
+import {
+  isSubmissionLabel,
+  mergeSubmissionStats,
+  NOT_RECORDED,
+  readOpponentBlock,
+  submissionBoards,
+  submissionStatMap,
+} from "@/lib/fight-submission";
 import type { FightResult } from "@/lib/fight-results";
 import {
   fightBySlug,
@@ -54,6 +62,10 @@ const STAT_ORDER = [
   "Losses (KO/Sub/Dec)",
   KO_PCT_LABEL,
   R1_FINISH_LABEL,
+  "Sub wins",
+  "Sub win %",
+  "Times submitted",
+  "Control time",
   "Last fight",
   "Days since",
   "Camp",
@@ -411,6 +423,7 @@ function breakdownFromCamel(raw: unknown): FightBreakdown {
   row.stats = readStats(raw.stats);
   row.links = readLinks(raw.links);
   row.boutOrder = readBoutOrder(raw.boutOrder);
+  applyOpponentBlock(row, raw);
   return row;
 }
 
@@ -437,7 +450,36 @@ function statMapFromFighter(fighter: Record<string, unknown>): Record<string, st
   if (lossParts.some(Boolean)) {
     stats["Losses (KO/Sub/Dec)"] = lossParts.map((part) => part || "—").join(" / ");
   }
-  return enrichFinishStats(stats, historyLines(fighter.last5) ?? historyLines(fighter.last3), fighter);
+  return mergeSubmissionStats(
+    enrichFinishStats(stats, historyLines(fighter.last5) ?? historyLines(fighter.last3), fighter),
+    submissionStatMap(fighter),
+  );
+}
+
+/** Opponent figures fill the side that is not the lean. A named opponent wins. Fighter fields stay. */
+function applyOpponentBlock(row: FightBreakdown, raw: Record<string, unknown>): void {
+  const block = readOpponentBlock(raw.opponent ?? raw.opponentStats);
+  if (!block) return;
+  const named = block.name;
+  const lean = row.lean || row.odds?.pick || null;
+  const aName = row.aName;
+  const bName = row.bName;
+  const matches = (left: string | null, right: string | null) => {
+    if (!left || !right) return false;
+    return personSlug(left) === personSlug(right);
+  };
+  let side: "a" | "b" | null = null;
+  if (named && matches(aName, named) && !matches(bName, named)) side = "a";
+  else if (named && matches(bName, named) && !matches(aName, named)) side = "b";
+  else if (lean && matches(aName, lean) && !matches(bName, lean)) side = "b";
+  else if (lean && matches(bName, lean) && !matches(aName, lean)) side = "a";
+  if (!side) return;
+  const stats = row.stats ?? { a: {}, b: {} };
+  const target = side === "a" ? stats.a : stats.b;
+  for (const [label, value] of Object.entries(block.stats)) {
+    if (!target[label]) target[label] = value;
+  }
+  row.stats = stats;
 }
 
 function numberAt(value: unknown, index: number): number | undefined {
@@ -548,6 +590,7 @@ function breakdownFromSiteFight(
     row.stats = Object.keys(stats.a).length || Object.keys(stats.b).length ? stats : null;
   }
   row.odds = Object.keys(odds).length ? odds : null;
+  applyOpponentBlock(row, fight);
   return row;
 }
 
@@ -834,13 +877,18 @@ function pairedStats(
 ): { label: string; value: string }[][] {
   const a = left ?? {};
   const b = right ?? {};
+  const hasStat = Object.keys(a).length > 0 || Object.keys(b).length > 0;
   const labels = [
-    ...STAT_ORDER.filter((label) => label in a || label in b),
+    ...STAT_ORDER.filter((label) => label in a || label in b || (hasStat && isSubmissionLabel(label))),
     ...Object.keys({ ...a, ...b })
       .filter((label) => !STAT_ORDER.includes(label))
       .sort(),
   ];
-  const empty = (label: string) => (label === KO_PCT_LABEL || label === R1_FINISH_LABEL ? "n/a" : "—");
+  const empty = (label: string) => {
+    if (label === KO_PCT_LABEL || label === R1_FINISH_LABEL) return "n/a";
+    if (isSubmissionLabel(label)) return NOT_RECORDED;
+    return "—";
+  };
   return [
     labels.map((label) => ({ label, value: a[label] ?? empty(label) })),
     labels.map((label) => ({ label, value: b[label] ?? empty(label) })),
@@ -1106,6 +1154,14 @@ export function annotateDeskFights(
     next.tierNote = doctrine.tierNote;
     next.stakePlan = doctrine.stakePlan;
     if (row.why) next.why = row.why;
+    next.submission = submissionBoards({
+      aName: row.aName,
+      bName: row.bName,
+      lean: row.lean,
+      pick: row.odds?.pick,
+      aStats: row.stats?.a,
+      bStats: row.stats?.b,
+    });
     if (!next.detail && row.division) next.detail = row.division;
     if (!next.kicker && row.slot) next.kicker = row.slot;
     if (!next.segment && row.card) {
