@@ -1,4 +1,5 @@
 import { FLOOR_NODES } from "@/data/floor-nodes";
+import { filmPhoneTrail } from "@/lib/film-episode";
 import { navHrefShelved } from "@/lib/node-visibility";
 import { findGear, gearHref, youtubeChildLabel } from "@/lib/youtube-node";
 import { NODE_PARENT, PARENTS } from "@/data/node-parents";
@@ -268,6 +269,10 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
 
   if (parts.length === 0) return { back: null, crumbs: [HOME] };
 
+  if (parts[0] === "film") {
+    return filmPhoneTrail(parts.slice(1)) ?? homeTrail();
+  }
+
   if (parts[0] === "n") {
     if (parts[1] === "system") {
       const system: PhoneTarget = { href: "/n/system", label: "System Map" };
@@ -457,7 +462,13 @@ export function phoneTabActive(href: string, pathname: string): boolean {
       return false;
     }
     if (normalized === "/n/approvals" || normalized.startsWith("/n/approvals/")) return false;
-    return normalized === "/" || normalized.startsWith("/n/") || normalized.startsWith("/fights");
+    return (
+      normalized === "/" ||
+      normalized.startsWith("/n/") ||
+      normalized.startsWith("/fights") ||
+      normalized === "/film" ||
+      normalized.startsWith("/film/")
+    );
   }
   if (href === "/settings/security") return normalized === "/settings" || normalized.startsWith("/settings/");
   return normalized === href || normalized.startsWith(`${href}/`);
