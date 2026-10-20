@@ -7,6 +7,13 @@ import {
   type IncidentView,
 } from "@/lib/chain-security";
 
+const NO_INCIDENTS_RECORDED = "no incidents recorded";
+
+function incidentStatus(incident: IncidentView): string {
+  const line = `${incident.dateLabel} · ${incident.status}`;
+  return incident.holdingChains.length > 0 ? `holding · ${line}` : line;
+}
+
 function IncidentCard({ incident }: { incident: IncidentView }) {
   return (
     <NodeFace
@@ -16,7 +23,7 @@ function IncidentCard({ incident }: { incident: IncidentView }) {
         href: incident.href,
         name: incident.subject,
         headline: incident.categoryLabel,
-        status: `${incident.dateLabel} · ${incident.status}`,
+        status: incidentStatus(incident),
         live: true,
       })}
     />
@@ -38,10 +45,10 @@ function ExposureCard({ watches }: { watches: readonly ExposureWatch[] }) {
                 glyph: "chain-security",
                 href: first?.href ?? "",
                 name: watch.label,
-                headline: watch.incidents.length === 0 ? "clear" : String(watch.incidents.length),
+                headline: watch.incidents.length === 0 ? "0" : String(watch.incidents.length),
                 status:
                   watch.incidents.length === 0 || !first
-                    ? "no incidents"
+                    ? NO_INCIDENTS_RECORDED
                     : `${first.subject} · ${first.status}`,
                 live: watch.incidents.length > 0,
               })}
@@ -74,7 +81,7 @@ export function ChainSecurityFloor({ feed }: { feed: ChainSecurityFeed }) {
       <ExposureCard watches={feed.watches} />
       {feed.groups.length === 0 ? (
         <p className="parent-empty" role="status">
-          No incidents yet.
+          {NO_INCIDENTS_RECORDED}
         </p>
       ) : (
         feed.groups.map((group) => (
@@ -118,6 +125,14 @@ export function ChainSecurityDetail({ incident }: { incident: IncidentView }) {
             <p className="control-meta">{incident.categoryLabel}</p>
           </div>
         </li>
+        {incident.holdingChains.length > 0 ? (
+          <li className="control-row">
+            <div>
+              <p className="control-name">Holding</p>
+              <p className="control-meta">{incident.holdingChains.join(", ")}</p>
+            </div>
+          </li>
+        ) : null}
         <li className="control-row">
           <div>
             <p className="control-name">Cause</p>
