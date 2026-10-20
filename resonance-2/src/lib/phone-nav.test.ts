@@ -305,11 +305,18 @@ describe("phone back targets", () => {
     assert.deepEqual(phoneTrail("/fights").back, { href: "/n/fight-desk", label: "Fight Desk" });
     assert.deepEqual(phoneTrail("/fights/ufc").back, { href: "/fights", label: "Fights" });
     assert.deepEqual(phoneTrail("/fights/contender-series").back, { href: "/fights", label: "Fights" });
-    assert.deepEqual(phoneTrail("/fights/ufc-332").back, { href: "/fights/ufc", label: "UFC" });
-    assert.deepEqual(phoneTrail("/fights/dwcs-week-1").back, {
-      href: "/fights/contender-series",
-      label: "Contender Series",
+    assert.deepEqual(phoneTrail("/fights/upcoming").back, { href: "/fights", label: "Fights" });
+    assert.deepEqual(phoneTrail("/fights/past").back, { href: "/fights", label: "Fights" });
+    assert.deepEqual(phoneTrail("/fights/past/ufc-332").back, {
+      href: "/fights/past",
+      label: "Past Events",
     });
+    assert.deepEqual(phoneTrail("/fights/upcoming/dwcs-week-1").back, {
+      href: "/fights/upcoming",
+      label: "Upcoming Events",
+    });
+    assert.deepEqual(phoneTrail("/fights/ufc-332").back, { href: "/fights", label: "Fights" });
+    assert.deepEqual(phoneTrail("/fights/dwcs-week-1").back, { href: "/fights", label: "Fights" });
     assert.deepEqual(phoneTrail("/fights/fighters/eric-nolan").back, { href: "/fights", label: "Fights" });
     assert.equal(phoneTrail("/fights/fighters/eric-nolan").crumbs.at(-1)?.label, "Eric Nolan");
     assert.deepEqual(phoneTrail("/fights/fighters").back, { href: "/", label: "Home" });
@@ -317,7 +324,11 @@ describe("phone back targets", () => {
       href: "/fights/ufc-332",
       label: "UFC 332",
     });
-    assert.deepEqual(phoneTrail("/fights/main-card").back, { href: "/fights/ufc", label: "UFC" });
+    assert.deepEqual(phoneTrail("/fights/past/ufc-332/silva-wang").back, {
+      href: "/fights/past/ufc-332",
+      label: "UFC 332",
+    });
+    assert.deepEqual(phoneTrail("/fights/main-card").back, { href: "/fights", label: "Fights" });
   });
 });
 

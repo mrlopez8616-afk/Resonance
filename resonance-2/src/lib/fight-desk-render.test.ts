@@ -464,6 +464,90 @@ describe("Edmonton fight desk render", () => {
     assert.match(html, /Card not posted yet/);
   });
 
+  it("shows upcoming and past tiles, then a past fight's result and flat $1", async () => {
+    const { FightIndex, FightTimeList, ListedFightEvent } = await import("@/components/fight-board");
+    const now = new Date("2026-10-20T12:00:00-05:00");
+    const index = render(createElement(FightIndex, { bets: [], events: [], now }));
+    assert.match(index, /Upcoming Events/);
+    assert.match(index, /Past Events/);
+    assert.match(index, /0 events/);
+    assert.match(index, /1 event/);
+    assert.equal(index.includes("$"), false);
+    const pastList = render(createElement(FightTimeList, { bucket: "past", events: [] }));
+    assert.match(pastList, /No events/);
+    const won = {
+      id: "flat-won",
+      event: "UFC 332",
+      fight: "A vs B",
+      fightSlug: "a-vs-b",
+      pick: "A",
+      stake: "4.76",
+      oddsPct: 40,
+      payout: "11.60",
+      status: "won" as const,
+      realizedPnl: "6.84",
+      venue: "coinbase-predict" as const,
+      ticker: "UFC" as const,
+      time: "2026-10-03T19:00:00-05:00",
+    };
+    const fight = {
+      slug: "a-vs-b",
+      title: "A vs B",
+      kicker: "Main",
+      detail: "Welterweight",
+      segment: null,
+      bets: [won],
+      lean: "A",
+      tier: "LEAN" as const,
+    };
+    const card = render(
+      createElement(ListedFightEvent, {
+        title: "UFC 332",
+        meta: "Las Vegas",
+        fights: [fight],
+        bets: [won],
+        results: [],
+        eventSlug: "ufc-332",
+        backHref: "/fights/past",
+        backLabel: "Past Events",
+        past: true,
+      }),
+    );
+    assert.match(card, /Lean A/);
+    assert.match(card, /LEAN/);
+    assert.match(card, /Result not recorded/);
+    assert.match(card, /Flat \$1 \+\$1\.44/);
+    const hidden = render(
+      createElement(ListedFightEvent, {
+        title: "UFC 332",
+        meta: "Las Vegas",
+        fights: [fight],
+        bets: [won],
+        results: [
+          {
+            event: "ufc-332",
+            fightSlug: "a-vs-b",
+            winner: "A",
+            opponent: "B",
+            method: "Decision",
+            round: 3,
+            time: "5:00",
+            status: "final" as const,
+          },
+        ],
+        eventSlug: "ufc-332",
+        backHref: "/fights/past",
+        backLabel: "Past Events",
+        past: true,
+        publicMode: true,
+      }),
+    );
+    assert.match(hidden, /Result A def\. B/);
+    assert.match(hidden, /won/);
+    assert.equal(hidden.includes("$"), false);
+    assert.equal(hidden.includes("Flat $1"), false);
+  });
+
   it("keeps fight text inside the page width", () => {
     const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8");
     assert.match(css, /\.log-canvas \{[^}]*overflow-wrap:\s*anywhere/);

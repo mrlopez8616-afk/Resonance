@@ -180,12 +180,9 @@ function dayLabel(day: string): string {
   return `${month} ${Number(match[3])}`;
 }
 
-function eventParent(slug: string): PhoneTarget {
-  const text = slug.toLowerCase();
-  if (text.includes("contender") || text.includes("dwcs")) {
-    return { href: "/fights/contender-series", label: "Contender Series" };
-  }
-  return { href: "/fights/ufc", label: "UFC" };
+function fightBucket(id: string): PhoneTarget {
+  const label = id === "upcoming" ? "Upcoming Events" : "Past Events";
+  return { href: `/fights/${id}`, label };
 }
 
 function homeTrail(): PhoneTrail {
@@ -411,8 +408,31 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     const desk: PhoneTarget = { href: "/n/fight-desk", label: "Fight Desk" };
     const fights: PhoneTarget = { href: "/fights", label: "Fights" };
     if (parts.length === 1) return { back: desk, crumbs: [HOME, desk, fights] };
-    if (parts.length > 3) return homeTrail();
+    if (parts.length > 4) return homeTrail();
     const second = parts[1] ?? "";
+    if (second === "upcoming" || second === "past") {
+      const bucket = fightBucket(second);
+      if (parts.length === 2) return { back: fights, crumbs: [HOME, desk, fights, bucket] };
+      const eventSlug = parts[2] ?? "";
+      const event: PhoneTarget = {
+        href: `/fights/${second}/${eventSlug}`,
+        label: slugLabel(eventSlug),
+      };
+      if (parts.length === 3) return { back: bucket, crumbs: [HOME, desk, fights, bucket, event] };
+      const fightId = parts[3] ?? "";
+      return {
+        back: event,
+        crumbs: [
+          HOME,
+          desk,
+          fights,
+          bucket,
+          event,
+          { href: `/fights/${second}/${eventSlug}/${fightId}`, label: slugLabel(fightId) },
+        ],
+      };
+    }
+    if (parts.length > 3) return homeTrail();
     if (second === "ufc" || second === "contender-series") {
       if (parts.length !== 2) return homeTrail();
       const promo: PhoneTarget = {
@@ -430,18 +450,14 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       };
     }
     if (second === "main-card" || second === "prelims") {
-      const ufc: PhoneTarget = { href: "/fights/ufc", label: "UFC" };
-      return { back: ufc, crumbs: [HOME, fights, ufc] };
+      return { back: fights, crumbs: [HOME, desk, fights] };
     }
     const event: PhoneTarget = { href: `/fights/${second}`, label: slugLabel(second) };
-    if (parts.length === 2) {
-      const back = eventParent(second);
-      return { back, crumbs: [HOME, desk, fights, back, event] };
-    }
+    if (parts.length === 2) return { back: fights, crumbs: [HOME, desk, fights, event] };
     const fightId = parts[2] ?? "";
     return {
       back: event,
-      crumbs: [HOME, fights, event, { href: `/fights/${second}/${fightId}`, label: slugLabel(fightId) }],
+      crumbs: [HOME, desk, fights, event, { href: `/fights/${second}/${fightId}`, label: slugLabel(fightId) }],
     };
   }
 

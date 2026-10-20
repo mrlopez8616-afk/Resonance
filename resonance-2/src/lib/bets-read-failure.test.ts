@@ -182,7 +182,7 @@ describe("bets read failure", { concurrency: false }, () => {
 
   it("passes the owner line through the fight pages and leaves careers off the bets read", () => {
     const fights = readFileSync(path.join(root, "src/app/fights/page.tsx"), "utf8");
-    const event = readFileSync(path.join(root, "src/app/fights/[event]/page.tsx"), "utf8");
+    const event = readFileSync(path.join(root, "src/app/fights/event-route.tsx"), "utf8");
     const fight = readFileSync(path.join(root, "src/app/fights/[event]/[fight]/page.tsx"), "utf8");
     for (const source of [fights, event, fight]) {
       assert.match(source, /betBookLine/);

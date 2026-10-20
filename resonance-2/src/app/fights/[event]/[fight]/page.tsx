@@ -3,9 +3,16 @@ import { FightDetail } from "@/components/fight-board";
 import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { resolveFightView } from "@/lib/fight-breakdowns";
+import { eventPageHref, eventTimeBucket, resolveFightEventPage } from "@/lib/fight-desk";
 import { resultForFight } from "@/lib/fight-results";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { betBookLine, loadBetsForPage, loadBreakdownsForPage, loadFightResultsForPage } from "@/lib/store-page";
+import {
+  betBookLine,
+  loadBetsForPage,
+  loadBreakdownsForPage,
+  loadCalendarForPage,
+  loadFightResultsForPage,
+} from "@/lib/store-page";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +59,11 @@ export default async function FightPage({
   if (event === UFC_332_EVENT.id) {
     const fight = fightBySlug(slug);
     if (!fight) notFound();
-    const [book, card] = await Promise.all([loadBetsForPage(), loadFightResultsForPage()]);
+    const [book, card, calendar] = await Promise.all([
+      loadBetsForPage(),
+      loadFightResultsForPage(),
+      loadCalendarForPage(),
+    ]);
     const bets = book.status === "unavailable" ? [] : book.bets;
     const results = card.status === "unavailable" ? [] : card.results;
     const availability =
@@ -74,7 +85,10 @@ export default async function FightPage({
           fight={fight}
           bets={bets}
           result={resultForFight(results, fight.slug)}
-          backHref={`/fights/${UFC_332_EVENT.id}`}
+          backHref={eventPageHref(
+            UFC_332_EVENT.id,
+            eventTimeBucket(resolveFightEventPage(event, bets, calendar.events)?.when ?? null),
+          )}
           availability={availability}
           resultsAvailability={resultsAvailability}
         />
@@ -82,10 +96,11 @@ export default async function FightPage({
     );
   }
 
-  const [book, card, breakdownPage] = await Promise.all([
+  const [book, card, breakdownPage, calendar] = await Promise.all([
     loadBetsForPage(),
     loadFightResultsForPage(),
     loadBreakdownsForPage(),
+    loadCalendarForPage(),
   ]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const results = card.status === "unavailable" ? [] : card.results;
@@ -116,7 +131,10 @@ export default async function FightPage({
         fight={view.fight}
         bets={view.bets}
         result={resultForFight(results, view.fight.slug, event)}
-        backHref={`/fights/${event}`}
+        backHref={eventPageHref(
+          event,
+          eventTimeBucket(resolveFightEventPage(event, bets, calendar.events)?.when ?? null),
+        )}
         backLabel={view.eventTitle}
         hideEmpty
         availability={availability}
