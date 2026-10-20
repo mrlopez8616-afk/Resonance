@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth-session";
 import { authorizeReadRequest, finishAuthorizedRead } from "@/lib/auth-read";
-import { exposureWatches, parseIncidentWrite, toIncidentJson } from "@/lib/chain-security";
+import { NO_INCIDENTS_RECORDED, exposureWatches, parseIncidentWrite, toIncidentJson } from "@/lib/chain-security";
 import { readIncidents, upsertIncident } from "@/lib/chain-security-store";
 import { requestIsPublicMode } from "@/lib/public-mode-server";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
@@ -47,6 +47,7 @@ export async function GET(request: Request) {
         id: watch.id,
         label: watch.label,
         incidents: watch.incidents.map((incident) => incident.id),
+        note: watch.incidents.length === 0 ? NO_INCIDENTS_RECORDED : null,
       })),
       incidents: incidents.map((incident) => toIncidentJson(incident, publicMode)),
     };

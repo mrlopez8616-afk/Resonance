@@ -1,3 +1,7 @@
+import { HBAR_SLEEVES } from "@/data/hbar-sleeves";
+import { SUI_SLEEVES } from "@/data/sui-sleeves";
+import { XRP_SLEEVES } from "@/data/xrp-sleeves";
+import { isDecimalString } from "@/lib/decimal";
 import { hasMoneyText, stripMoneyText } from "@/lib/public-mode";
 
 /**
@@ -13,6 +17,7 @@ export const SOURCE_PENDING = "source pending";
 export const LOSS_HIDDEN = "hidden";
 export const NOT_RECORDED = "not recorded";
 export const LOSS_NONE = "none";
+export const NO_INCIDENTS_RECORDED = "no incidents recorded";
 
 export const INCIDENT_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -22,7 +27,8 @@ export type IncidentCategory = (typeof CATEGORIES)[number];
 export const LOSS_KINDS = ["amount", "range", "not_recorded", "none"] as const;
 export type LossKind = (typeof LOSS_KINDS)[number];
 
-export const EXPOSURES = ["flare-fxrp", "xrpl"] as const;
+/** Chains a weekly post can name. Equities, RH Main, and the Xaman principal are not chains. */
+export const EXPOSURES = ["flare-fxrp", "xrpl", "sui", "hedera"] as const;
 export type ExposureId = (typeof EXPOSURES)[number];
 
 const CATEGORY_LABEL: Record<IncidentCategory, string> = {
@@ -89,6 +95,8 @@ export type IncidentView = {
   status: string;
   sourceUrl: string | null;
   sourceLabel: string;
+  /** Chain labels this incident touches. Empty when it misses the founder's holdings. */
+  holdingChains: string[];
 };
 
 export type ExposureWatch = {
@@ -127,6 +135,8 @@ export type IncidentJson = {
   source_label: string;
   exposures: ExposureId[];
   href: string;
+  holding: boolean;
+  holding_chains: string[];
 };
 
 type ParseFail = { ok: false; status: number; error: string };
@@ -163,9 +173,75 @@ export function isExposureId(value: string): value is ExposureId {
   return (EXPOSURES as readonly string[]).includes(value);
 }
 
+const EXPOSURE_LABEL: Record<ExposureId, string> = {
+  "flare-fxrp": "Flare FXRP bridge",
+  xrpl: "XRP Ledger",
+  sui: "Sui",
+  hedera: "Hedera",
+};
+
 export function exposureLabel(id: ExposureId): string {
-  if (id === "flare-fxrp") return "Flare FXRP bridge";
-  return "XRPL";
+  return EXPOSURE_LABEL[id];
+}
+
+export type SleeveQuantity = { id: string; quantity: string };
+
+/**
+ * Sleeve books already in the repo. A chain is listed from these rows.
+ * `rh-main` is not a holding. An Xaman principal is not a chain.
+ * Pinned chains stay on the card even when the book is zero.
+ */
+const CHAIN_BOOKS: Record<string, readonly SleeveQuantity[]> = {
+  XRP: XRP_SLEEVES,
+  SUI: SUI_SLEEVES,
+  HBAR: HBAR_SLEEVES,
+};
+
+type ChainMap = {
+  id: ExposureId;
+  ticker: string;
+  /** Null counts every sleeve on the ticker except the ignored ones. */
+  sleeveIds: readonly string[] | null;
+  pinned: boolean;
+};
+
+const CHAIN_MAP: readonly ChainMap[] = [
+  { id: "flare-fxrp", ticker: "XRP", sleeveIds: ["flare-vault"], pinned: true },
+  { id: "xrpl", ticker: "XRP", sleeveIds: ["rh-agentic", "cb-agentic", "coinbase"], pinned: true },
+  { id: "sui", ticker: "SUI", sleeveIds: null, pinned: false },
+  { id: "hedera", ticker: "HBAR", sleeveIds: null, pinned: false },
+];
+
+function ignoredSleeve(id: string): boolean {
+  const key = id.trim().toLowerCase();
+  return key === "rh-main" || key.includes("xaman");
+}
+
+function quantityHeld(quantity: string): boolean {
+  const text = quantity.trim();
+  return isDecimalString(text) && Number(text) > 0;
+}
+
+function chainIsHeld(
+  chain: ChainMap,
+  books: Readonly<Record<string, readonly SleeveQuantity[] | undefined>>,
+): boolean {
+  const rows = books[chain.ticker] ?? [];
+  return rows.some((row) => {
+    if (ignoredSleeve(row.id)) return false;
+    if (chain.sleeveIds && !chain.sleeveIds.includes(row.id)) return false;
+    return quantityHeld(row.quantity);
+  });
+}
+
+/** Flare FXRP and the XRP Ledger, then any other chain a positive sleeve book already maps to. */
+export function founderHoldingChains(
+  books: Readonly<Record<string, readonly SleeveQuantity[] | undefined>> = CHAIN_BOOKS,
+): { id: ExposureId; label: string }[] {
+  return CHAIN_MAP.filter((chain) => chain.pinned || chainIsHeld(chain, books)).map((chain) => ({
+    id: chain.id,
+    label: exposureLabel(chain.id),
+  }));
 }
 
 export function formatIncidentDay(day: string | null): string {
@@ -202,7 +278,9 @@ export function incidentTouches(incident: Pick<IncidentRecord, "subject" | "expo
   if (incident.exposures.includes(id)) return true;
   const subject = incident.subject.toLowerCase();
   if (id === "xrpl") return /\bxrpl\b/.test(subject) || subject.includes("xrp ledger");
-  return subject.includes("fxrp") || /\bflare\b/.test(subject);
+  if (id === "flare-fxrp") return subject.includes("fxrp") || /\bflare\b/.test(subject);
+  if (id === "sui") return /\bsui\b/.test(subject);
+  return /\bhedera\b/.test(subject) || /\bhbar\b/.test(subject);
 }
 
 function clean(value: string): string {
@@ -231,6 +309,9 @@ export function presentIncident(incident: IncidentRecord, publicMode: boolean): 
     status,
     sourceUrl: incident.sourceUrl,
     sourceLabel: incident.sourceUrl ?? SOURCE_PENDING,
+    holdingChains: founderHoldingChains()
+      .filter((chain) => incidentTouches(incident, chain.id))
+      .map((chain) => chain.label),
   };
 }
 
@@ -249,11 +330,11 @@ export function compareIncidents(left: IncidentRecord, right: IncidentRecord): n
 
 export function exposureWatches(incidents: readonly IncidentRecord[], publicMode: boolean): ExposureWatch[] {
   const ordered = [...incidents].sort(compareIncidents);
-  return EXPOSURES.map((id) => ({
-    id,
-    label: exposureLabel(id),
+  return founderHoldingChains().map((chain) => ({
+    id: chain.id,
+    label: chain.label,
     incidents: ordered
-      .filter((incident) => incidentTouches(incident, id))
+      .filter((incident) => incidentTouches(incident, chain.id))
       .map((incident) => presentIncident(incident, publicMode)),
   }));
 }
@@ -271,7 +352,8 @@ export function presentFeed(incidents: readonly IncidentRecord[], publicMode: bo
     }
   }
   const count = ordered.length;
-  const countLabel = count === 0 ? "No incidents yet." : count === 1 ? "1 incident" : `${count} incidents`;
+  const countLabel =
+    count === 0 ? NO_INCIDENTS_RECORDED : count === 1 ? "1 incident" : `${count} incidents`;
   return {
     count,
     countLabel,
@@ -335,6 +417,8 @@ export function toIncidentJson(incident: IncidentRecord, publicMode: boolean): I
     source_label: view.sourceLabel,
     exposures: incident.exposures,
     href: view.href,
+    holding: view.holdingChains.length > 0,
+    holding_chains: view.holdingChains,
   };
   if (!publicMode) {
     json.loss_kind = incident.loss.kind;
@@ -423,11 +507,11 @@ function parseSource(value: unknown): { ok: true; url: string | null } | ParseFa
 
 function parseExposures(value: unknown): { ok: true; exposures: ExposureId[] } | ParseFail {
   if (value == null) return { ok: true, exposures: [] };
-  if (!Array.isArray(value)) return fail("exposures is a list of flare-fxrp and xrpl.");
+  if (!Array.isArray(value)) return fail("exposures is a list of flare-fxrp, xrpl, sui, and hedera.");
   const exposures: ExposureId[] = [];
   for (const item of value) {
     if (typeof item !== "string" || !isExposureId(item)) {
-      return fail("exposures is a list of flare-fxrp and xrpl.");
+      return fail("exposures is a list of flare-fxrp, xrpl, sui, and hedera.");
     }
     if (!exposures.includes(item)) exposures.push(item);
   }

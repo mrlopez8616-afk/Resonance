@@ -23,9 +23,11 @@ Loss is one of:
 
 `source_url` is an `http` or `https` URL, or null. Null reads as `source pending`. The server does not look up an article and does not fill in a URL.
 
-`exposures` is a list of `flare-fxrp` and `xrpl`. The My exposure card always names the Flare FXRP bridge and the XRPL. An incident is listed there when its `exposures` include that id, or when the subject names XRPL, the XRP Ledger, FXRP, or Flare.
+`exposures` is a list of `flare-fxrp`, `xrpl`, `sui`, and `hedera`. The My exposure card pins the Flare FXRP bridge and the XRP Ledger at the top of the feed. Sui is listed when the SUI sleeve book has a positive quantity. Hedera is listed when the HBAR book does. A zero book is left off. `rh-main` and an Xaman principal are not chains and are not read. Equities are not chains.
 
-Public mode keeps the pages and returns `loss` as `hidden`. Dollar fields are omitted. A dollar amount in the cause is stripped before the page or the GET body is sent.
+An incident is flagged when its `exposures` include one of those chains, or when the subject names it: XRPL or the XRP Ledger, FXRP or Flare, Sui, Hedera or HBAR. A chain with no matching row says `no incidents recorded`. The page does not invent an incident.
+
+Public mode keeps the pages and returns `loss` as `hidden`. Dollar fields are omitted. A dollar amount in the cause is stripped before the page or the GET body is sent. The exposure card does not print a dollar amount.
 
 Owner pages. Signed out, the proxy redirects to `/login?next=...`.
 
@@ -79,7 +81,7 @@ curl -sS https://resonance3.vercel.app/api/chain-security \
   -H "Authorization: Bearer $RESONANCE_SYNC_SECRET"
 ```
 
-The owner session can GET. In public mode that GET sets `loss` to `hidden` and leaves out `loss_low`, `loss_high`, and `loss_kind`.
+The owner session can GET. In public mode that GET sets `loss` to `hidden` and leaves out `loss_low`, `loss_high`, and `loss_kind`. `exposure` pins the Flare FXRP bridge and the XRP Ledger, then any other held chain. `note` is `no incidents recorded` when that chain has no row. `holding_chains` names the founder's chains an incident touches. Public mode still omits dollar amounts.
 
 ## Auth
 

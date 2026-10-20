@@ -12,8 +12,10 @@ import { SESSION_COOKIE } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
 import {
   LOSS_HIDDEN,
+  NO_INCIDENTS_RECORDED,
   SOURCE_PENDING,
   chainSecurityHomeModel,
+  founderHoldingChains,
   formatLoss,
   formatUsd,
   parseIncidentWrite,
@@ -161,15 +163,23 @@ describe("chain security copy", () => {
       feed.groups.flatMap((group) => group.incidents.map((item) => item.id)),
       ["autheo-theo", "pirate-chain-arrr", "near-intents", "xrpl-ai-bug", "ledger-cryptobilis"],
     );
-    assert.equal(feed.watches[0]?.label, "Flare FXRP bridge");
+    assert.deepEqual(
+      feed.watches.map((watch) => watch.label),
+      ["Flare FXRP bridge", "XRP Ledger", "Sui"],
+    );
     assert.equal(feed.watches[0]?.incidents.length, 0);
+    assert.equal(feed.watches[0]?.id, "flare-fxrp");
     assert.deepEqual(
       feed.watches[1]?.incidents.map((item) => item.id),
       ["xrpl-ai-bug"],
     );
+    assert.equal(feed.watches[2]?.incidents.length, 0);
+    assert.equal(feed.watches.some((watch) => watch.id === "hedera"), false);
+    const xrplCard = feed.groups.flatMap((group) => group.incidents).find((item) => item.id === "xrpl-ai-bug");
+    assert.deepEqual(xrplCard?.holdingChains, ["XRP Ledger"]);
     const home = chainSecurityHomeModel(rows, { publicMode: false });
     assert.equal(home.count, 5);
-    assert.deepEqual(home.lines, ["XRPL \u00b7 patched", "Pirate Chain (ARRR)"]);
+    assert.deepEqual(home.lines, ["XRP Ledger \u00b7 patched", "Pirate Chain (ARRR)"]);
     assert.equal(home.lines.length <= 3, true);
 
     const shown = presentIncident(rows[2]!, true);
@@ -183,7 +193,11 @@ describe("chain security copy", () => {
     const list = render(createElement(ChainSecurityFloor, { feed: presentFeed(rows, true) }));
     assert.match(list, /My exposure/);
     assert.match(list, /Flare FXRP bridge/);
-    assert.match(list, /no incidents/);
+    assert.match(list, /XRP Ledger/);
+    assert.match(list, /Sui/);
+    assert.match(list, new RegExp(NO_INCIDENTS_RECORDED));
+    assert.match(list, /holding · not recorded · patched/);
+    assert.equal(list.includes("Hedera"), false);
     assert.equal(list.includes("$"), false);
     assert.equal(list.includes("119M"), false);
     assert.equal(list.includes("Mint bug"), false);
@@ -192,6 +206,112 @@ describe("chain security copy", () => {
     );
     assert.match(card, /Chain Security/);
     assert.equal(card.includes("$"), false);
+  });
+
+  it("pins Flare and the XRP Ledger and flags only recorded holding touches", async () => {
+    const chains = founderHoldingChains();
+    assert.deepEqual(
+      chains.map((chain) => chain.id),
+      ["flare-fxrp", "xrpl", "sui"],
+    );
+    assert.equal(chains.some((chain) => /xaman|rh-main/i.test(chain.id + chain.label)), false);
+
+    const ignored = founderHoldingChains({
+      XRP: [
+        { id: "rh-main", quantity: "587.718" },
+        { id: "xaman-principal", quantity: "999" },
+      ],
+      SUI: [{ id: "rh-main", quantity: "10" }],
+      HBAR: [{ id: "rh-agentic", quantity: "0" }],
+    });
+    assert.deepEqual(
+      ignored.map((chain) => chain.id),
+      ["flare-fxrp", "xrpl"],
+    );
+
+    const hederaHeld = founderHoldingChains({
+      XRP: [],
+      SUI: [{ id: "coinbase", quantity: "0" }],
+      HBAR: [{ id: "rh-agentic", quantity: "1" }],
+    });
+    assert.deepEqual(
+      hederaHeld.map((chain) => chain.id),
+      ["flare-fxrp", "xrpl", "hedera"],
+    );
+
+    const empty = presentFeed([], false);
+    assert.equal(empty.count, 0);
+    assert.equal(empty.countLabel, NO_INCIDENTS_RECORDED);
+    assert.deepEqual(empty.groups, []);
+    assert.deepEqual(
+      empty.watches.map((watch) => watch.incidents.length),
+      [0, 0, 0],
+    );
+
+    const flare = incident({
+      id: "flare-note",
+      category: "bridge_exploit",
+      subject: "FXRP bridge",
+      status: "watch",
+    });
+    const sui = incident({
+      id: "sui-note",
+      category: "chain_bug",
+      subject: "A Sui protocol",
+      exposures: ["sui"],
+    });
+    const suite = incident({
+      id: "suite-note",
+      category: "wallet_hardware",
+      subject: "Hardware suite",
+    });
+    const hedera = incident({
+      id: "hbar-note",
+      category: "chain_bug",
+      subject: "Hedera topic",
+      exposures: ["hedera"],
+    });
+    const tagged = presentFeed([flare, sui, suite, hedera], false);
+    assert.deepEqual(
+      tagged.watches.find((watch) => watch.id === "flare-fxrp")?.incidents.map((item) => item.id),
+      ["flare-note"],
+    );
+    assert.deepEqual(
+      tagged.watches.find((watch) => watch.id === "sui")?.incidents.map((item) => item.id),
+      ["sui-note"],
+    );
+    assert.equal(tagged.watches.some((watch) => watch.id === "hedera"), false);
+    const views = tagged.groups.flatMap((group) => group.incidents);
+    assert.deepEqual(views.find((item) => item.id === "flare-note")?.holdingChains, ["Flare FXRP bridge"]);
+    assert.deepEqual(views.find((item) => item.id === "sui-note")?.holdingChains, ["Sui"]);
+    assert.deepEqual(views.find((item) => item.id === "suite-note")?.holdingChains, []);
+    assert.deepEqual(views.find((item) => item.id === "hbar-note")?.holdingChains, []);
+
+    const { ChainSecurityFloor, ChainSecurityDetail } = await import("@/components/chain-security-floor");
+    const quiet = presentFeed([], true);
+    const html = render(createElement(ChainSecurityFloor, { feed: quiet }));
+    assert.match(html, /My exposure/);
+    assert.match(html, /Flare FXRP bridge/);
+    assert.match(html, /XRP Ledger/);
+    assert.match(html, /no incidents recorded/);
+    assert.equal(html.includes("Autheo"), false);
+    assert.equal(html.includes("Pirate"), false);
+    assert.equal(html.includes("$"), false);
+    assert.equal(html.includes("rh-main"), false);
+    assert.equal(/xaman/i.test(html), false);
+    const flagged = presentIncident(sui, true);
+    const detail = render(createElement(ChainSecurityDetail, { incident: flagged }));
+    assert.match(detail, /Holding/);
+    assert.match(detail, /Sui/);
+    assert.equal(detail.includes("$"), false);
+    const floorSource = readFileSync(path.join(root, "src/components/chain-security-floor.tsx"), "utf8");
+    const libSource = readFileSync(path.join(root, "src/lib/chain-security.ts"), "utf8");
+    assert.equal(floorSource.includes("NEXT_PUBLIC_"), false);
+    assert.equal(floorSource.includes("RESONANCE_SYNC_SECRET"), false);
+    assert.equal(floorSource.includes("rh-main"), false);
+    assert.equal(/xaman/i.test(floorSource), false);
+    assert.equal(libSource.includes("NEXT_PUBLIC_"), false);
+    assert.equal(libSource.includes("RESONANCE_SYNC_SECRET"), false);
   });
 
   it("rejects a made-up source and keeps a null link", () => {
@@ -221,6 +341,23 @@ describe("chain security copy", () => {
       source_url: "not a url",
     });
     assert.equal(invented.ok, false);
+    const tagged = parseIncidentWrite({
+      id: "sui-bridge",
+      subject: "Example bridge",
+      category: "bridge_exploit",
+      cause: "A weekly note.",
+      exposures: ["sui"],
+    });
+    assert.equal(tagged.ok, true);
+    if (tagged.ok) assert.deepEqual(tagged.incident.exposures, ["sui"]);
+    const principal = parseIncidentWrite({
+      id: "example-bridge",
+      subject: "Example bridge",
+      category: "bridge_exploit",
+      cause: "A weekly note.",
+      exposures: ["rh-main"],
+    });
+    assert.equal(principal.ok, false);
   });
 
   it("opens the owner pages before the feed is read", () => {
@@ -413,9 +550,24 @@ describe("chain security store", { concurrency: false }, () => {
       }),
     );
     assert.equal(bearer.status, 200);
-    const bearerBody = (await bearer.json()) as { incidents: { id: string; loss: string }[] };
+    const bearerBody = (await bearer.json()) as {
+      exposure: { id: string; label: string; incidents: string[] }[];
+      incidents: { id: string; loss: string; holding: boolean; holding_chains: string[] }[];
+    };
+    assert.deepEqual(
+      bearerBody.exposure.map((watch) => watch.id),
+      ["flare-fxrp", "xrpl", "sui"],
+    );
+    assert.equal(bearerBody.exposure[0]?.label, "Flare FXRP bridge");
+    assert.equal(bearerBody.exposure[1]?.label, "XRP Ledger");
+    assert.deepEqual(bearerBody.exposure[0]?.incidents, []);
+    assert.deepEqual(bearerBody.exposure[1]?.incidents, ["xrpl-ai-bug"]);
     const autheo = bearerBody.incidents.find((item) => item.id === "autheo-theo");
     assert.equal(autheo?.loss, "$730K\u2013$1.76M");
+    assert.equal(autheo?.holding, false);
+    const xrpl = bearerBody.incidents.find((item) => item.id === "xrpl-ai-bug");
+    assert.equal(xrpl?.holding, true);
+    assert.deepEqual(xrpl?.holding_chains, ["XRP Ledger"]);
 
     const hidden = await GET(
       new Request("https://resonance3.vercel.app/api/chain-security", {
@@ -425,6 +577,8 @@ describe("chain security store", { concurrency: false }, () => {
     assert.equal(hidden.status, 200);
     const hiddenText = JSON.stringify(await hidden.json());
     assert.match(hiddenText, /"loss":"hidden"/);
+    assert.match(hiddenText, /XRP Ledger/);
+    assert.match(hiddenText, /no incidents recorded/);
     assert.equal(hiddenText.includes("$"), false);
     assert.equal(hiddenText.includes("730000"), false);
     assert.equal(hiddenText.includes("1760000"), false);
