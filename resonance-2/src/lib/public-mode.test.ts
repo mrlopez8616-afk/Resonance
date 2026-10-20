@@ -823,6 +823,7 @@ describe("public render scan", () => {
       "/fights/main-card/page.tsx",
       "/fights/prelims/page.tsx",
       "/fights/ufc/page.tsx",
+      "/film/[[...slug]]/page.tsx",
       "/login/page.tsx",
       "/log/page.tsx",
       "/n/ai-stocks/catalysts/page.tsx",

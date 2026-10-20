@@ -623,18 +623,16 @@ function buildLevel(snap: FilmSnapshot, child?: string, leaf?: string): FilmLeve
       });
       return row ? [row] : [];
     });
-    sections.push(
-      face({
-        id: "ideas",
-        glyph: "build",
-        href: "/film/build/ideas",
-        name: "Future Ideas",
-        headline: "Board",
-        status: "What comes next",
-        live: true,
-      }),
-    );
-    return board("Build", ROOT, sections);
+    const ideas = face({
+      id: "ideas",
+      glyph: "build",
+      href: "/film/build/ideas",
+      name: "Future Ideas",
+      headline: "Board",
+      status: "What comes next",
+      live: true,
+    });
+    return board("Build", ROOT, ideas ? [...sections, ideas] : sections);
   }
   if (child === "ideas") {
     if (!leaf) {
