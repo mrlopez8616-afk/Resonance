@@ -114,7 +114,8 @@ export type DeskFight = {
   bets: Bet[];
   lean?: string;
   conf?: string;
-  tier?: Bet["tier"] | null;
+  /** STRONG, LEAN, or PASS. PASS is a plan tier, not a ticket tier. */
+  tier?: "STRONG" | "LEAN" | "PASS" | null;
   /** Set when the KO gate changes the posted tier. */
   tierNote?: string | null;
   /** PLAY is the only plan tier that takes money. free is unstaked. */

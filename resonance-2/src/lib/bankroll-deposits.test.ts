@@ -150,7 +150,7 @@ describe("bankroll deposit route", { concurrency: false }, () => {
     else process.env.BLOB_READ_WRITE_TOKEN = previous.BLOB_READ_WRITE_TOKEN;
   });
 
-  it("changes only bankroll, cash, and the suggested stake, and a repeat id does not double-count", async () => {
+  it("changes bankroll and cash, keeps the flat stake, and a repeat id does not double-count", async () => {
     const denied = await POST(depositRequest(DEPOSIT, ""));
     assert.equal(denied.status, 401);
 
@@ -191,7 +191,8 @@ describe("bankroll deposit route", { concurrency: false }, () => {
     assert.deepEqual(closed.tiers, opened.tiers);
     assert.notEqual(closed.bankroll, opened.bankroll);
     assert.notEqual(closed.cash, opened.cash);
-    assert.notEqual(closed.suggestedStake, opened.suggestedStake);
+    assert.equal(opened.suggestedStake, "1.00");
+    assert.equal(closed.suggestedStake, "1.00");
     const rows = await sqlQuery<{ n: string }>(`SELECT count(*)::text AS n FROM bankroll_deposits`);
     assert.equal(String(rows[0]?.n), "1");
   });

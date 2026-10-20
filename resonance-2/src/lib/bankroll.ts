@@ -35,10 +35,12 @@ export const BANKROLL_FIRST_EVENT = {
 /** Events on this civil date or later are in the bankroll. Earlier cards are history. */
 export const BANKROLL_SCOPE_FROM = BANKROLL_FIRST_EVENT.date;
 
-const STAKE_PERCENT = BigInt(5);
 const HUNDRED = BigInt(100);
-const HALF = BigInt(50);
 const TEN_THOUSAND = BigInt(10000);
+
+/** Founder stake. One dollar on every fight. The bankroll does not scale it. */
+export const FLAT_STAKE = "1.00";
+export const FLAT_STAKE_LABEL = "Flat $1/fight";
 const NOTE_TIER = /tier:\s*(strong|lean|none)\b/i;
 
 export type BankrollCard = {
@@ -209,15 +211,9 @@ function inScopeDepositTotal(deposits: readonly BankrollDeposit[]): string {
   return total;
 }
 
-/** Flat 5% of the current bankroll, rounded to the nearest cent. */
-export function suggestedStake(bankroll: string): string {
-  const printed = money(bankroll);
-  const negative = printed.startsWith("-");
-  const cents = BigInt((negative ? printed.slice(1) : printed).replace(".", ""));
-  const rounded = (cents * STAKE_PERCENT + HALF) / HUNDRED;
-  const body = rounded.toString().padStart(3, "0");
-  const stake = `${body.slice(0, -2)}.${body.slice(-2)}`;
-  return negative ? `-${stake}` : stake;
+/** Flat $1 per fight. The bankroll argument is ignored. */
+export function suggestedStake(_bankroll?: string): string {
+  return FLAT_STAKE;
 }
 
 /** Realized P/L divided by settled stake. Null when nothing has settled. */

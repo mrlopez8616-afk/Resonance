@@ -96,7 +96,7 @@ describe("breakdown validation", () => {
   it("rejects unknown tiers and a slug that is not lowercase", () => {
     assert.throws(() => parseBreakdownBody([camel({ tier: "LOCK" })]), /tier must be STRONG, LEAN, PASS, or null/);
     assert.equal(parseBreakdownBody([camel({ tier: "strong" })])[0]?.tier, "STRONG");
-    assert.equal(parseBreakdownBody([camel({ tier: "PASS" })])[0]?.tier, null);
+    assert.equal(parseBreakdownBody([camel({ tier: "PASS" })])[0]?.tier, "PASS");
     assert.equal(parseBreakdownBody([camel({ eventSlug: "UFC-332" })])[0]?.eventSlug, "ufc-332");
     assert.throws(() => parseBreakdownBody([camel({ eventSlug: "UFC 332: Silva vs Wang" })]), /eventSlug must be a lowercase slug/);
   });
@@ -145,7 +145,7 @@ describe("breakdown validation", () => {
     assert.equal(main?.card, "Main card");
     assert.equal(main?.division, "Middleweight");
     assert.equal(main?.rounds, 5);
-    assert.equal(main?.stats?.a["Record (Sherdog)"], "27-7-0");
+    assert.equal(main?.stats?.a["Record (ufc.com / ESPN)"], "27-7-0");
     assert.equal(main?.stats?.a.Age, "30");
     assert.equal(main?.odds?.medianMl?.a, -143);
     assert.equal(main?.links?.a?.books?.FanDuel, -154);
@@ -168,7 +168,7 @@ describe("breakdown validation", () => {
     assert.equal(rows[0]?.eventSlug, "ufc-fight-night-buckley-vs-malott");
     assert.equal(rows[0]?.fightSlug, "joaquin-buckley-vs-mike-malott");
     assert.equal(rows[0]?.fightN, 13);
-    assert.equal(rows[0]?.tier, null);
+    assert.equal(rows[0]?.tier, "PASS");
     assert.equal(rows[0]?.odds?.noVigPct, 56);
   });
 
@@ -256,6 +256,78 @@ describe("fight page resolver", () => {
       bets: [bet({ fightSlug: "not-a-real-fight", event: "UFC 332: Silva vs Wang" })],
     });
     assert.equal(ignored.status, "missing");
+  });
+
+  it("shows PASS on the card when the posted tier is PASS", () => {
+    const [row] = parseBreakdownBody([camel({ tier: "PASS", conf: null })]);
+    assert.equal(row?.tier, "PASS");
+    const fights = annotateDeskFights(
+      [
+        {
+          slug: SLUG,
+          title: "Brendan Allen vs Christian Leroy Duncan",
+          kicker: "",
+          detail: "",
+          segment: "main-card",
+          bets: [],
+        },
+      ],
+      EVENT,
+      [row],
+    );
+    assert.equal(fights[0]?.tier, "PASS");
+    const view = resolveFightView({
+      eventSlug: EVENT,
+      fightSlug: SLUG,
+      breakdowns: [row],
+      bets: [bet()],
+    });
+    assert.equal(view.status, "ready");
+    if (view.status !== "ready") return;
+    assert.equal(view.fight.tier, "PASS");
+  });
+
+  it("labels the record with its source and falls back to ufc.com / ESPN", () => {
+    const sourced = parseBreakdownBody({
+      eventSlug: EVENT,
+      fights: { "1": { fightSlug: SLUG, lean: "Brendan Allen" } },
+      data: [
+        {
+          n: 1,
+          A: { name: "Brendan Allen", record: "27-7-0", record_source: "ESPN" },
+          B: { name: "Christian Leroy Duncan", record: "15-2-0", source: "ufc.com" },
+        },
+      ],
+    });
+    assert.equal(sourced[0]?.stats?.a["Record (ESPN)"], "27-7-0");
+    assert.equal(sourced[0]?.stats?.b["Record (ufc.com)"], "15-2-0");
+    assert.equal(sourced[0]?.stats?.a["Record (Sherdog)"], undefined);
+
+    const [stored] = parseBreakdownBody([
+      camel({
+        aName: "Brendan Allen",
+        bName: "Christian Leroy Duncan",
+        stats: {
+          a: { "Record (Sherdog)": "27-7-0", record_source: "ufc.com" },
+          b: { "Record (Sherdog)": "15-2-0" },
+        },
+      }),
+    ]);
+    assert.ok(stored);
+    const view = resolveFightView({
+      eventSlug: EVENT,
+      fightSlug: SLUG,
+      breakdowns: [stored],
+      bets: [bet()],
+    });
+    assert.equal(view.status, "ready");
+    if (view.status !== "ready") return;
+    assert.equal(view.fight.A.stats.find((row) => row.label === "Record (ufc.com)")?.value, "27-7-0");
+    assert.equal(
+      view.fight.B.stats.find((row) => row.label === "Record (ufc.com / ESPN)")?.value,
+      "15-2-0",
+    );
+    assert.equal(view.fight.A.stats.some((row) => row.label.includes("Sherdog")), false);
   });
 
   it("puts lean, conf, tier, and why on the fight card and links it", () => {

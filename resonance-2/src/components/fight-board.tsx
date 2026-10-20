@@ -98,7 +98,8 @@ function TierTag({ tier }: { tier?: Bet["tier"] }) {
 function shownTicketTier(bet: Bet, fight?: DeskFight): Bet["tier"] | undefined {
   if (!fight?.tierNote || bet.tier !== "STRONG" || !fight.lean) return bet.tier;
   if (personSlug(bet.pick) !== personSlug(fight.lean)) return bet.tier;
-  return fight.tier ?? undefined;
+  if (fight.tier === "STRONG" || fight.tier === "LEAN") return fight.tier;
+  return undefined;
 }
 
 function FightStakeList({ bets, fight }: { bets: readonly Bet[]; fight?: DeskFight }) {
@@ -131,7 +132,7 @@ function FightSections({
 }) {
   const layout = eventBoutSections(fights);
   if (layout.kind === "list") {
-    if (layout.fights.length === 0) return <p className="calendar-quiet">—</p>;
+    if (layout.fights.length === 0) return <p className="calendar-quiet">Card not posted yet</p>;
     return (
       <ol className="flex flex-col gap-3">
         {layout.fights.map((fight, index) => (
@@ -815,7 +816,7 @@ export function FightDetail({
                         bet.tier === "STRONG" &&
                         fight.lean &&
                         personSlug(bet.pick) === personSlug(fight.lean)
-                          ? fight.tier ?? "Pass"
+                          ? fight.tier ?? "PASS"
                           : bet.tier
                       }
                     />

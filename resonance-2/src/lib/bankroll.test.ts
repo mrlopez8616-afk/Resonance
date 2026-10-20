@@ -14,6 +14,8 @@ import {
   earliestPlacementDay,
   eventInBankroll,
   fightCardDay,
+  FLAT_STAKE,
+  FLAT_STAKE_LABEL,
   suggestedStake,
 } from "@/lib/bankroll";
 import { settleBet, type Bet } from "@/lib/bets";
@@ -99,8 +101,8 @@ describe("bankroll", () => {
     assert.equal(ledger.open, 1);
     assert.equal(ledger.recordLabel, "0-0 · 0 sold · 0 void");
     assert.equal(ledger.roiLabel, "—");
-    assert.equal(ledger.suggestedStake, "0.85");
-    assert.equal(ledger.suggestedStakeLabel, "$0.85");
+    assert.equal(ledger.suggestedStake, FLAT_STAKE);
+    assert.equal(ledger.suggestedStakeLabel, "$1.00");
     assert.equal(ledger.cards.length, 1);
     assert.equal(ledger.cards[0]?.href, "/fights/ufc-fight-night-allen-vs-duncan");
     assert.equal(ledger.cards[0]?.date, "2026-10-10");
@@ -146,7 +148,7 @@ describe("bankroll", () => {
     assert.equal(ledger.recordLabel, "1-1 · 1 sold · 1 void");
     assert.equal(ledger.realizedLabel, "+$7.00");
     assert.equal(ledger.roiLabel, "+50.00%");
-    assert.equal(ledger.suggestedStake, "1.20");
+    assert.equal(ledger.suggestedStake, FLAT_STAKE);
     assert.equal(ledger.cards[0]?.recordLabel, "1-1 · 1 sold · 1 void");
     assert.equal(ledger.cards[0]?.pnlLabel, "+$7.00");
   });
@@ -291,12 +293,14 @@ describe("bankroll", () => {
     assert.equal(ledger.tiers.find((tier) => tier.id === "LEAN")?.atRiskLabel, "$0.96");
   });
 
-  it("rounds a 5% stake to cents and dashes ROI until a stake has settled", () => {
-    assert.equal(suggestedStake("17.06"), "0.85");
-    assert.equal(suggestedStake("23.06"), "1.15");
-    assert.equal(suggestedStake("0.10"), "0.01");
-    assert.equal(suggestedStake("0.09"), "0.00");
-    assert.equal(suggestedStake("-17.06"), "-0.85");
+  it("keeps a flat $1 stake and dashes ROI until a stake has settled", () => {
+    assert.equal(FLAT_STAKE, "1.00");
+    assert.equal(FLAT_STAKE_LABEL, "Flat $1/fight");
+    assert.equal(suggestedStake("17.06"), FLAT_STAKE);
+    assert.equal(suggestedStake("23.06"), FLAT_STAKE);
+    assert.equal(suggestedStake("0.10"), FLAT_STAKE);
+    assert.equal(suggestedStake("0.09"), FLAT_STAKE);
+    assert.equal(suggestedStake("-17.06"), FLAT_STAKE);
     assert.equal(bankrollRoi("0.00", "0.00"), null);
     assert.equal(bankrollRoi("6.00", "4.00"), "+150.00%");
     assert.equal(bankrollRoi("4.00", "6.00"), "+66.67%");
@@ -305,7 +309,8 @@ describe("bankroll", () => {
 
     const openOnly = computeBankroll([allen({ id: "open", stake: "1.00", status: "open" })]);
     assert.equal(openOnly.roiLabel, "—");
-    assert.equal(openOnly.suggestedStake, "0.85");
+    assert.equal(openOnly.suggestedStake, FLAT_STAKE);
+    assert.equal(openOnly.suggestedStakeLabel, "$1.00");
   });
 
   it("splits STRONG and LEAN from the tier field, then from the ticket note, and leaves the rest untiered", () => {
@@ -409,7 +414,7 @@ describe("bankroll", () => {
     assert.equal(ledger.depositShareLabel, "0.00%");
   });
 
-  it("adds deposits to bankroll, cash, and the suggested stake only", () => {
+  it("adds deposits to bankroll and cash and keeps the flat stake", () => {
     const won = settleBet(
       allen({ id: "win", stake: "4.00", payout: "10.00" }),
       { id: "win", status: "won", payout: "10.00" },
@@ -441,10 +446,11 @@ describe("bankroll", () => {
     assert.equal(after.depositTotal, "6.84");
     assert.equal(after.bankroll, "27.90");
     assert.equal(after.cash, "27.90");
-    assert.equal(after.suggestedStake, "1.40");
+    assert.equal(after.suggestedStake, FLAT_STAKE);
+    assert.equal(before.suggestedStake, FLAT_STAKE);
     assert.notEqual(after.bankroll, before.bankroll);
     assert.notEqual(after.cash, before.cash);
-    assert.notEqual(after.suggestedStake, before.suggestedStake);
+    assert.equal(after.suggestedStake, before.suggestedStake);
     assert.equal(after.depositShareLabel, "+24.52%");
     assert.equal(bankrollDepositLine(after, false), "+$6.84");
     assert.equal(bankrollDepositLine(after, true), "+24.52%");

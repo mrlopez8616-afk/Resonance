@@ -83,9 +83,33 @@ type RawFighter = {
   camp?: string;
   sherdog?: string;
   ufcstats?: string;
+  /** Where `record` was read. Omitted rows fall back to ufc.com / ESPN. */
+  record_source?: string;
+  source?: string;
   last5?: string[];
   no_ufc_stats?: boolean;
 };
+
+/** Shown on the record line when the post does not name a source. */
+export const RECORD_SOURCE_FALLBACK = "ufc.com / ESPN";
+
+/** `Record (source)`. A blank or a URL uses the fallback. */
+export function recordStatLabel(source: unknown): string {
+  const text = typeof source === "string" ? source.trim() : "";
+  if (!text || /^https?:/i.test(text)) return `Record (${RECORD_SOURCE_FALLBACK})`;
+  return `Record (${text})`;
+}
+
+export function recordSourceOf(fighter: {
+  record_source?: unknown;
+  recordSource?: unknown;
+  source?: unknown;
+}): unknown {
+  if (typeof fighter.record_source === "string" && fighter.record_source.trim()) return fighter.record_source;
+  if (typeof fighter.recordSource === "string" && fighter.recordSource.trim()) return fighter.recordSource;
+  if (typeof fighter.source === "string" && fighter.source.trim()) return fighter.source;
+  return "";
+}
 
 type RawFight = {
   n: number;
@@ -162,8 +186,8 @@ export type CatalogFight = {
   why?: string;
   edges: string[];
   xFactor?: string;
-  /** Plan tier after the KO gate. UFC 332 analysis does not post one. */
-  tier?: "STRONG" | "LEAN" | null;
+  /** Plan tier after the KO gate. PASS is shown. UFC 332 analysis does not post one. */
+  tier?: "STRONG" | "LEAN" | "PASS" | null;
   /** Short reason when the KO gate drops the posted tier. */
   tierNote?: string;
   /** PLAY takes a stake. free is an unstaked pick. */
@@ -180,7 +204,7 @@ const youtubeRaw = youtubeFile as Record<
 const betSeedsRaw = betFile as FounderBetSeed[];
 
 const STAT_FIELDS: { key: keyof RawFighter; label: string }[] = [
-  { key: "record", label: "Record (Sherdog)" },
+  { key: "record", label: "Record" },
   { key: "record_ufcstats", label: "Record (UFCStats)" },
   { key: "ufc_record", label: "UFC record" },
   { key: "streak", label: "Streak" },
@@ -277,8 +301,9 @@ function highlightFor(name: string): FighterSide["highlight"] {
 }
 
 function fighterSide(raw: RawFighter, index: 0 | 1, fight: RawFight): FighterSide {
+  const recordLabel = recordStatLabel(recordSourceOf(raw));
   const stats = STAT_FIELDS.map((field) => ({
-    label: field.label,
+    label: field.key === "record" ? recordLabel : field.label,
     value: displayValue(raw[field.key]),
   }));
   stats.push(

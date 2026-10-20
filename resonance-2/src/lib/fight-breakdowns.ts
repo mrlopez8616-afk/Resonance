@@ -1,4 +1,4 @@
-import type { Bet, BetTier } from "@/lib/bets";
+import type { Bet } from "@/lib/bets";
 import {
   betEventSlug,
   eventSlugFromTitle,
@@ -31,6 +31,8 @@ import type { FightResult } from "@/lib/fight-results";
 import {
   fightBySlug,
   personSlug,
+  recordSourceOf,
+  recordStatLabel,
   UFC_332_ID,
   type CatalogFight,
   type FighterSide,
@@ -43,7 +45,6 @@ const CLOCK = /^\d{1,2}:\d{2}\s*(?:AM|PM)$/i;
 const BOOKS = ["FanDuel", "Caesars", "BetRivers", "BetWay", "Unibet", "Kalshi"] as const;
 
 const STAT_ORDER = [
-  "Record (Sherdog)",
   "UFC record",
   "Streak",
   "Age",
@@ -72,7 +73,7 @@ const STAT_ORDER = [
 ];
 
 const FIGHTER_STATS: { key: string; label: string }[] = [
-  { key: "record", label: "Record (Sherdog)" },
+  { key: "record", label: "Record" },
   { key: "ufc_record", label: "UFC record" },
   { key: "streak", label: "Streak" },
   { key: "age", label: "Age" },
@@ -144,7 +145,7 @@ export type FightBreakdown = {
   bName: string | null;
   lean: string | null;
   conf: string | null;
-  tier: BetTier | null;
+  tier: PlanTier | null;
   method: string | null;
   why: string | null;
   xFactor: string | null;
@@ -246,12 +247,12 @@ function readNumber(value: unknown, label: string): number | null {
   return value;
 }
 
-function readTier(value: unknown): BetTier | null {
+function readTier(value: unknown): PlanTier | null {
   if (value == null || value === "") return null;
   if (typeof value !== "string") throw new BreakdownWriteError("tier must be STRONG, LEAN, PASS, or null.");
   const tier = value.trim().toUpperCase();
-  if (tier === "STRONG" || tier === "LEAN") return tier;
-  if (tier === "PASS" || tier === "NONE" || tier === "FREE") return null;
+  if (tier === "STRONG" || tier === "LEAN" || tier === "PASS") return tier;
+  if (tier === "NONE" || tier === "FREE") return null;
   throw new BreakdownWriteError("tier must be STRONG, LEAN, PASS, or null.");
 }
 
@@ -427,15 +428,21 @@ function breakdownFromCamel(raw: unknown): FightBreakdown {
   return row;
 }
 
+function statText(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text || text.toLowerCase().startsWith("not found")) return null;
+  return text;
+}
+
 function statMapFromFighter(fighter: Record<string, unknown>): Record<string, string> {
   const stats: Record<string, string> = {};
   for (const field of FIGHTER_STATS) {
-    const value = fighter[field.key];
-    if (typeof value === "number" && Number.isFinite(value)) stats[field.label] = String(value);
-    else if (typeof value === "string") {
-      const text = value.trim();
-      if (text && !text.toLowerCase().startsWith("not found")) stats[field.label] = text;
-    }
+    const text = statText(fighter[field.key]);
+    if (!text) continue;
+    const label = field.key === "record" ? recordStatLabel(recordSourceOf(fighter)) : field.label;
+    stats[label] = text;
   }
   const ko = fighter.wins_ko;
   const sub = fighter.wins_sub;
@@ -871,17 +878,41 @@ function betsOnThisFight(
   );
 }
 
+function isOverallRecordLabel(label: string): boolean {
+  return /^Record \(/.test(label) && label !== "Record (UFCStats)";
+}
+
+/** A stored "Record (Sherdog)" line uses the posted source, or ufc.com / ESPN. */
+function presentRecordStats(stats: Record<string, string> | undefined): Record<string, string> {
+  if (!stats) return {};
+  const source = stats.record_source ?? stats.recordSource ?? stats.source ?? "";
+  const next = { ...stats };
+  delete next.record_source;
+  delete next.recordSource;
+  delete next.source;
+  const legacy = next["Record (Sherdog)"] ?? next.Record ?? next.record;
+  if (legacy == null) return next;
+  delete next["Record (Sherdog)"];
+  delete next.Record;
+  delete next.record;
+  const label = recordStatLabel(source);
+  if (next[label] == null) next[label] = legacy;
+  return next;
+}
+
 function pairedStats(
   left: Record<string, string> | undefined,
   right: Record<string, string> | undefined,
 ): { label: string; value: string }[][] {
-  const a = left ?? {};
-  const b = right ?? {};
+  const a = presentRecordStats(left);
+  const b = presentRecordStats(right);
   const hasStat = Object.keys(a).length > 0 || Object.keys(b).length > 0;
+  const recordLabels = [...new Set([...Object.keys(a), ...Object.keys(b)].filter(isOverallRecordLabel))].sort();
   const labels = [
+    ...recordLabels,
     ...STAT_ORDER.filter((label) => label in a || label in b || (hasStat && isSubmissionLabel(label))),
     ...Object.keys({ ...a, ...b })
-      .filter((label) => !STAT_ORDER.includes(label))
+      .filter((label) => !STAT_ORDER.includes(label) && !isOverallRecordLabel(label))
       .sort(),
   ];
   const empty = (label: string) => {
@@ -945,7 +976,7 @@ function plainEdge(edge: string): string {
 }
 
 function planTierOf(row: FightBreakdown): PlanTier | null {
-  if (row.tier === "STRONG" || row.tier === "LEAN") return row.tier;
+  if (row.tier === "STRONG" || row.tier === "LEAN" || row.tier === "PASS") return row.tier;
   const conf = row.conf?.trim().toLowerCase();
   if (conf === "strong") return "STRONG";
   if (conf === "lean") return "LEAN";
@@ -971,7 +1002,7 @@ function matchPickSide(pick: string | null, aName: string | null, bName: string 
 
 /** Posted tier after the KO gate. The stored row is left as the hub posted it. */
 export function doctrineForBreakdown(row: FightBreakdown): {
-  tier: BetTier | null;
+  tier: PlanTier | null;
   conf: string | null;
   tierNote: string | null;
   stakePlan: "PLAY" | "free" | null;
@@ -990,7 +1021,7 @@ export function doctrineForBreakdown(row: FightBreakdown): {
   });
   const hadPlan = posted != null;
   return {
-    tier: gate.storedTier,
+    tier: gate.tier,
     conf: confAfterGate(row.conf, posted, gate.tier),
     tierNote: gate.reason,
     stakePlan: hadPlan || gate.gated ? gate.stakePlan : null,

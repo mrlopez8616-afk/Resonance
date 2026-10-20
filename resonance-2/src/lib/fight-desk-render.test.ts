@@ -318,7 +318,7 @@ describe("Edmonton fight desk render", () => {
       },
     });
     assert.equal(posted[0]?.eventSlug, EVENT_SLUG);
-    assert.equal(posted[0]?.tier, null);
+    assert.equal(posted[0]?.tier, "PASS");
     const mismatched = parseBreakdownBody({
       eventSlug: "ufc-edmonton",
       fights: {
@@ -405,6 +405,63 @@ describe("Edmonton fight desk render", () => {
     const scoreHtml = render(createElement(BetScorecard, { bets: [drawn] }));
     assert.match(scoreHtml, /0-0/);
     assert.match(scoreHtml, /1 draw/);
+  });
+
+  it("prints PASS and the record source on the fight page", async () => {
+    const [row] = parseBreakdownBody({
+      event: "UFC 333",
+      fights: {
+        "1": { fightSlug: "alpha-vs-bravo", lean: "Alpha", tier: "PASS" },
+      },
+      data: [
+        {
+          n: 1,
+          A: { name: "Alpha", record: "10-1", record_source: "ESPN" },
+          B: { name: "Bravo", record: "8-2" },
+        },
+      ],
+    });
+    assert.ok(row);
+    const view = resolveFightView({
+      eventSlug: "ufc-333",
+      fightSlug: "alpha-vs-bravo",
+      breakdowns: [row],
+      bets: [],
+    });
+    assert.equal(view.status, "ready");
+    if (view.status !== "ready") return;
+    const { FightDetail } = await import("@/components/fight-board");
+    const html = render(
+      createElement(FightDetail, {
+        fight: view.fight,
+        bets: [],
+        result: null,
+        backHref: "/fights/ufc-333",
+        backLabel: "UFC 333",
+        hideEmpty: true,
+      }),
+    );
+    assert.ok(html.includes("PASS"));
+    assert.match(html, /Record \(ESPN\)/);
+    assert.match(html, /Record \(ufc\.com \/ ESPN\)/);
+    assert.equal(html.includes("Sherdog"), false);
+  });
+
+  it("says the card is not posted when a fight event has no bouts", async () => {
+    const { ListedFightEvent } = await import("@/components/fight-board");
+    const html = render(
+      createElement(ListedFightEvent, {
+        title: "UFC 333",
+        meta: "Oct 24",
+        fights: [],
+        bets: [],
+        results: [],
+        eventSlug: "ufc-333",
+        backHref: "/fights/ufc",
+        backLabel: "UFC",
+      }),
+    );
+    assert.match(html, /Card not posted yet/);
   });
 
   it("keeps fight text inside the page width", () => {

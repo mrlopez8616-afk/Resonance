@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { catalystSeed } from "@/data/catalyst-seed";
-import { calendarSeed } from "@/data/calendar";
+import { calendarSeed, type CalendarEvent } from "@/data/calendar";
 import { fightCalendar } from "@/data/fight-calendar";
 import { DAILY_BRIEF_BACKFILL_DAYS } from "@/lib/calendar-writers";
 import { CalendarWriteError, parseCalendarEvent } from "./calendar-event";
@@ -9,11 +9,14 @@ import {
   calendarCatalog,
   createEmptyCalendarEnvelope,
   createSeededCalendarEnvelope,
+  dedupeSluglessFightEvents,
   detectCalendarBackend,
   ensureSeededCalendarEnvelope,
+  listCalendarEvents,
   parseCalendarEnvelope,
   writeCalendarEventIntoEnvelope,
 } from "./calendar-store-core";
+import { fightPromotions } from "@/lib/fight-desk";
 
 describe("calendar store core", () => {
   it("seeds cadence, the Monday capital history, and the catalyst catalog once", () => {
@@ -270,5 +273,60 @@ describe("calendar store core", () => {
     );
     assert.equal(detectCalendarBackend({ VERCEL: "1" }), "none");
     assert.equal(detectCalendarBackend({}), "file");
+  });
+
+  it("folds slugless UFC 333 copies into the slugged rows and leaves the store untouched", () => {
+    const sessions = [
+      { id: "early", title: "UFC 333 early prelims", start: "2026-10-24T15:00:00-05:00" },
+      { id: "prelims", title: "UFC 333 prelims", start: "2026-10-24T17:00:00-05:00" },
+      { id: "main", title: "UFC 333 main card", start: "2026-10-24T19:00:00-05:00" },
+    ];
+    const slugged = sessions.map((session) => ({
+      id: `ufc-333-${session.id}`,
+      kind: "fight" as const,
+      start: session.start,
+      title: session.title,
+      status: "scheduled" as const,
+      writer: "founder" as const,
+      eventSlug: "ufc-333",
+    }));
+    const slugless = sessions.map((session) => ({
+      id: `ufc-333-${session.id}-copy`,
+      kind: "fight" as const,
+      start: session.start,
+      title: session.title,
+      status: "scheduled" as const,
+      writer: "agent" as const,
+      location: session.id === "main" ? "T-Mobile Arena" : undefined,
+      note: session.id === "main" ? "Main card 7:00 PM CT." : undefined,
+    }));
+    const other = {
+      id: "ufc-334-main",
+      kind: "fight" as const,
+      start: "2026-11-07T19:00:00-05:00",
+      title: "UFC 334 main card",
+      status: "scheduled" as const,
+      writer: "founder" as const,
+    };
+    const stored: CalendarEvent[] = [...slugged, ...slugless, other];
+    const listed = listCalendarEvents(stored);
+    const ufc333 = listed.filter((event) => event.eventSlug === "ufc-333");
+    assert.equal(ufc333.length, 3);
+    assert.deepEqual(
+      ufc333.map((event) => event.id),
+      ["ufc-333-early", "ufc-333-prelims", "ufc-333-main"],
+    );
+    assert.equal(listed.some((event) => event.id.endsWith("-copy")), false);
+    assert.equal(listed.find((event) => event.id === "ufc-333-main")?.location, "T-Mobile Arena");
+    assert.equal(listed.find((event) => event.id === "ufc-333-main")?.note, "Main card 7:00 PM CT.");
+    assert.equal(listed.find((event) => event.id === "ufc-334-main")?.eventSlug, undefined);
+    assert.equal(stored.length, 7);
+    assert.equal(stored.filter((event) => !event.eventSlug).length, 4);
+    const card = fightPromotions({ bets: [], events: dedupeSluglessFightEvents(stored) });
+    const ufc = card.find((promotion) => promotion.id === "ufc");
+    assert.deepEqual(
+      ufc?.events.filter((event) => event.slug === "ufc-333").map((event) => event.slug),
+      ["ufc-333"],
+    );
   });
 });
