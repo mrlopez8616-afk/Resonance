@@ -1,19 +1,15 @@
 import type { NodeSleeve } from "@/data/sleeves";
 
 /**
- * SUI sleeve quantities for the live node face.
+ * Seed SUI sleeves. The Coinbase and Coinbase Agentic quantities are the
+ * fallback when a portfolio read has never been stored. A live read replaces
+ * those two quantities and includes staked SUI. RH Agentic stays this print.
+ * The Xaman vault and RH Main are not on this book.
  *
- * Same rule as XRP: no Robinhood / Coinbase calls in this brick. Quantities
- * are last-known live prints. Do not invent a Coinbase lot beyond the
- * filled-buy sum below.
- *
- * Hub live lock 2026-09-21: RH Agentic sold to 0. The 2026-09-30
- * Agentic pull still has no SUI position, so the zero stays.
- * Coinbase Advanced Trade
- * (2026-09-19): SUI available=0 hold=0 (staking not on this API key). Use
- * the sum of SUI-USD FILLED buys instead: 16.9 + 16.8 = 33.7. Sells on
- * this book: none. Keep 33.7. Do not replace it from the Robinhood pull.
- * Flag that Coinbase line for hub confirmation.
+ * Hub live lock 2026-09-21: RH Agentic sold to 0. Leave that print.
+ * The Coinbase seed is the filled-buy sum 16.9 + 16.8 = 33.7. A portfolio
+ * breakdown replaces it when staked or spendable SUI is readable. Do not
+ * replace either Coinbase line from a Robinhood pull.
  *
  * Coinbase Agentic (`cb-agentic`) starts at 0. A live buy is the first
  * print. A zero sleeve is hidden on the face while another sleeve is positive.

@@ -4,6 +4,7 @@ import { privateModeResponse, requestIsPublicMode } from "@/lib/public-mode-serv
 import { asFillWriteError, liveSleevesFromEnvelope, loadFillsStore } from "@/lib/fills-store";
 import { seedBookForTicker } from "@/lib/sleeve-apply";
 import { storageErrorJson } from "@/lib/storage-unavailable";
+import { withSuiCoinbaseBalance } from "@/lib/sui-coinbase-balance";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,8 @@ export async function GET(request: Request) {
 
   try {
     const loaded = await loadFillsStore();
-    const sleeves = liveSleevesFromEnvelope(loaded.envelope, ticker) ?? [...seed];
+    const printed = liveSleevesFromEnvelope(loaded.envelope, ticker) ?? [...seed];
+    const live = ticker === "SUI" ? await withSuiCoinbaseBalance(printed) : null;
     return finishAuthorizedRead(
       NextResponse.json(
         {
@@ -36,7 +38,8 @@ export async function GET(request: Request) {
           configured: loaded.configured,
           backend: loaded.backend,
           updatedAt: loaded.envelope.updatedAt,
-          sleeves,
+          sleeves: live?.sleeves ?? printed,
+          ...(live ? { balance: { fresh: live.fresh, asOf: live.asOf } } : {}),
         },
         { headers: { "cache-control": "no-store" } },
       ),

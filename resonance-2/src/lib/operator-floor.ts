@@ -5,6 +5,7 @@ import { sleevesForEquityCard } from "@/lib/ai-stocks";
 import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { assembleLiveFace, type LiveFaceData, type SpotQuote } from "@/lib/live-face";
 import { loadLiveSleeveBooks, type SleeveBooks } from "@/lib/sleeve-prints";
+import type { SuiBalanceMark } from "@/lib/sui-balance-line";
 import { loadSpotQuotes, type SpotTicker } from "@/lib/spot-price";
 import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
 import { loadFightDeskSummary } from "@/lib/store-page";
@@ -19,6 +20,8 @@ export type OperatorFloor = {
   /** Quotes the floor already fetched. Home lines read these. They are not a second feed. */
   spotQuotes: Record<SpotTicker, SpotQuote | null>;
   equityQuotes: Record<(typeof EQUITY_FACE_TICKERS)[number], SpotQuote | null>;
+  /** SUI Coinbase read. Fresh is a portfolio breakdown from this load. */
+  suiBalance: SuiBalanceMark;
 };
 
 /** Same read-only floor load the homepage used before parent drill-down. */
@@ -60,5 +63,6 @@ export async function loadOperatorFloor(): Promise<OperatorFloor> {
     storageDetail: details.length ? details.join(" ") : null,
     spotQuotes: cryptoQuotes,
     equityQuotes,
+    suiBalance: sleeves.suiBalance,
   };
 }

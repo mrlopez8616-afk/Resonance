@@ -132,15 +132,18 @@ export function holdingChildModel(input: {
   position?: readonly ChildCardLine[];
   /** Page layout puts the catalyst under the chart. The card keeps it with the day move. */
   catalystAfterChart?: boolean;
+  /** Stale quantity note. Dollars and unit counts stay off this line. */
+  statusLine?: string | null;
 }): ChildCardModel {
   const card = withoutZeroValue(valueCardFromFace(input.face));
   const day = dayChangeLine(input.changePct, input.fetchedAt, input.now);
   const catalyst = textLine(input.catalyst);
+  const status = textLine(input.statusLine);
   const treasury = input.treasury ? xrpTreasuryLines(input.face.sleeves, input.face.priceUsd) : [];
   const position = input.position ?? [];
   const before = input.catalystAfterChart
-    ? [day, ...position]
-    : [day, catalyst, ...treasury, ...position];
+    ? [day, status, ...position]
+    : [day, status, catalyst, ...treasury, ...position];
   const after = input.catalystAfterChart ? [catalyst] : [];
   return {
     ticker: input.face.ticker,

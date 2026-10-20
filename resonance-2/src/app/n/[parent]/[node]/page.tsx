@@ -42,6 +42,7 @@ import { loadCryptoCloses, loadEquityCloses, loadEquityHistory } from "@/lib/pri
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { suiBalanceLine } from "@/lib/sui-balance-line";
 
 export const dynamic = "force-dynamic";
 
@@ -363,7 +364,13 @@ export default async function NodeDetailPage({
               title={`Open ${node.ticker} log`}
             >
               <span className="sr-only">Open {node.ticker} operator log</span>
-              <LiveNodeFace ticker={node.ticker} sleeves={sleeves} initial={face} />
+              <LiveNodeFace
+                key={node.ticker}
+                ticker={node.ticker}
+                sleeves={sleeves}
+                initial={face}
+                statusLine={node.ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null}
+              />
             </Link>
           ) : (
             <ValueCard
