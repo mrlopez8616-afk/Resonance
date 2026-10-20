@@ -131,7 +131,7 @@ function FightSections({
 }) {
   const layout = eventBoutSections(fights);
   if (layout.kind === "list") {
-    if (layout.fights.length === 0) return <p className="calendar-quiet">—</p>;
+    if (layout.fights.length === 0) return <p className="calendar-quiet">Card not posted yet</p>;
     return (
       <ol className="flex flex-col gap-3">
         {layout.fights.map((fight, index) => (

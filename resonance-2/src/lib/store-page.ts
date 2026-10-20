@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { summarizeBets, type Bet, type FightDeskSummary } from "@/lib/bets";
 import { loadBetsStore } from "@/lib/bets-store";
-import { ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
+import { dedupeSluglessFightEvents, ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
 import { loadCalendarStore, type CalendarStoreBackend } from "@/lib/calendar-store";
 import type { CalendarEvent } from "@/data/calendar";
 import type { FightBreakdown } from "@/lib/fight-breakdowns";
@@ -150,14 +150,14 @@ export const loadCalendarForPage = cache(async (): Promise<CalendarPage> => {
     const status: StoreAvailability = loaded.configured ? "live" : "unconfigured";
     return {
       status: status === "live" ? "live" : "unconfigured",
-      events: loaded.envelope.events,
+      events: dedupeSluglessFightEvents(loaded.envelope.events),
       storeLabel: storeLabel(status, loaded.backend),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
     return {
       status: "seed-only",
-      events: ensureSeededCalendarEnvelope(null).envelope.events,
+      events: dedupeSluglessFightEvents(ensureSeededCalendarEnvelope(null).envelope.events),
       storeLabel: "seed-only",
       reason: error.reason,
     };

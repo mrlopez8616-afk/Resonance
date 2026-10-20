@@ -407,6 +407,23 @@ describe("Edmonton fight desk render", () => {
     assert.match(scoreHtml, /1 draw/);
   });
 
+  it("says the card is not posted when a fight event has no bouts", async () => {
+    const { ListedFightEvent } = await import("@/components/fight-board");
+    const html = render(
+      createElement(ListedFightEvent, {
+        title: "UFC 333",
+        meta: "Oct 24",
+        fights: [],
+        bets: [],
+        results: [],
+        eventSlug: "ufc-333",
+        backHref: "/fights/ufc",
+        backLabel: "UFC",
+      }),
+    );
+    assert.match(html, /Card not posted yet/);
+  });
+
   it("keeps fight text inside the page width", () => {
     const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8");
     assert.match(css, /\.log-canvas \{[^}]*overflow-wrap:\s*anywhere/);

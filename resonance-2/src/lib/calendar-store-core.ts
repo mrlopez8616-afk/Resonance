@@ -14,7 +14,7 @@ import {
   isCalendarWriter,
   parseCalendarEvent,
 } from "@/lib/calendar-event";
-import { isCivilDay } from "@/lib/calendar-time";
+import { chicagoDay, isCivilDay } from "@/lib/calendar-time";
 import { dailyBriefBackfillBodies } from "@/lib/calendar-writers";
 import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
@@ -292,8 +292,97 @@ export function parseCalendarEnvelope(raw: unknown): CalendarStoreEnvelope | nul
   };
 }
 
+const SESSION_IN_TITLE = /\b(?:early[\s-]*prelims?|main[\s-]*card|prelims?)\b/i;
+const NUMBERED_UFC = /\bufc\s+\d+\b/i;
+
+function isFightCalendarRow(event: CalendarEvent): boolean {
+  return event.kind === "fight" || event.lane === "fights";
+}
+
+/** Numbered UFC cards share one key. Other titles keep the bout and drop the session words. */
+function fightCardKey(title: string): string {
+  const numbered = NUMBERED_UFC.exec(title);
+  if (numbered?.[0]) return numbered[0].toLowerCase().replace(/\s+/g, " ");
+  return title
+    .toLowerCase()
+    .replace(new RegExp(SESSION_IN_TITLE.source, "gi"), " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function fightSession(title: string): string {
+  const match = SESSION_IN_TITLE.exec(title);
+  if (!match?.[0]) return "";
+  const word = match[0].toLowerCase();
+  if (word.startsWith("early")) return "early-prelims";
+  if (word.startsWith("main")) return "main-card";
+  return "prelims";
+}
+
+function sameFightCard(left: CalendarEvent, right: CalendarEvent): boolean {
+  if (!isFightCalendarRow(left) || !isFightCalendarRow(right)) return false;
+  const key = fightCardKey(left.title);
+  if (!key || key !== fightCardKey(right.title)) return false;
+  if (chicagoDay(left.start) !== chicagoDay(right.start)) return false;
+  const leftSession = fightSession(left.title);
+  const rightSession = fightSession(right.title);
+  return !leftSession || !rightSession || leftSession === rightSession;
+}
+
+function fillFromSlugless(target: CalendarEvent, extra: CalendarEvent): CalendarEvent {
+  const next: CalendarEvent = { ...target };
+  if (!next.location && extra.location) next.location = extra.location;
+  if (!next.link && extra.link) next.link = extra.link;
+  if (!next.sourceUrl && extra.sourceUrl) next.sourceUrl = extra.sourceUrl;
+  if (!next.end && extra.end) next.end = extra.end;
+  if (extra.note && extra.note !== next.note && !next.note?.includes(extra.note)) {
+    next.note = next.note ? `${next.note} · ${extra.note}` : extra.note;
+  }
+  return next;
+}
+
+/**
+ * Read-time only. A fight row with no eventSlug that matches a slugged row
+ * for the same card and day is folded into that row. Stored rows stay.
+ */
+export function dedupeSluglessFightEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
+  const slugged = events.filter((event) => isFightCalendarRow(event) && event.eventSlug?.trim());
+  const slugless = events.filter((event) => isFightCalendarRow(event) && !event.eventSlug?.trim());
+  const pairs: { slugless: CalendarEvent; slugged: CalendarEvent; score: number }[] = [];
+  for (const bare of slugless) {
+    for (const tagged of slugged) {
+      if (!sameFightCard(bare, tagged)) continue;
+      let score = 0;
+      if (fightSession(bare.title) && fightSession(bare.title) === fightSession(tagged.title)) score += 1000;
+      if (bare.title.trim().toLowerCase() === tagged.title.trim().toLowerCase()) score += 100;
+      const delta = Math.abs(Date.parse(bare.start) - Date.parse(tagged.start));
+      if (Number.isFinite(delta)) score -= Math.min(delta / 60_000, 500);
+      pairs.push({ slugless: bare, slugged: tagged, score });
+    }
+  }
+  pairs.sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score;
+    const titles = left.slugless.id.localeCompare(right.slugless.id);
+    if (titles !== 0) return titles;
+    return left.slugged.id.localeCompare(right.slugged.id);
+  });
+  const usedBare = new Set<string>();
+  const usedTagged = new Set<string>();
+  const folded = new Map<string, CalendarEvent>();
+  for (const pair of pairs) {
+    if (usedBare.has(pair.slugless.id) || usedTagged.has(pair.slugged.id)) continue;
+    usedBare.add(pair.slugless.id);
+    usedTagged.add(pair.slugged.id);
+    const current = folded.get(pair.slugged.id) ?? pair.slugged;
+    folded.set(pair.slugged.id, fillFromSlugless(current, pair.slugless));
+  }
+  return events
+    .filter((event) => !usedBare.has(event.id))
+    .map((event) => folded.get(event.id) ?? event);
+}
+
 export function listCalendarEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
-  return [...events].sort((left, right) => {
+  return dedupeSluglessFightEvents(events).sort((left, right) => {
     const delta = Date.parse(left.start) - Date.parse(right.start);
     if (delta !== 0) return delta;
     return left.id.localeCompare(right.id);

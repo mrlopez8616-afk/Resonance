@@ -2,7 +2,7 @@ import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { PredictionsVisual } from "@/components/home-visual";
 import { formatUsd } from "@/lib/bets";
-import { bankrollDepositLine, bankrollHomeFace, type BankrollLedger } from "@/lib/bankroll";
+import { bankrollDepositLine, bankrollHomeFace, FLAT_STAKE_LABEL, type BankrollLedger } from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
 import { tileFace } from "@/lib/home-faces";
 import type { TierSegment } from "@/lib/home-visuals";
@@ -120,7 +120,7 @@ export function BankrollLedgerView({
         )}
         {publicMode ? null : (
           <div>
-            <dt>Suggested stake</dt>
+            <dt>{FLAT_STAKE_LABEL}</dt>
             <dd>{ledger.suggestedStakeLabel}</dd>
           </div>
         )}
