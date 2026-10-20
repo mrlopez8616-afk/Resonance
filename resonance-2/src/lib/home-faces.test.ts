@@ -276,6 +276,13 @@ describe("uniform home tiles", () => {
     assert.equal(markup(ui, quiet).includes("$"), false);
   });
 
+  it("shows a negative linked net worth instead of not connected", () => {
+    const neg = financeHomeFaceTile({ headline: "-$1,234 partial", asOfLine: "as of Oct 19, 2026" });
+    assert.equal(neg.headline, "-$1,234");
+    assert.equal(neg.live, true);
+    assert.ok(neg.status.includes("partial"));
+  });
+
   it("leaves the TV factory floor on its own wall", () => {
     const source = readFileSync(path.join(root, "src/components/factory-floor.tsx"), "utf8");
     assert.equal(source.includes("NodeFace"), false);
