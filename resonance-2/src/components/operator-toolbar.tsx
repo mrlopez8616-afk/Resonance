@@ -100,6 +100,7 @@ export function OperatorToolbar({
   pendingApprovals?: number | null;
 }) {
   const pathname = usePathname();
+  const onFilm = pathname === "/film" || pathname.startsWith("/film/");
   const primary = visibleNavHrefs(PRIMARY).filter((item) => !(publicMode && item.href === "/log"));
   const settingsHref = publicMode ? "/settings" : "/settings/security";
   const settingsLabel = publicMode ? "Settings" : "Security";
@@ -112,15 +113,18 @@ export function OperatorToolbar({
       </div>
       <nav className="operator-nav" aria-label="Operator toolbar">
         {primary.map((item) => {
+          const href = item.href === "/" && onFilm ? "/film" : item.href;
           const active =
             item.href === "/"
-              ? (pathname === "/" || pathname.startsWith("/n/")) && !approvalsActive
+              ? onFilm
+                ? true
+                : (pathname === "/" || pathname.startsWith("/n/")) && !approvalsActive
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <RailButton
               key={item.href}
-              href={item.href}
+              href={href}
               label={item.label}
               active={active}
             >
@@ -147,9 +151,14 @@ export function OperatorToolbar({
       <nav className="phone-tabbar" aria-label="Phone">
         {visibleNavHrefs(PHONE_TABS).map((tab) => {
           if (phoneTabHidden(tab.href, publicMode)) return null;
-          const href = publicMode && tab.href === "/settings/security" ? "/settings" : tab.href;
+          const href =
+            onFilm && tab.href === "/"
+              ? "/film"
+              : publicMode && tab.href === "/settings/security"
+                ? "/settings"
+                : tab.href;
           const Icon = PHONE_ICONS[tab.href];
-          const active = phoneTabActive(tab.href, pathname);
+          const active = phoneTabActive(href, pathname);
           const label = tab.href === "/n/approvals" ? approvalsLabel(pendingApprovals) : tab.label;
           return (
             <Link

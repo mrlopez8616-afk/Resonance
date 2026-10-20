@@ -1036,7 +1036,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
