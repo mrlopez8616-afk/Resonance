@@ -167,7 +167,7 @@ function finish(face: Omit<HomeFace, "tone">, publicMode: boolean): HomeFace {
 }
 
 function isDollar(value: string): boolean {
-  return /^~?\$/.test(value.trim());
+  return /^[-−]?~?\$/.test(value.trim());
 }
 
 /** Crypto or AI Stocks. Private mode leads with the dollar sum. Public mode leads with the book weight. */
