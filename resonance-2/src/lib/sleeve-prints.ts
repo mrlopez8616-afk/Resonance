@@ -18,6 +18,8 @@ import { listFills } from "./fills";
 import { latestVaultAsOf, withVaultAsOf } from "./position-lots";
 import { loadFillsStore, liveSleevesFromEnvelope, type FillsStoreBackend } from "./fills-store";
 import { isStorageUnavailable, type StoreAvailability } from "@/lib/storage-unavailable";
+import { overlayLiveSuiBook } from "@/lib/sui-coinbase-balance";
+import type { SuiBalanceMark } from "@/lib/sui-balance-line";
 
 export type SleeveBooks = {
   XRP: readonly NodeSleeve[];
@@ -70,19 +72,37 @@ function booksFromEnvelope(envelope: Parameters<typeof liveSleevesFromEnvelope>[
   };
 }
 
+const QUIET_SUI: SuiBalanceMark = { fresh: false, asOf: null };
+
+async function withLiveSui(books: SleeveBooks): Promise<{
+  books: SleeveBooks;
+  suiBalance: SuiBalanceMark;
+}> {
+  try {
+    const live = await overlayLiveSuiBook(books);
+    return { books: live.books, suiBalance: { fresh: live.fresh, asOf: live.asOf } };
+  } catch {
+    return { books, suiBalance: QUIET_SUI };
+  }
+}
+
 export async function loadLiveSleeveBooks(): Promise<{
   books: SleeveBooks;
   status: "live" | "seed-only" | "unconfigured";
+  suiBalance: SuiBalanceMark;
 }> {
   try {
     const loaded = await loadFillsStore();
     if (!loaded.configured) {
-      return { books: SEED_BOOKS, status: "unconfigured" };
+      const live = await withLiveSui(SEED_BOOKS);
+      return { books: live.books, status: "unconfigured", suiBalance: live.suiBalance };
     }
-    return { books: booksFromEnvelope(loaded.envelope), status: "live" };
+    const live = await withLiveSui(booksFromEnvelope(loaded.envelope));
+    return { books: live.books, status: "live", suiBalance: live.suiBalance };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
-    return { books: SEED_BOOKS, status: "seed-only" };
+    const live = await withLiveSui(SEED_BOOKS);
+    return { books: live.books, status: "seed-only", suiBalance: live.suiBalance };
   }
 }
 

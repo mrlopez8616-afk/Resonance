@@ -11,6 +11,7 @@ import {
   type SpotQuote,
 } from "@/lib/live-face";
 import { subscribePullRefresh } from "@/lib/phone-nav";
+import { suiBalanceLine } from "@/lib/sui-balance-line";
 import { valueCardFromFace } from "@/lib/value-card";
 
 const POLL_MS = 45_000;
@@ -19,12 +20,16 @@ export function LiveNodeFace({
   ticker,
   sleeves,
   initial,
+  statusLine: initialStatus = null,
 }: {
   ticker: string;
   sleeves: readonly NodeSleeve[];
   initial: LiveFaceData;
+  statusLine?: string | null;
 }) {
   const [face, setFace] = useState(initial);
+  const [polledStatus, setPolledStatus] = useState<string | null | undefined>(undefined);
+  const statusLine = polledStatus === undefined ? initialStatus : polledStatus;
   const generation = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -44,6 +49,7 @@ export function LiveNodeFace({
       if (sleeveRes.ok) {
         const payload = (await sleeveRes.json()) as {
           sleeves?: NodeSleeve[];
+          balance?: { fresh?: boolean; asOf?: string | null };
         };
         if (Array.isArray(payload.sleeves) && payload.sleeves.length > 0) {
           const byId = new Map(sleeves.map((row) => [row.id, row]));
@@ -52,6 +58,15 @@ export function LiveNodeFace({
             if (seed && (seed.manual || seed.id === "flare-vault")) return seed;
             return row;
           });
+        }
+        const balance = payload.balance;
+        if (balance && typeof balance.fresh === "boolean") {
+          setPolledStatus(
+            suiBalanceLine({
+              fresh: balance.fresh,
+              asOf: typeof balance.asOf === "string" ? balance.asOf : null,
+            }),
+          );
         }
       }
 
@@ -113,6 +128,7 @@ export function LiveNodeFace({
       model={valueCardFromFace(face)}
       priceTitle={priceTitle}
     >
+      {statusLine ? <p className="node-note">{statusLine}</p> : null}
       <p className="live-units">
         {face.totalUnitsLabel}
         <span> {face.unitsWord}</span>

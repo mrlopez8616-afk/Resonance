@@ -211,7 +211,7 @@ describe("fighter career trends", () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "033_fighter_careers");
     assert.equal(embedded?.sql, file);
     assert.equal(file.includes("INSERT"), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "033_fighter_careers");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "034_sui_coinbase_balance");
 
     const parsed = parseFighterCareer({
       name: "Bravo",

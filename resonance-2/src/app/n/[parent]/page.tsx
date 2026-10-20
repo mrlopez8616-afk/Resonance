@@ -45,6 +45,7 @@ import { evaluateXrpTrigger } from "@/lib/xrp-trigger";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { suiBalanceLine } from "@/lib/sui-balance-line";
 import { valueCardFromFace } from "@/lib/value-card";
 
 export const dynamic = "force-dynamic";
@@ -268,6 +269,7 @@ export default async function ParentNodePage({
         now,
         catalyst: nextTickerCatalystLine(events, ticker, now),
         treasury: ticker === "XRP",
+        statusLine: ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null,
       });
     }
   } else if (parent.id === "ai-stocks") {
