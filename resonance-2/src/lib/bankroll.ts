@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@/data/calendar";
 import {
+  betStatusLabel,
   formatSignedUsd,
   formatUsd,
   money,
@@ -214,6 +215,44 @@ function inScopeDepositTotal(deposits: readonly BankrollDeposit[]): string {
 /** Flat $1 per fight. The bankroll argument is ignored. */
 export function suggestedStake(_bankroll?: string): string {
   return FLAT_STAKE;
+}
+
+/**
+ * Recorded settled P&L scaled to the flat $1 stake.
+ * Null when the ticket is open or the stake or P&L is missing.
+ * A loss of any recorded stake is -$1.00. A win uses the recorded return per dollar.
+ */
+export function flatStakeOutcome(bet: Pick<Bet, "stake" | "status" | "realizedPnl">): string | null {
+  if (bet.status === "open") return null;
+  if (typeof bet.realizedPnl !== "string" || !isDecimalString(bet.realizedPnl.trim())) return null;
+  if (typeof bet.stake !== "string" || !isDecimalString(bet.stake.trim())) return null;
+  const stake = money(bet.stake);
+  const pnl = money(bet.realizedPnl);
+  const stakeCents = BigInt(stake.replace("-", "").replace(".", ""));
+  if (stakeCents === BigInt(0)) return null;
+  const negative = pnl.startsWith("-");
+  const pnlCents = BigInt((negative ? pnl.slice(1) : pnl).replace(".", ""));
+  const rounded = (pnlCents * HUNDRED + stakeCents / BigInt(2)) / stakeCents;
+  const whole = rounded / HUNDRED;
+  const frac = (rounded % HUNDRED).toString().padStart(2, "0");
+  const body = `${whole.toString()}.${frac}`;
+  if (body === "0.00") return "$0.00";
+  return `${negative ? "-" : "+"}$${body}`;
+}
+
+/** One line for the fights on a card. Public mode keeps the status word and drops the dollars. */
+export function flatStakeFightLine(
+  bets: readonly Pick<Bet, "stake" | "status" | "realizedPnl">[],
+  publicMode = false,
+): string {
+  if (bets.length === 0) return "not recorded";
+  return bets
+    .map((bet) => {
+      if (bet.status === "open") return "not recorded";
+      if (publicMode) return bet.realizedPnl ? betStatusLabel(bet.status) : "not recorded";
+      return flatStakeOutcome(bet) ?? "not recorded";
+    })
+    .join(" · ");
 }
 
 /** Realized P/L divided by settled stake. Null when nothing has settled. */

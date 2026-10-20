@@ -22,12 +22,12 @@ export const FIGHT_PROMOTIONS = [
 
 export type FightPromotionId = (typeof FIGHT_PROMOTIONS)[number]["id"];
 
-/** Old top-level routes. They redirect to the UFC promotion page. */
+/** Old segment routes. They redirect to the fights node. */
 const LEGACY_FIGHT_NODES = ["main-card", "prelims"] as const;
 
 export function legacyFightNodeHref(slug: string): string | null {
   const id = slug.trim().toLowerCase();
-  return LEGACY_FIGHT_NODES.includes(id as (typeof LEGACY_FIGHT_NODES)[number]) ? "/fights/ufc" : null;
+  return LEGACY_FIGHT_NODES.includes(id as (typeof LEGACY_FIGHT_NODES)[number]) ? "/fights" : null;
 }
 
 export function eventSlugFromTitle(title: string): string {
@@ -143,9 +143,17 @@ export type DeskPromotion = {
   events: DeskEvent[];
 };
 
+export const FIGHT_TIME_BUCKETS = [
+  { id: "upcoming", label: "Upcoming Events" },
+  { id: "past", label: "Past Events" },
+] as const;
+
+export type FightTimeBucket = (typeof FIGHT_TIME_BUCKETS)[number]["id"];
+
 const RESERVED_SLUGS = new Set<string>([
   ...FIGHT_PROMOTIONS.map((promotion) => promotion.id),
   ...LEGACY_FIGHT_NODES,
+  ...FIGHT_TIME_BUCKETS.map((bucket) => bucket.id),
 ]);
 
 export function isReservedFightSlug(value: string): boolean {
@@ -154,6 +162,44 @@ export function isReservedFightSlug(value: string): boolean {
 
 export function fightPromotionHref(id: FightPromotionId): string {
   return `/fights/${id}`;
+}
+
+export function fightTimeHref(bucket: FightTimeBucket): string {
+  return `/fights/${bucket}`;
+}
+
+export function eventPageHref(slug: string, bucket: FightTimeBucket): string {
+  return `/fights/${bucket}/${slug}`;
+}
+
+/**
+ * A card with no recorded start stays on Upcoming.
+ * A start at or after `now` is upcoming. An earlier start is past.
+ */
+export function eventTimeBucket(when: string | null | undefined, now: Date = new Date()): FightTimeBucket {
+  const ms = when ? Date.parse(when) : Number.NaN;
+  if (!Number.isFinite(ms) || ms >= now.getTime()) return "upcoming";
+  return "past";
+}
+
+/** Upcoming soonest first, then past newest first. A card with no start stays upcoming. */
+export function fightTimeBoards(input: {
+  bets: readonly Bet[];
+  events?: readonly CalendarEvent[];
+  now?: Date;
+}): Record<FightTimeBucket, DeskEvent[]> {
+  const now = input.now ?? new Date();
+  const nowMs = now.getTime();
+  const events = fightPromotions(input)
+    .flatMap((promotion) => promotion.events)
+    .slice()
+    .sort((left, right) => compareEvents(left, right, nowMs));
+  const boards: Record<FightTimeBucket, DeskEvent[]> = { upcoming: [], past: [] };
+  for (const event of events) {
+    const bucket = eventTimeBucket(event.when, now);
+    boards[bucket].push({ ...event, href: eventPageHref(event.slug, bucket) });
+  }
+  return boards;
 }
 
 export type FightEventKind = "ufc" | "contender";
@@ -173,16 +219,14 @@ export function promotionForEvent(input: { slug?: string; title?: string }): Fig
   return fightEventKind(input) === "contender" ? "contender-series" : "ufc";
 }
 
-/** One level up from an event page: its promotion. */
+/** One level up from an event page: Upcoming Events or Past Events. */
 export function eventBackHref(
-  eventSlug: string,
-  context?: { title?: string | null },
+  _eventSlug: string,
+  context?: { title?: string | null; when?: string | null; now?: Date },
 ): { href: string; label: string } {
-  const promotion = FIGHT_PROMOTIONS.find(
-    (row) => row.id === promotionForEvent({ slug: eventSlug, title: context?.title ?? "" }),
-  );
-  const id = promotion?.id ?? "ufc";
-  return { href: fightPromotionHref(id), label: promotion?.label ?? "UFC" };
+  const bucket = eventTimeBucket(context?.when, context?.now);
+  const row = FIGHT_TIME_BUCKETS.find((item) => item.id === bucket) ?? FIGHT_TIME_BUCKETS[0];
+  return { href: fightTimeHref(row.id), label: row.label };
 }
 
 const EARLY = /\bearly[\s-]*prelims?\b/i;
@@ -509,7 +553,7 @@ export function eventBoutSections(fights: readonly DeskFight[]): EventBoutLayout
 }
 
 export type ResolvedFightEvent =
-  | { kind: "ufc-332"; slug: typeof UFC_332_ID; title: string; bets: Bet[] }
+  | { kind: "ufc-332"; slug: typeof UFC_332_ID; title: string; bets: Bet[]; when: string | null }
   | {
       kind: "listed";
       slug: string;
@@ -517,6 +561,7 @@ export type ResolvedFightEvent =
       meta: string;
       bets: Bet[];
       fights: DeskFight[];
+      when: string | null;
     };
 
 /** A slug with UFC 332, matching bets, or a calendar fight row. Anything else is absent. */
@@ -527,20 +572,21 @@ export function resolveFightEventPage(
 ): ResolvedFightEvent | null {
   const id = slug.trim().toLowerCase();
   if (!SLUG.test(id) || isReservedFightSlug(id)) return null;
+  const listed = fightPromotions({ bets, events })
+    .flatMap((promotion) => promotion.events)
+    .find((event) => event.slug === id);
   if (id === UFC_332_ID) {
     return {
       kind: "ufc-332",
       slug: UFC_332_ID,
       title: UFC_332_EVENT.name,
       bets: betsForEventSlug(bets, id, events),
+      when: listed?.when ?? `${UFC_332_DATE}T19:00:00-05:00`,
     };
   }
   const scoped = betsForEventSlug(bets, id, events);
   const calendar = events.filter((event) => calendarFightSlug(event) === id);
   if (scoped.length === 0 && calendar.length === 0) return null;
-  const listed = fightPromotions({ bets, events })
-    .flatMap((promotion) => promotion.events)
-    .find((event) => event.slug === id);
   const title = scoped[0]?.event || listed?.title || calendar[0]?.title || id;
   const meta = [calendar[0]?.location, calendar[0]?.note].filter(Boolean).join(" · ");
   return {
@@ -550,6 +596,7 @@ export function resolveFightEventPage(
     meta,
     bets: scoped,
     fights: listed?.fights ?? listedFights(scoped, calendar.map((event) => `${event.id} ${event.title}`)),
+    when: listed?.when ?? calendar[0]?.start ?? null,
   };
 }
 

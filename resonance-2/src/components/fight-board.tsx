@@ -3,24 +3,30 @@ import type { ReactNode } from "react";
 import type { BookAvailability } from "@/components/bet-scorecard";
 import { BetWriteError, betStatusLabel, betsOnFight, cardMoney, formatSignedUsd, formatUsd, type Bet, type CardMoney } from "@/lib/bets";
 import { FighterLink } from "@/components/fighter-link";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { SubmissionTiles } from "@/components/submission-tiles";
 import { submissionBoards } from "@/lib/fight-submission";
+import { flatStakeFightLine } from "@/lib/bankroll";
 import { isDecimalString } from "@/lib/decimal";
 import type { CalendarEvent } from "@/data/calendar";
-import { civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
+import { chicagoDay, civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
 import { detailTimeLabel, fightDetailVisibility } from "@/lib/fight-breakdowns";
 import {
   eventBoutSections,
   fightersFromTitle,
-  fightPromotions,
+  fightTimeBoards,
+  type DeskEvent,
   type DeskFight,
   type DeskPromotion,
+  type FightTimeBucket,
 } from "@/lib/fight-desk";
+import { tileFace } from "@/lib/home-faces";
 import { parentById, parentCardHref } from "@/lib/node-parents";
 import {
   fightOutcome,
   fightOutcomeLabel,
   formatBoutLine,
+  formatFightResult,
   hasNoWinner,
   resultForFight,
   type FightResult,
@@ -180,12 +186,40 @@ function BoutNames({ title }: { title: string }) {
   );
 }
 
+function countLine(count: number, singular: string, plural: string): string {
+  return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
+}
+
+function eventWhenLabel(when: string | null): string {
+  if (!when) return "not recorded";
+  const day = chicagoDay(when);
+  return day ? formatCivilDate(day) : "not recorded";
+}
+
+function recordedResultLine(
+  past: boolean,
+  result: FightResult | null | undefined,
+  bets: readonly Bet[],
+  resultsAvailability: BookAvailability,
+): string {
+  if (resultsAvailability === "unavailable") return "unavailable";
+  if (result?.status === "final") return formatFightResult(result);
+  if (past) return "not recorded";
+  return formatBoutLine(result, bets.map((bet) => bet.status));
+}
+
 function DeskFightCard({
   fight,
   resultLine,
+  past = false,
+  stakeLine = null,
+  publicMode = false,
 }: {
   fight: DeskFight;
   resultLine: string;
+  past?: boolean;
+  stakeLine?: string | null;
+  publicMode?: boolean;
 }) {
   const lean = analysisLine(fight);
   const body = (
@@ -195,8 +229,11 @@ function DeskFightCard({
       {lean ? <p>{lean}</p> : null}
       {fight.tierNote ? <p>{fight.tierNote}</p> : null}
       {fight.why ? <p>{fight.why}</p> : null}
-      <p className="fight-result">{resultLine}</p>
-      <FightStakeList bets={fight.bets} fight={fight} />
+      <p className="fight-result">{past ? `Result ${resultLine}` : resultLine}</p>
+      {past && stakeLine ? (
+        <p className="fight-result">{publicMode ? stakeLine : `Flat $1 ${stakeLine}`}</p>
+      ) : null}
+      {publicMode ? null : <FightStakeList bets={fight.bets} fight={fight} />}
     </>
   );
   const tiles = fight.submission?.length ? <SubmissionTiles boards={fight.submission} /> : null;
@@ -257,12 +294,18 @@ export function FightIndex({
   bets,
   events = [],
   availability = "live",
+  now,
+  publicMode = false,
 }: {
   bets: readonly Bet[];
   events?: readonly CalendarEvent[];
   availability?: BookAvailability;
+  now?: Date;
+  publicMode?: boolean;
 }) {
-  const promotions = fightPromotions({ bets, events });
+  const boards = fightTimeBoards({ bets, events, now });
+  const upcoming = boards.upcoming[0]?.title || null;
+  const past = boards.past[0]?.title || null;
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -271,19 +314,78 @@ export function FightIndex({
         </Link>
         <p className="log-kicker">{parentById("fight-desk")?.label ?? "Fight Desk"}</p>
         <h2 className="log-title">Fights</h2>
+        {availability === "seed-only" ? <p className="log-meta">seed-only</p> : null}
       </header>
-      <ol className="flex flex-col gap-3">
-        {promotions.map((promotion) => (
-          <li key={promotion.id}>
-            <ValueCard
-              href={promotion.href}
-              label={promotion.label}
-              bets={promotion.events.flatMap((event) => event.bets)}
-              availability={availability}
+      <NodeFaceGrid label="Fights">
+        <NodeFace
+          face={tileFace({
+            id: "upcoming-events",
+            glyph: "fight-desk",
+            href: "/fights/upcoming",
+            name: "Upcoming Events",
+            headline: countLine(boards.upcoming.length, "event", "events"),
+            status: upcoming,
+            live: true,
+            publicMode,
+          })}
+        />
+        <NodeFace
+          face={tileFace({
+            id: "past-events",
+            glyph: "fight-desk",
+            href: "/fights/past",
+            name: "Past Events",
+            headline: countLine(boards.past.length, "event", "events"),
+            status: past,
+            live: true,
+            publicMode,
+          })}
+        />
+      </NodeFaceGrid>
+    </div>
+  );
+}
+
+export function FightTimeList({
+  bucket,
+  events,
+  publicMode = false,
+}: {
+  bucket: FightTimeBucket;
+  events: readonly DeskEvent[];
+  publicMode?: boolean;
+}) {
+  const label = bucket === "upcoming" ? "Upcoming Events" : "Past Events";
+  return (
+    <div className="log-canvas">
+      <header className="log-header">
+        <Link href="/fights" className="calendar-back">
+          Fights
+        </Link>
+        <p className="log-kicker">Fights</p>
+        <h2 className="log-title">{label}</h2>
+      </header>
+      {events.length === 0 ? (
+        <p className="calendar-quiet">No events</p>
+      ) : (
+        <NodeFaceGrid label={label}>
+          {events.map((event) => (
+            <NodeFace
+              key={event.slug}
+              face={tileFace({
+                id: event.slug,
+                glyph: "fight-desk",
+                href: event.href,
+                name: event.title,
+                headline: eventWhenLabel(event.when),
+                status: event.fights.length > 0 ? countLine(event.fights.length, "fight", "fights") : null,
+                live: true,
+                publicMode,
+              })}
             />
-          </li>
-        ))}
-      </ol>
+          ))}
+        </NodeFaceGrid>
+      )}
     </div>
   );
 }
@@ -331,6 +433,7 @@ function EventMoneyHeader({
   meta,
   bets,
   availability,
+  publicMode = false,
 }: {
   backHref: string;
   backLabel: string;
@@ -338,6 +441,7 @@ function EventMoneyHeader({
   meta?: string;
   bets: readonly Bet[];
   availability: BookAvailability;
+  publicMode?: boolean;
 }) {
   const face = safeCardMoney(bets);
   return (
@@ -345,7 +449,13 @@ function EventMoneyHeader({
       <Link href={backHref} className="calendar-back">
         {backLabel}
       </Link>
-      {availability === "unavailable" ? (
+      {publicMode ? (
+        <>
+          <p className="log-kicker">Event</p>
+          <h2 className="log-title">{title}</h2>
+          {meta ? <p className="log-meta">{meta}</p> : null}
+        </>
+      ) : availability === "unavailable" ? (
         <>
           <p className="log-kicker">Event</p>
           <h2 className="log-title">{title}</h2>
@@ -381,6 +491,8 @@ export function ListedFightEvent({
   backLabel,
   availability = "live",
   resultsAvailability = "live",
+  past = false,
+  publicMode = false,
 }: {
   title: string;
   meta: string;
@@ -392,6 +504,8 @@ export function ListedFightEvent({
   backLabel: string;
   availability?: BookAvailability;
   resultsAvailability?: BookAvailability;
+  past?: boolean;
+  publicMode?: boolean;
 }) {
   return (
     <div className="log-canvas">
@@ -402,17 +516,28 @@ export function ListedFightEvent({
         meta={meta}
         bets={bets}
         availability={availability}
+        publicMode={publicMode}
       />
       <FightSections
         fights={fights}
         renderFight={(fight) => (
           <DeskFightCard
             fight={fight}
-            resultLine={
-              resultsAvailability === "unavailable"
-                ? "unavailable"
-                : boutLine(resultForFight(results, fight.slug, eventSlug), fight.bets)
+            past={past}
+            publicMode={publicMode}
+            stakeLine={
+              past
+                ? availability === "unavailable"
+                  ? "unavailable"
+                  : flatStakeFightLine(fight.bets, publicMode)
+                : null
             }
+            resultLine={recordedResultLine(
+              past,
+              resultForFight(results, fight.slug, eventSlug),
+              fight.bets,
+              resultsAvailability,
+            )}
           />
         )}
       />
@@ -427,6 +552,8 @@ export function FightEvent({
   backLabel,
   availability = "live",
   resultsAvailability = "live",
+  past = false,
+  publicMode = false,
 }: {
   bets: readonly Bet[];
   results: readonly FightResult[];
@@ -434,6 +561,8 @@ export function FightEvent({
   backLabel: string;
   availability?: BookAvailability;
   resultsAvailability?: BookAvailability;
+  past?: boolean;
+  publicMode?: boolean;
 }) {
   const place = `${UFC_332_EVENT.venue}, ${UFC_332_EVENT.city} · ${civilWeekdayLong(UFC_332_EVENT.date)} ${formatCivilDate(UFC_332_EVENT.date)} · America/Chicago`;
   return (
@@ -445,6 +574,7 @@ export function FightEvent({
         meta={place}
         bets={bets}
         availability={availability}
+        publicMode={publicMode}
       />
       <FightSections
         fights={[
@@ -486,11 +616,26 @@ export function FightEvent({
                   </p>
                 ) : null}
                 <p className="fight-result">
-                  {resultsAvailability === "unavailable"
-                    ? "unavailable"
-                    : boutLine(resultForFight(results, fight.slug, UFC_332_EVENT.id), stake)}
+                  {past ? "Result " : ""}
+                  {recordedResultLine(
+                    past,
+                    resultForFight(results, fight.slug, UFC_332_EVENT.id),
+                    stake,
+                    resultsAvailability,
+                  )}
                 </p>
-                {stake.length > 0 ? (
+                {past ? (
+                  <p className="fight-result">
+                    {publicMode
+                      ? availability === "unavailable"
+                        ? "unavailable"
+                        : flatStakeFightLine(stake, true)
+                      : `Flat $1 ${
+                          availability === "unavailable" ? "unavailable" : flatStakeFightLine(stake, false)
+                        }`}
+                  </p>
+                ) : null}
+                {publicMode || stake.length === 0 ? null : (
                   <ul className="fight-stakes">
                     {stake.map((bet, index) => (
                       <li key={`${bet.id}:${index}`}>
@@ -499,7 +644,7 @@ export function FightEvent({
                       </li>
                     ))}
                   </ul>
-                ) : null}
+                )}
               </Link>
               <SubmissionTiles boards={boards} />
             </div>

@@ -7,9 +7,11 @@ import {
   eventBackHref,
   eventBoutSections,
   eventSlugFromTitle,
+  eventTimeBucket,
   fightEventKind,
   fightLinkTargets,
   fightPromotions,
+  fightTimeBoards,
   knownBouts,
   legacyFightNodeHref,
   resolveFightEventPage,
@@ -107,10 +109,16 @@ describe("fight promotions", () => {
       layout.sections.at(-1)?.fights.at(-1)?.slug,
       "natalia-silva-vs-wang-cong",
     );
-    assert.equal(eventBackHref("ufc-332").href, "/fights/ufc");
-    assert.equal(eventBackHref("dwcs-s10-week-9", { title: DWCS_EVENT }).href, "/fights/contender-series");
-    assert.equal(legacyFightNodeHref("main-card"), "/fights/ufc");
-    assert.equal(legacyFightNodeHref("prelims"), "/fights/ufc");
+    assert.equal(
+      eventBackHref("ufc-332", { when: "2026-10-03T19:00:00-05:00", now: NOW }).href,
+      "/fights/past",
+    );
+    assert.equal(
+      eventBackHref("dwcs-s10-week-9", { title: DWCS_EVENT, when: dwcsCalendar.start, now: NOW }).href,
+      "/fights/past",
+    );
+    assert.equal(legacyFightNodeHref("main-card"), "/fights");
+    assert.equal(legacyFightNodeHref("prelims"), "/fights");
     assert.equal(resolveFightEventPage("main-card", bets, [dwcsCalendar]), null);
     assert.equal(resolveFightEventPage("prelims", bets, [dwcsCalendar]), null);
   });
@@ -146,7 +154,7 @@ describe("fight promotions", () => {
     assert.equal(summarizeBets(dwcs).open, 0);
   });
 
-  it("splits a fight night by note and calendar hints and keeps the back link on UFC", () => {
+  it("splits a fight night by note and calendar hints and keeps the back link on the time bucket", () => {
     const fightNight = dwcsBet("10.00");
     fightNight.id = "fn-allen";
     fightNight.event = "UFC Fight Night: Allen vs Duncan";
@@ -181,9 +189,18 @@ describe("fight promotions", () => {
       ufc.events.find((event) => event.slug === "ufc-fight-night-allen-vs-duncan")?.href,
       "/fights/ufc-fight-night-allen-vs-duncan",
     );
-    assert.equal(eventBackHref("ufc-fight-night-allen-vs-duncan").href, "/fights/ufc");
-    assert.equal(eventBackHref("ufc-332").href, "/fights/ufc");
-    assert.equal(eventBackHref("dwcs-s10-week-9", { title: DWCS_EVENT }).href, "/fights/contender-series");
+    assert.equal(
+      eventBackHref("ufc-fight-night-allen-vs-duncan", { when: "2026-10-10T19:00:00-05:00", now: NOW }).href,
+      "/fights/upcoming",
+    );
+    assert.equal(
+      eventBackHref("ufc-332", { when: "2026-10-03T19:00:00-05:00", now: NOW }).href,
+      "/fights/past",
+    );
+    assert.equal(
+      eventBackHref("dwcs-s10-week-9", { title: DWCS_EVENT, when: dwcsCalendar.start, now: NOW }).href,
+      "/fights/past",
+    );
     const night = ufc.events.find((event) => event.slug === "ufc-fight-night-allen-vs-duncan");
     const layout = eventBoutSections(night?.fights ?? []);
     assert.equal(layout.kind, "sections");
@@ -251,5 +268,46 @@ describe("fight promotions", () => {
     assert.equal(fightPageHref(dwcsCalendar), "/fights/dwcs-s10-week-9");
     const bout = knownBouts(bets, calendar).find((row) => row.event === "ufc-fight-night-allen-vs-duncan");
     assert.deepEqual(bout?.fighters, ["Brendan Allen", "Christian Leroy Duncan"]);
+  });
+});
+
+describe("fight time boards", () => {
+  it("splits cards into upcoming and past without dropping a row", () => {
+    const undated = {
+      id: "fights-undated",
+      kind: "fight",
+      lane: "fights",
+      start: "2026-11-01T19:00:00-05:00",
+      title: "UFC 334",
+      status: "scheduled",
+      writer: "founder",
+      eventSlug: "ufc-334",
+    } as CalendarEvent;
+    const noStart = {
+      ...undated,
+      id: "fights-no-start",
+      title: "UFC 335",
+      eventSlug: "ufc-335",
+      start: "",
+    } as CalendarEvent;
+    const bets = [...betSeed(), dwcsBet()];
+    const boards = fightTimeBoards({ bets, events: [dwcsCalendar, undated, noStart], now: NOW });
+    const slugs = [...boards.upcoming, ...boards.past].map((event) => event.slug).sort();
+    assert.deepEqual(slugs, ["dwcs-s10-week-9", "ufc-332", "ufc-334", "ufc-335"].sort());
+    assert.deepEqual(
+      boards.past.map((event) => event.slug),
+      ["dwcs-s10-week-9", UFC_332_ID],
+    );
+    assert.equal(boards.upcoming.some((event) => event.slug === "ufc-334"), true);
+    assert.equal(boards.upcoming.some((event) => event.slug === "ufc-335"), true);
+    assert.equal(boards.upcoming.find((event) => event.slug === "ufc-334")?.href, "/fights/upcoming/ufc-334");
+    assert.equal(boards.past.find((event) => event.slug === UFC_332_ID)?.href, "/fights/past/ufc-332");
+    assert.equal(eventTimeBucket(null, NOW), "upcoming");
+    assert.equal(eventTimeBucket("2026-10-07T18:00:00-05:00", NOW), "upcoming");
+    assert.equal(eventTimeBucket("2026-10-07T17:59:00-05:00", NOW), "past");
+    assert.equal(resolveFightEventPage("upcoming", bets, [dwcsCalendar]), null);
+    assert.equal(resolveFightEventPage("past", bets, [dwcsCalendar]), null);
+    const dwcs = resolveFightEventPage("dwcs-s10-week-9", bets, [dwcsCalendar]);
+    assert.equal(dwcs?.when, dwcsCalendar.start);
   });
 });

@@ -16,6 +16,8 @@ import {
   fightCardDay,
   FLAT_STAKE,
   FLAT_STAKE_LABEL,
+  flatStakeFightLine,
+  flatStakeOutcome,
   suggestedStake,
 } from "@/lib/bankroll";
 import { settleBet, type Bet } from "@/lib/bets";
@@ -455,5 +457,41 @@ describe("bankroll", () => {
     assert.equal(bankrollDepositLine(after, false), "+$6.84");
     assert.equal(bankrollDepositLine(after, true), "+24.52%");
     assert.equal(bankrollDepositLine(after, true)?.includes("$"), false);
+  });
+
+  it("scales a settled ticket to the flat $1 and leaves a missing outcome unrecorded", () => {
+    const won = ticket({
+      id: "flat-won",
+      event: "UFC 332",
+      stake: "4.76",
+      payout: "11.60",
+      status: "won",
+      realizedPnl: "6.84",
+    });
+    const lost = ticket({
+      id: "flat-lost",
+      event: "UFC 332",
+      stake: "28.00",
+      status: "lost",
+      realizedPnl: "-28.00",
+    });
+    const drawn = ticket({
+      id: "flat-draw",
+      event: "UFC 332",
+      stake: "0.96",
+      status: "draw",
+      realizedPnl: "-0.04",
+    });
+    const open = ticket({ id: "flat-open", event: "UFC 332", stake: "1.00" });
+    assert.equal(flatStakeOutcome(won), "+$1.44");
+    assert.equal(flatStakeOutcome(lost), "-$1.00");
+    assert.equal(flatStakeOutcome(drawn), "-$0.04");
+    assert.equal(flatStakeOutcome(open), null);
+    assert.equal(flatStakeOutcome({ ...won, realizedPnl: undefined }), null);
+    assert.equal(flatStakeFightLine([won, lost], false), "+$1.44 · -$1.00");
+    assert.equal(flatStakeFightLine([won], true), "won");
+    assert.equal(flatStakeFightLine([open], false), "not recorded");
+    assert.equal(flatStakeFightLine([], false), "not recorded");
+    assert.equal(flatStakeFightLine([won], true).includes("$"), false);
   });
 });
