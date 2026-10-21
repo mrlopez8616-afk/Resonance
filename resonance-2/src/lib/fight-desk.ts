@@ -154,6 +154,7 @@ const RESERVED_SLUGS = new Set<string>([
   ...FIGHT_PROMOTIONS.map((promotion) => promotion.id),
   ...LEGACY_FIGHT_NODES,
   ...FIGHT_TIME_BUCKETS.map((bucket) => bucket.id),
+  "tiers",
 ]);
 
 export function isReservedFightSlug(value: string): boolean {

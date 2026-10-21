@@ -329,6 +329,25 @@ describe("phone back targets", () => {
       label: "UFC 332",
     });
     assert.deepEqual(phoneTrail("/fights/main-card").back, { href: "/fights", label: "Fights" });
+    assert.deepEqual(phoneTrail("/fights/tiers").back, { href: "/fights", label: "Fights" });
+    assert.deepEqual(phoneTrail("/fights/tiers/strong").back, { href: "/fights/tiers", label: "Tier tracker" });
+    assert.deepEqual(phoneTrail("/fights/tiers/ko-gated").back, { href: "/fights/tiers", label: "Tier tracker" });
+    assert.equal(phoneTrail("/fights/tiers/strong").crumbs.at(-1)?.label, "STRONG");
+    assert.deepEqual(phoneTrail("/fights/tiers/strong/ufc-edmonton").back, {
+      href: "/fights/tiers/strong",
+      label: "STRONG",
+    });
+    assert.deepEqual(phoneTrail("/fights/tiers/cards/ufc-edmonton").back, {
+      href: "/fights/tiers",
+      label: "Tier tracker",
+    });
+    assert.deepEqual(phoneTrail("/fights/tiers/cards/ufc-edmonton/pass").back, {
+      href: "/fights/tiers/cards/ufc-edmonton",
+      label: "UFC Edmonton",
+    });
+    assert.equal(phoneTrail("/fights/tiers/cards/ufc-edmonton/pass").crumbs.at(-1)?.label, "PASS");
+    assert.deepEqual(phoneTrail("/fights/tiers/nope").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/fights/tiers/strong/ufc-edmonton/extra").back, { href: "/", label: "Home" });
   });
 });
 
