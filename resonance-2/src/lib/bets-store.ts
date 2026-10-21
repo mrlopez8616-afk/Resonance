@@ -178,11 +178,19 @@ async function readBetsBlob(revalidateWrites: boolean): Promise<CachedBets> {
   }
 }
 
-function unwrapBets(result: CachedBets): { envelope: BetsStoreEnvelope; seeded: boolean } {
+function unwrapBets(result: CachedBets & { stale?: boolean }): {
+  envelope: BetsStoreEnvelope;
+  seeded: boolean;
+  stale?: boolean;
+} {
   if (result.status === "unavailable") {
     throw new StorageUnavailableError("bets", result.reason);
   }
-  return result;
+  return {
+    envelope: result.envelope,
+    seeded: result.seeded,
+    ...(result.stale ? { stale: true as const } : {}),
+  };
 }
 
 async function loadBetsFromFile(): Promise<{
@@ -199,6 +207,7 @@ async function loadBetsStoreInner(fresh: boolean): Promise<{
   backend: BetsStoreBackend;
   envelope: BetsStoreEnvelope;
   seeded: boolean;
+  stale?: boolean;
 }> {
   throwIfStorageForced("bets");
   const backend = detectBetsBackend();

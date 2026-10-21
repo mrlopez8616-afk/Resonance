@@ -1,5 +1,6 @@
 import { sqlQuery, sqlTransaction } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
+import { patchEdmontonEventPayloads } from "@/lib/pg/edmonton-event-merge";
 import { patchRetaggedFillPayloads } from "@/lib/pg/fill-source-dedupe";
 import { SUI_AGENTIC_BUY_ORDER, patchSuiAgenticBuyPayload } from "@/lib/pg/sui-sleeve-fix";
 import { XRP_AGENTIC_SELL_ORDER, patchXrpAgenticSellPayload } from "@/lib/pg/xrp-sleeve-fix";
@@ -73,6 +74,18 @@ export function splitSqlStatements(source: string): string[] {
     .split(";")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
+}
+
+async function tableExists(name: string): Promise<boolean> {
+  if (!/^[a-z_]+$/.test(name)) return false;
+  try {
+    await sqlQuery(`SELECT 1 FROM ${name} LIMIT 0`);
+    return true;
+  } catch (error) {
+    const message = errorText(error);
+    if (/does not exist|no such/i.test(message)) return false;
+    throw error;
+  }
 }
 
 async function viewExists(name: string): Promise<boolean> {
@@ -181,7 +194,12 @@ export async function applyMigrations(
       continue;
     }
 
+    const breakdownsReady =
+      id === "035_merge_edmonton_buckley" ? await tableExists("fight_breakdowns") : true;
     for (const statement of splitSqlStatements(migration.sql)) {
+      if (id === "035_merge_edmonton_buckley" && !breakdownsReady && /fight_breakdowns/i.test(statement)) {
+        continue;
+      }
       const view = /^CREATE VIEW\s+([a-z_][a-z0-9_]*)/i.exec(statement);
       if (view?.[1] && (await viewExists(view[1]).catch(() => false))) continue;
       try {
@@ -217,6 +235,9 @@ export async function applyMigrations(
     }
     if (id === "015_dedupe_retagged_fills") {
       await patchRetaggedFillPayloads();
+    }
+    if (id === "035_merge_edmonton_buckley") {
+      await patchEdmontonEventPayloads();
     }
     await sqlQuery(`INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [
       id,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { CalendarEvent } from "@/data/calendar";
+import { eventSlugFromTitle } from "@/lib/fight-desk";
 import {
   BANKROLL_AS_OF,
   BANKROLL_FIRST_EVENT,
@@ -385,7 +386,8 @@ describe("bankroll", () => {
       realizedPnl: "-1.00",
       time: "2026-10-05T12:00:00-05:00",
     });
-    const edmontonSlug = "ufc-fight-night-edmonton";
+    const edmontonSlug = "ufc-fight-night-buckley-vs-malott";
+    assert.equal(eventSlugFromTitle("UFC Fight Night: Edmonton"), edmontonSlug);
     const ghostSlug = "ufc-fight-night-ghost-card";
     const splitSlug = "ufc-fight-night-split-card";
     assert.equal(fightCardDay(edmontonSlug, edmonton.event, []), null);

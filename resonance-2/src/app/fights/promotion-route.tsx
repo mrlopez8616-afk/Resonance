@@ -4,7 +4,7 @@ import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { fightPromotions, type FightPromotionId } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export async function FightPromotionRoute({ promotionId }: { promotionId: FightPromotionId }) {
   const blocked = await blockedPublicPage();
@@ -16,7 +16,11 @@ export async function FightPromotionRoute({ promotionId }: { promotionId: FightP
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const storageMessage = book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
-  const storageDetail = book.status === "unavailable" ? "Bet book is unavailable." : null;
+  const storageDetail = withStaleDetail(
+    book.status === "unavailable" ? "Bet book is unavailable." : null,
+    book,
+    card,
+  );
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail}>
       <FightPromotion promotion={promotion} availability={availability} />

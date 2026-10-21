@@ -148,11 +148,19 @@ async function readFillsBlob(revalidateWrites: boolean): Promise<CachedFills> {
   }
 }
 
-function unwrapFills(result: CachedFills): { envelope: FillsStoreEnvelope; seeded: boolean } {
+function unwrapFills(result: CachedFills & { stale?: boolean }): {
+  envelope: FillsStoreEnvelope;
+  seeded: boolean;
+  stale?: boolean;
+} {
   if (result.status === "unavailable") {
     throw new StorageUnavailableError("fills", result.reason);
   }
-  return result;
+  return {
+    envelope: result.envelope,
+    seeded: result.seeded,
+    ...(result.stale ? { stale: true as const } : {}),
+  };
 }
 
 async function loadFillsStoreInner(fresh: boolean): Promise<{
@@ -160,6 +168,7 @@ async function loadFillsStoreInner(fresh: boolean): Promise<{
   backend: FillsStoreBackend;
   envelope: FillsStoreEnvelope;
   seeded: boolean;
+  stale?: boolean;
 }> {
   throwIfStorageForced("fills");
   const backend = detectFillsBackend();

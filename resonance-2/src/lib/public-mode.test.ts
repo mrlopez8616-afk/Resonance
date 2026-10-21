@@ -301,7 +301,7 @@ async function publicTrackerPages(
     bets: [
       {
         id: "public-strong",
-        event: "UFC Edmonton",
+        event: "UFC Nashville",
         fight: "Alpha vs Bravo",
         fightSlug: "alpha-vs-bravo",
         pick: "Alpha",
@@ -332,24 +332,24 @@ async function publicTrackerPages(
       }),
     ),
   });
-  const picks = model.picks["strong/ufc-edmonton"]?.tiles ?? [];
+  const picks = model.picks["strong/ufc-nashville"]?.tiles ?? [];
   return [
     floor("/fights/tiers", "Tier tracker", model.homeTiles, "/fights", "Fights"),
     floor("/fights/tiers/strong", "STRONG", model.slices.strong.tiles, "/fights/tiers", "Tier tracker"),
-    floor("/fights/tiers/strong/ufc-edmonton", "UFC Edmonton", picks, "/fights/tiers/strong", "STRONG"),
+    floor("/fights/tiers/strong/ufc-nashville", "UFC Nashville", picks, "/fights/tiers/strong", "STRONG"),
     floor(
-      "/fights/tiers/cards/ufc-edmonton",
-      "UFC Edmonton",
-      model.cards["ufc-edmonton"]?.tiles ?? [],
+      "/fights/tiers/cards/ufc-nashville",
+      "UFC Nashville",
+      model.cards["ufc-nashville"]?.tiles ?? [],
       "/fights/tiers",
       "Tier tracker",
     ),
     floor(
-      "/fights/tiers/cards/ufc-edmonton/strong",
+      "/fights/tiers/cards/ufc-nashville/strong",
       "STRONG",
       picks,
-      "/fights/tiers/cards/ufc-edmonton",
-      "UFC Edmonton",
+      "/fights/tiers/cards/ufc-nashville",
+      "UFC Nashville",
     ),
   ];
 }

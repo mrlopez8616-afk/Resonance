@@ -3,7 +3,7 @@ import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { fightTimeBoards, type FightTimeBucket } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
-import { betBookLine, loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { betBookLine, loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export async function FightTimeScreen({ bucket }: { bucket: FightTimeBucket }) {
   const blocked = await blockedPublicPage();
@@ -14,12 +14,15 @@ export async function FightTimeScreen({ bucket }: { bucket: FightTimeBucket }) {
   const availability =
     book.status === "unavailable" ? "unavailable" : book.status === "unconfigured" ? "seed-only" : "live";
   const storageMessage = book.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
-  const storageDetail =
+  const storageDetail = withStaleDetail(
     book.status === "unavailable"
       ? await betBookLine(book)
       : book.status === "unconfigured"
         ? "Bet book is seed-only."
-        : null;
+        : null,
+    book,
+    calendar,
+  );
 
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail}>

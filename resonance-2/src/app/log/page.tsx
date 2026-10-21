@@ -7,7 +7,7 @@ import { listFills } from "@/lib/fills";
 import { loadLiveSleeveBooks, loadOperatorFills } from "@/lib/sleeve-prints";
 import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
 import { nodePageHref } from "@/lib/node-parents";
-import { loadBetsForPage, storeLabel } from "@/lib/store-page";
+import { loadBetsForPage, storeLabel, withStaleDetail } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +53,7 @@ export default async function OperatorLogPage({
   return (
     <OperatorShell
       storageMessage={storageMessage ? STORAGE_UNAVAILABLE_BANNER : null}
-      storageDetail={details.length ? details.join(" ") : null}
+      storageDetail={withStaleDetail(details.length ? details.join(" ") : null, betsLoaded)}
     >
       <FillDesk
         fills={rows}

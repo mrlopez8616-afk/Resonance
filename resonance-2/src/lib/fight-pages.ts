@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@/data/calendar";
 import { chicagoDay } from "@/lib/calendar-time";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import type { FightLinkTarget } from "@/lib/fight-desk";
 import { personSlug } from "@/lib/ufc332";
 
@@ -70,12 +71,12 @@ export function fightPageHref(
   event: Pick<CalendarEvent, "id" | "title" | "eventSlug" | "link">,
 ): string | undefined {
   if (event.eventSlug) {
-    const page = fightEventPageHref(event.eventSlug);
+    const page = fightEventPageHref(canonicalEventSlug(event.eventSlug));
     if (page) return page;
   }
   const match = FIGHT_PATH.exec(event.link ?? "");
   if (!match) return undefined;
-  return fightEventPageHref(match[1] ?? "");
+  return fightEventPageHref(canonicalEventSlug(match[1] ?? ""));
 }
 
 /**

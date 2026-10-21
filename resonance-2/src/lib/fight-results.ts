@@ -1,4 +1,5 @@
 import resultFile from "@/data/ufc332/results.json";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import { fightByNumber, fightBySlug, UFC_332_ID, ufc332Fights } from "@/lib/ufc332";
 
 export const FIGHT_RESULT_STATUSES = ["final", "pending"] as const;
@@ -148,7 +149,10 @@ function resolveBout(
     const fight = fightBySlug(fightSlug);
     if (fight) return { fightSlug: fight.slug, fighters: [fight.A.name, fight.B.name] };
   }
-  const row = known.find((bout) => bout.event === event && bout.fightSlug === fightSlug);
+  const wanted = canonicalEventSlug(event);
+  const row = known.find(
+    (bout) => canonicalEventSlug(bout.event) === wanted && bout.fightSlug === fightSlug,
+  );
   if (!row || row.fighters.length < 2) return null;
   return { fightSlug: row.fightSlug, fighters: row.fighters };
 }
@@ -161,8 +165,9 @@ function resolveBout(
  */
 export function parseFightResult(raw: unknown, known: readonly KnownBout[] = []): FightResult {
   if (!isRecord(raw)) throw new FightResultWriteError("Each result must be an object.");
-  const event = asTrimmed(raw.event).toLowerCase();
-  if (!EVENT_SLUG.test(event)) throw new FightResultWriteError("event must be a slug.");
+  const postedEvent = asTrimmed(raw.event).toLowerCase();
+  if (!EVENT_SLUG.test(postedEvent)) throw new FightResultWriteError("event must be a slug.");
+  const event = canonicalEventSlug(postedEvent);
   const fightSlug = asTrimmed(raw.fightSlug).toLowerCase();
   const bout = resolveBout(event, fightSlug, known);
   if (!bout) {
@@ -324,9 +329,10 @@ export function resultForFight(
   fightSlug: string,
   event?: string,
 ): FightResult | null {
+  const wanted = event ? canonicalEventSlug(event) : "";
   return (
     results.find(
-      (row) => row.fightSlug === fightSlug && (event ? row.event === event : true),
+      (row) => row.fightSlug === fightSlug && (wanted ? canonicalEventSlug(row.event) === wanted : true),
     ) ?? null
   );
 }

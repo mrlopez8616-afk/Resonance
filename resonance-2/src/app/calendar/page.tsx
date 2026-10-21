@@ -9,7 +9,7 @@ import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { fightLinkTargets } from "@/lib/fight-desk";
 import { scrubTextFields } from "@/lib/public-mode";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,11 @@ export default async function CalendarPage({
   return (
     <OperatorShell
       storageMessage={store.status === "seed-only" ? STORAGE_UNAVAILABLE_BANNER : null}
-      storageDetail={store.status === "seed-only" ? "Calendar events are seed-only." : null}
+      storageDetail={withStaleDetail(
+        store.status === "seed-only" ? "Calendar events are seed-only." : null,
+        store,
+        book,
+      )}
     >
       <CalendarDesk
         events={events}

@@ -20,7 +20,7 @@ const NOW = new Date("2026-10-20T18:00:00Z");
 
 function ticket(partial: Partial<Bet> & Pick<Bet, "id" | "status">): Bet {
   return {
-    event: "UFC Edmonton",
+    event: "UFC Nashville",
     fight: "Alpha vs Bravo",
     fightSlug: "alpha-vs-bravo",
     pick: "Alpha",
@@ -118,16 +118,50 @@ describe("tier tracker", () => {
     const names = model.homeTiles.map((tile) => tile.name);
     assert.deepEqual(names.slice(0, 4), ["STRONG", "LEAN", "PASS", "KO-gated"]);
     assert.equal(names.includes("UFC Vegas"), true);
-    assert.equal(names.includes("UFC Edmonton"), true);
+    assert.equal(names.includes("UFC Nashville"), true);
     assert.equal(trackerSlice(model, "strong")?.tiles.map((tile) => tile.name).includes("UFC Vegas"), false);
     assert.equal(trackerSlice(model, "lean")?.tiles[0]?.href, "/fights/tiers/lean/ufc-vegas");
-    assert.equal(trackerCard(model, "ufc-edmonton")?.tiles.find((tile) => tile.name === "STRONG")?.href, "/fights/tiers/cards/ufc-edmonton/strong");
-    const picks = trackerPicks(model, "strong", "ufc-edmonton");
+    assert.equal(trackerCard(model, "ufc-nashville")?.tiles.find((tile) => tile.name === "STRONG")?.href, "/fights/tiers/cards/ufc-nashville/strong");
+    const picks = trackerPicks(model, "strong", "ufc-nashville");
     assert.equal(picks?.tiles.length, 1);
     assert.equal(picks?.tiles[0]?.name, "Alpha vs Bravo");
     assert.equal(picks?.tiles[0]?.href, "");
     assert.equal(picks?.tiles[0]?.status, "+$1.00");
     assert.equal(trackerCopy(model).some((line) => line.includes("4.76")), false);
+  });
+
+  it("folds an Edmonton ticket onto Buckley and still reads that card's breakdown", () => {
+    const buckley = ticket({
+      id: "buck",
+      status: "won",
+      tier: "STRONG",
+      event: "UFC Fight Night: Buckley vs Malott",
+      time: "2026-10-17T20:00:00-05:00",
+    });
+    const edmonton = ticket({
+      id: "ed",
+      status: "lost",
+      tier: "LEAN",
+      event: "UFC Edmonton",
+      fight: "Charlie vs Delta",
+      fightSlug: "charlie-vs-delta",
+      pick: "Charlie",
+      time: "2026-10-17T21:00:00-05:00",
+    });
+    const breakdown = row({
+      eventSlug: "ufc-edmonton",
+      fightSlug: buckley.fightSlug,
+      tier: "STRONG",
+      stats: GATED_STATS,
+    });
+    const model = buildTierTracker({ bets: [buckley, edmonton], breakdowns: [breakdown], now: NOW });
+    const names = model.homeTiles.map((tile) => tile.name);
+    assert.equal(names.filter((name) => name === "UFC Fight Night: Buckley vs Malott").length, 1);
+    assert.equal(names.includes("UFC Edmonton"), false);
+    assert.equal(tileNamed(model, "KO-gated")?.headline, "1-0");
+    assert.equal(tileNamed(model, "LEAN")?.headline, "1-1");
+    assert.equal(trackerCard(model, "ufc-edmonton")?.title, "UFC Fight Night: Buckley vs Malott");
+    assert.equal(trackerPicks(model, "ko-gated", "ufc-edmonton")?.tiles.length, 1);
   });
 
   it("keeps a recorded win-loss when one price is missing and does not sum a partial book", () => {
@@ -354,7 +388,7 @@ describe("tier tracker tiles", () => {
     assert.match(home, /LEAN/);
     assert.match(home, /PASS/);
     assert.match(home, /KO-gated/);
-    assert.match(home, /UFC Edmonton/);
+    assert.match(home, /UFC Nashville/);
     assert.equal(home.includes("fight-stakes"), false);
     assert.equal(home.includes("Alpha vs Bravo"), false);
 
@@ -370,11 +404,11 @@ describe("tier tracker tiles", () => {
       }),
     );
     assert.match(slice, /\[\/fights\/tiers\]/);
-    assert.match(slice, /UFC Edmonton/);
+    assert.match(slice, /UFC Nashville/);
     assert.equal(slice.includes("UFC Vegas"), false);
     assert.equal(slice.includes("$2.00"), false);
 
-    const card = trackerCard(model, "ufc-edmonton");
+    const card = trackerCard(model, "ufc-nashville");
     const cardHtml = render(
       createElement(TrackerFloor, {
         backHref: "/fights/tiers",
@@ -385,7 +419,7 @@ describe("tier tracker tiles", () => {
         empty: "not recorded",
       }),
     );
-    assert.match(cardHtml, /\[\/fights\/tiers\/cards\/ufc-edmonton\/strong\]/);
+    assert.match(cardHtml, /\[\/fights\/tiers\/cards\/ufc-nashville\/strong\]/);
     assert.equal(cardHtml.includes("Charlie"), false);
 
     const publicIndex = render(

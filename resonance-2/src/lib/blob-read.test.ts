@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
-import { BLOB_TAGS, resetBlobReadCacheForTests, setBlobSdkForTests } from "./blob-read";
+import {
+  BLOB_TAGS,
+  cachedBlobRead,
+  expireReadCacheForTests,
+  resetBlobReadCacheForTests,
+  resultIsStale,
+  setBlobSdkForTests,
+} from "./blob-read";
 import { asBetWriteError, loadBetsStore, loadBetsStoreFresh, settleStoredBets } from "./bets-store";
 import { asFightResultWriteError, loadFightResultsStore } from "./fight-results-store";
 import { loadFillsStore } from "./fills-store";
 import { loadCalendarStore } from "./calendar-store";
 import { loadOperatorFills } from "./sleeve-prints";
-import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage } from "./store-page";
+import { loadBetsForPage, loadCalendarForPage, loadFightResultsForPage, withStaleDetail } from "./store-page";
 import {
   STORAGE_UNAVAILABLE_BANNER,
   isStorageUnavailable,
@@ -93,7 +100,7 @@ describe("blob reads", () => {
     const page = await loadBetsForPage();
     assert.equal(page.status, "unavailable");
     assert.equal("bets" in page, false);
-    assert.equal(gets, 1);
+    assert.equal(gets, 2);
 
     const mapped = asBetWriteError(
       await loadBetsStoreFresh().then(
@@ -104,9 +111,9 @@ describe("blob reads", () => {
     assert.equal(mapped.status, 503);
     assert.equal(mapped.message, STORAGE_UNAVAILABLE_BANNER);
     assert.match(mapped.reason ?? "", /403/);
-    assert.equal(gets, 2);
+    assert.equal(gets, 3);
     assert.equal(puts, 0);
-    assert.deepEqual(useCacheFlags, [false, false]);
+    assert.deepEqual(useCacheFlags, [false, false, false]);
   });
 
   it("does not seed fight results when the blob SDK throws 403", async () => {
@@ -118,7 +125,7 @@ describe("blob reads", () => {
     const page = await loadFightResultsForPage();
     assert.equal(page.status, "unavailable");
     assert.equal("results" in page, false);
-    assert.equal(gets, 1);
+    assert.equal(gets, 2);
 
     const mapped = asFightResultWriteError(
       await loadFightResultsStore().then(
@@ -207,7 +214,7 @@ describe("blob reads", () => {
     const fills = await loadOperatorFills();
     assert.equal(fills.status, "seed-only");
     assert.notEqual(fills.status, "live");
-    assert.equal(gets, 1);
+    assert.equal(gets, 2);
 
     await assert.rejects(loadCalendarStore(), isStorageUnavailable);
     const calendar = await loadCalendarForPage();
@@ -215,6 +222,54 @@ describe("blob reads", () => {
     assert.equal(calendar.storeLabel, "seed-only");
     assert.ok(calendar.events.length > 0);
     assert.equal(puts, 0);
+  });
+
+  it("returns the last good read marked stale and does not cache a failure", async () => {
+    type Probe =
+      | { status: "ok"; n: number; stale?: boolean }
+      | { status: "unavailable"; reason: string };
+    let n = 0;
+    const first = await cachedBlobRead<Probe>("stale-probe", async () => ({ status: "ok", n: ++n }));
+    assert.equal(first.status, "ok");
+    if (first.status !== "ok") return;
+    assert.equal(resultIsStale(first), false);
+    assert.equal(first.n, 1);
+    expireReadCacheForTests();
+    const stale = await cachedBlobRead<Probe>("stale-probe", async () => {
+      n += 1;
+      return { status: "unavailable", reason: "fetch failed" };
+    });
+    assert.equal(resultIsStale(stale), true);
+    assert.equal(stale.status, "ok");
+    if (stale.status !== "ok") return;
+    assert.equal(stale.n, 1);
+    assert.equal(n, 2);
+    expireReadCacheForTests();
+    const retried = await cachedBlobRead<Probe>("stale-probe", async () => ({ status: "ok", n: ++n }));
+    assert.equal(retried.status, "ok");
+    if (retried.status !== "ok") return;
+    assert.equal(resultIsStale(retried), false);
+    assert.equal(retried.n, 3);
+
+    let tries = 0;
+    await assert.rejects(
+      cachedBlobRead("empty-probe", async () => {
+        tries += 1;
+        return { status: "unavailable" as const, reason: "fetch failed" };
+      }),
+      isStorageUnavailable,
+    );
+    await assert.rejects(
+      cachedBlobRead("empty-probe", async () => {
+        tries += 1;
+        return { status: "unavailable" as const, reason: "fetch failed" };
+      }),
+      isStorageUnavailable,
+    );
+    assert.equal(tries, 2);
+    assert.equal(withStaleDetail(null, { status: "live", stale: true }), "stale");
+    assert.equal(withStaleDetail("Bet book is unavailable.", { status: "live", stale: true }), "Bet book is unavailable.");
+    assert.equal(withStaleDetail(null, { status: "unavailable" }), null);
   });
 
   it("names the cache tags used for revalidation", () => {

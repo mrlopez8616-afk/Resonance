@@ -52,6 +52,7 @@ export async function loadOperatorFloor(): Promise<OperatorFloor> {
     fightDesk.status === "unavailable" ? "Bet book is unavailable." : null,
     fightDesk.status === "seed-only" ? "Bet book is seed-only." : null,
   ].filter((line): line is string => line !== null);
+  const fightStale = fightDesk.status === "live" && fightDesk.stale === true;
 
   return {
     faces,
@@ -60,7 +61,15 @@ export async function loadOperatorFloor(): Promise<OperatorFloor> {
     fightDeskAvailability:
       fightDesk.status === "unavailable" ? "unavailable" : fightDesk.status,
     storageMessage: storageMessage ? STORAGE_UNAVAILABLE_BANNER : null,
-    storageDetail: details.length ? details.join(" ") : null,
+    storageDetail: storageMessage
+      ? details.length
+        ? details.join(" ")
+        : null
+      : fightStale
+        ? "stale"
+        : details.length
+          ? details.join(" ")
+          : null,
     spotQuotes: cryptoQuotes,
     equityQuotes,
     suiBalance: sleeves.suiBalance,

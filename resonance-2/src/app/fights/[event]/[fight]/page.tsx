@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { FightDetail } from "@/components/fight-board";
 import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import { resolveFightView } from "@/lib/fight-breakdowns";
 import { eventPageHref, eventTimeBucket, resolveFightEventPage } from "@/lib/fight-desk";
 import { resultForFight } from "@/lib/fight-results";
@@ -12,6 +13,7 @@ import {
   loadBreakdownsForPage,
   loadCalendarForPage,
   loadFightResultsForPage,
+  withStaleDetail,
 } from "@/lib/store-page";
 import { fightBySlug, UFC_332_EVENT } from "@/lib/ufc332";
 
@@ -55,6 +57,8 @@ export default async function FightPage({
   if (blocked) return blocked;
   const { event, fight: slug } = await params;
   const requestedNode = oneQuery((await searchParams).node);
+  const canonical = canonicalEventSlug(event);
+  if (canonical && canonical !== event.trim().toLowerCase()) redirect(`/fights/${canonical}/${slug}`);
   if (requestedNode) redirect(`/fights/${event}/${slug}`);
   if (event === UFC_332_EVENT.id) {
     const fight = fightBySlug(slug);
@@ -72,12 +76,17 @@ export default async function FightPage({
       card.status === "unavailable" ? "unavailable" : card.status === "unconfigured" ? "seed-only" : "live";
     const storageMessage =
       book.status === "unavailable" || card.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
-    const storageDetail = [
-      await betBookLine(book),
-      card.status === "unavailable" ? "Fight results are unavailable." : null,
-    ]
-      .filter((line): line is string => line !== null)
-      .join(" ");
+    const storageDetail = withStaleDetail(
+      [
+        await betBookLine(book),
+        card.status === "unavailable" ? "Fight results are unavailable." : null,
+      ]
+        .filter((line): line is string => line !== null)
+        .join(" ") || null,
+      book,
+      card,
+      calendar,
+    );
 
     return (
       <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail || null}>
@@ -117,13 +126,19 @@ export default async function FightPage({
     breakdownPage.status === "unavailable"
       ? STORAGE_UNAVAILABLE_BANNER
       : null;
-  const storageDetail = [
-    await betBookLine(book),
-    card.status === "unavailable" ? "Fight results are unavailable." : null,
-    breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
-  ]
-    .filter((line): line is string => line !== null)
-    .join(" ");
+  const storageDetail = withStaleDetail(
+    [
+      await betBookLine(book),
+      card.status === "unavailable" ? "Fight results are unavailable." : null,
+      breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
+    ]
+      .filter((line): line is string => line !== null)
+      .join(" ") || null,
+    book,
+    card,
+    breakdownPage,
+    calendar,
+  );
 
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail || null}>
