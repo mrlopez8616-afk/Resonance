@@ -290,6 +290,70 @@ function publicBrickRows() {
   return presentBricks({ items, lessons, overlays }, true);
 }
 
+async function publicTrackerPages(
+  paint: (node: ReactNode) => string,
+): Promise<{ path: string; html: string }[]> {
+  const [{ TrackerFloor }, tracker] = await Promise.all([
+    import("@/components/fight-tier-tracker"),
+    import("@/lib/fight-tier-tracker"),
+  ]);
+  const model = tracker.buildTierTracker({
+    bets: [
+      {
+        id: "public-strong",
+        event: "UFC Edmonton",
+        fight: "Alpha vs Bravo",
+        fightSlug: "alpha-vs-bravo",
+        pick: "Alpha",
+        stake: "4.76",
+        oddsPct: 40,
+        payout: "11.60",
+        status: "won",
+        venue: "coinbase-predict",
+        ticker: "UFC",
+        time: "2026-10-17T20:00:00-05:00",
+        tier: "STRONG",
+      },
+    ],
+    publicMode: true,
+    now: new Date("2026-10-20T18:00:00Z"),
+  });
+  const floor = (path: string, title: string, tiles: typeof model.homeTiles, backHref: string, backLabel: string) => ({
+    path,
+    html: paint(
+      createElement(TrackerFloor, {
+        backHref,
+        backLabel,
+        kicker: backLabel,
+        title,
+        tiles,
+        empty: "not recorded",
+        publicMode: true,
+      }),
+    ),
+  });
+  const picks = model.picks["strong/ufc-edmonton"]?.tiles ?? [];
+  return [
+    floor("/fights/tiers", "Tier tracker", model.homeTiles, "/fights", "Fights"),
+    floor("/fights/tiers/strong", "STRONG", model.slices.strong.tiles, "/fights/tiers", "Tier tracker"),
+    floor("/fights/tiers/strong/ufc-edmonton", "UFC Edmonton", picks, "/fights/tiers/strong", "STRONG"),
+    floor(
+      "/fights/tiers/cards/ufc-edmonton",
+      "UFC Edmonton",
+      model.cards["ufc-edmonton"]?.tiles ?? [],
+      "/fights/tiers",
+      "Tier tracker",
+    ),
+    floor(
+      "/fights/tiers/cards/ufc-edmonton/strong",
+      "STRONG",
+      picks,
+      "/fights/tiers/cards/ufc-edmonton",
+      "UFC Edmonton",
+    ),
+  ];
+}
+
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
   const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi, healthUi, health] =
     await Promise.all([
@@ -694,6 +758,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/calendar", html: calendar },
     { path: "/calendar/2026-10-08", html: day },
     { path: "/settings", html: settings },
+    ...(await publicTrackerPages(render)),
   ];
   const blocked = [
     "/n/finance",
@@ -831,6 +896,11 @@ describe("public render scan", () => {
       "/fights/main-card/page.tsx",
       "/fights/prelims/page.tsx",
       "/fights/ufc/page.tsx",
+      "/fights/tiers/page.tsx",
+      "/fights/tiers/[slice]/page.tsx",
+      "/fights/tiers/[slice]/[event]/page.tsx",
+      "/fights/tiers/cards/[event]/page.tsx",
+      "/fights/tiers/cards/[event]/[slice]/page.tsx",
       "/film/[[...slug]]/page.tsx",
       "/login/page.tsx",
       "/log/page.tsx",
@@ -1047,7 +1117,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

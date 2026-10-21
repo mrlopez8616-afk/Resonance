@@ -34,6 +34,7 @@ export function publicModeEnabled(value: string | null | undefined): boolean {
  * Routes that stay off a shared screen.
  * `/n/build` and `/n/system` are not in this list: they stay visible.
  * Fight Desk itself stays; only the bankroll child is hidden.
+ * The tier tracker under `/fights/tiers` stays too, and it prints percents only.
  */
 const HIDDEN_PREFIXES = [
   "/log",
@@ -61,6 +62,7 @@ const HIDDEN_PREFIXES = [
 export function isHiddenInPublicMode(pathname: string): boolean {
   const path = (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";
   if (path === "/n/fight-desk/bankroll") return true;
+  if (path === "/fights/tiers" || path.startsWith("/fights/tiers/")) return false;
   return HIDDEN_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 

@@ -185,6 +185,58 @@ function fightBucket(id: string): PhoneTarget {
   return { href: `/fights/${id}`, label };
 }
 
+const TIER_SLICE_LABELS: Record<string, string> = {
+  strong: "STRONG",
+  lean: "LEAN",
+  pass: "PASS",
+  "ko-gated": "KO-gated",
+};
+
+/** Tier tracker sits under Fights. Back goes up one path segment. */
+function tierPhoneTrail(parts: string[]): PhoneTrail {
+  const desk: PhoneTarget = { href: "/n/fight-desk", label: "Fight Desk" };
+  const fights: PhoneTarget = { href: "/fights", label: "Fights" };
+  const tracker: PhoneTarget = { href: "/fights/tiers", label: "Tier tracker" };
+  if (parts.length === 2) return { back: fights, crumbs: [HOME, desk, fights, tracker] };
+  const third = parts[2] ?? "";
+  if (third === "cards") {
+    if (parts.length < 4 || parts.length > 5) return homeTrail();
+    const eventSlug = parts[3] ?? "";
+    const card: PhoneTarget = { href: `/fights/tiers/cards/${eventSlug}`, label: slugLabel(eventSlug) };
+    if (parts.length === 4) return { back: tracker, crumbs: [HOME, desk, fights, tracker, card] };
+    const slice = TIER_SLICE_LABELS[parts[4] ?? ""];
+    if (!slice) return homeTrail();
+    return {
+      back: card,
+      crumbs: [
+        HOME,
+        desk,
+        fights,
+        tracker,
+        card,
+        { href: `/fights/tiers/cards/${eventSlug}/${parts[4]}`, label: slice },
+      ],
+    };
+  }
+  const slice = TIER_SLICE_LABELS[third];
+  if (!slice) return homeTrail();
+  const sliceTarget: PhoneTarget = { href: `/fights/tiers/${third}`, label: slice };
+  if (parts.length === 3) return { back: tracker, crumbs: [HOME, desk, fights, tracker, sliceTarget] };
+  if (parts.length !== 4) return homeTrail();
+  const eventSlug = parts[3] ?? "";
+  return {
+    back: sliceTarget,
+    crumbs: [
+      HOME,
+      desk,
+      fights,
+      tracker,
+      sliceTarget,
+      { href: `/fights/tiers/${third}/${eventSlug}`, label: slugLabel(eventSlug) },
+    ],
+  };
+}
+
 function homeTrail(): PhoneTrail {
   return { back: HOME, crumbs: [HOME] };
 }
@@ -408,8 +460,9 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     const desk: PhoneTarget = { href: "/n/fight-desk", label: "Fight Desk" };
     const fights: PhoneTarget = { href: "/fights", label: "Fights" };
     if (parts.length === 1) return { back: desk, crumbs: [HOME, desk, fights] };
-    if (parts.length > 4) return homeTrail();
     const second = parts[1] ?? "";
+    if (second === "tiers") return tierPhoneTrail(parts);
+    if (parts.length > 4) return homeTrail();
     if (second === "upcoming" || second === "past") {
       const bucket = fightBucket(second);
       if (parts.length === 2) return { back: fights, crumbs: [HOME, desk, fights, bucket] };

@@ -20,6 +20,8 @@ import {
   type DeskPromotion,
   type FightTimeBucket,
 } from "@/lib/fight-desk";
+import type { FightBreakdown } from "@/lib/fight-breakdowns";
+import { buildTierTracker, type TrackerStore } from "@/lib/fight-tier-tracker";
 import { tileFace } from "@/lib/home-faces";
 import { parentById, parentCardHref } from "@/lib/node-parents";
 import {
@@ -293,17 +295,30 @@ function ValueCard({
 export function FightIndex({
   bets,
   events = [],
+  breakdowns = [],
+  breakdownStore = "live",
   availability = "live",
   now,
   publicMode = false,
 }: {
   bets: readonly Bet[];
   events?: readonly CalendarEvent[];
+  breakdowns?: readonly FightBreakdown[];
+  breakdownStore?: TrackerStore;
   availability?: BookAvailability;
   now?: Date;
   publicMode?: boolean;
 }) {
   const boards = fightTimeBoards({ bets, events, now });
+  const tracker = buildTierTracker({
+    bets,
+    events,
+    breakdowns,
+    book: availability,
+    breakdownStore,
+    publicMode,
+    now,
+  });
   const upcoming = boards.upcoming[0]?.title || null;
   const past = boards.past[0]?.title || null;
   return (
@@ -338,6 +353,18 @@ export function FightIndex({
             headline: countLine(boards.past.length, "event", "events"),
             status: past,
             live: true,
+            publicMode,
+          })}
+        />
+        <NodeFace
+          face={tileFace({
+            id: tracker.summary.id,
+            glyph: "fight-desk",
+            href: tracker.summary.href,
+            name: tracker.summary.name,
+            headline: tracker.summary.headline,
+            status: tracker.summary.status,
+            live: tracker.summary.live,
             publicMode,
           })}
         />
