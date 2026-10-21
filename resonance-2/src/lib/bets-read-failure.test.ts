@@ -6,7 +6,13 @@ import { fileURLToPath } from "node:url";
 import { newDb } from "pg-mem";
 import { loadBetsStoreFresh } from "@/lib/bets-store";
 import { resetBlobReadCacheForTests } from "@/lib/blob-read";
-import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
+import {
+  databaseHostKind,
+  setPostgresRetryDelaysForTests,
+  setSqlClientForTests,
+  sqlQuery,
+  type SqlClient,
+} from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
 import { ownerBetFailureDetail } from "@/lib/store-page";
 import { isStorageUnavailable, StorageUnavailableError } from "@/lib/storage-unavailable";
@@ -61,7 +67,78 @@ describe("bets read failure", { concurrency: false }, () => {
     if (previous.vercel === undefined) delete process.env.VERCEL;
     else process.env.VERCEL = previous.vercel;
     setSqlClientForTests(null);
+    setPostgresRetryDelaysForTests(null);
     resetBlobReadCacheForTests();
+  });
+
+  it("names a pooled host and a direct host without returning the url", () => {
+    assert.equal(databaseHostKind("postgres://resonance@127.0.0.1:5432/resonance"), "loopback");
+    assert.equal(
+      databaseHostKind("postgres://user:secret@ep-example-pooler.us-east-1.aws.neon.tech/neondb"),
+      "pooled",
+    );
+    assert.equal(
+      databaseHostKind("postgres://user:secret@ep-example.us-east-1.aws.neon.tech/neondb"),
+      "direct",
+    );
+    assert.equal(databaseHostKind("postgres://user:secret@db.example/neondb"), "other");
+  });
+
+  it("retries a transient read and leaves writes and hard failures alone", async () => {
+    setPostgresRetryDelaysForTests([0, 0]);
+    let calls = 0;
+    setSqlClientForTests({
+      async query<T extends Record<string, unknown>>() {
+        calls += 1;
+        if (calls === 1) throw new Error("fetch failed");
+        return [{ ok: 1 }] as unknown as T[];
+      },
+    });
+    const captured = captureErrors();
+    try {
+      const rows = await sqlQuery<{ ok: number }>("SELECT 1");
+      assert.equal(rows[0]?.ok, 1);
+      assert.equal(calls, 2);
+      assert.equal(captured.lines.some((line) => line.startsWith("postgres query retry")), true);
+      assert.equal(captured.lines.some((line) => line.startsWith("postgres query failed")), false);
+    } finally {
+      captured.restore();
+    }
+
+    calls = 0;
+    setSqlClientForTests({
+      async query() {
+        calls += 1;
+        throw new Error("relation bets does not exist");
+      },
+    });
+    await assert.rejects(() => sqlQuery("SELECT 1"), isStorageUnavailable);
+    assert.equal(calls, 1);
+
+    calls = 0;
+    setSqlClientForTests({
+      async query() {
+        calls += 1;
+        throw new Error(`connect failed ${secretUrl}`);
+      },
+    });
+    await assert.rejects(() => sqlQuery("SELECT 1"), (error: unknown) => {
+      assert.equal(isStorageUnavailable(error), true);
+      if (isStorageUnavailable(error)) assert.equal(error.reason.includes("secret"), false);
+      return true;
+    });
+    assert.equal(calls, 1);
+
+    calls = 0;
+    setSqlClientForTests({
+      async query() {
+        calls += 1;
+        throw new Error("fetch failed");
+      },
+    });
+    await assert.rejects(() => sqlQuery("UPDATE bets SET event = 'x'"), isStorageUnavailable);
+    assert.equal(calls, 1);
+    setPostgresRetryDelaysForTests(null);
   });
 
   it("logs a redacted reason from sqlQuery and keeps it off the thrown banner", async () => {

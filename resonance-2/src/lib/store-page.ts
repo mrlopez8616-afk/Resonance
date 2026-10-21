@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { summarizeBets, type Bet, type FightDeskSummary } from "@/lib/bets";
 import { loadBetsStore } from "@/lib/bets-store";
-import { dedupeSluglessFightEvents, ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
+import { dedupeFightCalendarEvents, ensureSeededCalendarEnvelope } from "@/lib/calendar-store-core";
 import { loadCalendarStore, type CalendarStoreBackend } from "@/lib/calendar-store";
 import type { CalendarEvent } from "@/data/calendar";
 import type { FightBreakdown } from "@/lib/fight-breakdowns";
@@ -20,19 +20,32 @@ import {
 export type DurableBackend = "postgres" | "blob" | "file";
 
 export type BetsPage =
-  | { status: "live"; bets: Bet[]; backend: DurableBackend }
+  | { status: "live"; bets: Bet[]; backend: DurableBackend; stale?: boolean }
   | { status: "unconfigured"; bets: Bet[] }
   | { status: "unavailable"; reason: string };
 
 export type FightResultsPage =
-  | { status: "live"; results: FightResult[]; backend: DurableBackend }
+  | { status: "live"; results: FightResult[]; backend: DurableBackend; stale?: boolean }
   | { status: "unconfigured"; results: FightResult[] }
   | { status: "unavailable"; reason: string };
 
 export type BreakdownsPage =
-  | { status: "live"; breakdowns: FightBreakdown[]; backend: DurableBackend; updatedAt: string }
+  | { status: "live"; breakdowns: FightBreakdown[]; backend: DurableBackend; updatedAt: string; stale?: boolean }
   | { status: "unconfigured"; breakdowns: FightBreakdown[]; updatedAt: string }
   | { status: "unavailable"; reason: string };
+
+export function readIsStale(page: { status: string; stale?: boolean } | null | undefined): boolean {
+  return page != null && page.status !== "unavailable" && page.stale === true;
+}
+
+/** Keep an error line. With no error, a stale read asks the shell for the stale label. */
+export function withStaleDetail(
+  detail: string | null,
+  ...pages: readonly ({ status: string; stale?: boolean } | null | undefined)[]
+): string | null {
+  if (detail) return detail;
+  return pages.some((page) => readIsStale(page)) ? "stale" : null;
+}
 
 function liveBackend(backend: string): DurableBackend {
   if (backend === "postgres" || backend === "blob") return backend;
@@ -49,6 +62,7 @@ export const loadFightResultsForPage = cache(async (): Promise<FightResultsPage>
       status: "live",
       results: loaded.envelope.results,
       backend: liveBackend(loaded.backend),
+      ...(loaded.stale ? { stale: true as const } : {}),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
@@ -71,6 +85,7 @@ export const loadBreakdownsForPage = cache(async (): Promise<BreakdownsPage> => 
       breakdowns: loaded.envelope.breakdowns,
       backend: liveBackend(loaded.backend),
       updatedAt: loaded.envelope.updatedAt,
+      ...(loaded.stale ? { stale: true as const } : {}),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
@@ -104,6 +119,7 @@ export const loadBetsForPage = cache(async (): Promise<BetsPage> => {
       status: "live",
       bets: loaded.envelope.bets,
       backend: liveBackend(loaded.backend),
+      ...(loaded.stale ? { stale: true as const } : {}),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
@@ -112,7 +128,7 @@ export const loadBetsForPage = cache(async (): Promise<BetsPage> => {
 });
 
 export type FightDeskPage =
-  | { status: "live"; summary: FightDeskSummary }
+  | { status: "live"; summary: FightDeskSummary; stale?: boolean }
   | { status: "seed-only"; summary: FightDeskSummary }
   | { status: "unavailable"; summary: null; reason: string };
 
@@ -124,7 +140,7 @@ export async function loadFightDeskSummary(): Promise<FightDeskPage> {
   }
   const summary = summarizeBets(book.bets);
   if (book.status === "unconfigured") return { status: "seed-only", summary };
-  return { status: "live", summary };
+  return { status: "live", summary, ...(book.stale ? { stale: true as const } : {}) };
 }
 
 export function storeLabel(
@@ -142,6 +158,7 @@ export type CalendarPage = {
   events: CalendarEvent[];
   storeLabel: string;
   reason?: string;
+  stale?: boolean;
 };
 
 export const loadCalendarForPage = cache(async (): Promise<CalendarPage> => {
@@ -150,14 +167,15 @@ export const loadCalendarForPage = cache(async (): Promise<CalendarPage> => {
     const status: StoreAvailability = loaded.configured ? "live" : "unconfigured";
     return {
       status: status === "live" ? "live" : "unconfigured",
-      events: dedupeSluglessFightEvents(loaded.envelope.events),
+      events: dedupeFightCalendarEvents(loaded.envelope.events),
       storeLabel: storeLabel(status, loaded.backend),
+      ...(loaded.stale ? { stale: true as const } : {}),
     };
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
     return {
       status: "seed-only",
-      events: dedupeSluglessFightEvents(ensureSeededCalendarEnvelope(null).envelope.events),
+      events: dedupeFightCalendarEvents(ensureSeededCalendarEnvelope(null).envelope.events),
       storeLabel: "seed-only",
       reason: error.reason,
     };

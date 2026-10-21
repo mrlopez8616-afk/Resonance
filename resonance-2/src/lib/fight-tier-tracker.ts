@@ -4,6 +4,7 @@ import { formatSignedUsd, money, recordMark, type Bet } from "@/lib/bets";
 import { isDecimalString } from "@/lib/decimal";
 import { doctrineForBreakdown, type FightBreakdown } from "@/lib/fight-breakdowns";
 import { betEventSlug, fightTimeBoards } from "@/lib/fight-desk";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import type { PlanTier } from "@/lib/fight-ko-gate";
 import { hasMoneyText } from "@/lib/public-mode";
 import { personSlug } from "@/lib/ufc332";
@@ -301,7 +302,10 @@ export function buildTierTracker(input: {
   }
   const byFight = new Map<string, FightBreakdown>();
   for (const row of breakdowns) {
-    byFight.set(`${row.eventSlug}\0${row.fightSlug.trim().toLowerCase()}`, row);
+    const key = `${canonicalEventSlug(row.eventSlug)}\0${row.fightSlug.trim().toLowerCase()}`;
+    const current = byFight.get(key);
+    const rowIsCanonical = row.eventSlug.trim().toLowerCase() === canonicalEventSlug(row.eventSlug);
+    if (!current || rowIsCanonical) byFight.set(key, row);
   }
 
   const scored: ScoredBet[] = [];
@@ -419,14 +423,14 @@ export function trackerSlice(model: TierTrackerModel, id: string): SliceView | n
 export function trackerCard(model: TierTrackerModel, slug: string): CardView | null {
   const id = parseTrackerEventSlug(slug);
   if (!id) return null;
-  return model.cards[id] ?? null;
+  return model.cards[canonicalEventSlug(id)] ?? null;
 }
 
 export function trackerPicks(model: TierTrackerModel, slice: string, slug: string): PickView | null {
   const id = parseSliceId(slice);
   const event = parseTrackerEventSlug(slug);
   if (!id || !event) return null;
-  return model.picks[pickKey(id, event)] ?? null;
+  return model.picks[pickKey(id, canonicalEventSlug(event))] ?? null;
 }
 
 /** Every headline and status the tracker would paint. */

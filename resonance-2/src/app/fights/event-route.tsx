@@ -12,6 +12,7 @@ import {
   resolveFightEventPage,
   type FightTimeBucket,
 } from "@/lib/fight-desk";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import {
   betBookLine,
@@ -19,6 +20,7 @@ import {
   loadBreakdownsForPage,
   loadCalendarForPage,
   loadFightResultsForPage,
+  withStaleDetail,
 } from "@/lib/store-page";
 
 export async function fightEventMetadata(event: string) {
@@ -40,6 +42,8 @@ export async function FightEventScreen({
   if (blocked) return blocked;
   const legacy = legacyFightNodeHref(event);
   if (legacy) redirect(legacy);
+  const canonical = canonicalEventSlug(event);
+  if (canonical && canonical !== event.trim().toLowerCase()) redirect(eventPageHref(canonical, bucket));
   const [book, card, calendar, breakdownPage] = await Promise.all([
     loadBetsForPage(),
     loadFightResultsForPage(),
@@ -73,13 +77,19 @@ export async function FightEventScreen({
     breakdownPage.status === "unavailable"
       ? STORAGE_UNAVAILABLE_BANNER
       : null;
-  const storageDetail = [
-    await betBookLine(book),
-    card.status === "unavailable" ? "Fight results are unavailable." : null,
-    breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
-  ]
-    .filter((line): line is string => line !== null)
-    .join(" ");
+  const storageDetail = withStaleDetail(
+    [
+      await betBookLine(book),
+      card.status === "unavailable" ? "Fight results are unavailable." : null,
+      breakdownPage.status === "unavailable" ? "Fight breakdowns are unavailable." : null,
+    ]
+      .filter((line): line is string => line !== null)
+      .join(" ") || null,
+    book,
+    card,
+    calendar,
+    breakdownPage,
+  );
 
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail || null}>

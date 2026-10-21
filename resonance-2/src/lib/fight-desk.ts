@@ -1,5 +1,13 @@
 import type { CalendarEvent } from "@/data/calendar";
 import type { Bet } from "@/lib/bets";
+import { chicagoDay } from "@/lib/calendar-time";
+import {
+  BUCKLEY_EVENT_TITLE,
+  canonicalEventSlug,
+  canonicalEventTitle,
+  isEdmontonAlias,
+  sameHeadlinerOrVenue,
+} from "@/lib/fight-event-alias";
 import type { SubmissionBoard } from "@/lib/fight-submission";
 import type { KnownBout } from "@/lib/fight-results";
 import {
@@ -33,8 +41,9 @@ export function legacyFightNodeHref(slug: string): string | null {
 export function eventSlugFromTitle(title: string): string {
   const trimmed = title.trim();
   if (trimmed === UFC_332_EVENT.name || trimmed.toLowerCase() === UFC_332_ID) return UFC_332_ID;
+  if (isEdmontonAlias(trimmed)) return canonicalEventSlug(trimmed);
   const slug = personSlug(trimmed);
-  return SLUG.test(slug) ? slug : "";
+  return SLUG.test(slug) ? canonicalEventSlug(slug) : "";
 }
 
 /**
@@ -59,10 +68,10 @@ export function calendarFightSlug(
 ): string | null {
   if (!isFightRow(event)) return null;
   const explicit = event.eventSlug?.trim().toLowerCase() ?? "";
-  if (SLUG.test(explicit)) return explicit;
+  if (SLUG.test(explicit)) return canonicalEventSlug(explicit);
   const match = FIGHT_PATH.exec(event.link ?? "");
   const fromLink = match?.[1] ?? "";
-  if (SLUG.test(fromLink)) return fromLink;
+  if (SLUG.test(fromLink)) return canonicalEventSlug(fromLink);
   return null;
 }
 
@@ -88,7 +97,7 @@ export function betEventSlug(bet: Bet, events: readonly CalendarEvent[] = []): s
     if (eventSlugFromTitle(event.title) === derived) return true;
     return titlesAlign(event.title, bet.event);
   });
-  return match ? (calendarFightSlug(match) ?? derived) : derived;
+  return canonicalEventSlug(match ? (calendarFightSlug(match) ?? derived) : derived);
 }
 
 export function betsForEventSlug(
@@ -380,6 +389,92 @@ type EventGroup = {
   calendarTexts: string[];
 };
 
+function preferEventTitle(current: string, incoming: string): string {
+  const now = current.trim();
+  const next = incoming.trim();
+  if (!now) return next && isEdmontonAlias(next) ? BUCKLEY_EVENT_TITLE : next;
+  if (isEdmontonAlias(now) && next && !isEdmontonAlias(next)) return next;
+  if (/\svs\.?\s/i.test(next) && !/\svs\.?\s/i.test(now)) return next;
+  return now;
+}
+
+function sameCardDay(left: string | null, right: string | null): boolean {
+  if (!left || !right) return false;
+  const a = chicagoDay(left);
+  const b = chicagoDay(right);
+  return /^\d{4}-\d{2}-\d{2}$/.test(a) && a === b;
+}
+
+function eventsAreSameCard(left: DeskEvent, right: DeskEvent): boolean {
+  if (left.slug === UFC_332_ID || right.slug === UFC_332_ID) return false;
+  if (left.slug !== right.slug && canonicalEventSlug(left.slug) === canonicalEventSlug(right.slug)) return true;
+  if (!sameCardDay(left.when, right.when)) return false;
+  return sameHeadlinerOrVenue(
+    { title: left.title, place: left.meta },
+    { title: right.title, place: right.meta },
+  );
+}
+
+function hostRank(event: DeskEvent): number {
+  let rank = 0;
+  if (/\svs\.?\s/i.test(event.title)) rank += 4;
+  if (!isEdmontonAlias(event.slug) && !isEdmontonAlias(event.title)) rank += 2;
+  if (event.bets.length > 0) rank += 1;
+  return rank;
+}
+
+function mergeDeskEvents(host: DeskEvent, guest: DeskEvent): DeskEvent {
+  const seen = new Set(host.bets.map((bet) => bet.id));
+  const bets = [...host.bets];
+  for (const bet of guest.bets) {
+    if (seen.has(bet.id)) continue;
+    seen.add(bet.id);
+    bets.push(bet);
+  }
+  const fights = new Map(host.fights.map((fight) => [fight.slug, { ...fight, bets: [...fight.bets] }]));
+  for (const fight of guest.fights) {
+    const current = fights.get(fight.slug);
+    if (!current) {
+      fights.set(fight.slug, { ...fight, bets: [...fight.bets] });
+      continue;
+    }
+    const ids = new Set(current.bets.map((bet) => bet.id));
+    current.bets.push(...fight.bets.filter((bet) => !ids.has(bet.id)));
+  }
+  return {
+    ...host,
+    title: preferEventTitle(host.title, guest.title),
+    href: `/fights/${host.slug}`,
+    meta: host.meta || guest.meta,
+    when: host.when ?? guest.when,
+    bets,
+    fights: [...fights.values()],
+  };
+}
+
+/** One card per event. An alias slug or the same day and headliner folds in. Bets stay. */
+export function mergeDuplicateDeskEvents(events: readonly DeskEvent[]): DeskEvent[] {
+  const pending = events.map((event) => ({ ...event, bets: [...event.bets], fights: [...event.fights] }));
+  const used = new Set<number>();
+  const merged: DeskEvent[] = [];
+  for (let index = 0; index < pending.length; index += 1) {
+    if (used.has(index)) continue;
+    let host = pending[index];
+    if (!host) continue;
+    used.add(index);
+    for (let other = index + 1; other < pending.length; other += 1) {
+      if (used.has(other)) continue;
+      const guest = pending[other];
+      if (!guest || !eventsAreSameCard(host, guest)) continue;
+      const hostFirst = hostRank(host) > hostRank(guest) || (hostRank(host) === hostRank(guest) && host.slug <= guest.slug);
+      host = mergeDeskEvents(hostFirst ? host : guest, hostFirst ? guest : host);
+      used.add(other);
+    }
+    merged.push(host);
+  }
+  return merged;
+}
+
 function latestInstant(values: readonly string[]): string | null {
   let best: string | null = null;
   let bestMs = Number.NEGATIVE_INFINITY;
@@ -452,16 +547,16 @@ export function fightPromotions(input: {
   for (const bet of input.bets) {
     const slug = betEventSlug(bet, events);
     if (!slug || slug === UFC_332_ID || isReservedFightSlug(slug)) continue;
-    const group = ensure(slug, bet.event);
+    const group = ensure(slug, canonicalEventTitle(bet.event));
     group.bets.push(bet);
-    group.title = bet.event || group.title;
+    group.title = preferEventTitle(group.title, bet.event);
   }
 
   for (const event of events) {
     const slug = calendarFightSlug(event);
     if (!slug || slug === UFC_332_ID || isReservedFightSlug(slug)) continue;
-    const group = ensure(slug, event.title);
-    if (group.bets.length === 0) group.title = event.title;
+    const group = ensure(slug, canonicalEventTitle(event.title));
+    if (group.bets.length === 0) group.title = preferEventTitle(group.title, event.title);
     group.meta = event.location ?? group.meta;
     group.calendarTexts.push(`${event.id} ${event.title}`);
     group.when = latestInstant([group.when ?? "", event.start].filter(Boolean));
@@ -488,7 +583,7 @@ export function fightPromotions(input: {
     }
   }
 
-  const deskEvents: DeskEvent[] = [...grouped.entries()].map(([slug, group]) => ({
+  const deskEvents: DeskEvent[] = mergeDuplicateDeskEvents([...grouped.entries()].map(([slug, group]) => ({
     slug,
     title: group.title,
     href: `/fights/${slug}`,
@@ -499,7 +594,7 @@ export function fightPromotions(input: {
       slug === UFC_332_ID
         ? ufc332Fights.map((fight) => catalogFightRow(fight, group.bets))
         : listedFights(group.bets, group.calendarTexts),
-  }));
+  })));
 
   const byPromotion = new Map<FightPromotionId, DeskEvent[]>(
     FIGHT_PROMOTIONS.map((promotion) => [promotion.id, []]),
@@ -571,7 +666,7 @@ export function resolveFightEventPage(
   bets: readonly Bet[],
   events: readonly CalendarEvent[] = [],
 ): ResolvedFightEvent | null {
-  const id = slug.trim().toLowerCase();
+  const id = canonicalEventSlug(slug.trim().toLowerCase());
   if (!SLUG.test(id) || isReservedFightSlug(id)) return null;
   const listed = fightPromotions({ bets, events })
     .flatMap((promotion) => promotion.events)
@@ -648,7 +743,7 @@ export function knownBouts(
   }
   // Stored breakdown rows name the card before any bet is placed (any event, not only UFC 332).
   for (const row of breakdowns) {
-    const event = row.eventSlug.trim().toLowerCase();
+    const event = canonicalEventSlug(row.eventSlug.trim().toLowerCase());
     const fightSlug = row.fightSlug.trim().toLowerCase();
     const a = row.aName?.trim() ?? "";
     const b = row.bName?.trim() ?? "";

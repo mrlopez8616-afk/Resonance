@@ -2,7 +2,7 @@ import "server-only";
 
 import { computeBankroll, type BankrollLedger } from "@/lib/bankroll";
 import { loadBankrollDeposits } from "@/lib/bankroll-deposits-store";
-import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export type BankrollPage = {
   status: "live" | "seed-only" | "unavailable";
@@ -26,6 +26,10 @@ export async function loadBankroll(): Promise<BankrollPage> {
   return {
     status: book.status === "unconfigured" ? "seed-only" : "live",
     ledger: computeBankroll(book.bets, calendar.events, deposits.rows),
-    storageDetail: book.status === "unconfigured" ? "Bet book is seed-only." : null,
+    storageDetail: withStaleDetail(
+      book.status === "unconfigured" ? "Bet book is seed-only." : null,
+      book,
+      calendar,
+    ),
   };
 }

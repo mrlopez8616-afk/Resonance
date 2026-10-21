@@ -19,6 +19,7 @@ import {
   loadBetsForPage,
   loadBreakdownsForPage,
   loadCalendarForPage,
+  withStaleDetail,
 } from "@/lib/store-page";
 
 export async function loadTierTracker(): Promise<{
@@ -49,14 +50,18 @@ export async function loadTierTracker(): Promise<{
   });
   const storageMessage =
     book.status === "unavailable" || breakdowns.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null;
-  const storageDetail =
+  const storageDetail = withStaleDetail(
     book.status === "unavailable"
       ? await betBookLine(book)
       : breakdowns.status === "unavailable"
         ? "Breakdowns are unavailable."
         : book.status === "unconfigured"
           ? "Bet book is seed-only."
-          : null;
+          : null,
+    book,
+    calendar,
+    breakdowns,
+  );
   return {
     model,
     storageMessage,

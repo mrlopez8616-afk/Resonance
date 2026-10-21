@@ -765,6 +765,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "032_bankroll_deposits",
         "033_fighter_careers",
         "034_sui_coinbase_balance",
+        "035_merge_edmonton_buckley",
       ],
     );
     assert.equal(

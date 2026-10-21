@@ -129,17 +129,24 @@ async function readBreakdownsBlob(): Promise<CachedBreakdowns> {
   return { status: "ok", envelope: parsed };
 }
 
-function unwrap(result: CachedBreakdowns): FightBreakdownsEnvelope {
+function unwrap(result: CachedBreakdowns & { stale?: boolean }): {
+  envelope: FightBreakdownsEnvelope;
+  stale?: boolean;
+} {
   if (result.status === "unavailable") {
     throw new StorageUnavailableError("fight-breakdowns", result.reason);
   }
-  return result.envelope;
+  return {
+    envelope: result.envelope,
+    ...(result.stale ? { stale: true as const } : {}),
+  };
 }
 
 async function loadFightBreakdownsStoreInner(fresh: boolean): Promise<{
   configured: boolean;
   backend: FightBreakdownsBackend;
   envelope: FightBreakdownsEnvelope;
+  stale?: boolean;
 }> {
   throwIfStorageForced("fight-breakdowns");
   const backend = detectFightBreakdownsBackend();
@@ -151,15 +158,15 @@ async function loadFightBreakdownsStoreInner(fresh: boolean): Promise<{
     return { configured: true, backend, envelope };
   }
   if (backend === "postgres") {
-    const envelope = fresh
+    const loaded = fresh
       ? unwrap(await readBreakdownsPostgres())
       : unwrap(await cachedBlobRead(BLOB_TAGS.fightBreakdowns, () => readBreakdownsPostgres()));
-    return { configured: true, backend, envelope };
+    return { configured: true, backend, ...loaded };
   }
-  const envelope = fresh
+  const loaded = fresh
     ? unwrap(await readBreakdownsBlob())
     : unwrap(await cachedBlobRead(BLOB_TAGS.fightBreakdowns, () => readBreakdownsBlob()));
-  return { configured: true, backend, envelope };
+  return { configured: true, backend, ...loaded };
 }
 
 /** Display read. Deduped within a request and cached for 45s across requests. */

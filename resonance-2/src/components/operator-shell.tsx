@@ -72,6 +72,10 @@ export async function OperatorShell({
               {storageMessage}
               {storageDetail ? <span className="storage-banner-detail">{storageDetail}</span> : null}
             </p>
+          ) : storageDetail === "stale" ? (
+            <p className="storage-inline" role="status" data-storage-banner="stale">
+              <span className="warn-badge">stale</span> Showing the last good read.
+            </p>
           ) : null}
           {children}
         </div>

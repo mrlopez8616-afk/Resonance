@@ -103,7 +103,7 @@ describe("bankroll deposit validation", () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "032_bankroll_deposits");
     assert.equal(embedded?.sql, file);
     assert.equal(file.includes("INSERT"), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "034_sui_coinbase_balance");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "035_merge_edmonton_buckley");
   });
 
   it("shows the deposit total in dollars and a percent with no dollar sign in public mode", async () => {

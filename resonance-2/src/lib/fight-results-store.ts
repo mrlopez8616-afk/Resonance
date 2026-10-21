@@ -157,14 +157,19 @@ async function readResultsBlob(revalidateWrites: boolean): Promise<CachedResults
   }
 }
 
-function unwrapResults(result: CachedResults): {
+function unwrapResults(result: CachedResults & { stale?: boolean }): {
   envelope: FightResultsEnvelope;
   seeded: boolean;
+  stale?: boolean;
 } {
   if (result.status === "unavailable") {
     throw new StorageUnavailableError("fight-results", result.reason);
   }
-  return result;
+  return {
+    envelope: result.envelope,
+    seeded: result.seeded,
+    ...(result.stale ? { stale: true as const } : {}),
+  };
 }
 
 async function loadResultsFromFile(): Promise<{
@@ -181,6 +186,7 @@ async function loadFightResultsStoreInner(fresh: boolean): Promise<{
   backend: FightResultsBackend;
   envelope: FightResultsEnvelope;
   seeded: boolean;
+  stale?: boolean;
 }> {
   throwIfStorageForced("fight-results");
   const backend = detectFightResultsBackend();

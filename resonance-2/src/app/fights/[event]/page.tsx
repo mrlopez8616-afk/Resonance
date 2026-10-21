@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { blockedPublicPage } from "@/components/private-notice";
 import { staticFightCard } from "@/data/dwcs-cards";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import { eventPageHref, eventTimeBucket, legacyFightNodeHref, resolveFightEventPage } from "@/lib/fight-desk";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 
@@ -17,9 +18,11 @@ export default async function FightEventRedirect({
   const { event } = await params;
   const legacy = legacyFightNodeHref(event);
   if (legacy) redirect(legacy);
+  const canonical = canonicalEventSlug(event);
+  const slug = canonical || event;
   const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
   const bets = book.status === "unavailable" ? [] : book.bets;
-  const resolved = resolveFightEventPage(event, bets, calendar.events);
-  if (!resolved && !staticFightCard(event)) notFound();
-  redirect(eventPageHref(event, eventTimeBucket(resolved?.when ?? null)));
+  const resolved = resolveFightEventPage(slug, bets, calendar.events);
+  if (!resolved && !staticFightCard(slug) && !staticFightCard(event)) notFound();
+  redirect(eventPageHref(slug, eventTimeBucket(resolved?.when ?? null)));
 }

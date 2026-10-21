@@ -11,7 +11,7 @@ import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavail
 import { fightLinkTargets } from "@/lib/fight-desk";
 import { scrubTextFields } from "@/lib/public-mode";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
+import { loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export const dynamic = "force-dynamic";
 
@@ -53,14 +53,16 @@ export default async function CalendarDayRoute({
   return (
     <OperatorShell
       storageMessage={storageMessage ? STORAGE_UNAVAILABLE_BANNER : null}
-      storageDetail={
+      storageDetail={withStaleDetail(
         [
           store.status === "seed-only" ? "Calendar events are seed-only." : null,
           !pub && fillsLoaded?.status === "seed-only" ? "Fills are seed-only." : null,
         ]
           .filter((line): line is string => line !== null)
-          .join(" ") || null
-      }
+          .join(" ") || null,
+        store,
+        book,
+      )}
     >
       <CalendarDayView
         day={day}

@@ -1,4 +1,5 @@
 import type { Bet } from "@/lib/bets";
+import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import {
   betEventSlug,
   eventSlugFromTitle,
@@ -824,17 +825,21 @@ function rowsForEventPage(
   bets: readonly Bet[],
   events: Parameters<typeof betEventSlug>[1] = [],
 ): FightBreakdown[] {
-  const id = eventSlug.trim().toLowerCase();
-  const direct = breakdowns.filter((row) => row.eventSlug === id);
+  const id = canonicalEventSlug(eventSlug.trim().toLowerCase());
+  const direct = breakdowns
+    .filter((row) => canonicalEventSlug(row.eventSlug) === id)
+    .map((row) => (row.eventSlug === id ? row : { ...row, eventSlug: id }));
   const have = new Set(direct.map((row) => row.fightSlug));
   const onThis = new Set(
-    bets.filter((bet) => betEventSlug(bet, events) === id).map((bet) => bet.fightSlug),
+    bets.filter((bet) => canonicalEventSlug(betEventSlug(bet, events)) === id).map((bet) => bet.fightSlug),
   );
   const onOther = new Set(
-    bets.filter((bet) => betEventSlug(bet, events) !== id).map((bet) => bet.fightSlug),
+    bets
+      .filter((bet) => canonicalEventSlug(betEventSlug(bet, events)) !== id)
+      .map((bet) => bet.fightSlug),
   );
   const extra = breakdowns.filter((row) => {
-    if (row.eventSlug === id || row.eventSlug === UFC_332_ID) return false;
+    if (canonicalEventSlug(row.eventSlug) === id || row.eventSlug === UFC_332_ID) return false;
     if (have.has(row.fightSlug) || !onThis.has(row.fightSlug) || onOther.has(row.fightSlug)) return false;
     return true;
   });
@@ -873,8 +878,9 @@ function betsOnThisFight(
   fightSlug: string,
   events: Parameters<typeof betEventSlug>[1],
 ): Bet[] {
+  const id = canonicalEventSlug(eventSlug);
   return bets.filter(
-    (bet) => bet.fightSlug === fightSlug && betEventSlug(bet, events) === eventSlug,
+    (bet) => bet.fightSlug === fightSlug && canonicalEventSlug(betEventSlug(bet, events)) === id,
   );
 }
 

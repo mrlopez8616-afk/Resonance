@@ -3,6 +3,7 @@ import {
   StorageUnavailableError,
   blobFailureReason,
   isBlobMissingError,
+  isStorageUnavailable,
   throwIfStorageForced,
 } from "@/lib/storage-unavailable";
 
@@ -48,15 +49,27 @@ let sdkOverride: BlobSdk | null = null;
 const memory = new Map<string, { expires: number; value: unknown }>();
 const inflight = new Map<string, Promise<unknown>>();
 const nextReaders = new Map<string, () => Promise<unknown>>();
+const lastGood = new Map<string, unknown>();
 
 export function setBlobSdkForTests(sdk: BlobSdk | null): void {
   sdkOverride = sdk;
+}
+
+/** Drops the 45s window. The last successful read stays, so the next miss can go stale. */
+export function expireReadCacheForTests(): void {
+  memory.clear();
+  inflight.clear();
 }
 
 export function resetBlobReadCacheForTests(): void {
   memory.clear();
   inflight.clear();
   nextReaders.clear();
+  lastGood.clear();
+}
+
+export function resultIsStale(value: unknown): boolean {
+  return Boolean(value) && typeof value === "object" && (value as { stale?: unknown }).stale === true;
 }
 
 async function sdk(): Promise<BlobSdk> {
@@ -133,6 +146,32 @@ function recall<T>(tag: string): T | undefined {
   return hit.value as T;
 }
 
+function unavailableReason(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as { status?: unknown; reason?: unknown };
+  if (record.status !== "unavailable") return null;
+  return typeof record.reason === "string" && record.reason.trim() ? record.reason : "Storage read failed.";
+}
+
+function rememberGood<T>(tag: string, value: T): void {
+  if (!value || typeof value !== "object") return;
+  if ((value as { status?: unknown }).status !== "ok") return;
+  if ((value as { stale?: unknown }).stale === true) return;
+  lastGood.set(tag, value);
+}
+
+function withStale<T>(value: T): T {
+  if (value && typeof value === "object") return { ...(value as object), stale: true } as T;
+  return value;
+}
+
+async function readGuarded<T>(tag: string, fresh: () => Promise<T>): Promise<T> {
+  const value = await fresh();
+  const reason = unavailableReason(value);
+  if (reason !== null) throw new StorageUnavailableError(tag, reason);
+  return value;
+}
+
 async function readThroughMemory<T>(tag: string, fresh: () => Promise<T>): Promise<T> {
   const hit = recall<T>(tag);
   if (hit !== undefined) return hit;
@@ -157,7 +196,7 @@ async function readThroughMemory<T>(tag: string, fresh: () => Promise<T>): Promi
  * scripts have no incremental cache, so they use the same TTL in-process.
  * Either way a tag drop forces the next read to call `fresh`.
  */
-export async function cachedBlobRead<T>(tag: string, fresh: () => Promise<T>): Promise<T> {
+async function readCached<T>(tag: string, fresh: () => Promise<T>): Promise<T> {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     let run = nextReaders.get(tag) as (() => Promise<T>) | undefined;
     if (!run) {
@@ -171,6 +210,24 @@ export async function cachedBlobRead<T>(tag: string, fresh: () => Promise<T>): P
     return run();
   }
   return readThroughMemory(tag, fresh);
+}
+
+/**
+ * A failed read is not stored. The next request tries again.
+ * When an earlier read succeeded, that copy is returned with stale set
+ * and the page keeps the last good rows.
+ */
+export async function cachedBlobRead<T>(tag: string, fresh: () => Promise<T>): Promise<T> {
+  try {
+    const value = await readCached(tag, () => readGuarded(tag, fresh));
+    rememberGood(tag, value);
+    return value;
+  } catch (error) {
+    if (!isStorageUnavailable(error)) throw error;
+    const previous = lastGood.get(tag) as T | undefined;
+    if (previous === undefined) throw error;
+    return withStale(previous);
+  }
 }
 
 export function revalidateBlobTag(tag: string): void {

@@ -142,14 +142,19 @@ async function readCalendarBlob(revalidateWrites: boolean): Promise<CachedCalend
   }
 }
 
-function unwrapCalendar(result: CachedCalendar): {
+function unwrapCalendar(result: CachedCalendar & { stale?: boolean }): {
   envelope: CalendarStoreEnvelope;
   seeded: boolean;
+  stale?: boolean;
 } {
   if (result.status === "unavailable") {
     throw new StorageUnavailableError("calendar", result.reason);
   }
-  return result;
+  return {
+    envelope: result.envelope,
+    seeded: result.seeded,
+    ...(result.stale ? { stale: true as const } : {}),
+  };
 }
 
 async function loadCalendarStoreInner(fresh: boolean): Promise<{
@@ -157,6 +162,7 @@ async function loadCalendarStoreInner(fresh: boolean): Promise<{
   backend: CalendarStoreBackend;
   envelope: CalendarStoreEnvelope;
   seeded: boolean;
+  stale?: boolean;
 }> {
   throwIfStorageForced("calendar");
   const backend = detectCalendarBackend();

@@ -15,6 +15,12 @@ import {
   parseCalendarEvent,
 } from "@/lib/calendar-event";
 import { chicagoDay, isCivilDay } from "@/lib/calendar-time";
+import {
+  BUCKLEY_EVENT_SLUG,
+  canonicalEventSlug,
+  isEdmontonAlias,
+  sameHeadlinerOrVenue,
+} from "@/lib/fight-event-alias";
 import { dailyBriefBackfillBodies } from "@/lib/calendar-writers";
 import { detectStoreBackend, type EnvLike, type StoreBackendName } from "@/lib/store-backend";
 
@@ -381,8 +387,89 @@ export function dedupeSluglessFightEvents(events: readonly CalendarEvent[]): Cal
     .map((event) => folded.get(event.id) ?? event);
 }
 
+function sameSlugSessions(left: CalendarEvent, right: CalendarEvent): boolean {
+  const leftSlug = left.eventSlug?.trim().toLowerCase() ?? "";
+  const rightSlug = right.eventSlug?.trim().toLowerCase() ?? "";
+  if (!leftSlug || leftSlug !== rightSlug) return false;
+  const key = fightCardKey(left.title);
+  if (!key || key !== fightCardKey(right.title)) return false;
+  if (NUMBERED_UFC.test(left.title) && NUMBERED_UFC.test(right.title)) return true;
+  return Boolean(fightSession(left.title) && fightSession(right.title));
+}
+
+function sameAliasedCard(left: CalendarEvent, right: CalendarEvent): boolean {
+  if (!isFightCalendarRow(left) || !isFightCalendarRow(right)) return false;
+  if (sameSlugSessions(left, right)) return false;
+  const day = chicagoDay(left.start);
+  if (!isCivilDay(day) || day !== chicagoDay(right.start)) return false;
+  const leftSlug = left.eventSlug?.trim() ?? "";
+  const rightSlug = right.eventSlug?.trim() ?? "";
+  const leftCanon = leftSlug ? canonicalEventSlug(leftSlug) : "";
+  const rightCanon = rightSlug ? canonicalEventSlug(rightSlug) : "";
+  if (leftCanon && rightCanon && leftCanon === rightCanon) return true;
+  const leftAlias = isEdmontonAlias(left.title) || isEdmontonAlias(leftSlug);
+  const rightAlias = isEdmontonAlias(right.title) || isEdmontonAlias(rightSlug);
+  if (leftAlias || rightAlias) {
+    const namesBuckley =
+      leftCanon === BUCKLEY_EVENT_SLUG ||
+      rightCanon === BUCKLEY_EVENT_SLUG ||
+      left.title.toLowerCase().includes("buckley") ||
+      right.title.toLowerCase().includes("buckley");
+    if (namesBuckley || (leftAlias && rightAlias)) return true;
+  }
+  return sameHeadlinerOrVenue(
+    { title: left.title, place: left.location },
+    { title: right.title, place: right.location },
+  );
+}
+
+function preferCalendarHost(left: CalendarEvent, right: CalendarEvent): CalendarEvent {
+  const score = (event: CalendarEvent) => {
+    let rank = 0;
+    if (/\svs\.?\s/i.test(event.title)) rank += 4;
+    if (event.eventSlug?.trim() && !isEdmontonAlias(event.eventSlug) && !isEdmontonAlias(event.title)) rank += 2;
+    return rank;
+  };
+  const leftScore = score(left);
+  const rightScore = score(right);
+  if (leftScore !== rightScore) return leftScore > rightScore ? left : right;
+  return left.id <= right.id ? left : right;
+}
+
+/**
+ * Read-time only. An Edmonton alias, or the same day and headliner, folds into the canonical row.
+ * Two session rows that already share one slug stay. Stored rows stay.
+ */
+export function dedupeAliasedFightEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
+  const fights = events.filter(isFightCalendarRow);
+  const folded = new Map<string, CalendarEvent>();
+  const dropped = new Set<string>();
+  for (let index = 0; index < fights.length; index += 1) {
+    for (let other = index + 1; other < fights.length; other += 1) {
+      const left = fights[index];
+      const right = fights[other];
+      if (!left || !right || dropped.has(left.id) || dropped.has(right.id)) continue;
+      const currentLeft = folded.get(left.id) ?? left;
+      const currentRight = folded.get(right.id) ?? right;
+      if (!sameAliasedCard(currentLeft, currentRight)) continue;
+      const host = preferCalendarHost(currentLeft, currentRight);
+      const guest = host === currentLeft ? currentRight : currentLeft;
+      const base = folded.get(host.id) ?? host;
+      folded.set(host.id, fillFromSlugless(base, guest));
+      dropped.add(guest.id);
+      folded.delete(guest.id);
+    }
+  }
+  return events.filter((event) => !dropped.has(event.id)).map((event) => folded.get(event.id) ?? event);
+}
+
+/** Slugless UFC copies first, then alias and same-day headliner copies. */
+export function dedupeFightCalendarEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
+  return dedupeAliasedFightEvents(dedupeSluglessFightEvents(events));
+}
+
 export function listCalendarEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
-  return dedupeSluglessFightEvents(events).sort((left, right) => {
+  return dedupeFightCalendarEvents(events).sort((left, right) => {
     const delta = Date.parse(left.start) - Date.parse(right.start);
     if (delta !== 0) return delta;
     return left.id.localeCompare(right.id);
