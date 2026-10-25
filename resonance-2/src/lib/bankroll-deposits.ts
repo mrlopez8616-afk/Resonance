@@ -16,13 +16,17 @@ export class BankrollDepositError extends Error {
   }
 }
 
-/** One stored row. amount is a signed two-decimal string. */
+/** One stored row. amount is a signed two-decimal string. A void keeps the row. */
 export type StoredBankrollDeposit = {
   id: string;
   date: string;
   amount: string;
   note: string | null;
   createdAt: string;
+  /** True once the row has been voided. The amount stays. */
+  voided: boolean;
+  voidedAt: string | null;
+  voidReason: string | null;
 };
 
 export type BankrollDepositWrite = {
@@ -30,6 +34,11 @@ export type BankrollDepositWrite = {
   date: string;
   amount: string;
   note: string | null;
+};
+
+export type BankrollDepositVoid = {
+  id: string;
+  reason: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -66,4 +75,16 @@ export function parseBankrollDeposit(body: unknown): BankrollDepositWrite {
   const note = body.note.trim();
   if (note.length > NOTE_MAX) throw new BankrollDepositError("note is too long.");
   return { id, date, amount, note: note || null };
+}
+
+/** `{ id, reason }`. Reason is required and is stored with the void. */
+export function parseBankrollDepositVoid(body: unknown): BankrollDepositVoid {
+  if (!isRecord(body)) throw new BankrollDepositError("JSON object is required.");
+  const id = typeof body.id === "string" ? body.id.trim() : "";
+  if (!ID.test(id)) throw new BankrollDepositError("id must be a lowercase slug.");
+  if (typeof body.reason !== "string") throw new BankrollDepositError("reason must be a string.");
+  const reason = body.reason.trim();
+  if (!reason) throw new BankrollDepositError("reason is required.");
+  if (reason.length > NOTE_MAX) throw new BankrollDepositError("reason is too long.");
+  return { id, reason };
 }

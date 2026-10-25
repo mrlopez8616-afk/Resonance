@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { newDb } from "pg-mem";
-import { betSeed, parseBetPostBody } from "@/lib/bets";
+import { BetWriteError, betSeed, money, parseBetPostBody, realizedPnl } from "@/lib/bets";
 import {
   loadBetsStore,
   loadBetsStoreFresh,
   postStoredBets,
+  reviseStoredBetStake,
   settleStoredBets,
 } from "@/lib/bets-store";
 import { detectBetsBackend } from "@/lib/bets-store-core";
@@ -186,6 +187,59 @@ describe("storage contract", { concurrency: false }, () => {
         ["ufc-332-nolan"],
       );
       assert.equal(history.length, 1);
+    });
+
+    it("revises one stake, keeps the previous stake, and recomputes settled P&L", async () => {
+      const loaded = await loadBetsStoreFresh();
+      const nolan = loaded.envelope.bets.find((bet) => bet.id === "ufc-332-nolan");
+      assert.ok(nolan);
+      const settled = await settleStoredBets([{ id: nolan.id, status: "won" }]);
+      const won = settled.results[0]?.bet;
+      assert.ok(won);
+      const revised = await reviseStoredBetStake({ id: nolan.id, stake: "2.00" });
+      assert.equal(revised.deduped, false);
+      assert.equal(revised.previousStake, won.stake);
+      assert.equal(revised.bet.stake, "2.00");
+      assert.equal(revised.bet.status, "won");
+      assert.equal(revised.bet.payout, won.payout);
+      assert.equal(revised.bet.oddsPct, won.oddsPct);
+      assert.equal(revised.bet.settledPayout, won.settledPayout ?? won.payout);
+      assert.equal(revised.bet.realizedPnl, realizedPnl("2.00", "won", won.settledPayout ?? won.payout));
+      assert.deepEqual(
+        revised.bet.stakeRevisions?.map((row) => row.stake),
+        [won.stake],
+      );
+      const again = await reviseStoredBetStake({ id: nolan.id, stake: "2.00" });
+      assert.equal(again.deduped, true);
+      assert.equal(again.previousStake, null);
+      assert.equal(again.bet.stakeRevisions?.length, 1);
+      resetBlobReadCacheForTests();
+      const reread = await loadBetsStoreFresh();
+      const kept = reread.envelope.bets.find((bet) => bet.id === nolan.id);
+      assert.equal(kept?.stake, "2.00");
+      assert.equal(kept?.stakeRevisions?.[0]?.stake, won.stake);
+      assert.equal(kept?.oddsPct, won.oddsPct);
+      assert.equal(reread.envelope.bets.length, loaded.envelope.bets.length);
+      const stored = await sqlQuery<{ stake: string; payload: unknown }>(
+        `SELECT stake::text AS stake, payload FROM bets WHERE id = $1`,
+        [nolan.id],
+      );
+      assert.equal(money(String(stored[0]?.stake)), "2.00");
+      const payload = stored[0]?.payload;
+      const parsed =
+        typeof payload === "string"
+          ? (JSON.parse(payload) as { stakeRevisions?: { stake: string }[] })
+          : (payload as { stakeRevisions?: { stake: string }[] });
+      assert.equal(parsed.stakeRevisions?.[0]?.stake, won.stake);
+      const history = await sqlQuery<{ n: string }>(
+        `SELECT count(*)::text AS n FROM settlements WHERE bet_id = $1`,
+        [nolan.id],
+      );
+      assert.equal(String(history[0]?.n), "1");
+      await assert.rejects(
+        () => reviseStoredBetStake({ id: "missing-bet", stake: "1.00" }),
+        (error: unknown) => error instanceof BetWriteError && error.status === 404,
+      );
     });
 
     it("caches a display read and drops it after a successful write", async () => {

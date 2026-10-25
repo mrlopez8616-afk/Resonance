@@ -459,6 +459,18 @@ describe("bankroll", () => {
     assert.equal(bankrollDepositLine(after, false), "+$6.84");
     assert.equal(bankrollDepositLine(after, true), "+24.52%");
     assert.equal(bankrollDepositLine(after, true)?.includes("$"), false);
+
+    const voided = computeBankroll(
+      [won, lost],
+      [],
+      [
+        { date: "2026-10-18", amount: "6.84", voidedAt: "2026-10-19T00:00:00.000Z" },
+        { date: "2026-10-18", amount: "-1.00", voidedAt: "2026-10-19T00:00:00.000Z" },
+      ],
+    );
+    assert.equal(voided.depositTotal, before.depositTotal);
+    assert.equal(voided.bankroll, before.bankroll);
+    assert.equal(voided.cash, before.cash);
   });
 
   it("scales a settled ticket to the flat $1 and leaves a missing outcome unrecorded", () => {

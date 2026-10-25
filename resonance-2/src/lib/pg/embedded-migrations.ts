@@ -723,6 +723,17 @@ WHERE (
     AND (lower(title) LIKE '%ufc%' OR lower(title) = 'edmonton')
   );
 `;
+
+export const BANKROLL_DEPOSIT_VOIDS_SQL = `-- Soft void for a bankroll deposit. Number 036.
+-- 035 merges the Edmonton card. This file inserts no rows.
+-- voided_at keeps the row and drops it from cash totals.
+-- A second run adds nothing.
+
+ALTER TABLE bankroll_deposits ADD COLUMN IF NOT EXISTS voided_at timestamptz;
+
+ALTER TABLE bankroll_deposits ADD COLUMN IF NOT EXISTS void_reason text;
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -757,4 +768,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "033_fighter_careers", sql: FIGHTER_CAREERS_SQL },
   { id: "034_sui_coinbase_balance", sql: SUI_COINBASE_BALANCE_SQL },
   { id: "035_merge_edmonton_buckley", sql: MERGE_EDMONTON_BUCKLEY_SQL },
+  { id: "036_bankroll_deposit_voids", sql: BANKROLL_DEPOSIT_VOIDS_SQL },
 ];

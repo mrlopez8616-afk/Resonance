@@ -44,6 +44,9 @@ export const READ_ROUTES = [
 export const MACHINE_ROUTES = [
   "POST /api/bets",
   "POST /api/bets/settle",
+  "POST /api/bets/stake",
+  "PATCH /api/bets/stake",
+  "POST /api/deposits/void",
   "POST /api/fights/result",
   "POST /api/calendar",
   "POST /api/storage/migrate",

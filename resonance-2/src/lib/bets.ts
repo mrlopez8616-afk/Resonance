@@ -30,6 +30,11 @@ export type Bet = {
   /** Ticket note. Fees and contract count live here when recorded. */
   note?: string;
   stake: string;
+  /**
+   * Earlier stakes. Each edit appends the stake it replaced.
+   * Entries stay. A later edit does not drop them.
+   */
+  stakeRevisions?: StakeRevision[];
   oddsPct: number;
   /** Ticket payout if the bet hits. Coria's is estimated. */
   payout: string;
@@ -49,6 +54,12 @@ export type Bet = {
   venue: typeof BET_VENUE;
   ticker: typeof BET_TICKER;
   time: string;
+};
+
+/** One replaced stake. `at` is the ISO time of the edit that replaced it. */
+export type StakeRevision = {
+  stake: string;
+  at: string;
 };
 
 export type FightDeskSummary = {
@@ -560,6 +571,87 @@ export function settleBet(
     return { bet, deduped: true };
   }
   return { bet: next, deduped: false };
+}
+
+export type StakeEdit = {
+  id: string;
+  stake: string;
+};
+
+const POSITIVE_STAKE = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
+const STAKE_CENT_TOLERANCE = 1e-6;
+const STAKE_MAX = 1_000_000_000;
+
+function positiveMoney(printed: string): string {
+  if (printed.startsWith("-") || printed === "0.00") {
+    throw new BetWriteError("stake must be a positive finite number.");
+  }
+  return printed;
+}
+
+/**
+ * A positive finite stake in cents.
+ * A string keeps at most two decimal places. A number has to land on a cent.
+ */
+export function parsePositiveStake(value: unknown): string {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0 || value > STAKE_MAX) {
+      throw new BetWriteError("stake must be a positive finite number.");
+    }
+    const cents = Math.round(value * 100);
+    if (Math.abs(value * 100 - cents) > STAKE_CENT_TOLERANCE) {
+      throw new BetWriteError("stake must be a positive finite number.");
+    }
+    const whole = Math.trunc(cents / 100);
+    const frac = String(cents % 100).padStart(2, "0");
+    return positiveMoney(money(`${whole}.${frac}`));
+  }
+  if (typeof value !== "string" || !POSITIVE_STAKE.test(value.trim())) {
+    throw new BetWriteError("stake must be a positive finite number.");
+  }
+  return positiveMoney(money(value.trim()));
+}
+
+/** Cash the settle formula uses when the caller does not send a new payout. */
+function storedProceeds(bet: Bet, stake: string): string {
+  if (bet.status === "draw") return money(bet.settledPayout ?? stake);
+  if (bet.status === "won" || bet.status === "sold") return money(bet.settledPayout ?? bet.payout);
+  return money(bet.payout);
+}
+
+/**
+ * Replace the stake and leave every other ticket field put.
+ * The replaced stake is appended to stakeRevisions.
+ * The same stake is a no-op.
+ * A settled row recomputes realized P&L with the settle formula:
+ * lost is minus the new stake, void is 0.00, and won, sold, and draw
+ * subtract the new stake from the stored proceeds. Odds stay stored.
+ */
+export function reviseBetStake(
+  bet: Bet,
+  stake: string,
+  now: string,
+): { bet: Bet; deduped: boolean } {
+  const nextStake = parsePositiveStake(stake);
+  if (nextStake === bet.stake) return { bet, deduped: true };
+  const next: Bet = {
+    ...bet,
+    stake: nextStake,
+    stakeRevisions: [...(bet.stakeRevisions ?? []), { stake: bet.stake, at: now }],
+  };
+  if (bet.status !== "open") {
+    next.realizedPnl = realizedPnl(nextStake, bet.status, storedProceeds(bet, nextStake));
+  }
+  return { bet: next, deduped: false };
+}
+
+/** `{ id, stake }`. Stake is a positive finite number. */
+export function parseStakeBody(body: unknown): StakeEdit {
+  if (!isRecord(body)) throw new BetWriteError("JSON object is required.");
+  const id = asTrimmed(body.id).toLowerCase();
+  if (!BET_ID.test(id)) throw new BetWriteError("id must be a lowercase slug.");
+  if (!("stake" in body)) throw new BetWriteError("stake must be a positive finite number.");
+  return { id, stake: parsePositiveStake(body.stake) };
 }
 
 export type PublicBet = {

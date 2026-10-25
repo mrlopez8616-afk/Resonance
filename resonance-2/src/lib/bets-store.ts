@@ -6,10 +6,12 @@ import path from "node:path";
 import {
   BetWriteError,
   placeBet,
+  reviseBetStake,
   settleBet,
   type Bet,
   type BetPost,
   type SettleRequest,
+  type StakeEdit,
 } from "@/lib/bets";
 import {
   BLOB_TAGS,
@@ -281,6 +283,50 @@ export async function settleStoredBets(requests: readonly SettleRequest[]): Prom
   }
   if (changed) await persistEnvelope(envelope, true);
   return { envelope, backend: loaded.backend, results };
+}
+
+/**
+ * Change one ticket's stake. The fresh read is the same path settle uses,
+ * so the write lands on the current Postgres or Blob book and drops the tag
+ * after a successful put. The previous stake stays on the row.
+ */
+export async function reviseStoredBetStake(request: StakeEdit): Promise<{
+  envelope: BetsStoreEnvelope;
+  backend: BetsStoreBackend;
+  deduped: boolean;
+  previousStake: string | null;
+  bet: Bet;
+}> {
+  if (!isBetsStoreConfigured()) {
+    throw new BetsStoreError(
+      "Bet store is not configured. Create a Vercel Blob store and redeploy.",
+    );
+  }
+  const loaded = await loadBetsStoreFresh();
+  const now = new Date().toISOString();
+  const current = loaded.envelope.bets.find((bet) => bet.id === request.id);
+  if (!current) {
+    throw new BetWriteError(`Unknown bet id ${request.id}.`, 404);
+  }
+  const written = reviseBetStake(current, request.stake, now);
+  if (!written.deduped) {
+    const envelope = replaceBet(loaded.envelope, written.bet, now);
+    await persistEnvelope(envelope, true);
+    return {
+      envelope,
+      backend: loaded.backend,
+      deduped: false,
+      previousStake: current.stake,
+      bet: written.bet,
+    };
+  }
+  return {
+    envelope: loaded.envelope,
+    backend: loaded.backend,
+    deduped: true,
+    previousStake: null,
+    bet: written.bet,
+  };
 }
 
 export async function postStoredBets(requests: readonly BetPost[]): Promise<{

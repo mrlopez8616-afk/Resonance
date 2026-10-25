@@ -1,8 +1,13 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { parseSettleBody } from "@/lib/bets";
-import { asBetWriteError, isBetsStoreConfigured, settleStoredBets } from "@/lib/bets-store";
+import { parseSettleBody, parseStakeBody } from "@/lib/bets";
+import {
+  asBetWriteError,
+  isBetsStoreConfigured,
+  reviseStoredBetStake,
+  settleStoredBets,
+} from "@/lib/bets-store";
 import { storageErrorJson } from "@/lib/storage-unavailable";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 
@@ -20,6 +25,37 @@ function notConfigured() {
     },
     { status: 503 },
   );
+}
+
+/** Shared writer for POST /api/bets/stake and PATCH /api/bets/stake. */
+export async function postBetStake(request: Request) {
+  const auth = authorizeSyncRequest(request);
+  if (!auth.ok) return unauthorized(auth.error);
+  if (!isBetsStoreConfigured()) return notConfigured();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "JSON body is required." }, { status: 400 });
+  }
+
+  try {
+    const written = await reviseStoredBetStake(parseStakeBody(body));
+    return NextResponse.json({
+      ok: true,
+      configured: true,
+      backend: written.backend,
+      deduped: written.deduped,
+      previousStake: written.previousStake,
+      bet: written.bet,
+      updatedAt: written.envelope.updatedAt,
+    });
+  } catch (error) {
+    const mapped = asBetWriteError(error);
+    console.error("bet stake failed", mapped.message);
+    return NextResponse.json(storageErrorJson(mapped), { status: mapped.status });
+  }
 }
 
 /** Shared writer for POST /api/bets and POST /api/bets/settle. */

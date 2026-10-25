@@ -1099,6 +1099,8 @@ describe("public render scan", () => {
       "/fights/past",
       "/fights/ufc",
       "/api/fills",
+      "/api/bets/stake",
+      "/api/deposits/void",
       "/api/spot-price",
       "/api/settings/fitness-token",
       "/api/fitness/token",

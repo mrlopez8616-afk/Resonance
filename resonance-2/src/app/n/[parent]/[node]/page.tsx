@@ -222,7 +222,7 @@ export default async function NodeDetailPage({
           {parent.label}
         </Link>
         {bankroll.ledger ? (
-          <BankrollLedgerView ledger={bankroll.ledger} />
+          <BankrollLedgerView ledger={bankroll.ledger} deposits={bankroll.deposits} />
         ) : (
           <p className="parent-empty" role="status">
             unavailable
