@@ -7,10 +7,11 @@ import { fileURLToPath } from "node:url";
 import { createElement, isValidElement, type ReactNode } from "react";
 import { newDb } from "pg-mem";
 import { NextRequest } from "next/server";
+import { POST as voidDeposit } from "@/app/api/deposits/void/route";
 import { GET } from "@/app/api/fights/bankroll/route";
 import { POST } from "@/app/api/fights/bankroll/deposit/route";
 import { computeBankroll } from "@/lib/bankroll";
-import { parseBankrollDeposit } from "@/lib/bankroll-deposits";
+import { parseBankrollDeposit, parseBankrollDepositVoid } from "@/lib/bankroll-deposits";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
 import { migrate } from "@/lib/pg/migrate";
@@ -79,6 +80,14 @@ function ledgerRequest(authorization = `Bearer ${SECRET}`) {
   });
 }
 
+function voidRequest(body: unknown, authorization = `Bearer ${SECRET}`) {
+  return new NextRequest("https://resonance3.vercel.app/api/deposits/void", {
+    method: "POST",
+    headers: { authorization, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 const DEPOSIT = {
   id: "coinbase-2026-10-18",
   date: "2026-10-18",
@@ -103,7 +112,16 @@ describe("bankroll deposit validation", () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "032_bankroll_deposits");
     assert.equal(embedded?.sql, file);
     assert.equal(file.includes("INSERT"), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "035_merge_edmonton_buckley");
+    const voidFile = readFileSync(path.join(root, "db/migrations/036_bankroll_deposit_voids.sql"), "utf8");
+    const voidEmbedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "036_bankroll_deposit_voids");
+    assert.equal(voidEmbedded?.sql, voidFile);
+    assert.equal(voidFile.includes("INSERT"), false);
+    assert.equal(/^\s*delete\b/im.test(voidFile), false);
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "036_bankroll_deposit_voids");
+    assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id }), /reason must be a string/);
+    assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id, reason: "  " }), /reason is required/);
+    assert.throws(() => parseBankrollDepositVoid({ id: "Missing", reason: "duplicate" }), /lowercase slug/);
+    assert.equal(parseBankrollDepositVoid({ id: DEPOSIT.id, reason: " duplicate " }).reason, "duplicate");
   });
 
   it("shows the deposit total in dollars and a percent with no dollar sign in public mode", async () => {
@@ -112,10 +130,39 @@ describe("bankroll deposit validation", () => {
     const privateCard = render(createElement(BankrollLedgerView, { ledger }));
     assert.match(privateCard, /Deposits/);
     assert.match(privateCard, /\+\$6\.84/);
-    const publicCard = render(createElement(BankrollLedgerView, { ledger, publicMode: true }));
+    const publicCard = render(createElement(BankrollLedgerView, {
+      ledger,
+      publicMode: true,
+      deposits: [
+        {
+          id: "coinbase-2026-10-18",
+          date: "2026-10-18",
+          amount: "6.84",
+          voidedAt: "2026-10-19T00:00:00.000Z",
+          voidReason: "duplicate",
+        },
+      ],
+    }));
     assert.match(publicCard, /Deposits/);
     assert.match(publicCard, /\+28\.62%/);
     assert.equal(publicCard.includes("$"), false);
+    assert.equal(publicCard.includes("voided"), false);
+    const privateList = render(createElement(BankrollLedgerView, {
+      ledger,
+      deposits: [
+        {
+          id: "coinbase-2026-10-18",
+          date: "2026-10-18",
+          amount: "6.84",
+          voidedAt: "2026-10-19T00:00:00.000Z",
+          voidReason: "duplicate",
+        },
+      ],
+    }));
+    assert.match(privateList, /Ledger/);
+    assert.match(privateList, /voided/);
+    assert.match(privateList, /duplicate/);
+    assert.match(privateList, /\+\$6\.84/);
   });
 });
 
@@ -195,5 +242,83 @@ describe("bankroll deposit route", { concurrency: false }, () => {
     assert.equal(closed.suggestedStake, "1.00");
     const rows = await sqlQuery<{ n: string }>(`SELECT count(*)::text AS n FROM bankroll_deposits`);
     assert.equal(String(rows[0]?.n), "1");
+  });
+
+  it("voids a deposit in place, drops it from cash, and a repeat keeps the first reason", async () => {
+    const denied = await voidDeposit(voidRequest({ id: DEPOSIT.id, reason: "duplicate" }, ""));
+    assert.equal(denied.status, 401);
+
+    const missing = await voidDeposit(voidRequest({ id: "missing-deposit", reason: "duplicate" }));
+    assert.equal(missing.status, 404);
+
+    const before = await GET(ledgerRequest());
+    assert.equal(before.status, 200);
+    const opened = (await before.json()) as { bankroll: string; cash: string; depositTotal: string };
+
+    const created = await POST(depositRequest(DEPOSIT));
+    assert.equal(created.status, 200);
+    const withdrawal = {
+      id: "coinbase-2026-10-19",
+      date: "2026-10-19",
+      amount: "-1.00",
+      note: "pull",
+    };
+    assert.equal((await POST(depositRequest(withdrawal))).status, 200);
+
+    const funded = await GET(ledgerRequest());
+    const withCash = (await funded.json()) as { cash: string; deposits: unknown[] };
+    assert.notEqual(withCash.cash, opened.cash);
+    assert.equal(withCash.deposits.length, 2);
+
+    const first = await voidDeposit(voidRequest({ id: DEPOSIT.id, reason: "duplicate transfer" }));
+    assert.equal(first.status, 200);
+    const voided = (await first.json()) as {
+      deduped: boolean;
+      deposit: {
+        voided: boolean;
+        amount: string;
+        note: string | null;
+        voidReason: string | null;
+        voidedAt: string | null;
+        date: string;
+      };
+    };
+    assert.equal(voided.deduped, false);
+    assert.equal(voided.deposit.voided, true);
+    assert.equal(voided.deposit.amount, "6.84");
+    assert.equal(voided.deposit.note, "Coinbase transfer");
+    assert.equal(voided.deposit.date, "2026-10-18");
+    assert.equal(voided.deposit.voidReason, "duplicate transfer");
+    assert.equal(typeof voided.deposit.voidedAt, "string");
+
+    const again = await voidDeposit(voidRequest({ id: DEPOSIT.id, reason: "different reason" }));
+    assert.equal(again.status, 200);
+    const repeat = (await again.json()) as typeof voided;
+    assert.equal(repeat.deduped, true);
+    assert.equal(repeat.deposit.voidedAt, voided.deposit.voidedAt);
+    assert.equal(repeat.deposit.voidReason, "duplicate transfer");
+    assert.equal(repeat.deposit.amount, "6.84");
+
+    const pulled = await voidDeposit(voidRequest({ id: withdrawal.id, reason: "wrong account" }));
+    assert.equal(pulled.status, 200);
+
+    const after = await GET(ledgerRequest());
+    const closed = (await after.json()) as typeof opened & {
+      deposits: { voided: boolean; id: string; amount: string }[];
+    };
+    assert.equal(closed.deposits.length, 2);
+    assert.equal(closed.deposits.every((row) => row.voided), true);
+    assert.equal(closed.depositTotal, opened.depositTotal);
+    assert.equal(closed.cash, opened.cash);
+    assert.equal(closed.bankroll, opened.bankroll);
+    const rows = await sqlQuery<{ n: string; amount: string; note: string | null }>(
+      `SELECT count(*)::text AS n FROM bankroll_deposits`,
+    );
+    assert.equal(String(rows[0]?.n), "2");
+    const kept = await sqlQuery<{ amount: string; note: string | null }>(
+      `SELECT amount::text AS amount, note FROM bankroll_deposits WHERE id = $1`,
+      [DEPOSIT.id],
+    );
+    assert.equal(kept[0]?.note, "Coinbase transfer");
   });
 });

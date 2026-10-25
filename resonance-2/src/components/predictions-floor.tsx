@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { PredictionsVisual } from "@/components/home-visual";
-import { formatUsd } from "@/lib/bets";
+import { formatSignedUsd, formatUsd } from "@/lib/bets";
 import { bankrollDepositLine, bankrollHomeFace, FLAT_STAKE_LABEL, type BankrollLedger } from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
 import { tileFace } from "@/lib/home-faces";
@@ -68,14 +68,24 @@ export function PredictionsFloor({
   );
 }
 
+export type BankrollDepositLine = {
+  id: string;
+  date: string;
+  amount: string;
+  voidedAt: string | null;
+  voidReason: string | null;
+};
+
 export function BankrollLedgerView({
   ledger,
+  deposits = [],
   publicMode = false,
 }: {
   ledger: BankrollLedger;
+  deposits?: readonly BankrollDepositLine[];
   publicMode?: boolean;
 }) {
-  const deposits = bankrollDepositLine(ledger, publicMode);
+  const depositLine = bankrollDepositLine(ledger, publicMode);
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -100,10 +110,10 @@ export function BankrollLedgerView({
             <dd>{ledger.cashLabel}</dd>
           </div>
         )}
-        {deposits ? (
+        {depositLine ? (
           <div>
             <dt>Deposits</dt>
-            <dd>{deposits}</dd>
+            <dd>{depositLine}</dd>
           </div>
         ) : null}
         {publicMode ? null : (
@@ -152,9 +162,31 @@ export function BankrollLedgerView({
             <p className="log-meta">Excluded from the bankroll.</p>
             <CardList cards={ledger.before} empty="No earlier cards" />
           </section>
+          <DepositList deposits={deposits} />
         </>
       )}
     </div>
+  );
+}
+
+function DepositList({ deposits }: { deposits: readonly BankrollDepositLine[] }) {
+  if (deposits.length === 0) return null;
+  return (
+    <section className="bankroll-section" aria-label="Ledger">
+      <h3>Ledger</h3>
+      <ol>
+        {deposits.map((row) => (
+          <li key={row.id}>
+            <p className="log-kicker">{formatCivilDate(row.date)}</p>
+            <p className="fight-result">
+              {formatSignedUsd(row.amount)}
+              {row.voidedAt ? " · voided" : ""}
+            </p>
+            {row.voidedAt && row.voidReason ? <p>{row.voidReason}</p> : null}
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

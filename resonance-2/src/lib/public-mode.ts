@@ -44,6 +44,7 @@ const HIDDEN_PREFIXES = [
   "/fights",
   "/api/finance",
   "/api/bets",
+  "/api/deposits",
   "/api/fills",
   "/api/sleeves",
   "/api/spot-price",

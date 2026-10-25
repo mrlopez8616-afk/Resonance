@@ -61,6 +61,42 @@ npm start
 
 `override: true` corrects an already-settled row. On a full ticket it updates that order's status, payout, and stake. A settle-shaped body (`id`, `status`, optional `payout` and `stake`, `override: true`) does the same correction on both `POST /api/bets` and `POST /api/bets/settle`. Without the flag, stake changes are rejected and a settled row is left as stored.
 
+## How to edit a stake
+
+`POST /api/bets/stake` and `PATCH /api/bets/stake` use the same Bearer as `POST /api/bets/settle`. Send one object:
+
+```json
+{ "id": "ufc-332-nolan", "stake": "2.00" }
+```
+
+`stake` is a positive finite number. A decimal string keeps at most two places (`"2.5"` is stored as `2.50`). A JSON number is accepted when it lands on a cent. Zero, a negative, and anything that is not finite are rejected. An unknown id is 404. Sending the stake already stored is a no-op.
+
+The write changes the stake only. Odds, status, payout, and settled payout stay on the row. On a settled ticket, realized P&L is recomputed with the settle formula: lost is minus the new stake, void is `0.00`, and won, sold, and draw subtract the new stake from the stored proceeds (`settledPayout`, otherwise the ticket payout). The stake that was replaced is appended to `stakeRevisions` and is not removed.
+
+```bash
+curl -sS -X POST https://resonance3.vercel.app/api/bets/stake \
+  -H "Authorization: Bearer $RESONANCE_SYNC_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"id":"ufc-332-nolan","stake":"2.00"}'
+```
+
+## How to void a deposit
+
+`POST /api/deposits/void` uses that same Bearer. Send one object:
+
+```json
+{ "id": "coinbase-2026-10-18", "reason": "duplicate transfer" }
+```
+
+The row stays. `voidedAt` and the reason are stored, the ledger lists the row as voided, and the amount leaves the bankroll and the cash total. A repeat returns the stored void and does not change the timestamp or the reason. An unknown id is 404.
+
+```bash
+curl -sS -X POST https://resonance3.vercel.app/api/deposits/void \
+  -H "Authorization: Bearer $RESONANCE_SYNC_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"id":"coinbase-2026-10-18","reason":"duplicate transfer"}'
+```
+
 The live blob (`resonance-2/bets.json`) inserts seed ids that are missing on the next read. A row already stored under that id or orderId is left alone, including a settled row. The second Coria ticket (`ufc-332-coria-2`, order `e4f0c363-fefd-4cb5-8e7c-bb695def7711`) rides that path.
 
 ```bash

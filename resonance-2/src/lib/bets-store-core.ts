@@ -171,6 +171,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Keep prior stakes on read. A bad entry is skipped. The bet itself stays. */
+function readStakeRevisions(raw: unknown): { stake: string; at: string }[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const revisions: { stake: string; at: string }[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) continue;
+    if (typeof item.stake !== "string" || !item.stake.trim()) continue;
+    if (typeof item.at !== "string" || !item.at.trim()) continue;
+    revisions.push({ stake: item.stake.trim(), at: item.at.trim() });
+  }
+  return revisions.length > 0 ? revisions : undefined;
+}
+
 function coerceBet(raw: unknown): Bet | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.id !== "string" || !BET_ID.test(raw.id)) return null;
@@ -216,6 +229,8 @@ function coerceBet(raw: unknown): Bet | null {
   if (typeof raw.note === "string" && raw.note.trim()) {
     bet.note = raw.note.trim();
   }
+  const revisions = readStakeRevisions(raw.stakeRevisions);
+  if (revisions) bet.stakeRevisions = revisions;
   if (
     typeof raw.correctionVersion === "number" &&
     Number.isInteger(raw.correctionVersion) &&

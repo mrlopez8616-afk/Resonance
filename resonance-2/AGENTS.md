@@ -39,3 +39,7 @@ VALUES ('carla', 'operator', '<argon2id phc>', '<base32>', now());
 ```
 
 This deploy still rejects that login. Read APIs call `authorizeReadRequest()`. Machine routes keep `Authorization: Bearer $RESONANCE_SYNC_SECRET`. Fitness ingest keeps `X-Fitness-Token`.
+
+`POST /api/bets/stake` and `PATCH /api/bets/stake` take `{ "id", "stake" }` with that Bearer. `stake` is a positive finite number. An unknown id is 404. The previous stake stays on `stakeRevisions`. Settled P&L is recomputed from the stored payout the same way settle does.
+
+`POST /api/deposits/void` takes `{ "id", "reason" }` with that Bearer. The row stays, marked voided, and leaves the cash total. A repeat is a no-op. An unknown id is 404.

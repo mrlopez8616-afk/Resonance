@@ -541,6 +541,7 @@ describe("login core", { concurrency: false }, () => {
         "033_fighter_careers",
         "034_sui_coinbase_balance",
         "035_merge_edmonton_buckley",
+        "036_bankroll_deposit_voids",
       ],
     );
     const ids = (await sqlQuery<{ id: string }>(`SELECT id FROM schema_migrations ORDER BY id`)).map(
@@ -600,6 +601,7 @@ describe("login core", { concurrency: false }, () => {
         "033_fighter_careers",
         "034_sui_coinbase_balance",
         "035_merge_edmonton_buckley",
+        "036_bankroll_deposit_voids",
       ],
     );
     const filled = await applyMigrations(EMBEDDED_MIGRATIONS);

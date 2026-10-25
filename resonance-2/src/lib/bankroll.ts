@@ -92,10 +92,11 @@ export type BankrollLedger = {
   before: BankrollCard[];
 };
 
-/** A stored deposit. Only date and amount move the bankroll. */
+/** A stored deposit. A voided row stays listed and does not move the bankroll. */
 export type BankrollDeposit = {
   date: string;
   amount: string;
+  voidedAt?: string | null;
 };
 
 type Tally = {
@@ -206,6 +207,7 @@ export function bankrollDepositLine(
 function inScopeDepositTotal(deposits: readonly BankrollDeposit[]): string {
   let total = "0.00";
   for (const deposit of deposits) {
+    if (typeof deposit.voidedAt === "string" && deposit.voidedAt.trim()) continue;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(deposit.date) || deposit.date < BANKROLL_AS_OF) continue;
     total = money(addDecimal(total, money(deposit.amount)));
   }
