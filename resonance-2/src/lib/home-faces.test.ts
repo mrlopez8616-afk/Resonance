@@ -383,6 +383,7 @@ describe("uniform home tiles", () => {
     const pages = [
       "src/components/node-grid.tsx",
       "src/components/build-floor.tsx",
+      "src/components/crawl-walk-run-floor.tsx",
       "src/components/finance-floor.tsx",
       "src/components/predictions-floor.tsx",
       "src/components/youtube-node.tsx",

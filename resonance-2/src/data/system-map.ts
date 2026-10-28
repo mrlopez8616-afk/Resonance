@@ -99,8 +99,12 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     label: "Build",
     href: "/n/build",
     status: "live",
-    connection: "The checklist, pull state, and the calendar build lane land here. Future Ideas is the bulletin on this node.",
-    children: [{ id: "ideas", label: "Future Ideas", href: "/n/ideas" }],
+    connection:
+      "The checklist, pull state, and the calendar build lane land here. Future Ideas is the bulletin. Crawl Walk Run tracks each capability.",
+    children: [
+      { id: "ideas", label: "Future Ideas", href: "/n/ideas" },
+      { id: "crawl-walk-run", label: "Crawl Walk Run", href: "/n/crawl-walk-run" },
+    ],
   },
   {
     id: "youtube",

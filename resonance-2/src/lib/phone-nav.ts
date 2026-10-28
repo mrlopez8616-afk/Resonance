@@ -4,6 +4,7 @@ import { navHrefShelved } from "@/lib/node-visibility";
 import { findGear, gearHref, youtubeChildLabel } from "@/lib/youtube-node";
 import { NODE_PARENT, PARENTS } from "@/data/node-parents";
 import { buildSectionLabel } from "@/lib/build-tracker";
+import { cwrGroupLabel, cwrItemLabel, CWR_HREF, groupHref, itemHref } from "@/lib/crawl-walk-run";
 
 /**
  * Phone drill-down. Back goes up exactly one level.
@@ -279,6 +280,26 @@ function catalystPhoneTrail(parts: string[]): PhoneTrail {
 
 const BRICK_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
 
+/** /n/crawl-walk-run → a group → one capability. Back goes up one level, to Build from the parent. */
+function crawlWalkRunPhoneTrail(parts: readonly string[]): PhoneTrail {
+  const build: PhoneTarget = { href: "/n/build", label: "Build" };
+  const root: PhoneTarget = { href: CWR_HREF, label: "Crawl Walk Run" };
+  if (parts.length === 2) return { back: build, crumbs: [HOME, build, root] };
+  const groupId = parts[2] ?? "";
+  const groupLabel = cwrGroupLabel(groupId);
+  if (!groupLabel) return homeTrail();
+  const group: PhoneTarget = { href: groupHref(groupId), label: groupLabel };
+  if (parts.length === 3) return { back: root, crumbs: [HOME, build, root, group] };
+  if (parts.length !== 4) return homeTrail();
+  const itemId = parts[3] ?? "";
+  const itemLabel = cwrItemLabel(groupId, itemId);
+  if (!itemLabel) return homeTrail();
+  return {
+    back: group,
+    crumbs: [HOME, build, root, group, { href: itemHref(groupId, itemId), label: itemLabel }],
+  };
+}
+
 /** /n/youtube → Channel, Gear, or Brick Tracker. Gear and bricks open one page further down. */
 function youtubePhoneTrail(parts: readonly string[]): PhoneTrail {
   const youtube: PhoneTarget = { href: "/n/youtube", label: "YouTube" };
@@ -336,6 +357,7 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     }
     if (parts[1] === "ai-stocks" && parts[2] === "catalysts") return catalystPhoneTrail(parts);
     if (parts[1] === "youtube") return youtubePhoneTrail(parts);
+    if (parts[1] === "crawl-walk-run") return crawlWalkRunPhoneTrail(parts);
     const parentId = parts[1];
     if (!parentId || parts.length > 3) return homeTrail();
     if (parentId === "ideas") {
@@ -521,13 +543,25 @@ export function phoneTabActive(href: string, pathname: string): boolean {
   const path = segments(pathname).join("/");
   const normalized = path ? `/${path}` : "/";
   if (href === "/n/build") {
-    return normalized === "/n/build" || normalized.startsWith("/n/build/") || normalized === "/n/ideas";
+    return (
+      normalized === "/n/build" ||
+      normalized.startsWith("/n/build/") ||
+      normalized === "/n/ideas" ||
+      normalized === CWR_HREF ||
+      normalized.startsWith(`${CWR_HREF}/`)
+    );
   }
   if (href === "/n/approvals") {
     return normalized === "/n/approvals" || normalized.startsWith("/n/approvals/");
   }
   if (href === "/") {
-    if (normalized === "/n/build" || normalized.startsWith("/n/build/") || normalized === "/n/ideas") {
+    if (
+      normalized === "/n/build" ||
+      normalized.startsWith("/n/build/") ||
+      normalized === "/n/ideas" ||
+      normalized === CWR_HREF ||
+      normalized.startsWith(`${CWR_HREF}/`)
+    ) {
       return false;
     }
     if (normalized === "/n/approvals" || normalized.startsWith("/n/approvals/")) return false;

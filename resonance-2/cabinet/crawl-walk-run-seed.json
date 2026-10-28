@@ -1,0 +1,1135 @@
+{
+  "version": 1,
+  "updated": "2026-10-28",
+  "groups": [
+    {
+      "id": "built",
+      "label": "Built",
+      "blurb": "A floor page or a recorded rule already exists."
+    },
+    {
+      "id": "planned",
+      "label": "Planned",
+      "blurb": "Named as later work. No page for it yet."
+    },
+    {
+      "id": "recommended",
+      "label": "Recommended",
+      "blurb": "Hub recommendations. Not queued to build."
+    }
+  ],
+  "items": [
+    {
+      "id": "youtube",
+      "group": "built",
+      "title": "YouTube",
+      "glyph": "youtube",
+      "stage": "crawl",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: trim a desktop file together",
+      "sort": 10,
+      "crawl": "Channel and assets ready.",
+      "walk": "Sophia trims videos from the founder's desktop file and they write metadata together.",
+      "run": "YouTube Analytics API node + upload API posting unlisted drafts.",
+      "more": "The node has Channel, Gear, and Brick Tracker. Channel stats read not connected. Gear is the launch-plan list. Brick Tracker can mark an episode and does not upload. The trim pass and the analytics plus unlisted-draft upload are still open.",
+      "phases": [
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "Sophia trims one video from the founder's desktop file, they write the metadata together, and that pass is recorded on this node."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A YouTube Analytics API feed fills the channel stats, and an upload API posts an unlisted draft."
+        }
+      ],
+      "evidence": "Gear is seeded from the launch plan. youtube-node.ts says no YouTube Data API or Analytics connection exists, and the system map says channel stats are not connected. No trim workflow and no upload API are in the repo, so the stage stays Crawl.",
+      "sources": [
+        "src/lib/youtube-node.ts",
+        "src/data/youtube-gear.ts",
+        "src/data/system-map.ts",
+        "cabinet/youtube-bricks.md"
+      ]
+    },
+    {
+      "id": "site-health",
+      "group": "built",
+      "title": "Site health",
+      "glyph": "health",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: self-healing alerts",
+      "sort": 20,
+      "crawl": "The founder spots breaks.",
+      "walk": "A 3x-daily Architect sweep is live (9 AM, 1 PM, and 6 PM CT).",
+      "run": "Self-healing alerts.",
+      "more": "The sweep is the current stage. What remains is an alert that fires, and a fix that lands, before a person opens the broken tile.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A self-healing alert fires and a fix lands before a person opens the broken tile."
+        }
+      ],
+      "evidence": "LL-048 records the founder finding a broken Fight Desk tile and names the 3x-daily Architect sweep. The operator records that sweep as live. This repo has the lesson and the tile fix. It does not contain a self-healing alert, so the stage stays Walk.",
+      "sources": [
+        "cabinet/lessons-seed.json",
+        "src/lib/home-faces.ts"
+      ]
+    },
+    {
+      "id": "fitness",
+      "group": "built",
+      "title": "Fitness",
+      "glyph": "fitness",
+      "stage": "crawl",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: the phone posts on its own",
+      "sort": 30,
+      "crawl": "Steps, runs, lifting, heart, and a manual import render after the phone posts them.",
+      "walk": "The phone posts on its own and the week and month story stays current without a manual import.",
+      "run": "Health Auto Export posts with no shortcut to maintain, and the node is back on the home floor.",
+      "more": "The ingest route and the five child pages exist. The node is shelved off the home floor. Auto-sync is still a Future Idea, and the original build row left the founder shortcut step open, so the stage stays Crawl.",
+      "phases": [
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "A full week of steps and runs arrives from the phone with no manual import on the node."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "Health Auto Export posts on its own, and fitness is restored to the home floor."
+        }
+      ],
+      "evidence": "FITNESS_NODES lists steps, runs, lifting, heart, and manual import. Ingest is the shortcut route. SHELVED_NODES still hides fitness. Future Ideas still has fitness-auto-sync as an idea. The build seed left the founder shortcut step undone.",
+      "sources": [
+        "src/lib/fitness-board.ts",
+        "src/lib/node-visibility.ts",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "fight-desk",
+      "group": "built",
+      "title": "Fight Desk",
+      "glyph": "fight-desk",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: the next card arrives on its own",
+      "sort": 40,
+      "crawl": "Recorded bets, the card, and the Bankroll page are on the desk.",
+      "walk": "Bout order, breakdowns, and a posted result settle on the desk, and the home tile keeps a live book when the deposit read fails.",
+      "run": "The next card arrives and settles from a recorded result without a hand-built file.",
+      "more": "Tiers, fighters, and the contender series are on the desk. Settlement still starts from a posted result. A hand-built card file is still how a new event lands.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A new event card appears from a recorded source, and a posted result settles it, with no hand-built file."
+        }
+      ],
+      "evidence": "Fight pages, bout order, breakdowns, and settle scripts are in the repo. The home face keeps the bet record when deposits are missing. Nothing here ingests the next card on its own.",
+      "sources": [
+        "src/app/fights/page.tsx",
+        "src/lib/home-faces.ts",
+        "cabinet/fight-breakdowns.md",
+        "scripts/settle-bet.ts"
+      ]
+    },
+    {
+      "id": "finance",
+      "group": "built",
+      "title": "Finance",
+      "glyph": "finance",
+      "stage": "crawl",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: a posted snapshot",
+      "sort": 50,
+      "crawl": "Five encrypted cards exist and stay empty until Finance Desk posts a snapshot.",
+      "walk": "A snapshot is on the node, and a snapshot older than two days is marked stale.",
+      "run": "The connector refreshes without a hand-posted snapshot, and the fees card raises an alert from that refresh.",
+      "more": "The cards are Cash Flow, Bills and Subscriptions, Debt, Net Worth, and Fees and Alerts. The empty line is still no snapshot yet. The original build row left the first snapshot open. This node prints no money figures.",
+      "phases": [
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "Finance Desk posts one encrypted snapshot, and the cards show it until it is older than two days."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A later snapshot arrives without a hand post, and the fees card raises an alert from that refresh."
+        }
+      ],
+      "evidence": "FINANCE_NODES lists the five cards. The empty line is no snapshot yet. Stale is two days. The build seed left the first snapshot step undone. No snapshot post is evidenced in this repo, so the stage stays Crawl.",
+      "sources": [
+        "src/lib/finance/view.ts",
+        "src/data/system-map.ts",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "xrp-tracker",
+      "group": "built",
+      "title": "XRP tracker",
+      "glyph": "crypto",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: record the founder's go",
+      "sort": 60,
+      "crawl": "A live price and the sleeve rows render on the XRP face.",
+      "walk": "Posted fills and lots update the face, and the read-only trigger watch counts completed daily closes without trading.",
+      "run": "The trigger can record the founder's go and hand a proposal to Approvals. It still does not trade from this node.",
+      "more": "Founder's go is hard-coded to not given. There is no switch that can record a go. The line the founder set stays on the trigger page and is not repeated here.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The founder records a go on the trigger, and that go becomes an Approvals proposal. The node still does not trade."
+        }
+      ],
+      "evidence": "The live face, sleeve prints, lots, and the read-only trigger page are in the repo. XRP_TRIGGER_FOUNDER_GO is not given, and the module says there is no switch. The stage stays Walk.",
+      "sources": [
+        "src/lib/xrp-trigger.ts",
+        "src/lib/live-face.ts",
+        "cabinet/xrp-face.md"
+      ]
+    },
+    {
+      "id": "sui-tracker",
+      "group": "built",
+      "title": "SUI tracker",
+      "glyph": "crypto",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a live wallet read",
+      "sort": 70,
+      "crawl": "A live price and the sleeve rows render on the SUI face.",
+      "walk": "Posted fills and transfers update the sleeve print, including a transfer that is not a trade.",
+      "run": "A live wallet read replaces the sleeve print when spendable units are actually readable.",
+      "more": "The cabinet note still says to keep the sleeve print until a server-side connector can read spendable units. That connector is not in the repo.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A server-side wallet read replaces the sleeve print when spendable units are readable."
+        }
+      ],
+      "evidence": "The shared live face, fill ingest, and the internal-transfer migration are in the repo. sui-face.md still treats a live wallet read as later work. The stage stays Walk.",
+      "sources": [
+        "cabinet/sui-face.md",
+        "src/lib/live-face.ts",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "ai-stocks",
+      "group": "built",
+      "title": "AI Stocks",
+      "glyph": "ai-stocks",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: catalysts arrive without a hand post",
+      "sort": 80,
+      "crawl": "The eight names render a live price.",
+      "walk": "Child pages, lots, and a catalyst calendar read stored events.",
+      "run": "A catalyst row arrives without a hand-posted event.",
+      "more": "ETN and HUBB are retired. The calendar build lane and posted events feed the catalyst pages. Nothing in the repo creates the next catalyst by itself.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A catalyst row appears on the calendar from a recorded source, with no hand-posted event."
+        }
+      ],
+      "evidence": "The eight child pages, lots, and the catalyst calendar routes are in the repo. Catalyst buckets read stored calendar events. The stage stays Walk.",
+      "sources": [
+        "src/data/system-map.ts",
+        "src/lib/catalyst-calendar.ts",
+        "src/app/n/ai-stocks/catalysts/page.tsx"
+      ]
+    },
+    {
+      "id": "operator-floor",
+      "group": "built",
+      "title": "Operator floor",
+      "glyph": "build",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: every child uses the same face",
+      "sort": 90,
+      "crawl": "The home floor shows parent cards only.",
+      "walk": "A parent page shows child cards, details sit one level down, and back goes up one level.",
+      "run": "Every child uses the shared geometric face, including fitness.",
+      "more": "Home, Build, YouTube, and the value nodes use the shared face. The fitness grid still uses the older square. Chart time range on the value pages is already shipped.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The fitness grid uses the same geometric face as the other nodes."
+        }
+      ],
+      "evidence": "Home is parent cards. NodeFace is the shared face. The fitness grid test still expects the older square, so the stage stays Walk.",
+      "sources": [
+        "src/components/node-face.tsx",
+        "src/components/fitness-grid.tsx",
+        "src/lib/home-faces.test.ts"
+      ]
+    },
+    {
+      "id": "login",
+      "group": "built",
+      "title": "Login",
+      "glyph": "system",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a passkey is the usual sign-in",
+      "sort": 100,
+      "crawl": "A password gate locks the site.",
+      "walk": "A password plus a 6-digit authenticator code opens a 30-day sliding session.",
+      "run": "A passkey is the usual sign-in, not only an optional setting.",
+      "more": "Passkeys can be registered on the Security page and are not offered after sign-in. Only one username can sign in. A second person is a database row this deploy still rejects.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "Sign-in offers a registered passkey first, and the password plus code remains the fallback."
+        }
+      ],
+      "evidence": "The session is password plus authenticator code. Passkey routes exist and the floor rules say they are optional and not offered after sign-in. The stage stays Walk.",
+      "sources": [
+        "src/lib/auth-session.ts",
+        "src/lib/auth-passkey.ts",
+        "AGENTS.md"
+      ]
+    },
+    {
+      "id": "public-mode",
+      "group": "built",
+      "title": "Public mode",
+      "glyph": "system",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: shared screens default to public",
+      "sort": 110,
+      "crawl": "An owner toggle exists for a shared screen.",
+      "walk": "The server strips money figures and hides private routes before the page renders.",
+      "run": "A shared screen is public by default, and a new page fails the build when it is missing from that scan.",
+      "more": "The scan already walks the page list and rejects money figures. Public is still a toggle, not the default, and a new page has to be added to that list by hand.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A shared screen opens in public mode unless the owner switches it, and a page missing from the scan fails the build."
+        }
+      ],
+      "evidence": "Public mode strips money text on the server and hides private routes. The suite walks the page files. The default screen is still private, so the stage stays Walk.",
+      "sources": [
+        "src/lib/public-mode.ts",
+        "src/lib/public-mode.test.ts"
+      ]
+    },
+    {
+      "id": "build-tracker",
+      "group": "built",
+      "title": "Build Tracker",
+      "glyph": "build",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: prod checks flip the last step",
+      "sort": 120,
+      "crawl": "A written checklist of build items.",
+      "walk": "Items live in the store, the percent is how many steps are done, and GitHub can mark the pull-request steps.",
+      "run": "Verified on prod flips from a recorded production check, not a hand patch.",
+      "more": "The cabinet still shows verified-on-prod as a hand patch. GitHub is cached and is skipped when it does not answer.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A recorded production check marks verified on prod, with no hand patch."
+        }
+      ],
+      "evidence": "The Build page, the items API, and the GitHub step update are in the repo. The cabinet note still tells the hub to patch verified-on-prod by hand. The stage stays Walk.",
+      "sources": [
+        "src/lib/build-tracker.ts",
+        "cabinet/build-tracker.md"
+      ]
+    },
+    {
+      "id": "lessons",
+      "group": "built",
+      "title": "Lessons",
+      "glyph": "lessons",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a live item needs a lesson",
+      "sort": 130,
+      "crawl": "A written log of what changed and why.",
+      "walk": "The floor reads stored lessons, and public mode keeps only public-safe rows.",
+      "run": "A build item cannot be marked live without a linked lesson.",
+      "more": "The versioned seed is posted into the store. The site does not refuse a live build item that has no lesson.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "Marking a build item live fails when no lesson points at that item."
+        }
+      ],
+      "evidence": "The lessons page, the store, and the public-safe filter are in the repo. No check ties a live build item to a lesson. The stage stays Walk.",
+      "sources": [
+        "src/lib/lessons.ts",
+        "cabinet/lessons.md",
+        "cabinet/lessons-seed.json"
+      ]
+    },
+    {
+      "id": "system-map",
+      "group": "built",
+      "title": "System map",
+      "glyph": "system",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: every lens follows a live signal",
+      "sort": 140,
+      "crawl": "A written map of nodes, flow, sources, agents, and governance.",
+      "walk": "One map file paints those lenses, the links resolve, and the live page pulses on a real event.",
+      "run": "Every lens is driven by runtime signals, not only a pulse on top of the static file.",
+      "more": "The live page says a pulse follows a real event. The lenses themselves still read the static map.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "Nodes, flow, sources, agents, and governance each move from a runtime signal, not only from the static file."
+        }
+      ],
+      "evidence": "system-map.ts is the source for /n/system. /n/system/live pulses on a real event. The lenses are still the static file, so the stage stays Walk.",
+      "sources": [
+        "src/data/system-map.ts",
+        "src/app/n/system/live/page.tsx"
+      ]
+    },
+    {
+      "id": "operator-log",
+      "group": "built",
+      "title": "Operator log",
+      "glyph": "build",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: venues post their own fills",
+      "sort": 150,
+      "crawl": "Posted fills show on the log.",
+      "walk": "A posted fill dedupes on the order id and can update a sleeve print.",
+      "run": "Each venue posts its own fills with no hand-built payload.",
+      "more": "The floor does not poll the brokers. Robinhood and Coinbase rows arrive when an agent posts them. The named order-id dedupe is in the migrations.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A venue posts its own fills on the ingest route, with no hand-built payload."
+        }
+      ],
+      "evidence": "The log, the ingest route, and the order-id dedupe migrations are in the repo. The system map says the floor does not poll the brokers. The stage stays Walk.",
+      "sources": [
+        "cabinet/fill-ingest.md",
+        "src/data/system-map.ts",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "approvals",
+      "group": "built",
+      "title": "Approvals",
+      "glyph": "control",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a decision only happens on the phone",
+      "sort": 160,
+      "crawl": "A list of requests.",
+      "walk": "Pending and done are separate views, and a decision is stored without moving money.",
+      "run": "A decision can be recorded only on the phone.",
+      "more": "The write route still accepts the server secret, so a decision is not limited to the phone. Approving does not place a trade.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A decision is refused unless it is recorded from the phone."
+        }
+      ],
+      "evidence": "The approvals pages and the decision table are in the repo. The migration says approving does not move money. A machine route can still write. The stage stays Walk.",
+      "sources": [
+        "src/app/n/approvals/page.tsx",
+        "src/lib/pg/embedded-migrations.ts",
+        "cabinet/approvals.md"
+      ]
+    },
+    {
+      "id": "control-room",
+      "group": "built",
+      "title": "Control Room",
+      "glyph": "control",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a stale signal pages the owner",
+      "sort": 170,
+      "crawl": "A status board of agents and feeds.",
+      "walk": "Approvals, bots, and feeds score from stored signals.",
+      "run": "A stale signal pages the owner by itself.",
+      "more": "The room reads the latest stored times. It does not send a page when a signal goes stale.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A stale bot or feed signal pages the owner without someone opening the room."
+        }
+      ],
+      "evidence": "The control room scores approvals, bots, and feeds from stored signals. No paging path is in the repo. The stage stays Walk.",
+      "sources": [
+        "src/lib/control-room.ts",
+        "src/app/n/control/page.tsx"
+      ]
+    },
+    {
+      "id": "calendar",
+      "group": "built",
+      "title": "Calendar",
+      "glyph": "system",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: the brief writes itself",
+      "sort": 180,
+      "crawl": "A calendar page of stored events.",
+      "walk": "The build lane posts a row when a pull request changes, and a day page opens one event.",
+      "run": "The daily brief writes itself on its cadence, with no backfill script.",
+      "more": "A backfill script is still in the repo. The workflow posts the build lane. The brief scripts are hand runs.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The daily brief posts on its cadence, and the backfill script is no longer how a missed day lands."
+        }
+      ],
+      "evidence": "The calendar pages exist. The GitHub Actions workflow posts a build row. post-daily-brief.ts and a backfill script are still hand runs, so the stage stays Walk.",
+      "sources": [
+        ".github/workflows/calendar-build.yml",
+        "scripts/post-daily-brief.ts",
+        "src/app/calendar/page.tsx"
+      ]
+    },
+    {
+      "id": "chain-security",
+      "group": "built",
+      "title": "Chain Security",
+      "glyph": "chain-security",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: a weekly post updates a row",
+      "sort": 190,
+      "crawl": "A written incident list.",
+      "walk": "The floor reads stored incidents and the exposure watches.",
+      "run": "A weekly post updates a row without a hand-edited seed.",
+      "more": "The migration says an id is the slug a weekly post updates. The poster is not in this repo. Loss figures stay off this node.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A weekly post updates one incident row, and the seed file is not edited to do it."
+        }
+      ],
+      "evidence": "The chain security page reads stored incidents. The migration describes a weekly post and does not include that poster. The stage stays Walk.",
+      "sources": [
+        "src/app/n/chain-security/page.tsx",
+        "cabinet/chain-security.md",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "roundtable",
+      "group": "built",
+      "title": "Roundtable",
+      "glyph": "roundtable",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a channel audience shows on the floor",
+      "sort": 200,
+      "crawl": "An agent can post a thread the founder can read.",
+      "walk": "The founder can reply, and the thread stays stored.",
+      "run": "A channel-audience thread shows on the floor and can feed the YouTube node.",
+      "more": "The table allows a youtube audience. The migration says the floor does not show that audience yet.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A thread marked for the channel is visible on the floor and linked from the YouTube node."
+        }
+      ],
+      "evidence": "Threads and founder replies are in the roundtable tables and pages. The migration says the floor does not show the youtube audience yet. The stage stays Walk.",
+      "sources": [
+        "src/app/n/roundtable/page.tsx",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "machine-health",
+      "group": "built",
+      "title": "Health of the Machine",
+      "glyph": "health",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: a falling score opens site health",
+      "sort": 210,
+      "crawl": "A score page.",
+      "walk": "Allocation, growth, feeds, build, and agents score from data the page already loaded.",
+      "run": "A falling score opens a site-health item by itself.",
+      "more": "The Future Ideas row for this page is marked done. The scores do not open the site-health sweep.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A falling score creates a site-health item without someone opening the score page."
+        }
+      ],
+      "evidence": "The health page scores allocation, growth, feeds, build, and agents. The future-idea seed says it shipped. Nothing opens a site-health item from a falling score. The stage stays Walk.",
+      "sources": [
+        "src/lib/machine-health.ts",
+        "src/app/n/health/page.tsx",
+        "src/lib/future-ideas.ts"
+      ]
+    },
+    {
+      "id": "factory-floor",
+      "group": "built",
+      "title": "Factory Floor",
+      "glyph": "build",
+      "stage": "walk",
+      "stageMet": true,
+      "confidence": "recorded",
+      "statusLine": "Next: the redesign replaces this wall",
+      "sort": 220,
+      "crawl": "A TV route.",
+      "walk": "The wall paints the live floor and polls for a newer picture.",
+      "run": "The redesign replaces this wall.",
+      "more": "The wall is public-only and checks itself before render. A separate Future Idea asks for a redesign and does not describe it.",
+      "phases": [
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The redesign is the wall on /tv, and the current wall is retired."
+        }
+      ],
+      "evidence": "/tv loads the factory floor and the runtime polls. The redesign is still an empty Future Idea. The stage stays Walk.",
+      "sources": [
+        "src/app/tv/page.tsx",
+        "src/lib/tv-wake.ts",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "pwa",
+      "group": "built",
+      "title": "Installable phone app",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: install recorded on a phone",
+      "sort": 230,
+      "crawl": "A manifest and a service worker the phone can install.",
+      "walk": "An install is recorded on a phone, and the Security page can show the fitness sync key.",
+      "run": "That install is verified in production, and the shortcut posts from it.",
+      "more": "The original build row left verified-on-prod open and named the iPhone install as the next step. This repo does not record that install, so the stage stays Crawl.",
+      "phases": [
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "A phone install is recorded, and the Security page shows the fitness sync key for that install."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The install is verified in production, and the shortcut posts from that install."
+        }
+      ],
+      "evidence": "manifest.ts and the service worker exist. The build seed left verified-on-prod false and the next step as an iPhone install. No install record is in the repo, so the stage stays Crawl.",
+      "sources": [
+        "src/app/manifest.ts",
+        "src/components/service-worker-register.tsx",
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "hold-order",
+      "group": "built",
+      "title": "Hold order",
+      "glyph": "system",
+      "stage": "crawl",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: an unapproved fill is refused",
+      "sort": 240,
+      "crawl": "The rule is written: no trades without the owner's yes.",
+      "walk": "A fill with no recorded yes is refused.",
+      "run": "A venue refuses the same trade before it can be posted here.",
+      "more": "Approvals can record a yes, and that yes does not place the trade. The ingest path does not check an approval row.",
+      "phases": [
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "The ingest route refuses a fill that has no recorded yes."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The venue refuses that trade before a payload can be posted here."
+        }
+      ],
+      "evidence": "Governance on the system map states the hold order. Fill ingest does not look up an approval. The stage stays Crawl.",
+      "sources": [
+        "src/data/system-map.ts",
+        "cabinet/fill-ingest.md"
+      ]
+    },
+    {
+      "id": "floor-sync",
+      "group": "planned",
+      "title": "Floor sync across devices",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "recorded",
+      "statusLine": "Not started",
+      "sort": 10,
+      "crawl": "Hidden nodes follow the account, not one browser.",
+      "walk": "Add and delete on one phone show on the other.",
+      "run": "The same hidden set paints the TV wall and the phone.",
+      "more": "The cabinet names this as the next brick and says not to delete data files when a square is hidden. Hidden ids still sit in local storage.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "The hidden-id list is stored for the account, and a second browser reads that list."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "Hiding a square on one phone hides it on the other without a reload by hand."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The TV wall and the phone paint the same hidden set."
+        }
+      ],
+      "evidence": "floor-nodes.md says a cross-device sync would replace the localStorage list, and not to start that by deleting files. The list is still localStorage. Crawl is not crossed.",
+      "sources": [
+        "cabinet/floor-nodes.md",
+        "src/lib/floor-registry.ts"
+      ]
+    },
+    {
+      "id": "per-node-daily-buy",
+      "group": "planned",
+      "title": "Per-node daily buy",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "conservative",
+      "statusLine": "Not started",
+      "sort": 20,
+      "crawl": "A recorded plan for a daily buy on each node, and no order is placed.",
+      "walk": "One node can preview a buy that still waits for the owner's yes.",
+      "run": "The daily buy runs only after cash is steady, and each order still needs the owner's yes.",
+      "more": "Future Ideas marks this someday. The figure in that note is left off this node. Nothing here places an order.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "The plan is a build item with the hold order attached, and no order is placed."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "One node shows a preview that cannot be sent until the owner says yes."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The daily buy runs only after cash is recorded as steady, and each order still needs the owner's yes."
+        }
+      ],
+      "evidence": "Future Ideas id per-node-dca is status someday. No preview and no order path exist in the repo. The money figure from that note is omitted here. Crawl is not crossed.",
+      "sources": [
+        "src/lib/future-ideas.ts"
+      ]
+    },
+    {
+      "id": "driving-tracker",
+      "group": "recommended",
+      "title": "Driving tracker",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "recorded",
+      "statusLine": "Not started",
+      "sort": 10,
+      "crawl": "A node that records a drive.",
+      "walk": "Drives list on the floor from a posted log.",
+      "run": "The log posts from the phone without a typed entry.",
+      "more": "The Future Ideas note is only that it tracks driving. No page and no log exist.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "One drive can be recorded on a node, and the list shows that drive."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "A posted log fills the list without editing the page by hand."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The phone posts a drive with no typed entry."
+        }
+      ],
+      "evidence": "Future Ideas id driving-tracker is an idea: a node that tracks driving. No route exists. Crawl is not crossed.",
+      "sources": [
+        "src/lib/future-ideas.ts"
+      ]
+    },
+    {
+      "id": "resonance-shell",
+      "group": "recommended",
+      "title": "Resonance shell",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "recorded",
+      "statusLine": "Not started",
+      "sort": 20,
+      "crawl": "A page mirrors the nodes, says adopt or stay, and says it is not financial advice.",
+      "walk": "A reader can see that mirror without private figures.",
+      "run": "The mastermind bridge in the note is still only a note, and the page stays a mirror.",
+      "more": "The idea names a membership product and a possible bridge to the Jake Claver mastermind. It is not queued to build.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "A page mirrors the nodes, offers adopt or stay, and states that it is not financial advice."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "That page renders in public mode with no private figures."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The mastermind bridge stays a written note, and the page does not take a payment."
+        }
+      ],
+      "evidence": "Future Ideas id resonance-shell is an idea. No shell page exists. Crawl is not crossed.",
+      "sources": [
+        "src/lib/future-ideas.ts"
+      ]
+    },
+    {
+      "id": "resonance-world",
+      "group": "recommended",
+      "title": "Resonance world",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "recorded",
+      "statusLine": "Not started",
+      "sort": 30,
+      "crawl": "A sketch of agents as characters, and it is not queued to build.",
+      "walk": "The founder character can be moved on a private board.",
+      "run": "The board reads live node state.",
+      "more": "The note says brainstorm only. No board exists.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "A private sketch names the agents as characters and says it is not queued."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "The founder character can be moved on that board."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The board reads live node state and invents none of it."
+        }
+      ],
+      "evidence": "Future Ideas id resonance-world is an idea and says it is not queued to build. No board exists. Crawl is not crossed.",
+      "sources": [
+        "src/lib/future-ideas.ts"
+      ]
+    },
+    {
+      "id": "own-apps",
+      "group": "recommended",
+      "title": "Own apps",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "conservative",
+      "statusLine": "Not started",
+      "sort": 40,
+      "crawl": "One Resonance app that is not this website.",
+      "walk": "That app reads the same session.",
+      "run": "The app ships on its own cadence from this floor.",
+      "more": "The Future Ideas note is only that these are Resonance's own apps. No app is named.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "One named app exists outside this website, and this node links to it."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "That app reads the same session."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The app ships on its own cadence, recorded from this floor."
+        }
+      ],
+      "evidence": "Future Ideas id own-apps is an idea with no further note. No app is named in the repo. Crawl is not crossed.",
+      "sources": [
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "mastermind",
+      "group": "recommended",
+      "title": "Mastermind",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "recorded",
+      "statusLine": "Not started",
+      "sort": 50,
+      "crawl": "A written offer frames the floor as a mirror to follow, not financial advice.",
+      "walk": "A member can see meetings and events on the calendar.",
+      "run": "A subscription makes the buyer a member, and the price stays off this node.",
+      "more": "The idea describes meetings and events with the founder. No offer page and no member list exist.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "A page states the mirror, the meetings, and that it is not financial advice."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "Meetings and events for members show on the calendar."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A subscription records a member, and no price is shown on this node."
+        }
+      ],
+      "evidence": "Future Ideas id mastermind is an idea. No offer page exists. Crawl is not crossed.",
+      "sources": [
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "nuevo-arcabuz",
+      "group": "recommended",
+      "title": "Nuevo Arcabuz",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "recorded",
+      "statusLine": "Not started",
+      "sort": 60,
+      "crawl": "A founding book and a charter exist as documents.",
+      "walk": "The living record is a node.",
+      "run": "The endowment, the building, and the successors are on that record.",
+      "more": "The idea names a building, Saturday dances, scholarships, elder care, and an eventual income floor for about 1,500 people. None of those pieces are a page in this repo.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "The founding book and the charter are stored documents this node can open."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "The living record is a node with those documents linked."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The endowment, the building, and the successors are rows on that record."
+        }
+      ],
+      "evidence": "Future Ideas id nuevo-arcabuz is an idea owned by the Nuevo Arcabuz agent in the note. No documents are in this repo. Crawl is not crossed.",
+      "sources": [
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "factory-floor-redesign",
+      "group": "recommended",
+      "title": "Factory Floor redesign",
+      "glyph": "build",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "conservative",
+      "statusLine": "Not started",
+      "sort": 70,
+      "crawl": "A written redesign of the TV wall.",
+      "walk": "The new wall replaces the current one.",
+      "run": "The new wall is the screen people use.",
+      "more": "The Future Ideas note is empty. The current wall stays the built Factory Floor item.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "A written redesign says what changes on /tv."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "That redesign is the wall on /tv."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "The old wall is retired, and this one is the screen in use."
+        }
+      ],
+      "evidence": "Future Ideas id factory-floor-redesign is an idea with an empty note. No redesign spec is in the repo. Crawl is not crossed.",
+      "sources": [
+        "src/lib/pg/embedded-migrations.ts"
+      ]
+    },
+    {
+      "id": "on-chain-mirror",
+      "group": "recommended",
+      "title": "On-chain mirror",
+      "glyph": "chain-security",
+      "stage": "crawl",
+      "stageMet": false,
+      "confidence": "conservative",
+      "statusLine": "Not started",
+      "sort": 80,
+      "crawl": "The log already records a proposal, a why, who authorized it, and the outcome.",
+      "walk": "A testnet stamp can be attached to a decision the founder already made.",
+      "run": "A new decision can be mirrored without redesigning the log.",
+      "more": "The lesson says key decisions got testnet stamps in the early playbook. This repo has the Web2 log and no stamp writer. The stage is not moved up on that history alone.",
+      "phases": [
+        {
+          "id": "enter-crawl",
+          "to": "crawl",
+          "label": "Into Crawl",
+          "line": "A decision row on this floor carries the proposal, the why, who authorized it, and the outcome."
+        },
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "A testnet stamp can be attached to a decision the founder already made."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "A new decision is mirrored with those same fields, and the log is not redesigned to do it."
+        }
+      ],
+      "evidence": "LL-006 records the chain-mimic rule and early testnet stamps. This repo has no stamp writer. Crawl on this floor is not crossed.",
+      "sources": [
+        "cabinet/lessons-seed.json"
+      ]
+    }
+  ]
+}

@@ -40,6 +40,7 @@ export function systemRouteResolves(href: string): boolean {
   if (href === "/n/youtube/gear") return appPage("n/youtube/gear");
   if (href === "/n/youtube/bricks") return appPage("n/youtube/bricks");
   if (href === "/n/ideas") return appPage("n/ideas");
+  if (href === "/n/crawl-walk-run") return appPage("n/crawl-walk-run");
   const parent = /^\/n\/([a-z0-9-]+)$/.exec(href);
   if (parent) return appPage("n/[parent]") && parentById(parent[1]) !== null;
   const child = /^\/n\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(href);
