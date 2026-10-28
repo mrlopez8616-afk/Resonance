@@ -313,10 +313,12 @@ describe("lessons api", { concurrency: false }, () => {
     for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
     for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
     assert.equal(await countLessons(), 1);
-    const rows = await sqlQuery<{ lesson: string; date: string }>(
-      `SELECT lesson, "date"::text AS date FROM lessons WHERE id = 'LL-048'`,
+    const rows = await sqlQuery<{ lesson: string; date: Date | string }>(
+      `SELECT lesson, "date" FROM lessons WHERE id = 'LL-048'`,
     );
-    assert.equal(String(rows[0]?.date).slice(0, 10), "2026-10-27");
+    const storedDay = rows[0]?.date;
+    const day = storedDay instanceof Date ? storedDay.toISOString().slice(0, 10) : String(storedDay ?? "").slice(0, 10);
+    assert.equal(day, "2026-10-27");
     await sqlQuery(`UPDATE lessons SET lesson = 'edited' WHERE id = 'LL-048'`);
     for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
     const kept = await sqlQuery<{ lesson: string }>(`SELECT lesson FROM lessons WHERE id = 'LL-048'`);
