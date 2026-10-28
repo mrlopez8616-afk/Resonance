@@ -40,7 +40,7 @@ import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { rollupHoldingBooks } from "@/lib/position-lots";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { loadCryptoCloses, loadEquityCloses, loadXrpTriggerCloses } from "@/lib/price-history";
+import { loadCryptoCloses, loadEquityCloses, loadXrpTriggerCloses, xrpTriggerAgeLabel } from "@/lib/price-history";
 import { evaluateXrpTrigger } from "@/lib/xrp-trigger";
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
@@ -110,7 +110,11 @@ export default async function ParentNodePage({
       const safeCatalyst = catalyst && !hasMoneyText(catalyst) ? catalyst : null;
       const trigger =
         parent.id === "crypto" ? (
-          <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], now)} publicMode />
+          <XrpTriggerCard
+            view={evaluateXrpTrigger(triggerCloses ?? [], now)}
+            publicMode
+            staleLabel={triggerCloses ? xrpTriggerAgeLabel(now) : null}
+          />
         ) : null;
       return (
         <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
@@ -251,13 +255,13 @@ export default async function ParentNodePage({
   ]);
   const retiring =
     parent.id === "ai-stocks" ? retiringHeldLine(retiringHeldTickers(floor.sleeves)) : null;
+  const now = new Date();
   const cards = Object.fromEntries(
-    Object.entries(floor.faces).map(([ticker, face]) => [ticker, valueCardFromFace(face)]),
+    Object.entries(floor.faces).map(([ticker, face]) => [ticker, valueCardFromFace(face, now)]),
   );
   const heldUsd = Object.fromEntries(
     Object.entries(floor.faces).map(([ticker, face]) => [ticker, face.totalUsd]),
   );
-  const now = new Date();
   const events = calendar?.events ?? [];
   const childCards: Record<string, ChildCardModel> = {};
   if (parent.id === "crypto") {
@@ -322,7 +326,11 @@ export default async function ParentNodePage({
         childCards={childParent ? childCards : undefined}
         extra={
           parent.id === "crypto" ? (
-            <XrpTriggerCard view={evaluateXrpTrigger(triggerCloses ?? [], now)} publicMode={false} />
+            <XrpTriggerCard
+              view={evaluateXrpTrigger(triggerCloses ?? [], now)}
+              publicMode={false}
+              staleLabel={triggerCloses ? xrpTriggerAgeLabel(now) : null}
+            />
           ) : null
         }
       />

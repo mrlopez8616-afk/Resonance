@@ -799,6 +799,21 @@ WHERE NOT EXISTS (
 );
 `;
 
+export const MARKET_QUOTES_SQL = `-- Last good public market quote. Number 040.
+-- 039 inserted the health-route lesson. This file creates one table.
+-- It inserts no rows and does not change positions, fills, or balances.
+-- cache_key is spot:XRP or chart:XRP:365. payload is the feed print.
+
+CREATE TABLE IF NOT EXISTS market_quotes (
+  cache_key text PRIMARY KEY,
+  source text NOT NULL,
+  fetched_at timestamptz NOT NULL,
+  payload jsonb NOT NULL,
+  CONSTRAINT market_quotes_key_chk CHECK (cache_key <> ''),
+  CONSTRAINT market_quotes_source_chk CHECK (source <> '')
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -837,4 +852,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "037_fight_desk_home_lesson", sql: FIGHT_DESK_HOME_LESSON_SQL },
   { id: "038_backup_runs", sql: BACKUP_RUNS_SQL },
   { id: "039_health_route_lesson", sql: HEALTH_ROUTE_LESSON_SQL },
+  { id: "040_market_quotes", sql: MARKET_QUOTES_SQL },
 ];

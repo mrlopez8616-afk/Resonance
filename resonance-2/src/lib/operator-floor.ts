@@ -6,7 +6,7 @@ import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { assembleLiveFace, type LiveFaceData, type SpotQuote } from "@/lib/live-face";
 import { loadLiveSleeveBooks, type SleeveBooks } from "@/lib/sleeve-prints";
 import type { SuiBalanceMark } from "@/lib/sui-balance-line";
-import { loadSpotQuotes, type SpotTicker } from "@/lib/spot-price";
+import { loadSpotQuotes, readSharedSpotQuotes, type SpotTicker } from "@/lib/spot-price";
 import { STORAGE_UNAVAILABLE_BANNER, storageBanner } from "@/lib/storage-unavailable";
 import { loadFightDeskSummary } from "@/lib/store-page";
 
@@ -25,9 +25,10 @@ export type OperatorFloor = {
 };
 
 /** Same read-only floor load the homepage used before parent drill-down. */
-export async function loadOperatorFloor(): Promise<OperatorFloor> {
+export async function loadOperatorFloor(options?: { quotes?: "live" | "cache" }): Promise<OperatorFloor> {
+  const shareQuotes = options?.quotes === "cache";
   const [cryptoQuotes, equityQuotes, sleeves, fightDesk] = await Promise.all([
-    loadSpotQuotes(["XRP", "SUI"]),
+    shareQuotes ? readSharedSpotQuotes(["XRP", "SUI"]) : loadSpotQuotes(["XRP", "SUI"]),
     loadEquityQuotes(EQUITY_FACE_TICKERS),
     loadLiveSleeveBooks(),
     loadFightDeskSummary(),

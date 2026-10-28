@@ -83,11 +83,14 @@ function TriggerBars({
 export function XrpTriggerCard({
   view,
   publicMode,
+  staleLabel = null,
 }: {
   view: XrpTriggerStatus;
   publicMode: boolean;
+  staleLabel?: string | null;
 }) {
   const title = publicMode ? "Trigger" : "XRP Trigger";
+  const distance = `${distanceCopy(view, publicMode)} · ${view.streak} of ${view.holdDays}`;
   return (
     <NodeFace
       face={tileFace({
@@ -96,7 +99,7 @@ export function XrpTriggerCard({
         href: XRP_TRIGGER_HREF,
         name: title,
         headline: view.stateLabel,
-        status: `${distanceCopy(view, publicMode)} · ${view.streak} of ${view.holdDays}`,
+        status: staleLabel ? `${distance} · ${staleLabel}` : distance,
         live: true,
         publicMode,
       })}
@@ -108,9 +111,11 @@ export function XrpTriggerCard({
 export function XrpTriggerFloor({
   view,
   publicMode,
+  staleLabel = null,
 }: {
   view: XrpTriggerStatus;
   publicMode: boolean;
+  staleLabel?: string | null;
 }) {
   const line = linePrice(view.lineUsd);
   return (
@@ -128,6 +133,7 @@ export function XrpTriggerFloor({
           {formatSpotPrice(view.lastClose)} close · {view.ctLabel}
         </p>
       ) : null}
+      {staleLabel ? <p className="node-note">{staleLabel}</p> : null}
       <ol className="trigger-check">
         <li>{view.checklist.dailyClose}</li>
         <li>{view.checklist.holds}</li>

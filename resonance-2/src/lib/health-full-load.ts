@@ -38,11 +38,12 @@ import {
   type HealthFullReport,
 } from "@/lib/health-report";
 import { AI_STOCK_TICKERS } from "@/lib/ai-stocks";
+import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { CRYPTO_HOME_TICKERS } from "@/lib/home-lines";
 import { loadLessonsHome, loadLessonPage } from "@/lib/lessons-store";
 import { loadMachineHealth } from "@/lib/machine-health-load";
-import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
-import { loadXrpTriggerCloses, readXrpDailyCloseCache } from "@/lib/price-history";
+import { readSharedXrpTrigger } from "@/lib/price-history";
+import { readSharedSpotQuotes } from "@/lib/spot-price";
 import { loadRoundtableCards, loadRoundtableHome, readFounderThreads } from "@/lib/roundtable-store";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 import { loadBetsForPage } from "@/lib/store-page";
@@ -78,8 +79,14 @@ function fitnessStamps(read: FitnessRead): (string | null)[] {
   ];
 }
 
-function quotePages(floor: OperatorFloor, now: Date, tiles: Record<string, HealthBits>, pages: Record<string, HealthBits>) {
-  const crypto = CRYPTO_HOME_TICKERS.map((ticker) => quoteBits(floor.spotQuotes[ticker], now));
+function quotePages(
+  spotQuotes: Readonly<Record<string, { fetchedAt?: string | null } | null>>,
+  equityQuotes: Readonly<Record<string, { fetchedAt?: string | null } | null>>,
+  now: Date,
+  tiles: Record<string, HealthBits>,
+  pages: Record<string, HealthBits>,
+) {
+  const crypto = CRYPTO_HOME_TICKERS.map((ticker) => quoteBits(spotQuotes[ticker], now));
   const cryptoGroup = groupQuoteBits(crypto);
   tiles.crypto = cryptoGroup;
   pages.crypto = cryptoGroup;
@@ -87,7 +94,7 @@ function quotePages(floor: OperatorFloor, now: Date, tiles: Record<string, Healt
     const part = crypto[index];
     if (part) pages[`crypto-${ticker.toLowerCase()}`] = part;
   });
-  const stocks = AI_STOCK_TICKERS.map((ticker) => quoteBits(floor.equityQuotes[ticker], now));
+  const stocks = AI_STOCK_TICKERS.map((ticker) => quoteBits(equityQuotes[ticker], now));
   const stockGroup = groupQuoteBits(stocks);
   tiles["ai-stocks"] = stockGroup;
   pages["ai-stocks"] = stockGroup;
@@ -107,7 +114,7 @@ export function setHealthFullLoaderForTests(next: HealthLoader | null) {
 
 async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
   const [
-    floor,
+    quotes,
     finance,
     bankroll,
     bets,
@@ -134,7 +141,13 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     brickRows,
     liveMode,
   ] = await Promise.all([
-    settled(() => loadOperatorFloor()),
+    settled(async () => {
+      const [spotQuotes, equityQuotes] = await Promise.all([
+        readSharedSpotQuotes(["XRP", "SUI"]),
+        loadEquityQuotes(EQUITY_FACE_TICKERS),
+      ]);
+      return { spotQuotes, equityQuotes };
+    }),
     settled(() => loadFinancePage(now)),
     settled(() => loadBankroll()),
     settled(() => loadBetsForPage()),
@@ -143,8 +156,8 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     settled(() => loadLessonPage()),
     settled(() => loadControlHome(false)),
     settled(() => loadControlRoom({ publicMode: false, probeLive: false, now })),
-    settled(() => loadControlRoom({ publicMode: false, probeLive: true, now })),
-    settled(() => loadMachineHealth({ publicMode: false, now })),
+    settled(() => loadControlRoom({ publicMode: false, probeLive: true, now, quotes: "cache" })),
+    settled(() => loadMachineHealth({ publicMode: false, now, quotes: "cache" })),
     settled(() => loadRoundtableHome()),
     settled(() => loadRoundtableCards(false)),
     settled(() => readFounderThreads()),
@@ -158,7 +171,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
         return [node.id, loaded] as const;
       }),
     ),
-    settled(() => loadXrpTriggerCloses()),
+    settled(() => readSharedXrpTrigger()),
     settled(() => loadCatalystPage()),
     settled(() => loadIdeaBoard(false, false)),
     settled(() => loadApprovalBoard()),
@@ -175,8 +188,8 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
   const tiles: Record<string, HealthBits> = {};
   const pages: Record<string, HealthBits> = {};
 
-  if (!floor.ok) {
-    const failed = failedBits(floor.kind);
+  if (!quotes.ok) {
+    const failed = failedBits(quotes.kind);
     tiles.crypto = failed;
     tiles["ai-stocks"] = failed;
     pages.crypto = failed;
@@ -184,7 +197,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     for (const ticker of CRYPTO_HOME_TICKERS) pages[`crypto-${ticker.toLowerCase()}`] = failed;
     for (const ticker of AI_STOCK_TICKERS) pages[`ai-${ticker.toLowerCase()}`] = failed;
   } else {
-    quotePages(floor.value, now, tiles, pages);
+    quotePages(quotes.value.spotQuotes, quotes.value.equityQuotes, now, tiles, pages);
   }
 
   const financeFact = fromSettled(finance, (page) =>
@@ -323,9 +336,13 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     ),
   );
 
-  pages["crypto-xrp-trigger"] = fromSettled(trigger, (closes) =>
-    triggerBits(closes !== null, readXrpDailyCloseCache(now.getTime())),
-  );
+  pages["crypto-xrp-trigger"] = fromSettled(trigger, (shared) => {
+    const age = shared ? now.getTime() - Date.parse(shared.fetchedAt) : Number.NaN;
+    return triggerBits(
+      Boolean(shared && shared.closes.length > 0),
+      Number.isFinite(age) ? { ageMs: Math.max(0, age) } : null,
+    );
+  });
   pages["ai-catalysts"] = fromSettled(catalysts, (page) => calendarBits(page.store));
 
   pages.ideas = fromSettled(ideas, (cards) =>

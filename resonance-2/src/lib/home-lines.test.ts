@@ -18,6 +18,7 @@ import {
   homeQuoteFresh,
   nextAiCatalystLine,
   nextCryptoCatalystLine,
+  quoteStatusLabel,
   predictionsHeadline,
   predictionsSecondaryLines,
   topMoverLine,
@@ -98,15 +99,16 @@ describe("crypto home lines", () => {
     assert.deepEqual(cryptoSecondaryLines(quote({ change24hPct: Number.NaN }), NOW), ["$1.55 close: 90.3% there"]);
   });
 
-  it("hides both lines when the price is missing, not positive, or the quote is stale", () => {
+  it("hides a missing price and labels a real cached price stale", () => {
     assert.deepEqual(cryptoSecondaryLines(null, NOW), []);
     assert.deepEqual(cryptoSecondaryLines(quote({ usd: null }), NOW), []);
     assert.deepEqual(cryptoSecondaryLines(quote({ usd: 0 }), NOW), []);
     assert.deepEqual(cryptoSecondaryLines(quote({ usd: Number.NaN }), NOW), []);
-    assert.deepEqual(
-      cryptoSecondaryLines(quote({ fetchedAt: new Date(NOW.getTime() - HOME_QUOTE_MAX_AGE_MS - 5).toISOString() }), NOW),
-      [],
-    );
+    const staleAt = new Date(NOW.getTime() - HOME_QUOTE_MAX_AGE_MS - 5).toISOString();
+    assert.deepEqual(cryptoSecondaryLines(quote({ fetchedAt: staleAt }), NOW), [
+      `XRP ${formatSpotPrice(1.4)} ${quoteStatusLabel(staleAt, NOW)}`,
+    ]);
+    assert.equal(quoteStatusLabel(staleAt, NOW), "stale · 15m");
     assert.deepEqual(cryptoSecondaryLines(quote({ fetchedAt: null }), NOW), []);
   });
 

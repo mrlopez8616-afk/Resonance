@@ -22,12 +22,22 @@ async function orNull<T>(promise: Promise<T>): Promise<T | null> {
 export async function loadMachineHealth(options: {
   publicMode: boolean;
   now?: Date;
+  /** The full health probe reads quotes a page already fetched. */
+  quotes?: "live" | "cache";
 }): Promise<{ report: MachineHealthReport; storageDown: boolean }> {
   const now = options.now ?? new Date();
+  const shareQuotes = options.quotes === "cache";
   const [floor, build, control] = await Promise.all([
-    orNull(loadPublicFloor()),
+    orNull(loadPublicFloor(shareQuotes ? { quotes: "cache" } : undefined)),
     orNull(loadBuildItems()),
-    orNull(loadControlRoom({ publicMode: options.publicMode, probeLive: true, now })),
+    orNull(
+      loadControlRoom({
+        publicMode: options.publicMode,
+        probeLive: true,
+        now,
+        quotes: shareQuotes ? "cache" : "live",
+      }),
+    ),
   ]);
   return {
     storageDown: floor === null && build === null && control === null,

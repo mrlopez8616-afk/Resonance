@@ -1,4 +1,5 @@
 import { isDecimalString } from "@/lib/decimal";
+import { quoteStatusLabel } from "@/lib/home-lines";
 
 export type ValueCardLabel = "no position" | "not connected";
 
@@ -18,6 +19,7 @@ export type ValueCardFace = {
   totalUsd: number | null;
   totalUsdLabel: string;
   sleeves: readonly { quantity: string }[];
+  fetchedAt?: string | null;
 };
 
 function livePrice(face: ValueCardFace): boolean {
@@ -34,9 +36,9 @@ function livePrice(face: ValueCardFace): boolean {
  * A headline exists only for a real quantity source times a live price,
  * including a real zero quantity. An empty sleeve list is not a quantity.
  */
-export function valueCardFromFace(face: ValueCardFace): ValueCardModel {
+export function valueCardFromFace(face: ValueCardFace, now = new Date()): ValueCardModel {
   const priced = livePrice(face);
-  const priceLine = priced ? `${face.priceLabel} live` : null;
+  const priceLine = priced ? `${face.priceLabel} ${quoteStatusLabel(face.fetchedAt, now)}` : null;
   const quantityKnown =
     face.sleeves.length > 0 &&
     face.sleeves.every((sleeve) => isDecimalString(sleeve.quantity));
