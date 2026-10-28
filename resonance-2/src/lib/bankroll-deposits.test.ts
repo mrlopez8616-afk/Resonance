@@ -120,7 +120,7 @@ describe("bankroll deposit validation", () => {
     assert.equal(voidEmbedded?.sql, voidFile);
     assert.equal(voidFile.includes("INSERT"), false);
     assert.equal(/^\s*delete\b/im.test(voidFile), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "037_fight_desk_home_lesson");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "038_backup_runs");
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id }), /reason must be a string/);
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id, reason: "  " }), /reason is required/);
     assert.throws(() => parseBankrollDepositVoid({ id: "Missing", reason: "duplicate" }), /lowercase slug/);

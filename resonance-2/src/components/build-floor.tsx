@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { cwrBuildFace } from "@/lib/crawl-walk-run-faces";
-import { tileFace } from "@/lib/home-faces";
+import { tileFace, type HomeFace } from "@/lib/home-faces";
 import {
   buildSectionLabel,
   buildShowsPrivateText,
@@ -96,12 +96,14 @@ export function BuildParent({
   githubFresh,
   sections,
   notes = [],
+  backup,
 }: {
   totalPercent: number | null;
   githubFresh: boolean;
   sections: readonly BuildSectionView[];
   /** Home-tile lines that do not fit the one status slot, such as the next queued title. */
   notes?: readonly string[];
+  backup: HomeFace;
 }) {
   return (
     <div className={`build-floor ${styles.floor}`}>
@@ -153,6 +155,7 @@ export function BuildParent({
           })}
         />
         <NodeFace face={cwrBuildFace()} />
+        <NodeFace face={backup} />
       </NodeFaceGrid>
     </div>
   );

@@ -366,6 +366,12 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       const ideas: PhoneTarget = { href: "/n/ideas", label: "Future Ideas" };
       return { back: build, crumbs: [HOME, build, ideas] };
     }
+    if (parentId === "backup") {
+      if (parts.length !== 2) return homeTrail();
+      const build: PhoneTarget = { href: "/n/build", label: "Build" };
+      const backup: PhoneTarget = { href: "/n/backup", label: "Backup" };
+      return { back: build, crumbs: [HOME, build, backup] };
+    }
     if (parentId === "lessons" && parts.length === 2) {
       const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
       return { back: HOME, crumbs: [HOME, lessons] };
@@ -547,6 +553,7 @@ export function phoneTabActive(href: string, pathname: string): boolean {
       normalized === "/n/build" ||
       normalized.startsWith("/n/build/") ||
       normalized === "/n/ideas" ||
+      normalized === "/n/backup" ||
       normalized === CWR_HREF ||
       normalized.startsWith(`${CWR_HREF}/`)
     );
@@ -559,6 +566,7 @@ export function phoneTabActive(href: string, pathname: string): boolean {
       normalized === "/n/build" ||
       normalized.startsWith("/n/build/") ||
       normalized === "/n/ideas" ||
+      normalized === "/n/backup" ||
       normalized === CWR_HREF ||
       normalized.startsWith(`${CWR_HREF}/`)
     ) {
