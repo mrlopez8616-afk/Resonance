@@ -59,7 +59,7 @@ export function ParentGrid({
   financeHome?: FinanceHomeFace | null;
   /** Render instant. Quote age is measured from this, so server and client agree. */
   asOf: string;
-  /** Build tracker headline. Unavailable means the checklist could not be read. */}
+  /** Build tracker headline. Unavailable means the checklist could not be read. */
   buildHome?: { unavailable: boolean; percentLabel: string | null; lines: readonly string[] } | null;
 }) {
   const hiddenRaw = useSyncExternalStore(subscribeHiddenIds, hiddenIdsSnapshot, hiddenIdsServerSnapshot);
