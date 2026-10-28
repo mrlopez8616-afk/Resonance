@@ -36,7 +36,7 @@ describe("edmonton event merge", { concurrency: false }, () => {
     assert.equal(embedded?.sql, file);
     assert.equal(splitSqlStatements(file).some((statement) => /^delete\b/i.test(statement)), false);
     assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, MIGRATION_ID);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "036_bankroll_deposit_voids");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "037_fight_desk_home_lesson");
 
     setSqlClientForTests(memorySql());
     await applyMigrations(EMBEDDED_MIGRATIONS.filter((entry) => entry.id !== MIGRATION_ID));

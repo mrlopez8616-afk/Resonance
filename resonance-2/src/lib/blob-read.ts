@@ -16,6 +16,7 @@ export const BLOB_TAGS = {
   calendar: "resonance-blob-calendar",
   fightResults: "resonance-blob-fight-results",
   fightBreakdowns: "resonance-blob-fight-breakdowns",
+  bankrollDeposits: "resonance-bankroll-deposits",
 } as const;
 
 export type BlobTag = (typeof BLOB_TAGS)[keyof typeof BLOB_TAGS];

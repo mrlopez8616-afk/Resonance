@@ -15,6 +15,7 @@ import {
   buildHomeFace,
   chainHomeFace,
   controlHomeFace,
+  fightDeskHomeFace,
   fightHomeFace,
   financeHomeFaceTile,
   fitnessHomeFace,
@@ -400,5 +401,54 @@ describe("uniform home tiles", () => {
     const fitness = readFileSync(path.join(root, "src/components/fitness-grid.tsx"), "utf8");
     assert.equal(fitness.includes("NodeFace"), false);
     assert.match(fitness, /NodeSquare/);
+  });
+
+  it("keeps a real zero bankroll and a live bet book when deposits are missing", () => {
+    const zero = fightDeskHomeFace({
+      bankroll: { headline: "$0.00", priceLine: "$0.00 at risk · 0 open" },
+      book: { recordLabel: "0-0 · 0 sold · 0 void" },
+    });
+    assert.equal(zero?.headline, "$0.00");
+    assert.equal(zero?.status, "$0.00 at risk · 0 open");
+    assert.equal(zero?.status.includes("not recorded"), false);
+
+    const negative = fightDeskHomeFace({
+      bankroll: { headline: "-$0.00", priceLine: "$1.00 at risk · 1 open" },
+      book: null,
+    });
+    assert.equal(negative?.headline, "-$0.00");
+    assert.equal(negative?.status, "$1.00 at risk · 1 open");
+
+    const deposits = fightDeskHomeFace({
+      bankroll: null,
+      book: { recordLabel: "6-9 · 0 sold · 0 void" },
+      depositsUnavailable: true,
+    });
+    assert.equal(deposits?.headline, "6-9 · 0 sold · 0 void");
+    assert.equal(deposits?.status, "deposits unavailable");
+    assert.equal(deposits?.headline.includes("unavailable"), false);
+    assert.equal(deposits?.status.includes("not recorded"), false);
+
+    const missing = fightDeskHomeFace({ bankroll: null, book: null });
+    assert.equal(missing?.headline, "unavailable");
+    assert.equal(missing?.status, "not recorded");
+
+    const build = buildHomeFace({
+      unavailable: false,
+      percentLabel: null,
+      lines: [],
+      publicMode: false,
+    });
+    assert.equal(build.headline, "0%");
+    assert.equal(build.status, "no items");
+    assert.equal(build.headline.includes("unavailable"), false);
+
+    const lessons = lessonsHomeFace({ unavailable: false, count: 0, latestTitle: null }, false);
+    assert.equal(lessons.headline, "0");
+    assert.equal(lessons.status, "no lessons yet");
+
+    const chain = chainHomeFace({ unavailable: false, count: 2, lines: [] }, false);
+    assert.equal(chain.headline, "2");
+    assert.equal(chain.status, "logged");
   });
 });

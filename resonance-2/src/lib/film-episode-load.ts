@@ -54,7 +54,9 @@ export async function loadFilmSnapshot(now = new Date()): Promise<{
     snapshot.crypto = floor.model.crypto;
     snapshot.aiStocks = floor.model.aiStocks;
   }
-  snapshot.fightRecord = publicRecordLabel(bankroll?.ledger?.recordLabel ?? null);
+  snapshot.fightRecord = publicRecordLabel(
+    bankroll?.ledger?.recordLabel ?? bankroll?.bookFacts?.recordLabel ?? null,
+  );
 
   if (build) {
     const card = buildHomeCard(build.items);

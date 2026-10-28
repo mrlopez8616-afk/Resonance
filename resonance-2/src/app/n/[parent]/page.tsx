@@ -91,7 +91,9 @@ export default async function ParentNodePage({
           <Link href="/" className="calendar-back">
             Floor
           </Link>
-          <PublicFightRecord record={publicRecordLabel(bankroll.ledger?.recordLabel)} />
+          <PublicFightRecord
+            record={publicRecordLabel(bankroll.ledger?.recordLabel ?? bankroll.bookFacts?.recordLabel)}
+          />
         </OperatorShell>
       );
     }
@@ -156,6 +158,7 @@ export default async function ParentNodePage({
         >
           <PredictionsFloor
             ledger={ledger}
+            bookFacts={ledger ? null : bankroll.bookFacts}
             segments={
               ledger
                 ? predictionsTierBar(ledger.tiers.map((tier) => ({ id: tier.id, atRiskLabel: tier.atRiskLabel })))

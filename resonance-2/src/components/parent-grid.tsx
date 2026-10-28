@@ -13,13 +13,12 @@ import {
 import {
   bookHomeFace,
   buildHomeFace,
-  fightHomeFace,
+  fightDeskHomeFace,
   financeHomeFaceTile,
   fitnessHomeFace,
 } from "@/lib/home-faces";
 import {
   fitnessSecondaryLines,
-  predictionsHeadline,
   topMoverLine,
   visibleHomeMoves,
   type HomeMove,
@@ -36,6 +35,7 @@ export function ParentGrid({
   fitnessLine = null,
   fitnessWeek = null,
   bankroll = null,
+  fightBook = null,
   moves = [],
   cryptoMoves = [],
   financeHome = null,
@@ -48,8 +48,10 @@ export function ParentGrid({
   /** One real fitness line. Null keeps the card on "not connected" unless a week line exists. */
   fitnessLine?: FitnessHomeLine | null;
   fitnessWeek?: FitnessWeekFacts | null;
-  /** Fight Desk bankroll headline. Null when the bet book cannot be read. */
+  /** Fight Desk bankroll headline. Null when the dollar total cannot be named. */
   bankroll?: { headline: string; priceLine: string } | null;
+  /** Bet-book record used when deposits could not be read. Null when the book itself is missing. */
+  fightBook?: { recordLabel: string } | null;
   moves?: readonly HomeMove[];
   /** XRP and SUI day changes from the same spot quotes the crypto faces already use. */
   cryptoMoves?: readonly HomeMove[];
@@ -57,7 +59,7 @@ export function ParentGrid({
   financeHome?: FinanceHomeFace | null;
   /** Render instant. Quote age is measured from this, so server and client agree. */
   asOf: string;
-  /** Build tracker headline. Null percent means the checklist could not be read. */
+  /** Build tracker headline. Unavailable means the checklist could not be read. */}
   buildHome?: { unavailable: boolean; percentLabel: string | null; lines: readonly string[] } | null;
 }) {
   const hiddenRaw = useSyncExternalStore(subscribeHiddenIds, hiddenIdsSnapshot, hiddenIdsServerSnapshot);
@@ -73,11 +75,10 @@ export function ParentGrid({
           return <NodeFace key={parent.id} face={financeHomeFaceTile(financeHome)} />;
         }
         if (parent.id === "fight-desk") {
-          const face = fightHomeFace({
-            publicMode: false,
-            headline: bankroll ? predictionsHeadline(bankroll.headline) : null,
-            priceLine: bankroll?.priceLine ?? null,
-            record: null,
+          const face = fightDeskHomeFace({
+            bankroll,
+            book: fightBook,
+            depositsUnavailable: bankroll === null && fightBook !== null,
           });
           return face ? <NodeFace key={parent.id} face={face} /> : null;
         }
