@@ -1,5 +1,5 @@
--- Health route lesson. Number 038.
--- 037 inserted LL-048. This file inserts one lesson
+-- Health route lesson. Number 039.
+-- 038 created the backup log. This file inserts one lesson
 -- when that id is absent, and does not change a row that is already stored.
 
 INSERT INTO lessons (id, date, title, category, what_changed, why, lesson, public_safe, sources)

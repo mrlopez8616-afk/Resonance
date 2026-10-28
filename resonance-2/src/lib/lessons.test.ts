@@ -331,8 +331,8 @@ describe("lessons api", { concurrency: false }, () => {
   });
 
   it("inserts LL-049 once and leaves an edited row alone", async () => {
-    const file = readFileSync(path.join(root, "db/migrations/038_health_route_lesson.sql"), "utf8");
-    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "038_health_route_lesson");
+    const file = readFileSync(path.join(root, "db/migrations/039_health_route_lesson.sql"), "utf8");
+    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "039_health_route_lesson");
     assert.equal(embedded?.sql, file);
     assert.equal(file.includes("UPDATE"), false);
     assert.equal(/^\s*delete\b/im.test(file), false);

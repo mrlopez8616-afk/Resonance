@@ -214,6 +214,15 @@ function NodeGlyph({ id }: { id: string }) {
       </svg>
     );
   }
+  if (kind === "backup") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M4.5 8.5h15l-1.2-3h-12.6z" {...stroke} />
+        <path d="M5 8.5h14V19H5z" {...stroke} />
+        <path d="M9 13.5h6" {...stroke} />
+      </svg>
+    );
+  }
   if (kind === "chain-security") {
     return (
       <svg viewBox="0 0 24 24">

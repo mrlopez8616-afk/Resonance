@@ -743,6 +743,41 @@
       ]
     },
     {
+      "id": "backup",
+      "group": "built",
+      "title": "Backup",
+      "glyph": "backup",
+      "stage": "crawl",
+      "stageMet": true,
+      "confidence": "conservative",
+      "statusLine": "Next: a tested restore drill",
+      "sort": 250,
+      "crawl": "A nightly job copies Postgres and non-secret settings to a private GitHub branch and keeps thirty snapshots.",
+      "walk": "A tested restore drill loads one snapshot onto a clean database.",
+      "run": "An automated off-site copy plus point-in-time recovery.",
+      "more": "The cron writes one JSON snapshot to the backups branch. Blob is read when the store answers and is never written. A restore drill and off-site recovery are not in this repo, so the stage stays Crawl.",
+      "phases": [
+        {
+          "id": "to-walk",
+          "to": "walk",
+          "label": "Into Walk",
+          "line": "A restore drill loads one snapshot onto a clean database and the result is recorded."
+        },
+        {
+          "id": "to-run",
+          "to": "run",
+          "label": "Into Run",
+          "line": "An automated off-site copy is kept, and the database can be restored to a point in time."
+        }
+      ],
+      "evidence": "The nightly route, migration 038, and RESTORE.md are in the repo. The job has not been drilled against a clean database, and nothing here rewinds Postgres to a minute, so the stage stays Crawl.",
+      "sources": [
+        "src/lib/backup.ts",
+        "src/app/api/cron/backup/route.ts",
+        "RESTORE.md"
+      ]
+    },
+    {
       "id": "floor-sync",
       "group": "planned",
       "title": "Floor sync across devices",
