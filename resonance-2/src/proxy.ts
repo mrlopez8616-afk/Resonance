@@ -9,7 +9,7 @@ import {
   safeNextPath,
 } from "@/lib/auth-core";
 import { authorizePresentedCredentials } from "@/lib/auth-store";
-import { bearerMatchesSyncSecret } from "@/lib/sync-auth-core";
+import { bearerMatchesBackupSecret, bearerMatchesSyncSecret } from "@/lib/sync-auth-core";
 
 function continueWithPath(request: NextRequest) {
   const headers = new Headers(request.headers);
@@ -34,11 +34,12 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? null;
   const authorization = request.headers.get("authorization");
+  const backupCron = pathname === "/api/cron/backup";
   const plan = planAccess({
     pathname,
     method: request.method,
     sessionToken: token,
-    bearerOk: bearerMatchesSyncSecret(authorization),
+    bearerOk: backupCron ? bearerMatchesBackupSecret(authorization) : bearerMatchesSyncSecret(authorization),
     loginConfigured: isLoginConfigured(),
     nextPath: `${pathname}${search}`,
   });

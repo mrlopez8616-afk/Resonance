@@ -377,6 +377,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       import("@/components/machine-health-floor"),
       import("@/lib/machine-health"),
     ]);
+  const backupUi = await import("@/components/backup-floor");
+  const backupLib = await import("@/lib/backup");
   const ideasUi = await import("@/components/ideas-board");
   const ideasLib = await import("@/lib/future-ideas");
   const cwrUi = await import("@/components/crawl-walk-run-floor");
@@ -535,11 +537,25 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   const treasury = render(createElement(TreasuryCard));
   const fight = render(createElement(PublicFightRecord, { record: "4-1" }));
   const section = buildSection();
+  const backupRun = {
+    startedAt: "2026-10-28T08:00:00.000Z",
+    status: "ok" as const,
+    blobStatus: "unavailable" as const,
+    tableCount: 4,
+    byteSize: 2048,
+    error: "lost $40",
+  };
   const build = render(
     createElement(BuildParent, {
       totalPercent: 40,
       githubFresh: true,
       sections: [section],
+      backup: backupLib.backupFace({ ...backupRun, error: null }, true),
+    }),
+  );
+  const backupHtml = render(
+    createElement(backupUi.BackupFloor, {
+      lines: backupLib.backupDetailLines(backupRun, true),
     }),
   );
   const buildSectionHtml = render(
@@ -665,6 +681,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/fight-desk", html: fight },
     { path: "/n/build", html: build },
     { path: "/n/build/platform", html: buildSectionHtml },
+    { path: "/n/backup", html: backupHtml },
     { path: "/n/lessons", html: publicLessonsHtml() },
     { path: "/n/chain-security", html: render(createElement(chainUi.ChainSecurityFloor, { feed: chainFeed })) },
     {
@@ -924,6 +941,7 @@ describe("public render scan", () => {
       "/n/ai-stocks/catalysts/[bucket]/[event]/page.tsx",
       "/n/build/page.tsx",
       "/n/build/[section]/page.tsx",
+      "/n/backup/page.tsx",
       "/n/crypto/xrp-trigger/page.tsx",
       "/n/approvals/page.tsx",
       "/n/approvals/[view]/page.tsx",
@@ -970,6 +988,7 @@ describe("public render scan", () => {
       "/n/fight-desk",
       "/n/build",
       "/n/build/platform",
+      "/n/backup",
       "/n/health",
       "/n/ideas",
       "/n/crawl-walk-run",
@@ -1093,6 +1112,14 @@ describe("public render scan", () => {
     assert.match(buildPage?.html ?? "", /\/n\/ideas/);
     assert.match(buildPage?.html ?? "", /Crawl Walk Run/);
     assert.match(buildPage?.html ?? "", /\/n\/crawl-walk-run/);
+    assert.match(buildPage?.html ?? "", /Backup/);
+    assert.match(buildPage?.html ?? "", /\/n\/backup/);
+    assert.equal(buildPage?.html.includes("$"), false);
+    const backupPage = pages.find((page) => page.path === "/n/backup");
+    assert.match(backupPage?.html ?? "", /Last run/);
+    assert.match(backupPage?.html ?? "", /blob unavailable/);
+    assert.equal(backupPage?.html.includes("$"), false);
+    assert.equal(backupPage?.html.includes("lost $"), false);
     const chainPage = pages.find((page) => page.path === "/n/chain-security");
     assert.match(chainPage?.html ?? "", /My exposure/);
     assert.match(chainPage?.html ?? "", /Flare FXRP bridge/);
@@ -1157,7 +1184,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

@@ -73,6 +73,12 @@ describe("crawl walk run seed", () => {
     assert.equal(health?.stageMet, true);
     assert.equal(openPhase(health!)?.to, "run");
     assert.equal(openPhase(youtube!)?.to, "walk");
+    const backup = cwrItem("built", "backup");
+    assert.equal(backup?.stage, "crawl");
+    assert.equal(backup?.stageMet, true);
+    assert.match(backup?.crawl ?? "", /private GitHub branch/);
+    assert.match(backup?.run ?? "", /point-in-time/);
+    assert.equal(backup?.statusLine.includes("$"), false);
     const buy = cwrItem("planned", "per-node-daily-buy");
     assert.equal(buy?.stageMet, false);
     assert.equal(openPhase(buy!)?.to, "crawl");

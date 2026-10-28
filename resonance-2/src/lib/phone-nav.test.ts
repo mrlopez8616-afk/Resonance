@@ -132,6 +132,15 @@ describe("phone back targets", () => {
       ],
     });
     assert.deepEqual(phoneTrail("/n/ideas/extra").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/backup"), {
+      back: { href: "/n/build", label: "Build" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/build", label: "Build" },
+        { href: "/n/backup", label: "Backup" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/backup/extra").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/n/crawl-walk-run"), {
       back: { href: "/n/build", label: "Build" },
       crumbs: [
@@ -408,6 +417,8 @@ describe("phone tabs", () => {
     assert.equal(phoneTabActive("/n/build", "/n/build"), true);
     assert.equal(phoneTabActive("/n/build", "/n/build/queue"), true);
     assert.equal(phoneTabActive("/n/build", "/n/ideas"), true);
+    assert.equal(phoneTabActive("/n/build", "/n/backup"), true);
+    assert.equal(phoneTabActive("/", "/n/backup"), false);
     assert.equal(phoneTabActive("/", "/n/ideas"), false);
     assert.equal(phoneTabActive("/n/build", "/n/crawl-walk-run"), true);
     assert.equal(phoneTabActive("/n/build", "/n/crawl-walk-run/built/youtube"), true);

@@ -13,6 +13,11 @@ export function getSyncSecret(env: EnvLike = process.env): string | null {
   return value ? value : null;
 }
 
+export function getCronSecret(env: EnvLike = process.env): string | null {
+  const value = env.CRON_SECRET?.trim() ?? "";
+  return value ? value : null;
+}
+
 export function writeProtectionEnabled(
   env: EnvLike = process.env,
 ): boolean {
@@ -74,6 +79,35 @@ export function bearerMatchesSyncSecret(
   const bearer = readBearerToken(authorizationHeader);
   if (!secret || !bearer) return false;
   return secretsMatch(bearer, secret);
+}
+
+/**
+ * Nightly backup. CRON_SECRET or the sync secret. Closed when both are unset.
+ * A backup dumps the database, so an empty env does not leave the route open.
+ */
+export function authorizeBackupAccess(input: {
+  cronSecret: string | null;
+  syncSecret: string | null;
+  bearer: string | null;
+}): { ok: true; via: "cron" | "sync" } | { ok: false; error: string } {
+  const { cronSecret, syncSecret, bearer } = input;
+  if (bearer && cronSecret && secretsMatch(bearer, cronSecret)) return { ok: true, via: "cron" };
+  if (bearer && syncSecret && secretsMatch(bearer, syncSecret)) return { ok: true, via: "sync" };
+  return {
+    ok: false,
+    error: "Send Authorization: Bearer <CRON_SECRET> or the sync secret.",
+  };
+}
+
+export function bearerMatchesBackupSecret(
+  authorizationHeader: string | null | undefined,
+  env: EnvLike = process.env,
+): boolean {
+  return authorizeBackupAccess({
+    cronSecret: getCronSecret(env),
+    syncSecret: getSyncSecret(env),
+    bearer: readBearerToken(authorizationHeader),
+  }).ok;
 }
 
 /** Phase Zero Bearer-secret spirit: open only when the secret is unset (local/dev). */
