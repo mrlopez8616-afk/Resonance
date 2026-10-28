@@ -38,7 +38,7 @@ INSERT INTO users (username, role, password_hash, totp_secret, created_at)
 VALUES ('carla', 'operator', '<argon2id phc>', '<base32>', now());
 ```
 
-This deploy still rejects that login. Read APIs call `authorizeReadRequest()`. Machine routes keep `Authorization: Bearer $RESONANCE_SYNC_SECRET`. Fitness ingest keeps `X-Fitness-Token`.
+This deploy still rejects that login. Read APIs call `authorizeReadRequest()`. Machine routes keep `Authorization: Bearer $RESONANCE_SYNC_SECRET`. Fitness ingest keeps `X-Fitness-Token`. `GET /api/health/full` keeps `Authorization: Bearer $RESONANCE_HEALTH_TOKEN`, a different read-only value. The login gate lets that path through so the route can check the token itself. The body is statuses and ages only.
 
 ## Build/deploy notes
 

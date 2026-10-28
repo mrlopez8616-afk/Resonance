@@ -663,5 +663,18 @@
     "sources": [
       "founder report, Oct 27 2026"
     ]
+  },
+  {
+    "id": "LL-049",
+    "date": "2026-10-28",
+    "title": "A health check the login gate cannot hide",
+    "category": "build process",
+    "what_changed": "GET /api/health/full checks every home tile and node page with the same loaders the pages use. It answers with a status, whether the data is stale, and the age in seconds. A dedicated read-only token opens it. The login gate lets that route through to its own check.",
+    "why": "The health check was blind behind the login gate, so a sweep could not see a broken tile without a session.",
+    "lesson": "A check that cannot run cannot catch a break. The token is read-only, separate from the sync secret, and the report carries statuses and ages only.",
+    "public_safe": true,
+    "sources": [
+      "founder request, Oct 28 2026"
+    ]
   }
 ]

@@ -66,9 +66,9 @@
       "statusLine": "Next: self-healing alerts",
       "sort": 20,
       "crawl": "The founder spots breaks.",
-      "walk": "A 3x-daily Architect sweep is live (9 AM, 1 PM, and 6 PM CT).",
+      "walk": "A 3x-daily Architect sweep is live (9 AM, 1 PM, and 6 PM CT), and a machine-readable check covers every tile and node page.",
       "run": "Self-healing alerts.",
-      "more": "The sweep is the current stage. What remains is an alert that fires, and a fix that lands, before a person opens the broken tile.",
+      "more": "The sweep is the current stage, and the health route reports each tile and node page. What remains is an alert that fires, and a fix that lands, before a person opens the broken tile.",
       "phases": [
         {
           "id": "to-run",
@@ -77,10 +77,12 @@
           "line": "A self-healing alert fires and a fix lands before a person opens the broken tile."
         }
       ],
-      "evidence": "LL-048 records the founder finding a broken Fight Desk tile and names the 3x-daily Architect sweep. The operator records that sweep as live. This repo has the lesson and the tile fix. It does not contain a self-healing alert, so the stage stays Walk.",
+      "evidence": "LL-048 records the founder finding a broken Fight Desk tile and names the 3x-daily Architect sweep. LL-049 records the read-only health route. The operator records that sweep as live. This repo has both lessons, the tile fix, and GET /api/health/full. It does not contain a self-healing alert, so the stage stays Walk.",
       "sources": [
         "cabinet/lessons-seed.json",
-        "src/lib/home-faces.ts"
+        "src/lib/home-faces.ts",
+        "src/app/api/health/full/route.ts",
+        "src/lib/health-full-load.ts"
       ]
     },
     {
