@@ -78,6 +78,13 @@ async function readRow(
   }
 }
 
+/** Upstream status only. No price, no URL, no secret. */
+export function logQuoteAttempt(symbol: string, feed: string, status: number | string): void {
+  const line = `crypto quote ${symbol} ${feed} ${status}`;
+  if (typeof status === "number" && status >= 200 && status < 300) console.info(line);
+  else console.error(line);
+}
+
 async function writeRow(cacheKey: string, source: string, fetchedAt: string, payload: unknown): Promise<void> {
   if (!cacheKey || !source || !Number.isFinite(Date.parse(fetchedAt))) return;
   try {
@@ -91,8 +98,9 @@ async function writeRow(cacheKey: string, source: string, fetchedAt: string, pay
        WHERE market_quotes.fetched_at <= EXCLUDED.fetched_at`,
       [cacheKey, source, fetchedAt, JSON.stringify(payload)],
     );
-  } catch {
-    // The in-memory copy still serves this process.
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "write failed";
+    console.error(`crypto quote ${cacheKey} store failed`, message.slice(0, 180));
   }
 }
 

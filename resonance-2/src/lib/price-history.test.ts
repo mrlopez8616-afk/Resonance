@@ -3,6 +3,7 @@ import { after, describe, it } from "node:test";
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
 import {
   clearCryptoChartMemoryForTests,
+  ensureXrpTrigger,
   expireCryptoChartForTests,
   loadXrpTriggerCloses,
   readSharedXrpTrigger,
@@ -75,6 +76,7 @@ describe("XRP trigger quote cache", () => {
       urls.push(url);
       if (url.includes("coingecko")) return new Response("limited", { status: 429 });
       if (url.includes("kraken")) return fail ? new Response("down", { status: 502 }) : krakenChart();
+      if (url.includes("coinbase")) return new Response("down", { status: 502 });
       throw new Error(`unexpected ${url}`);
     };
     const first = await loadXrpTriggerCloses();
@@ -105,6 +107,39 @@ describe("XRP trigger quote cache", () => {
     assert.equal(urls.length, calls);
     const label = xrpTriggerAgeLabel(new Date(Date.parse(cached.fetchedAt) + 60 * 60 * 1000));
     assert.equal(label, "stale · 1h");
+  });
+
+  it("uses Coinbase daily candles when CoinGecko and Kraken charts fail", async () => {
+    resetCryptoChartForTests();
+    rows.clear();
+    setSqlClientForTests(memorySql());
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes("coingecko") || url.includes("kraken")) return new Response("down", { status: 502 });
+      if (url.includes("coinbase")) {
+        return json([
+          [newer, 1.3, 1.34, 1.32, 1.32, 10],
+          [older, 1.1, 1.2, 1.05, 1.11, 10],
+        ]);
+      }
+      throw new Error(`unexpected ${url}`);
+    };
+    const closes = await loadXrpTriggerCloses();
+    assert.deepEqual(closes, [
+      { day: "2026-10-26", close: 1.11 },
+      { day: "2026-10-27", close: 1.32 },
+    ]);
+    assert.equal(rows.get("chart:XRP:365")?.source, "Coinbase");
+    clearCryptoChartMemoryForTests();
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls += 1;
+      throw new Error("fresh chart must not refetch");
+    };
+    const shared = await ensureXrpTrigger();
+    assert.equal(calls, 0);
+    assert.deepEqual(shared?.closes, closes);
+    assert.equal(shared?.source, "Coinbase");
   });
 
   it("reports nothing when no feed and no stored print exists", async () => {
