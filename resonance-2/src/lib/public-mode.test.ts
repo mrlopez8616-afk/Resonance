@@ -379,6 +379,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     ]);
   const ideasUi = await import("@/components/ideas-board");
   const ideasLib = await import("@/lib/future-ideas");
+  const cwrUi = await import("@/components/crawl-walk-run-floor");
+  const cwrLib = await import("@/lib/crawl-walk-run");
   const chainUi = await import("@/components/chain-security-floor");
   const chainLib = await import("@/lib/chain-security");
   const chainIncidents = [
@@ -679,6 +681,19 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         }),
       ),
     },
+    { path: "/n/crawl-walk-run", html: render(createElement(cwrUi.CrawlWalkRunParent)) },
+    {
+      path: "/n/crawl-walk-run/built",
+      html: render(createElement(cwrUi.CrawlWalkRunGroup, { group: "built" })),
+    },
+    {
+      path: "/n/crawl-walk-run/built/youtube",
+      html: render(createElement(cwrUi.CrawlWalkRunItem, { detail: cwrLib.cwrDetail("built", "youtube")! })),
+    },
+    {
+      path: "/n/crawl-walk-run/built/site-health",
+      html: render(createElement(cwrUi.CrawlWalkRunItem, { detail: cwrLib.cwrDetail("built", "site-health")! })),
+    },
     {
       path: "/n/control",
       html: render(createElement(controlUi.ControlParent, { view: publicControl, now: controlNow })),
@@ -916,6 +931,9 @@ describe("public render scan", () => {
       "/n/control/[view]/page.tsx",
       "/n/health/page.tsx",
       "/n/ideas/page.tsx",
+      "/n/crawl-walk-run/page.tsx",
+      "/n/crawl-walk-run/[group]/page.tsx",
+      "/n/crawl-walk-run/[group]/[id]/page.tsx",
       "/n/lessons/page.tsx",
       "/n/chain-security/page.tsx",
       "/n/chain-security/[id]/page.tsx",
@@ -954,6 +972,10 @@ describe("public render scan", () => {
       "/n/build/platform",
       "/n/health",
       "/n/ideas",
+      "/n/crawl-walk-run",
+      "/n/crawl-walk-run/built",
+      "/n/crawl-walk-run/built/youtube",
+      "/n/crawl-walk-run/built/site-health",
       "/n/lessons",
       "/n/chain-security",
       "/n/chain-security/autheo-theo",
@@ -1042,6 +1064,20 @@ describe("public render scan", () => {
     assert.match(healthPage?.html ?? "", /%/);
     assert.equal(healthPage?.html.includes("$"), false);
     assert.equal(healthPage?.html.includes("Wire"), false);
+    const cwrPage = pages.find((page) => page.path === "/n/crawl-walk-run");
+    assert.match(cwrPage?.html ?? "", /Built/);
+    assert.match(cwrPage?.html ?? "", /Recommended/);
+    assert.equal(cwrPage?.html.includes("$"), false);
+    assert.equal(cwrPage?.html.includes("Channel and assets ready"), false);
+    const cwrYouTube = pages.find((page) => page.path === "/n/crawl-walk-run/built/youtube");
+    assert.match(cwrYouTube?.html ?? "", /Channel and assets ready/);
+    assert.match(cwrYouTube?.html ?? "", /Sophia trims videos from the founder's desktop file/);
+    assert.match(cwrYouTube?.html ?? "", /unlisted drafts/);
+    assert.equal(cwrYouTube?.html.includes("$"), false);
+    const cwrHealth = pages.find((page) => page.path === "/n/crawl-walk-run/built/site-health");
+    assert.match(cwrHealth?.html ?? "", /3x-daily Architect sweep/);
+    assert.match(cwrHealth?.html ?? "", /Self-healing alerts/);
+    assert.equal(cwrHealth?.html.includes("$"), false);
     const ideasPage = pages.find((page) => page.path === "/n/ideas");
     assert.match(ideasPage?.html ?? "", /Driving-tracker node/);
     assert.match(ideasPage?.html ?? "", /one dollar a day per-node DCA/);
@@ -1055,6 +1091,8 @@ describe("public render scan", () => {
     const buildPage = pages.find((page) => page.path === "/n/build");
     assert.match(buildPage?.html ?? "", /Future Ideas/);
     assert.match(buildPage?.html ?? "", /\/n\/ideas/);
+    assert.match(buildPage?.html ?? "", /Crawl Walk Run/);
+    assert.match(buildPage?.html ?? "", /\/n\/crawl-walk-run/);
     const chainPage = pages.find((page) => page.path === "/n/chain-security");
     assert.match(chainPage?.html ?? "", /My exposure/);
     assert.match(chainPage?.html ?? "", /Flare FXRP bridge/);
@@ -1119,7 +1157,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { cwrBuildFace } from "@/lib/crawl-walk-run-faces";
 import { tileFace } from "@/lib/home-faces";
 import {
   buildSectionLabel,
@@ -151,6 +152,7 @@ export function BuildParent({
             live: true,
           })}
         />
+        <NodeFace face={cwrBuildFace()} />
       </NodeFaceGrid>
     </div>
   );
