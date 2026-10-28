@@ -129,7 +129,7 @@ describe("coinbase portfolio breakdown", () => {
   it("prices the live quantity on the value card and in the crypto sum", () => {
     const sleeves = applySuiCoinbaseQuantities(SUI_SLEEVES, { coinbase: "49.050865", cbAgentic: "0" });
     const face = assembleLiveFace("SUI", sleeves, QUOTE);
-    const card = valueCardFromFace(face);
+    const card = valueCardFromFace(face, new Date(AS_OF));
     assert.equal(face.totalUsd, 49.050865 * 2);
     assert.equal(card.headline, "~$98.10");
     assert.equal(card.priceLine, "$2.000 live");

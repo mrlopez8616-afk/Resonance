@@ -120,7 +120,7 @@ describe("AI Stocks eight", () => {
     });
     assert.equal(empty.sleeves.length, 0);
     assert.equal(empty.totalUsd, null);
-    assert.deepEqual(valueCardFromFace(empty), {
+    assert.deepEqual(valueCardFromFace(empty, new Date(NOW)), {
       headline: null,
       priceLine: "$180.000 live",
       label: "no position",

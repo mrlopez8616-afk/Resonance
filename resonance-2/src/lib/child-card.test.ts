@@ -133,9 +133,25 @@ describe("child value card", () => {
       history: null,
     });
     assert.equal(model.headline, face.totalUsdLabel);
+    assert.equal(model.priceLine, "$2.000 live");
     assert.deepEqual(model.lines, []);
     assert.deepEqual(model.footerLines, []);
     assert.equal(model.spark, null);
+    const aged = new Date(NOW.getTime() - HOME_QUOTE_MAX_AGE_MS - 60_000).toISOString();
+    const staleFace = assembleLiveFace(
+      "SUI",
+      [{ id: "coinbase", label: "Coinbase", quantity: "4", source: "coinbase-config", manual: false }],
+      { ...QUOTE, fetchedAt: aged },
+    );
+    const stale = holdingChildModel({
+      face: staleFace,
+      changePct: -4,
+      fetchedAt: aged,
+      now: NOW,
+    });
+    assert.equal(stale.priceLine, "$2.000 stale · 16m");
+    assert.equal(stale.headline, staleFace.totalUsdLabel);
+    assert.deepEqual(stale.lines, []);
     assert.equal(priceSpark([1.2]), null);
     assert.equal(priceSpark([]), null);
     const view = ChildValueCard({ model });

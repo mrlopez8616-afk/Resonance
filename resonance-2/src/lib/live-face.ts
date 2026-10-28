@@ -8,8 +8,8 @@ export type SpotQuote = {
   fetchedAt: string;
   /**
    * Feed-reported percent change versus the prior price (CoinGecko / Binance
-   * rolling 24h, or Yahoo's change vs the previous close). Null when that
-   * payload did not include it. Never invented.
+   * rolling 24h, or Yahoo's change vs the previous close). Kraken's ticker
+   * open is not a 24h price, so that fallback leaves this null. Never invented.
    */
   change24hPct?: number | null;
   /**

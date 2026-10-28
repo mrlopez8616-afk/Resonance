@@ -67,6 +67,27 @@ export function homeQuoteFresh(fetchedAt: string | null | undefined, now: Date):
   return age <= HOME_QUOTE_MAX_AGE_MS;
 }
 
+function compactAge(ms: number): string {
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 48) return `${hr}h`;
+  return `${Math.floor(hr / 24)}d`;
+}
+
+/**
+ * `live` inside the window. A real older timestamp is `stale · 18m`.
+ * A missing timestamp stays `live` so a price is not given an invented age.
+ */
+export function quoteStatusLabel(fetchedAt: string | null | undefined, now: Date): string {
+  if (homeQuoteFresh(fetchedAt, now)) return "live";
+  const at = fetchedAt ? Date.parse(fetchedAt) : Number.NaN;
+  if (!Number.isFinite(at)) return "live";
+  return `stale · ${compactAge(now.getTime() - at)}`;
+}
+
 /** Signed percent with one decimal. A real zero prints `0.0%`. */
 export function formatHomePct(pct: number): string | null {
   if (!Number.isFinite(pct)) return null;
@@ -89,15 +110,19 @@ function countLabel(value: number): string | null {
 
 /**
  * XRP spot and the path to a $1.55 daily close.
- * The price line needs both a fresh price and a fresh 24h change.
- * The close line needs only the fresh price.
+ * A fresh price line needs a fresh 24h change. The close line needs only the fresh price.
+ * An older real price is one stale line with its age. A missing price is hidden.
  */
 export function cryptoSecondaryLines(quote: HomeQuote | null, now: Date): string[] {
-  if (!quote || !homeQuoteFresh(quote.fetchedAt, now)) return [];
+  if (!quote) return [];
   const usd = quote.usd;
   if (typeof usd !== "number" || !Number.isFinite(usd) || usd <= 0) return [];
   const price = formatSpotPrice(usd);
   if (price === "—") return [];
+  if (!homeQuoteFresh(quote.fetchedAt, now)) {
+    const status = quoteStatusLabel(quote.fetchedAt, now);
+    return status.startsWith("stale") ? [`XRP ${price} ${status}`] : [];
+  }
   const change =
     typeof quote.change24hPct === "number" ? formatHomePct(quote.change24hPct) : null;
   const priceLine = change ? `XRP ${price}, ${change} 24h` : null;

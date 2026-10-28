@@ -17,8 +17,8 @@ import {
 } from "@/lib/control-room";
 import { readEquityCache, loadEquityQuote } from "@/lib/equity-price";
 import { sqlQuery } from "@/lib/pg/client";
-import { loadXrpTriggerCloses, readXrpDailyCloseCache } from "@/lib/price-history";
-import { readSpotCache, loadSpotQuote } from "@/lib/spot-price";
+import { loadXrpTriggerCloses, readSharedXrpTrigger, readXrpDailyCloseCache } from "@/lib/price-history";
+import { readSharedSpotQuote, readSpotCache, loadSpotQuote } from "@/lib/spot-price";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 
 const QUOTE_TTL_MS = 30_000;
@@ -138,7 +138,11 @@ async function feedStamps(includeFinance: boolean): Promise<Partial<Record<Contr
   };
 }
 
-async function coinGeckoAt(nowMs: number): Promise<string | null> {
+async function coinGeckoAt(nowMs: number, live: boolean): Promise<string | null> {
+  if (!live) {
+    const quote = await readSharedSpotQuote("XRP");
+    return quote?.source === "CoinGecko" && quote.fetchedAt ? quote.fetchedAt : null;
+  }
   const cached = readSpotCache("XRP", nowMs);
   if (cached && cached.source === "CoinGecko" && cached.ageMs >= 0 && cached.ageMs < QUOTE_TTL_MS) {
     return cached.fetchedAt;
@@ -149,7 +153,13 @@ async function coinGeckoAt(nowMs: number): Promise<string | null> {
   return last?.source === "CoinGecko" ? last.fetchedAt : null;
 }
 
-async function xrpDailyClosesAt(nowMs: number): Promise<string | null> {
+async function xrpDailyClosesAt(nowMs: number, live: boolean): Promise<string | null> {
+  if (!live) {
+    const cached = readXrpDailyCloseCache(nowMs);
+    if (cached) return cached.fetchedAt;
+    const shared = await readSharedXrpTrigger();
+    return shared?.fetchedAt ?? null;
+  }
   const cached = readXrpDailyCloseCache(nowMs);
   if (cached && cached.ageMs >= 0 && cached.ageMs <= HISTORY_FRESHNESS.amberMs) return cached.fetchedAt;
   const previous = cached?.fetchedAt ?? null;
@@ -192,6 +202,8 @@ export async function loadControlRoom(options: {
   publicMode: boolean;
   probeLive: boolean;
   now?: Date;
+  /** Health reads quotes a page already fetched. It does not call the price feeds. */
+  quotes?: "live" | "cache";
 }): Promise<ControlRoom> {
   const now = options.now ?? new Date();
   const includeFinance = !options.publicMode;
@@ -210,9 +222,10 @@ export async function loadControlRoom(options: {
   };
 
   if (options.probeLive) {
+    const liveQuotes = options.quotes !== "cache";
     const [coingecko, xrpCloses, yahoo, github] = await Promise.all([
-      coinGeckoAt(now.getTime()).catch(() => null),
-      xrpDailyClosesAt(now.getTime()).catch(() => null),
+      coinGeckoAt(now.getTime(), liveQuotes).catch(() => null),
+      xrpDailyClosesAt(now.getTime(), liveQuotes).catch(() => null),
       yahooAt(now.getTime()).catch(() => null),
       githubAt(now.getTime()),
     ]);

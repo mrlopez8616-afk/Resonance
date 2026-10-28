@@ -135,7 +135,7 @@ export function holdingChildModel(input: {
   /** Stale quantity note. Dollars and unit counts stay off this line. */
   statusLine?: string | null;
 }): ChildCardModel {
-  const card = withoutZeroValue(valueCardFromFace(input.face));
+  const card = withoutZeroValue(valueCardFromFace(input.face, input.now));
   const day = dayChangeLine(input.changePct, input.fetchedAt, input.now);
   const catalyst = textLine(input.catalyst);
   const status = textLine(input.statusLine);

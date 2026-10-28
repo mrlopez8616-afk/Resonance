@@ -16,7 +16,7 @@ import {
   rollupHoldingBooks,
   type FillMarker,
 } from "@/lib/position-lots";
-import { loadCryptoCloses, loadEquityCloses } from "@/lib/price-history";
+import { loadCryptoCloses, loadEquityCloses, readSharedCryptoCloses } from "@/lib/price-history";
 import {
   firstBuyPriceFromMarkers,
   toPublicFloor,
@@ -106,18 +106,21 @@ function closedInputs(
   );
 }
 
-export async function loadPublicFloor(): Promise<{
+export async function loadPublicFloor(options?: { quotes?: "live" | "cache" }): Promise<{
   model: PublicFloorModel;
   nodeBars: Readonly<Record<string, readonly PublicLotBar[]>>;
   groupBars: Readonly<Record<"crypto" | "ai-stocks", readonly PublicLotBar[]>>;
   storageMessage: string | null;
   storageDetail: string | null;
 }> {
+  const shareQuotes = options?.quotes === "cache";
   const [floor, book, equityCloses, cryptoCloses] = await Promise.all([
-    loadOperatorFloor(),
+    loadOperatorFloor(shareQuotes ? { quotes: "cache" } : undefined),
     loadOperatorFills(),
     loadEquityCloses(EQUITIES),
-    loadCryptoCloses(["SUI"]),
+    shareQuotes
+      ? readSharedCryptoCloses("SUI").then((closes) => ({ SUI: closes }))
+      : loadCryptoCloses(["SUI"]),
   ]);
   const today = yahooSessionDay(Date.now() / 1000) ?? "";
   const inputs: PublicHoldingInput[] = [];

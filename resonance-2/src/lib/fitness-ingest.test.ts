@@ -770,6 +770,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "037_fight_desk_home_lesson",
         "038_backup_runs",
         "039_health_route_lesson",
+        "040_market_quotes",
       ],
     );
     assert.equal(
