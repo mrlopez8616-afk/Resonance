@@ -28,7 +28,9 @@ function unauthorized() {
  * Cookie shape is checked here. Pages with a well-formed cookie continue so
  * the root layout can validate the row. GET /api is session-or-Bearer, including
  * routes added later (GET /api/fights/breakdown). GET /api/finance is the
- * exception: the sync Bearer does not open it. Writes keep their own checks.
+ * exception: the sync Bearer does not open it. GET /api/health/full is the
+ * other exception: the route checks RESONANCE_HEALTH_TOKEN itself. Writes keep
+ * their own checks.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

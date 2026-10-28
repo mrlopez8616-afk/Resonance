@@ -204,6 +204,14 @@ export function isFinanceApi(pathname: string): boolean {
   return pathname === "/api/finance" || pathname.startsWith("/api/finance/");
 }
 
+/**
+ * The floor probe checks `RESONANCE_HEALTH_TOKEN` itself.
+ * The sync secret does not open it, and the login gate must not answer first.
+ */
+export function isHealthFullApi(pathname: string): boolean {
+  return pathname === "/api/health/full";
+}
+
 export function isLoginPage(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
@@ -233,6 +241,10 @@ export function planAccess(input: {
   }
   const method = input.method.toUpperCase();
   if (pathname === "/api" || pathname.startsWith("/api/")) {
+    if (isHealthFullApi(pathname)) {
+      if (method !== "GET" && method !== "HEAD") return { kind: "deny" };
+      return { kind: "allow" };
+    }
     if (method !== "GET" && method !== "HEAD") return { kind: "allow" };
     if (isFinanceApi(pathname)) {
       if (input.loginConfigured && isSessionToken(input.sessionToken)) {
