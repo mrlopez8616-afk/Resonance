@@ -1,8 +1,9 @@
 import "server-only";
 
 import type { SpotQuote } from "@/lib/live-face";
+import { coinbaseSpotUsd } from "@/lib/coinbase-public";
 import { KRAKEN_PAIRS, krakenTickerUsd } from "@/lib/kraken-public";
-import { readStoredSpot, writeStoredSpot } from "@/lib/market-quote-store";
+import { logQuoteAttempt, readStoredSpot, writeStoredSpot } from "@/lib/market-quote-store";
 
 export const SPOT_TICKERS = ["XRP", "SUI", "HBAR"] as const;
 export type SpotTicker = (typeof SPOT_TICKERS)[number];
@@ -52,6 +53,11 @@ export function readSpotCache(
   return { fetchedAt: hit.quote.fetchedAt, source: hit.quote.source, ageMs: now - hit.at };
 }
 
+const FEED_HEADERS = {
+  accept: "application/json",
+  "user-agent": "Resonance2/0.1",
+};
+
 async function fetchWithTimeout(
   url: string,
   init: RequestInit = {},
@@ -70,15 +76,21 @@ async function fetchWithTimeout(
   }
 }
 
+async function readFeed(symbol: string, feed: string, url: string): Promise<Response> {
+  try {
+    const response = await fetchWithTimeout(url, { headers: FEED_HEADERS });
+    logQuoteAttempt(symbol, feed, response.status);
+    return response;
+  } catch (error) {
+    logQuoteAttempt(symbol, feed, error instanceof Error && error.name === "AbortError" ? "timeout" : "network");
+    throw error;
+  }
+}
+
 async function fetchCoinGecko(ticker: SpotTicker): Promise<SpotQuote> {
   const { geckoId } = FEEDS[ticker];
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd&include_24hr_change=true`;
-  const response = await fetchWithTimeout(url, {
-    headers: {
-      accept: "application/json",
-      "user-agent": "Resonance2/0.1",
-    },
-  });
+  const response = await readFeed(ticker, "CoinGecko", url);
   if (!response.ok) {
     throw new Error(`CoinGecko HTTP ${response.status}`);
   }
@@ -103,10 +115,9 @@ async function fetchCoinGecko(ticker: SpotTicker): Promise<SpotQuote> {
 
 async function fetchKraken(ticker: SpotTicker): Promise<SpotQuote> {
   const pair = KRAKEN_PAIRS[ticker];
+  // XRPUSD comes back as XXRPZUSD. SUIUSD stays SUIUSD. The parser reads the row, not the alias.
   const url = `https://api.kraken.com/0/public/Ticker?pair=${pair}`;
-  const response = await fetchWithTimeout(url, {
-    headers: { accept: "application/json", "user-agent": "Resonance2/0.1" },
-  });
+  const response = await readFeed(ticker, "Kraken", url);
   if (!response.ok) throw new Error(`Kraken HTTP ${response.status}`);
   const usd = krakenTickerUsd(await response.json());
   return {
@@ -118,14 +129,26 @@ async function fetchKraken(ticker: SpotTicker): Promise<SpotQuote> {
   };
 }
 
+async function fetchCoinbase(ticker: SpotTicker): Promise<SpotQuote> {
+  const url = `https://api.coinbase.com/v2/prices/${ticker}-USD/spot`;
+  const response = await readFeed(ticker, "Coinbase", url);
+  if (!response.ok) throw new Error(`Coinbase HTTP ${response.status}`);
+  const usd = coinbaseSpotUsd(await response.json());
+  return {
+    usd,
+    source: "Coinbase",
+    fetchedAt: new Date().toISOString(),
+    change24hPct: null,
+    price24hAgoUsd: null,
+  };
+}
+
 async function fetchBinance(ticker: SpotTicker): Promise<SpotQuote> {
   const { binanceSymbol } = FEEDS[ticker];
   // 24hr ticker carries last price and the rolling change. The price-only
   // endpoint does not, so a fallback quote would otherwise drop 24h coverage.
   const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSymbol}`;
-  const response = await fetchWithTimeout(url, {
-    headers: { accept: "application/json" },
-  });
+  const response = await readFeed(ticker, "Binance", url);
   if (!response.ok) {
     throw new Error(`Binance HTTP ${response.status}`);
   }
@@ -151,10 +174,11 @@ async function fetchBinance(ticker: SpotTicker): Promise<SpotQuote> {
   };
 }
 
-function remember(ticker: SpotTicker, quote: SpotQuote): void {
+async function remember(ticker: SpotTicker, quote: SpotQuote): Promise<void> {
   cache.set(ticker, { at: Date.parse(quote.fetchedAt) || Date.now(), quote });
   retryNotBefore.delete(ticker);
-  void writeStoredSpot(ticker, quote);
+  // Await the insert. A floating write is dropped when the serverless isolate freezes.
+  await writeStoredSpot(ticker, quote);
 }
 
 async function lastGood(ticker: SpotTicker): Promise<SpotQuote | null> {
@@ -168,10 +192,10 @@ async function lastGood(ticker: SpotTicker): Promise<SpotQuote | null> {
 
 async function fetchSpotFresh(ticker: SpotTicker): Promise<SpotQuote> {
   const errors: string[] = [];
-  for (const fetchFeed of [fetchCoinGecko, fetchKraken, fetchBinance]) {
+  for (const fetchFeed of [fetchCoinGecko, fetchKraken, fetchCoinbase, fetchBinance]) {
     try {
       const quote = await fetchFeed(ticker);
-      remember(ticker, quote);
+      await remember(ticker, quote);
       return quote;
     } catch (error) {
       errors.push(error instanceof Error ? error.message : "failed");
@@ -184,7 +208,7 @@ async function fetchSpotFresh(ticker: SpotTicker): Promise<SpotQuote> {
 }
 
 /**
- * Live spot USD. CoinGecko, then Kraken, then Binance.
+ * Live spot USD. CoinGecko, then Kraken, then Coinbase, then Binance.
  * One in-flight fetch per symbol. A fresh print is reused for 30 seconds.
  * When every feed fails, the last real print is returned with its original time.
  */
@@ -222,6 +246,29 @@ export async function readSharedSpotQuote(ticker: SpotTicker): Promise<SpotQuote
     }
   }
   return lastGood(ticker);
+}
+
+function spotIsFresh(quote: SpotQuote | null, now = Date.now()): boolean {
+  if (!quote?.fetchedAt) return false;
+  const at = Date.parse(quote.fetchedAt);
+  return Number.isFinite(at) && now - at >= 0 && now - at < TTL_MS;
+}
+
+/**
+ * Stored print when it is still inside the fresh window.
+ * One deduped fetch when that print is missing or older than the window.
+ */
+export async function ensureSpotQuotes(
+  tickers: readonly SpotTicker[],
+): Promise<Record<SpotTicker, SpotQuote | null>> {
+  const entries = await Promise.all(
+    tickers.map(async (ticker) => {
+      const cached = await readSharedSpotQuote(ticker);
+      if (spotIsFresh(cached)) return [ticker, cached] as const;
+      return [ticker, await loadSpotQuote(ticker)] as const;
+    }),
+  );
+  return Object.fromEntries(entries) as Record<SpotTicker, SpotQuote | null>;
 }
 
 export async function readSharedSpotQuotes(

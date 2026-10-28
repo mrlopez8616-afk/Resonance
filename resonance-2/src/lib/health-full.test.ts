@@ -305,12 +305,11 @@ describe("health full probe", () => {
     assert.equal(broken.summary.error, HEALTH_TILES.length + healthPages().length);
   });
 
-  it("shares cached crypto quotes instead of calling the price feeds", () => {
+  it("fetches a missing or old crypto quote once and does not reload the floor", () => {
     const source = readFileSync(join(root, "src/lib/health-full-load.ts"), "utf8");
     assert.equal(source.includes("loadOperatorFloor"), false);
-    assert.equal(source.includes("loadXrpTriggerCloses"), false);
-    assert.match(source, /readSharedSpotQuotes\(\["XRP", "SUI"\]\)/);
-    assert.match(source, /readSharedXrpTrigger\(\)/);
+    assert.match(source, /ensureSpotQuotes\(\["XRP", "SUI"\]\)/);
+    assert.match(source, /ensureXrpTrigger\(\)/);
     assert.match(source, /quotes: "cache"/);
     const machine = readFileSync(join(root, "src/lib/machine-health-load.ts"), "utf8");
     assert.match(machine, /quotes: "cache"/);

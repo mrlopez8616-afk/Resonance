@@ -42,8 +42,8 @@ import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { CRYPTO_HOME_TICKERS } from "@/lib/home-lines";
 import { loadLessonsHome, loadLessonPage } from "@/lib/lessons-store";
 import { loadMachineHealth } from "@/lib/machine-health-load";
-import { readSharedXrpTrigger } from "@/lib/price-history";
-import { readSharedSpotQuotes } from "@/lib/spot-price";
+import { ensureXrpTrigger } from "@/lib/price-history";
+import { ensureSpotQuotes } from "@/lib/spot-price";
 import { loadRoundtableCards, loadRoundtableHome, readFounderThreads } from "@/lib/roundtable-store";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
 import { loadBetsForPage } from "@/lib/store-page";
@@ -143,7 +143,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
   ] = await Promise.all([
     settled(async () => {
       const [spotQuotes, equityQuotes] = await Promise.all([
-        readSharedSpotQuotes(["XRP", "SUI"]),
+        ensureSpotQuotes(["XRP", "SUI"]),
         loadEquityQuotes(EQUITY_FACE_TICKERS),
       ]);
       return { spotQuotes, equityQuotes };
@@ -171,7 +171,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
         return [node.id, loaded] as const;
       }),
     ),
-    settled(() => readSharedXrpTrigger()),
+    settled(() => ensureXrpTrigger()),
     settled(() => loadCatalystPage()),
     settled(() => loadIdeaBoard(false, false)),
     settled(() => loadApprovalBoard()),

@@ -279,7 +279,7 @@ export const DATA_SOURCES = [
   {
     id: "prices",
     name: "CoinGecko and Yahoo Finance",
-    feeds: "CoinGecko supplies crypto prices and history, then Kraken if CoinGecko is down. Yahoo Finance supplies equity prices and history for the eight AI names.",
+    feeds: "CoinGecko supplies crypto prices and history, then Kraken, then Coinbase's public spot if those are down. Yahoo Finance supplies equity prices and history for the eight AI names.",
     cadence: "On each page view. A fresh quote is reused for about 30 seconds. If the feeds fail, the last real price stays and is marked stale. History is reused for about 15 minutes.",
   },
   {

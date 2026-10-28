@@ -5,8 +5,9 @@ import { dailyClosesFromYahooChart, datedClosesFromYahooChart } from "@/lib/equi
 import { datedClosesFromMarketChart, xrpPricesFromMarketChart } from "@/lib/home-visuals";
 import { quoteStatusLabel } from "@/lib/home-lines";
 import type { EquityFaceTicker } from "@/lib/equity-price";
+import { coinbaseDailyPrices } from "@/lib/coinbase-public";
 import { KRAKEN_PAIRS, krakenDailyPrices } from "@/lib/kraken-public";
-import { readStoredCloses, writeStoredCloses } from "@/lib/market-quote-store";
+import { logQuoteAttempt, readStoredCloses, writeStoredCloses } from "@/lib/market-quote-store";
 import type { SpotTicker } from "@/lib/spot-price";
 import { utcClosesFromMarketChart } from "@/lib/xrp-trigger";
 
@@ -170,6 +171,26 @@ function rememberChart(
   });
 }
 
+const CHART_HEADERS = {
+  accept: "application/json",
+  "user-agent": "Resonance2/0.1",
+};
+
+async function readChart(symbol: string, feed: string, url: string): Promise<Response> {
+  try {
+    const response = await fetchWithTimeout(url, { headers: CHART_HEADERS });
+    logQuoteAttempt(`${symbol} chart`, feed, response.status);
+    return response;
+  } catch (error) {
+    logQuoteAttempt(
+      `${symbol} chart`,
+      feed,
+      error instanceof Error && error.name === "AbortError" ? "timeout" : "network",
+    );
+    throw error;
+  }
+}
+
 async function fetchChartFeeds(
   ticker: SpotTicker,
   days: number,
@@ -177,9 +198,7 @@ async function fetchChartFeeds(
   const errors: string[] = [];
   try {
     const url = `https://api.coingecko.com/api/v3/coins/${GECKO_IDS[ticker]}/market_chart?vs_currency=usd&days=${days}`;
-    const response = await fetchWithTimeout(url, {
-      headers: { accept: "application/json", "user-agent": "Resonance2/0.1" },
-    });
+    const response = await readChart(ticker, "CoinGecko", url);
     if (!response.ok) throw new Error(`CoinGecko HTTP ${response.status}`);
     const body: unknown = await response.json();
     const closes = utcClosesFromMarketChart(body);
@@ -190,9 +209,7 @@ async function fetchChartFeeds(
   }
   try {
     const url = `https://api.kraken.com/0/public/OHLC?pair=${KRAKEN_PAIRS[ticker]}&interval=1440`;
-    const response = await fetchWithTimeout(url, {
-      headers: { accept: "application/json", "user-agent": "Resonance2/0.1" },
-    });
+    const response = await readChart(ticker, "Kraken", url);
     if (!response.ok) throw new Error(`Kraken HTTP ${response.status}`);
     const body = { prices: krakenDailyPrices(await response.json()) };
     const closes = utcClosesFromMarketChart(body);
@@ -201,6 +218,18 @@ async function fetchChartFeeds(
   } catch (error) {
     errors.push(error instanceof Error ? error.message : "Kraken failed");
   }
+  try {
+    const url = `https://api.exchange.coinbase.com/products/${ticker}-USD/candles?granularity=86400`;
+    const response = await readChart(ticker, "Coinbase", url);
+    if (!response.ok) throw new Error(`Coinbase HTTP ${response.status}`);
+    const body = { prices: coinbaseDailyPrices(await response.json()) };
+    const closes = utcClosesFromMarketChart(body);
+    if (closes.length === 0) throw new Error("Coinbase chart empty");
+    return { body, source: "Coinbase", closes };
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "Coinbase failed");
+  }
+  logQuoteAttempt(`${ticker} chart`, "all", "unavailable");
   throw new Error(errors.join(". "));
 }
 
@@ -223,7 +252,7 @@ async function fetchCryptoMarketBody(ticker: SpotTicker, days: number): Promise<
       const fetchedAt = new Date().toISOString();
       rememberChart(key, loaded.body, loaded.source, fetchedAt, HISTORY_TTL_MS);
       chartRetryNotBefore.delete(key);
-      void writeStoredCloses(`chart:${key}`, {
+      await writeStoredCloses(`chart:${key}`, {
         source: loaded.source,
         fetchedAt,
         closes: loaded.closes,
@@ -375,6 +404,34 @@ export async function readSharedCryptoCloses(
   }
   const stored = await readStoredCloses(`chart:${key}`);
   return stored && stored.closes.length > 0 ? stored.closes : null;
+}
+
+/**
+ * Stored XRP closes when they are still inside the history window.
+ * One deduped fetch when they are missing or older than that window.
+ */
+export async function ensureXrpTrigger(): Promise<{
+  closes: { day: string; close: number }[];
+  fetchedAt: string;
+  source: string;
+} | null> {
+  const cached = await readSharedXrpTrigger();
+  const at = cached ? Date.parse(cached.fetchedAt) : Number.NaN;
+  if (
+    cached &&
+    cached.closes.length > 0 &&
+    Number.isFinite(at) &&
+    Date.now() - at >= 0 &&
+    Date.now() - at < HISTORY_TTL_MS
+  ) {
+    return cached;
+  }
+  const closes = await loadXrpTriggerCloses();
+  const stamp = readXrpDailyCloseCache(Date.now());
+  if (closes && closes.length > 0 && stamp) {
+    return { closes, fetchedAt: stamp.fetchedAt, source: cached?.source ?? "cached" };
+  }
+  return cached && cached.closes.length > 0 ? cached : null;
 }
 
 /** Age label for a chart older than the trigger's fresh window. Null while it is fresh. */
