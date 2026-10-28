@@ -92,6 +92,14 @@ export type BankrollLedger = {
   before: BankrollCard[];
 };
 
+/** Bet-book facts. They do not use deposits, so a deposit miss does not erase them. */
+export type BankrollBookFacts = {
+  open: number;
+  deskOpen: number;
+  atRiskLabel: string;
+  recordLabel: string;
+};
+
 /** A stored deposit. A voided row stays listed and does not move the bankroll. */
 export type BankrollDeposit = {
   date: string;

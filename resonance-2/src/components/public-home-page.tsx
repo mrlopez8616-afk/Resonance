@@ -84,7 +84,7 @@ export async function PublicHomePage() {
       if (!title) return [];
       return [{ ...item, title, href: publicHref(item.href) }];
     });
-  const fightRecord = publicRecordLabel(bankroll.ledger?.recordLabel);
+  const fightRecord = publicRecordLabel(bankroll.ledger?.recordLabel ?? bankroll.bookFacts?.recordLabel);
   const lines = [
     ...fitnessSecondaryLines(fitness.week, fitness.line),
   ].flatMap((line) => {
@@ -99,7 +99,10 @@ export async function PublicHomePage() {
     (fitness.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null);
 
   return (
-    <OperatorShell storageMessage={storageMessage} storageDetail={floor.storageDetail}>
+    <OperatorShell
+      storageMessage={storageMessage}
+      storageDetail={floor.storageDetail ?? bankroll.storageDetail}
+    >
       <ThisWeek items={week} />
       <NodeFaceGrid
         count={publicHomeNodeCount({

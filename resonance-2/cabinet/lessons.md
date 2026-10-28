@@ -1,6 +1,6 @@
 # Cabinet note — lessons
 
-The hub keeps the Lessons node current without a deploy. Resonance stores the log. The migration inserts no rows. After this deploys, post `cabinet/lessons-seed.json` (LL-001 through LL-047). LL-042 is past tense: the fill-key fix shipped in #78 and the guarded cleanup shipped in #80.
+The hub keeps the Lessons node current without a deploy. Resonance stores the log. Migration 018 inserts no rows. Migration 037 inserts LL-048 when that id is absent and does not overwrite an edit. After this deploys, post `cabinet/lessons-seed.json` (LL-001 through LL-048). LL-042 is past tense: the fill-key fix shipped in #78 and the guarded cleanup shipped in #80.
 
 | Piece | Path | Use |
 | --- | --- | --- |

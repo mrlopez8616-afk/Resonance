@@ -2,7 +2,13 @@ import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { PredictionsVisual } from "@/components/home-visual";
 import { formatSignedUsd, formatUsd } from "@/lib/bets";
-import { bankrollDepositLine, bankrollHomeFace, FLAT_STAKE_LABEL, type BankrollLedger } from "@/lib/bankroll";
+import {
+  bankrollDepositLine,
+  bankrollHomeFace,
+  FLAT_STAKE_LABEL,
+  type BankrollBookFacts,
+  type BankrollLedger,
+} from "@/lib/bankroll";
 import { formatCivilDate } from "@/lib/calendar-time";
 import { tileFace } from "@/lib/home-faces";
 import type { TierSegment } from "@/lib/home-visuals";
@@ -10,15 +16,19 @@ import { parentById, parentCardHref } from "@/lib/node-parents";
 
 export function PredictionsFloor({
   ledger,
+  bookFacts = null,
   segments = null,
   bankrollLine = null,
 }: {
   ledger: BankrollLedger | null;
+  /** Bet book facts when the dollar ledger could not be named. */
+  bookFacts?: BankrollBookFacts | null;
   segments?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
 }) {
   const face = ledger ? bankrollHomeFace(ledger) : null;
-  const fightsOpen = ledger ? (ledger.deskOpen === 1 ? "1 open" : `${ledger.deskOpen} open`) : null;
+  const deskOpen = ledger?.deskOpen ?? bookFacts?.deskOpen ?? null;
+  const fightsOpen = deskOpen === null ? null : deskOpen === 1 ? "1 open" : `${deskOpen} open`;
   const label = parentById("fight-desk")?.label ?? "Fight Desk";
   return (
     <>
@@ -47,8 +57,10 @@ export function PredictionsFloor({
             glyph: "fight-desk",
             href: `${parentCardHref("fight-desk")}/bankroll`,
             name: "Bankroll",
-            headline: ledger?.bankrollLabel ?? "unavailable",
-            status: ledger ? `${ledger.atRiskLabel} at risk` : null,
+            headline: ledger?.bankrollLabel ?? (bookFacts ? "deposits unavailable" : "unavailable"),
+            status: ledger
+              ? `${ledger.atRiskLabel} at risk`
+              : bookFacts?.recordLabel ?? null,
             live: face !== null,
           })}
         />

@@ -469,7 +469,9 @@ describe("finance and predictions home lines", () => {
     );
     assert.deepEqual(predictionsSecondaryLines(null), []);
     assert.equal(predictionsHeadline("$17.06"), "$17.06");
-    assert.equal(predictionsHeadline("$0.00"), null);
+    assert.equal(predictionsHeadline("$0.00"), "$0.00");
+    assert.equal(predictionsHeadline("-$0.00"), "-$0.00");
+    assert.equal(predictionsHeadline("$0.00 at risk"), null);
     assert.equal(predictionsHeadline("NaN"), null);
     assert.equal(predictionsHeadline(undefined), null);
   });

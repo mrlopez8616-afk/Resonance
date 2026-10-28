@@ -225,7 +225,7 @@ export default async function NodeDetailPage({
           <BankrollLedgerView ledger={bankroll.ledger} deposits={bankroll.deposits} />
         ) : (
           <p className="parent-empty" role="status">
-            unavailable
+            {bankroll.storageDetail ?? "unavailable"}
           </p>
         )}
       </OperatorShell>

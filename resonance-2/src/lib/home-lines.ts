@@ -15,7 +15,10 @@ export const HOME_QUOTE_MAX_AGE_MS = 15 * 60 * 1000;
 /** Shown when there is no owner snapshot. No balances. */
 export const FINANCE_HOME_LABEL = "Bank linked · private";
 
-const BLOCKED = /\$0\.00|\bNaN\b|\bundefined\b/;
+const BROKEN = /\bNaN\b|\bundefined\b/;
+/** A zero dollar figure inside a longer line is still dropped. A line that is only `$0.00` is a real total. */
+const ZERO_INSIDE = /\$0\.00/;
+const EXACT_ZERO_DOLLAR = /^[-−]?\$0\.00$/;
 const AI_TICKERS = new Set<string>(EQUITY_FACE_TICKERS);
 
 export type HomeQuote = {
@@ -42,7 +45,8 @@ export type PredictionsHomeFacts = {
 function publish(line: string | null | undefined): string | null {
   if (typeof line !== "string") return null;
   const trimmed = line.trim();
-  if (!trimmed || BLOCKED.test(trimmed)) return null;
+  if (!trimmed || BROKEN.test(trimmed)) return null;
+  if (ZERO_INSIDE.test(trimmed) && !EXACT_ZERO_DOLLAR.test(trimmed)) return null;
   return trimmed;
 }
 
@@ -381,7 +385,7 @@ export function predictionsSecondaryLines(facts: PredictionsHomeFacts | null): s
   return keep([atRisk, open, facts.recordLabel]);
 }
 
-/** Headline dollars. `$0.00` is not a headline. */
+/** Headline dollars. A real `$0.00` stays. `NaN`, `undefined`, and a zero buried in a longer line do not. */
 export function predictionsHeadline(label: string | null | undefined): string | null {
   return publish(label ?? null);
 }

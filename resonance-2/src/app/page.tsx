@@ -131,7 +131,10 @@ export default async function Home() {
   const ledger = bankroll.ledger;
 
   return (
-    <OperatorShell storageMessage={storageMessage} storageDetail={floor.storageDetail}>
+    <OperatorShell
+      storageMessage={storageMessage}
+      storageDetail={floor.storageDetail ?? bankroll.storageDetail}
+    >
       <ThisWeek items={thisWeekItems(calendar.events, asOf, fightLinkTargets(bets, calendar.events))} />
       <NodeFaceGrid
         count={privateHomeNodeCount({
@@ -146,6 +149,7 @@ export default async function Home() {
         fitnessLine={fitness.line}
         fitnessWeek={fitness.week}
         bankroll={ledger ? bankrollHomeFace(ledger) : null}
+        fightBook={ledger ? null : bankroll.bookFacts}
         moves={moves}
         cryptoMoves={cryptoMoves}
         financeHome={financeHome}

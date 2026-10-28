@@ -1,4 +1,5 @@
 import { nodeShelved } from "@/lib/node-visibility";
+import { predictionsHeadline } from "@/lib/home-lines";
 import { hasMoneyText } from "@/lib/public-mode";
 import type { ParentSummaryLine } from "@/lib/node-parents";
 
@@ -288,6 +289,8 @@ export function fightHomeFace(input: {
   headline: string | null;
   priceLine: string | null;
   record: string | null;
+  /** The bet book loaded. The dollar bankroll did not, because deposits could not be read. */
+  depositsUnavailable?: boolean;
 }): HomeFace | null {
   if (input.publicMode) {
     const record = input.record?.trim() ?? "";
@@ -305,17 +308,59 @@ export function fightHomeFace(input: {
     );
   }
   const dollar = input.headline && isDollar(input.headline) ? input.headline : null;
+  if (dollar) {
+    return finish(
+      {
+        id: "fight-desk",
+        href: "/n/fight-desk",
+        name: "Fight Desk",
+        headline: dollar,
+        status: input.priceLine?.trim() || NOT_RECORDED,
+        live: true,
+      },
+      false,
+    );
+  }
+  const record = input.record?.trim() ?? "";
+  if (input.depositsUnavailable && record && !hasMoneyText(record)) {
+    return finish(
+      {
+        id: "fight-desk",
+        href: "/n/fight-desk",
+        name: "Fight Desk",
+        headline: record,
+        status: "deposits unavailable",
+        live: false,
+      },
+      false,
+    );
+  }
   return finish(
     {
       id: "fight-desk",
       href: "/n/fight-desk",
       name: "Fight Desk",
-      headline: dollar ?? "unavailable",
-      status: dollar ? input.priceLine?.trim() || NOT_RECORDED : NOT_RECORDED,
-      live: dollar !== null,
+      headline: "unavailable",
+      status: NOT_RECORDED,
+      live: false,
     },
     false,
   );
+}
+
+/** Private Fight Desk home tile. A real zero stays. A missing deposit read does not erase the bet book. */
+export function fightDeskHomeFace(input: {
+  bankroll: { headline: string; priceLine: string } | null;
+  book: { recordLabel: string } | null;
+  depositsUnavailable?: boolean;
+}): HomeFace | null {
+  return fightHomeFace({
+    publicMode: false,
+    headline: input.bankroll ? predictionsHeadline(input.bankroll.headline) : null,
+    priceLine: input.bankroll?.priceLine ?? null,
+    record: input.book?.recordLabel ?? null,
+    depositsUnavailable: input.depositsUnavailable === true && input.bankroll === null,
+  });
 }
 
 export function buildHomeFace(input: {
@@ -326,7 +371,21 @@ export function buildHomeFace(input: {
 }): HomeFace {
   const lines = input.lines.filter((line) => line.trim() && !(input.publicMode && hasMoneyText(line)));
   const percent = input.percentLabel?.trim() ?? "";
-  const ready = !input.unavailable && percent.length > 0 && !(input.publicMode && hasMoneyText(percent));
+  const readable = !input.unavailable && !(input.publicMode && hasMoneyText(percent));
+  if (readable && percent.length === 0) {
+    return finish(
+      {
+        id: "build",
+        href: "/n/build",
+        name: "Build",
+        headline: "0%",
+        status: lines[0] || "no items",
+        live: false,
+      },
+      input.publicMode,
+    );
+  }
+  const ready = readable && percent.length > 0;
   return finish(
     {
       id: "build",
@@ -419,13 +478,14 @@ export function lessonsHomeFace(card: { unavailable: boolean; count: number; lat
   }
   const title = card.latestTitle?.trim() ?? "";
   const safeTitle = publicMode && hasMoneyText(title) ? "" : title;
+  const empty = card.count === 0 ? "no lessons yet" : NOT_RECORDED;
   return finish(
     {
       id: "lessons",
       href: "/n/lessons",
       name: "Lessons",
       headline: String(card.count),
-      status: safeTitle || NOT_RECORDED,
+      status: safeTitle || empty,
       live: card.count > 0,
     },
     publicMode,
@@ -483,7 +543,7 @@ export function chainHomeFace(
       href: "/n/chain-security",
       name: "Chain Security",
       headline: String(card.count),
-      status: line || (card.count === 0 ? "No incidents yet" : NOT_RECORDED),
+      status: line || (card.count === 0 ? "No incidents yet" : "logged"),
       live: card.count > 0,
     },
     publicMode,

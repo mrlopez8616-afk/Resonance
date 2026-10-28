@@ -20,7 +20,8 @@ import {
   type Lesson,
 } from "@/lib/lessons";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
-import { migrate } from "@/lib/pg/migrate";
+import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
+import { migrate, splitSqlStatements } from "@/lib/pg/migrate";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const t0 = Date.UTC(2026, 9, 9, 17, 0, 0);
@@ -250,6 +251,7 @@ describe("lessons api", { concurrency: false }, () => {
     process.env.RESONANCE_SYNC_SECRET = "hub-secret";
     setSqlClientForTests(memorySql());
     await migrate();
+    await sqlQuery(`DELETE FROM lessons`);
     token = await createSession("Mozilla/5.0 Chrome/120.0.0.0", t0);
   });
 
@@ -300,6 +302,32 @@ describe("lessons api", { concurrency: false }, () => {
     );
     assert.equal(sessionPatch.status, 401);
     assert.equal(await countLessons(), 0);
+  });
+
+  it("inserts LL-048 once and leaves an edited row alone", async () => {
+    const file = readFileSync(path.join(root, "db/migrations/037_fight_desk_home_lesson.sql"), "utf8");
+    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "037_fight_desk_home_lesson");
+    assert.equal(embedded?.sql, file);
+    assert.equal(file.includes("UPDATE"), false);
+    assert.equal(/^\s*delete\b/im.test(file), false);
+    for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
+    for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
+    assert.equal(await countLessons(), 1);
+    const rows = await sqlQuery<{ lesson: string; date: Date | string }>(
+      `SELECT lesson, "date" FROM lessons WHERE id = 'LL-048'`,
+    );
+    const storedDay = rows[0]?.date;
+    const day = storedDay instanceof Date ? storedDay.toISOString().slice(0, 10) : String(storedDay ?? "").slice(0, 10);
+    assert.equal(day, "2026-10-27");
+    await sqlQuery(`UPDATE lessons SET lesson = 'edited' WHERE id = 'LL-048'`);
+    for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
+    const kept = await sqlQuery<{ lesson: string }>(`SELECT lesson FROM lessons WHERE id = 'LL-048'`);
+    assert.equal(kept[0]?.lesson, "edited");
+    assert.equal(
+      rows[0]?.lesson,
+      "The Fight Desk home tile showed 'unavailable / not recorded' and the founder found it before we did. The system should catch its own breaks. Fix: a 3x-daily Site Health Check (9 AM, 1 PM, 6 PM CT) where Architect sweeps every tile and node page and fixes what it finds before the founder sees it. The home tile blanked a live bet book when the deposit read failed, and it also hid a real zero bankroll, so either case was painted as unavailable / not recorded.",
+    );
+    await sqlQuery(`DELETE FROM lessons`);
   });
 
   it("upserts one row, stores an unknown category, and keeps Founder's call", async () => {
@@ -443,6 +471,7 @@ describe("lessons api", { concurrency: false }, () => {
   it("upserts the cabinet seed, including the past-tense dedupe lesson", async () => {
     const seed = JSON.parse(readFileSync(path.join(root, "cabinet/lessons-seed.json"), "utf8")) as Array<{
       id: string;
+      date: string;
       what_changed: string;
       why: string;
       lesson: string;
@@ -450,10 +479,17 @@ describe("lessons api", { concurrency: false }, () => {
       public_safe: boolean;
       sources: string[];
     }>;
-    assert.equal(seed.length, 47);
+    assert.equal(seed.length, 48);
     assert.deepEqual(
       seed.map((row) => row.id),
-      Array.from({ length: 47 }, (_, index) => `LL-${String(index + 1).padStart(3, "0")}`),
+      Array.from({ length: 48 }, (_, index) => `LL-${String(index + 1).padStart(3, "0")}`),
+    );
+    const tile = seed.find((row) => row.id === "LL-048");
+    assert.ok(tile);
+    assert.equal(tile.date, "2026-10-27");
+    assert.equal(
+      tile.lesson,
+      "The Fight Desk home tile showed 'unavailable / not recorded' and the founder found it before we did. The system should catch its own breaks. Fix: a 3x-daily Site Health Check (9 AM, 1 PM, 6 PM CT) where Architect sweeps every tile and node page and fixes what it finds before the founder sees it. The home tile blanked a live bet book when the deposit read failed, and it also hid a real zero bankroll, so either case was painted as unavailable / not recorded.",
     );
     const dedupe = seed.find((row) => row.id === "LL-042");
     assert.ok(dedupe);
@@ -481,8 +517,8 @@ describe("lessons api", { concurrency: false }, () => {
     );
     assert.equal(posted.status, 200);
     const postedBody = await posted.json();
-    assert.equal(postedBody.upserted, 47);
-    assert.equal(await countLessons(), 47);
+    assert.equal(postedBody.upserted, 48);
+    assert.equal(await countLessons(), 48);
     const stored = postedBody.lessons.find((row: { id: string }) => row.id === "LL-042");
     assert.equal(stored.what_changed, dedupe.what_changed);
     assert.equal(stored.why, dedupe.why);
@@ -497,15 +533,15 @@ describe("lessons api", { concurrency: false }, () => {
       }),
     );
     assert.equal(again.status, 200);
-    assert.equal(await countLessons(), 47);
+    assert.equal(await countLessons(), 48);
     const againBody = await again.json();
     assert.equal(againBody.lessons.find((row: { id: string }) => row.id === "LL-042").created_at, createdAt);
 
     const read = await GET(new Request(url, { headers: { authorization: "Bearer hub-secret" } }));
     const readBody = await read.json();
     assert.equal(readBody.public, false);
-    assert.equal(readBody.count, 47);
-    assert.equal(readBody.lessons[0].id, "LL-047");
+    assert.equal(readBody.count, 48);
+    assert.equal(readBody.lessons[0].id, "LL-048");
     const privateRow = readBody.lessons.find((row: { id: string }) => row.id === "LL-021");
     assert.equal(privateRow.public_safe, false);
     assert.ok(privateRow.sources.length > 0);
@@ -514,7 +550,7 @@ describe("lessons api", { concurrency: false }, () => {
     const lessons = readBody.lessons.map(fromJson);
     const publicView = lessonsPayload(lessons, true);
     assert.equal(publicView.public, true);
-    assert.equal(publicView.count, 46);
+    assert.equal(publicView.count, 47);
     assert.equal(publicView.lessons.some((row) => row.id === "LL-021"), false);
     assert.equal(publicView.lessons.some((row) => "sources" in row), false);
     const publicDedupe = publicView.lessons.find((row) => row.id === "LL-042");

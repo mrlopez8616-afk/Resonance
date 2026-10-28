@@ -10,12 +10,15 @@ import { NextRequest } from "next/server";
 import { POST as voidDeposit } from "@/app/api/deposits/void/route";
 import { GET } from "@/app/api/fights/bankroll/route";
 import { POST } from "@/app/api/fights/bankroll/deposit/route";
-import { computeBankroll } from "@/lib/bankroll";
+import { bankrollHomeFace, computeBankroll } from "@/lib/bankroll";
+import { assembleBankrollPage } from "@/lib/bankroll-load";
+import { loadBankrollDeposits } from "@/lib/bankroll-deposits-store";
+import { fightDeskHomeFace } from "@/lib/home-faces";
 import { parseBankrollDeposit, parseBankrollDepositVoid } from "@/lib/bankroll-deposits";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
 import { migrate } from "@/lib/pg/migrate";
-import { resetBlobReadCacheForTests } from "@/lib/blob-read";
+import { expireReadCacheForTests, resetBlobReadCacheForTests } from "@/lib/blob-read";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const SECRET = "bankroll-deposit-sync-secret";
@@ -117,7 +120,7 @@ describe("bankroll deposit validation", () => {
     assert.equal(voidEmbedded?.sql, voidFile);
     assert.equal(voidFile.includes("INSERT"), false);
     assert.equal(/^\s*delete\b/im.test(voidFile), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "036_bankroll_deposit_voids");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "037_fight_desk_home_lesson");
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id }), /reason must be a string/);
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id, reason: "  " }), /reason is required/);
     assert.throws(() => parseBankrollDepositVoid({ id: "Missing", reason: "duplicate" }), /lowercase slug/);
@@ -167,6 +170,7 @@ describe("bankroll deposit validation", () => {
 });
 
 describe("bankroll deposit route", { concurrency: false }, () => {
+  let client: SqlClient;
   const previous = {
     DATABASE_URL: process.env.DATABASE_URL,
     RESONANCE_SYNC_SECRET: process.env.RESONANCE_SYNC_SECRET,
@@ -177,13 +181,15 @@ describe("bankroll deposit route", { concurrency: false }, () => {
     process.env.DATABASE_URL = "postgres://resonance@127.0.0.1:5432/resonance";
     process.env.RESONANCE_SYNC_SECRET = SECRET;
     delete process.env.BLOB_READ_WRITE_TOKEN;
-    setSqlClientForTests(memorySql());
+    client = memorySql();
+    setSqlClientForTests(client);
     resetBlobReadCacheForTests();
     await migrate();
   });
 
   beforeEach(async () => {
     await sqlQuery(`DELETE FROM bankroll_deposits`);
+    resetBlobReadCacheForTests();
   });
 
   after(() => {
@@ -320,5 +326,93 @@ describe("bankroll deposit route", { concurrency: false }, () => {
       [DEPOSIT.id],
     );
     assert.equal(kept[0]?.note, "Coinbase transfer");
+  });
+
+  it("keeps the last good deposits and does not call a live bet book unrecorded", async () => {
+    assert.equal((await POST(depositRequest(DEPOSIT))).status, 200);
+    const first = await loadBankrollDeposits();
+    assert.equal(first.availability, "live");
+    assert.equal(first.rows.length, 1);
+    assert.equal(first.stale, undefined);
+    expireReadCacheForTests();
+
+    setSqlClientForTests({
+      async query() {
+        throw new Error("deposit read failed");
+      },
+    });
+    try {
+      const stale = await loadBankrollDeposits();
+      assert.equal(stale.availability, "live");
+      assert.equal(stale.stale, true);
+      assert.equal(stale.rows[0]?.amount, "6.84");
+      const faced = assembleBankrollPage(
+        { status: "live", bets: [], backend: "postgres" },
+        { status: "live", events: [], storeLabel: "postgres" },
+        stale,
+      );
+      assert.ok(faced.ledger);
+      const tile = fightDeskHomeFace({
+        bankroll: bankrollHomeFace(faced.ledger),
+        book: faced.bookFacts,
+      });
+      assert.equal(tile?.headline.startsWith("$"), true);
+      assert.notEqual(tile?.headline, "unavailable");
+      assert.equal(tile?.status.includes("not recorded"), false);
+    } finally {
+      setSqlClientForTests(client);
+    }
+
+    const missed = assembleBankrollPage(
+      { status: "live", bets: [], backend: "postgres" },
+      { status: "live", events: [], storeLabel: "postgres" },
+      { rows: [], availability: "unavailable" },
+    );
+    assert.equal(missed.ledger, null);
+    assert.equal(missed.bookFacts?.recordLabel, "0-0 · 0 sold · 0 void");
+    const quiet = fightDeskHomeFace({
+      bankroll: null,
+      book: missed.bookFacts,
+      depositsUnavailable: true,
+    });
+    assert.equal(quiet?.headline, "0-0 · 0 sold · 0 void");
+    assert.equal(quiet?.status, "deposits unavailable");
+
+    const zero = assembleBankrollPage(
+      { status: "live", bets: [], backend: "postgres" },
+      { status: "live", events: [], storeLabel: "postgres" },
+      {
+        rows: [
+          {
+            id: "flat",
+            date: "2026-10-18",
+            amount: "-17.06",
+            note: null,
+            createdAt: "2026-10-18T00:00:00.000Z",
+            voided: false,
+            voidedAt: null,
+            voidReason: null,
+          },
+        ],
+        availability: "live",
+      },
+    );
+    assert.equal(zero.ledger?.bankrollLabel, "$0.00");
+    const zeroTile = fightDeskHomeFace({
+      bankroll: zero.ledger ? bankrollHomeFace(zero.ledger) : null,
+      book: zero.bookFacts,
+    });
+    assert.equal(zeroTile?.headline, "$0.00");
+    assert.equal(zeroTile?.status.includes("not recorded"), false);
+
+    const unread = assembleBankrollPage(
+      { status: "unavailable", reason: "down" },
+      { status: "live", events: [], storeLabel: "postgres" },
+      { rows: [], availability: "live" },
+    );
+    assert.equal(unread.bookFacts, null);
+    const blank = fightDeskHomeFace({ bankroll: null, book: unread.bookFacts });
+    assert.equal(blank?.headline, "unavailable");
+    assert.equal(blank?.status, "not recorded");
   });
 });
