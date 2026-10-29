@@ -21,6 +21,8 @@ export type HomeFace = {
   status: string;
   live: boolean;
   tone: HomeFaceTone;
+  /** Public finance stays on the floor and does not open. */
+  locked?: boolean;
 };
 
 export const HOME_FACE_SLOTS = ["glyph", "name", "headline", "status"] as const;
@@ -258,30 +260,23 @@ export function fitnessHomeFace(input: {
   );
 }
 
-/** Public finance tile. The headline is the linked-account count. No balance. */
-export function financePublicHomeFace(input: { accountCount: number; asOfLine: string } | null): HomeFace {
-  if (!input) {
-    return finish(
-      {
-        id: "finance",
-        href: "/n/finance",
-        name: "Finance",
-        headline: NOT_CONNECTED,
-        status: NOT_RECORDED,
-        live: false,
-      },
-      true,
-    );
-  }
-  const count = Number.isInteger(input.accountCount) && input.accountCount > 0 ? input.accountCount : 0;
+/**
+ * Public finance tile. It stays on the floor so the node is visible,
+ * with a Private lock and no link. No balance, account count, or date.
+ * The argument is ignored so a caller cannot paint a private fact.
+ */
+export function financePublicHomeFace(
+  _input?: { accountCount: number; asOfLine: string } | null,
+): HomeFace {
   return finish(
     {
       id: "finance",
-      href: "/n/finance",
+      href: "",
       name: "Finance",
-      headline: String(count),
-      status: input.asOfLine.trim() || NOT_RECORDED,
-      live: count > 0,
+      headline: "Private",
+      status: "locked",
+      live: false,
+      locked: true,
     },
     true,
   );

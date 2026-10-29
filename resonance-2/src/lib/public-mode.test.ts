@@ -17,6 +17,7 @@ import { assembleFactoryFloor } from "@/lib/factory-floor";
 import { visibleLessons, type Lesson } from "@/lib/lessons";
 import { presentBricks, type BrickItem, type BrickOverlay } from "@/lib/youtube-bricks";
 import { holdingChildModel } from "@/lib/child-card";
+import { financePublicHomeFace } from "@/lib/home-faces";
 import type { FitnessCard, FitnessNodeDetail } from "@/lib/fitness-board";
 import { assembleLiveFace } from "@/lib/live-face";
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
@@ -515,6 +516,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         fitness: { headline: "8420", unit: "steps", lines: ["3.2 mi this week"] },
         fightRecord: "4-1",
         buildHome,
+        finance: financePublicHomeFace({ accountCount: 4, asOfLine: "as of Oct 8, 2026 · $80,000" }),
       }),
       createElement(system.SystemHomeCard),
       createElement(controlUi.ControlHomeCard, {
@@ -623,6 +625,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     debt ? render(createElement(financeDetailUi.FinanceDetail, { detail: debt, asOf: snapshot.asOf, stale: false })) : "",
     netWorth ? render(createElement(financeDetailUi.FinanceDetail, { detail: netWorth, asOf: snapshot.asOf, stale: false })) : "",
   ].join("\n");
+  assert.equal(finance.includes("$"), false);
   const approvalHtml = render(
     createElement(approvalsUi.ApprovalList, {
       mode: "pending",
@@ -810,8 +813,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/fight-desk", html: fight },
     { path: "/fights", html: fight },
     { path: "/n/fight-desk/bankroll", html: bankrollHtml },
-    { path: "/n/finance", html: finance },
-    { path: "/n/finance/debt", html: finance },
+    { path: "/n/finance", html: hidden },
+    { path: "/n/finance/debt", html: hidden },
     { path: "/n/approvals", html: approvalHtml },
     { path: "/n/approvals/pending", html: approvalHtml },
     { path: "/n/roundtable", html: roundtableHtml },
@@ -905,7 +908,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     },
     ...lenses.SYSTEM_LENSES.map((lens) => ({
       path: lens.id === "nodes" ? "/n/system" : `/n/system?lens=${lens.id}`,
-      html: render(createElement(system.SystemMap, { lens: lens.id })),
+      html: render(createElement(system.SystemMap, { lens: lens.id, publicMode: true })),
     })),
     {
       path: "/n/system/live",
@@ -1135,6 +1138,7 @@ describe("public render scan", () => {
       "/calendar/2026-10-08",
       "/settings",
       "/n/finance",
+      "/n/finance/debt",
       "/settings/security",
       "/log",
       "/fights",
@@ -1168,6 +1172,13 @@ describe("public render scan", () => {
     assert.match(treasury?.html ?? "", /Powered by a digital asset treasury/);
     assert.equal(treasury?.html.includes("XRP"), false);
     const home = pages.find((page) => page.path === "/");
+    assert.match(home?.html ?? "", /data-lock-badge/);
+    assert.match(home?.html ?? "", /Private/);
+    assert.equal(home?.html.includes('href="/n/finance"'), false);
+    assert.equal(home?.html.includes("$80,000"), false);
+    assert.match(home?.html ?? "", /href="\/n\/crypto"/);
+    assert.match(home?.html ?? "", /href="\/n\/ai-stocks"/);
+    assert.match(home?.html ?? "", /href="\/n\/build"/);
     assert.match(home?.html ?? "", /Build/);
     assert.match(home?.html ?? "", /40%/);
     assert.match(home?.html ?? "", /System/);
@@ -1289,14 +1300,22 @@ describe("public render scan", () => {
       "/api/roundtable",
       "/api/roundtable/rt-example",
       "/api/roundtable/rt-example/reply",
+      "/n/finance",
+      "/n/finance/net-worth",
+      "/n/finance/debt",
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/n/control/approvals", "/n/finance", "/n/finance/net-worth", "/n/finance/debt", "/n/fight-desk", "/n/fight-desk/bankroll", "/fights", "/fights/upcoming", "/fights/past", "/fights/ufc", "/n/approvals", "/n/approvals/pending", "/n/approvals/done", "/n/roundtable", "/n/roundtable/rt-example", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/n/control/approvals", "/n/fight-desk", "/n/fight-desk/bankroll", "/fights", "/fights/upcoming", "/fights/past", "/fights/ufc", "/n/approvals", "/n/approvals/pending", "/n/approvals/done", "/n/roundtable", "/n/roundtable/rt-example", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
-    assert.deepEqual(hidden.map((page) => page.path).sort(), ["/log", "/settings/security"]);
+    assert.deepEqual(hidden.map((page) => page.path).sort(), [
+      "/log",
+      "/n/finance",
+      "/n/finance/debt",
+      "/settings/security",
+    ]);
     for (const page of hidden) {
       assert.match(page.html, /Private/);
       assert.equal(page.html.includes("$"), false);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { NodeFace } from "@/components/node-face";
 import { systemHomeFace } from "@/lib/home-faces";
 import { navHrefShelved, visibleById } from "@/lib/node-visibility";
+import { financePageLocked } from "@/lib/public-mode";
 import {
   DATA_SOURCES,
   GOVERNANCE,
@@ -91,12 +92,18 @@ export function SystemLensNav({ live = false }: { live?: boolean }) {
   return <NodeLinks lens={null} live={live} />;
 }
 
+function shownHref(href: string | null, publicMode: boolean): string | null {
+  if (!href || navHrefShelved(href)) return null;
+  if (publicMode && financePageLocked(href)) return null;
+  return href;
+}
+
 function FeedLink({ href, label }: { href: string; label: string }) {
-  if (navHrefShelved(href)) return null;
+  if (!href) return <span>{label}</span>;
   return <Link href={href}>{label}</Link>;
 }
 
-function NodesLens() {
+function NodesLens({ publicMode }: { publicMode: boolean }) {
   const nodes = visibleById(SYSTEM_NODES);
   return (
     <>
@@ -105,7 +112,7 @@ function NodesLens() {
         <FlowArrow />
         <div className={styles.feedTargets}>
           {SYSTEM_FEED.to.map((target) => (
-            <FeedLink key={target.id} href={target.href} label={target.label} />
+            <FeedLink key={target.id} href={shownHref(target.href, publicMode) ?? ""} label={target.label} />
           ))}
         </div>
         <figcaption className={styles.caption}>{SYSTEM_FEED.summary}</figcaption>
@@ -115,20 +122,26 @@ function NodesLens() {
           <article key={node.id} className={styles.card}>
             <div className={styles.cardHead}>
               <h3 className={styles.cardTitle}>
-                {node.href ? <Link href={node.href}>{node.label}</Link> : node.label}
+                {shownHref(node.href, publicMode) ? (
+                  <Link href={shownHref(node.href, publicMode) ?? ""}>{node.label}</Link>
+                ) : (
+                  node.label
+                )}
               </h3>
               {node.status === "coming" ? <span className={styles.chip}>Coming</span> : null}
             </div>
             <p className={styles.detail}>{node.connection}</p>
             {node.children.length > 0 ? (
               <ul className={styles.chips}>
-                {node.children.map((child) =>
-                  child.href && navHrefShelved(child.href) ? null : (
+                {node.children.map((child) => {
+                  const href = shownHref(child.href, publicMode);
+                  if (child.href && !href && navHrefShelved(child.href)) return null;
+                  return (
                   <li key={child.id}>
-                    {child.href ? <Link href={child.href}>{child.label}</Link> : <span>{child.label}</span>}
+                    {href ? <Link href={href}>{child.label}</Link> : <span>{child.label}</span>}
                   </li>
-                  ),
-                )}
+                  );
+                })}
               </ul>
             ) : null}
           </article>
@@ -230,7 +243,6 @@ function TimelineLens() {
 }
 
 const LENSES = {
-  nodes: NodesLens,
   flow: FlowLens,
   sources: SourcesLens,
   agents: AgentsLens,
@@ -242,8 +254,8 @@ function paintedNodeCount(): number {
   return visibleById(SYSTEM_NODES).length;
 }
 
-export function SystemMap({ lens }: { lens: SystemLensId }) {
-  const Lens = LENSES[lens];
+export function SystemMap({ lens, publicMode = false }: { lens: SystemLensId; publicMode?: boolean }) {
+  const Lens = lens === "nodes" ? null : LENSES[lens];
   const line = `${SYSTEM_AGENTS.length} agents · ${paintedNodeCount()} nodes · all protections on`;
   return (
     <div className={styles.root} data-lens={lens}>
@@ -253,7 +265,7 @@ export function SystemMap({ lens }: { lens: SystemLensId }) {
         <p className="log-meta">{line}</p>
       </header>
       <NodeLinks lens={lens} />
-      <Lens />
+      {lens === "nodes" ? <NodesLens publicMode={publicMode} /> : Lens ? <Lens /> : null}
     </div>
   );
 }

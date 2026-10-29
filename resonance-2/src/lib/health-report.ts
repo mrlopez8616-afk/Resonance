@@ -5,7 +5,7 @@ import { CRAWL_WALK_RUN } from "@/lib/crawl-walk-run";
 import { FINANCE_NODES } from "@/lib/finance/view";
 import { FITNESS_NODES } from "@/lib/fitness-board";
 import { CRYPTO_HOME_TICKERS, HOME_QUOTE_MAX_AGE_MS } from "@/lib/home-lines";
-import { isHiddenInPublicMode } from "@/lib/public-mode";
+import { financePageLocked, isHiddenInPublicMode } from "@/lib/public-mode";
 
 export const HEALTH_STATUSES = ["ok", "unavailable", "error"] as const;
 export type HealthStatus = (typeof HEALTH_STATUSES)[number];
@@ -63,12 +63,35 @@ export type HealthSummary = {
   stale: number;
 };
 
+export const PUBLIC_VIEW_ISSUE_IDS = [
+  "logged-out-dollar-fields",
+  "logged-out-write-open",
+  "public-page-status",
+  "public-page-error",
+  "public-drill-down",
+  "finance-lock-tile",
+  "finance-lock-href",
+  "finance-logged-out-page",
+  "finance-logged-out-api",
+] as const;
+
+export type PublicViewIssueId = (typeof PUBLIC_VIEW_ISSUE_IDS)[number];
+
+/** One named Public-view check. A failure is its own row, with the route on `path`. */
+export type HealthIssue = {
+  id: PublicViewIssueId;
+  name: string;
+  status: "ok" | "error";
+  path: string;
+};
+
 export type HealthFullReport = {
   ok: boolean;
   checkedAt: string;
   summary: HealthSummary;
   tiles: HealthSurface[];
   pages: HealthSurface[];
+  issues: HealthIssue[];
 };
 
 export type HealthTarget = {
@@ -239,10 +262,12 @@ export function resolveDrillDown(href: string): { ok: true; path: string } | { o
 /**
  * A home tile or node card is broken when its href 404s, loops, or
  * public mode would still answer with the private gate.
+ * Finance is locked on purpose in public mode. That missing link is expected.
  */
 export function drillDownBroken(href: string, mode: "private" | "public"): boolean {
   const resolved = resolveDrillDown(href);
   if (!resolved.ok) return true;
+  if (mode === "public" && financePageLocked(resolved.path)) return false;
   if (mode === "public" && isHiddenInPublicMode(resolved.path)) return true;
   return false;
 }
@@ -355,11 +380,32 @@ function rowFor(raw: readonly unknown[], target: HealthTarget, index: number): u
   return match ?? raw[index];
 }
 
+const ISSUE_IDS = new Set<string>(PUBLIC_VIEW_ISSUE_IDS);
+
+function cleanIssues(value: unknown): HealthIssue[] {
+  if (!Array.isArray(value)) return [];
+  const issues: HealthIssue[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Partial<HealthIssue>;
+    if (typeof row.id !== "string" || !ISSUE_IDS.has(row.id)) continue;
+    if (row.status !== "ok" && row.status !== "error") continue;
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    const path = typeof row.path === "string" ? row.path.trim() : "";
+    if (!name || name.includes("$") || path.includes("$")) continue;
+    if (name.length > 180 || path.length > 160) continue;
+    if (path && !path.startsWith("/")) continue;
+    issues.push({ id: row.id as PublicViewIssueId, name, status: row.status, path });
+  }
+  return issues;
+}
+
 /** Rebuild the public shape. Extra fields and dollar text do not survive. */
 export function publicHealthReport(input: {
   checkedAt?: unknown;
   tiles?: unknown;
   pages?: unknown;
+  issues?: unknown;
 }): HealthFullReport {
   const tileTargets = HEALTH_TILES;
   const pageTargets = healthPages();
@@ -371,14 +417,22 @@ export function publicHealthReport(input: {
   const pages = pageTargets.map((target, index) =>
     applyDrillDown(cleanSurface(rowFor(rawPages, target, index), target), target.path),
   );
+  const issues = cleanIssues(input.issues);
+  const issueErrors = issues.filter((issue) => issue.status === "error").length;
   const summary = healthSummary(tiles, pages);
+  const status: HealthStatus = issueErrors > 0 ? "error" : summary.status;
   const checkedAt = cleanString(input.checkedAt, "");
   return {
-    ok: summary.status === "ok",
+    ok: status === "ok",
     checkedAt: Number.isFinite(Date.parse(checkedAt)) ? checkedAt : new Date(0).toISOString(),
-    summary,
+    summary: {
+      ...summary,
+      status,
+      error: summary.error + issueErrors,
+    },
     tiles,
     pages,
+    issues,
   };
 }
 
@@ -547,11 +601,13 @@ export function assembleHealth(
   checkedAt: string,
   tileFacts: Readonly<Record<string, HealthBits>>,
   pageFacts: Readonly<Record<string, HealthBits>>,
+  issues: readonly HealthIssue[] = [],
 ): HealthFullReport {
   const missing = failedBits("error");
   return publicHealthReport({
     checkedAt,
     tiles: HEALTH_TILES.map((target) => surface(target, tileFacts[target.id] ?? missing)),
     pages: healthPages().map((target) => surface(target, pageFacts[target.id] ?? missing)),
+    issues: [...issues],
   });
 }

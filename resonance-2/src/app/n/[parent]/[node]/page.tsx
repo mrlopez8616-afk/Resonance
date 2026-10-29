@@ -5,6 +5,7 @@ import { PositionBook } from "@/components/position-book";
 import { PublicNodePage, TreasuryCard } from "@/components/public-floor";
 import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
+import { PrivatePage } from "@/components/private-notice";
 import { FitnessDetail } from "@/components/fitness-detail";
 import { manualImportDetail } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
@@ -16,7 +17,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFinancePage, readFinanceNetWorthSeries } from "@/lib/finance/store";
-import { financeDetail, financeNode, publicFinanceDetail } from "@/lib/finance/view";
+import { financeDetail, financeNode } from "@/lib/finance/view";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
@@ -142,16 +143,12 @@ export default async function NodeDetailPage({
     }
   }
   if (parent?.id === "finance") {
+    if (await isPublicMode()) return <PrivatePage />;
     await requireRole("owner");
     if (!financeNode(nodeId)) notFound();
-    const [finance, publicMode] = await Promise.all([loadFinancePage(), isPublicMode()]);
+    const finance = await loadFinancePage();
     const series = finance.status === "live" ? await readFinanceNetWorthSeries() : [];
-    const detail =
-      finance.status === "live"
-        ? publicMode
-          ? publicFinanceDetail(finance.snapshot, nodeId, series)
-          : financeDetail(finance.snapshot, nodeId, series)
-        : null;
+    const detail = finance.status === "live" ? financeDetail(finance.snapshot, nodeId, series) : null;
     return (
       <OperatorShell
         storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}

@@ -32,8 +32,9 @@ export function publicModeEnabled(value: string | null | undefined): boolean {
 
 /**
  * Routes that stay off a shared screen.
- * Node pages stay on. Dollars on those pages are swapped for a record,
- * a win rate, an ROI percent, or a count before render.
+ * Node pages stay on, except Finance. Finance stays visible on the floor
+ * as a locked tile and does not open. Dollars on the pages that stay on
+ * are swapped for a record, a win rate, an ROI percent, or a count.
  * The operator log, the security settings, and the money APIs stay hidden.
  * Those APIs return stakes, balances, and write actions, not a node page.
  */
@@ -43,6 +44,7 @@ const HIDDEN_PREFIXES = [
   "/settings/integrations",
   "/api/settings/health-auto-export-token",
   "/api/ingest/health-auto-export",
+  "/n/finance",
   "/api/finance",
   "/api/bets",
   "/api/deposits",
@@ -58,8 +60,24 @@ const HIDDEN_PREFIXES = [
   "/api/roundtable",
 ] as const;
 
+export function normalizePath(pathname: string): string {
+  return (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";
+}
+
+/** Finance pages and finance APIs. The home tile stays; these routes do not open. */
+export function isFinancePath(pathname: string): boolean {
+  const path = normalizePath(pathname);
+  return path === "/n/finance" || path.startsWith("/n/finance/") || path === "/api/finance" || path.startsWith("/api/finance/");
+}
+
+/** Finance screens. Public mode keeps the tile and drops the drill-down. */
+export function financePageLocked(pathname: string): boolean {
+  const path = normalizePath(pathname);
+  return path === "/n/finance" || path.startsWith("/n/finance/");
+}
+
 export function isHiddenInPublicMode(pathname: string): boolean {
-  const path = (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";
+  const path = normalizePath(pathname);
   return HIDDEN_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
