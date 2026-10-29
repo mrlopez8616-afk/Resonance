@@ -5225,3 +5225,317 @@ a.fighter-link {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/* Fitness is one dark screen, in the Health / Run Club density, using the floor's red. */
+.operator-floor:has(.fitness-floor) {
+  height: auto;
+  min-height: 100dvh;
+  background: #0a0b0d;
+}
+
+.operator-floor:has(.fitness-floor) .mood-wash {
+  display: none;
+}
+
+.operator-floor:has(.fitness-floor) .operator-main {
+  flex: none;
+  overflow: visible;
+  background: #0a0b0d;
+  color: #f5f6f8;
+}
+
+.fitness-floor {
+  --ff-muted: #9aa0ab;
+  --ff-line: #2c3038;
+  --ff-up: #30d158;
+  width: min(100%, 920px);
+  margin: 0 auto;
+  color: #f5f6f8;
+}
+
+.fitness-floor .calendar-back {
+  color: #ff5a63;
+}
+
+.fitness-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.fitness-block h2,
+.fitness-records h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.fitness-block-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.fitness-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  margin: 0.15rem 0 0;
+}
+
+.fitness-hero strong {
+  font-size: clamp(2.4rem, 12vw, 3.4rem);
+  font-weight: 680;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-hero span,
+.fitness-quiet,
+.fitness-how,
+.fitness-metric-head span,
+.fitness-records span,
+.fitness-statline dt {
+  color: var(--ff-muted);
+}
+
+.fitness-quiet,
+.fitness-how,
+.fitness-delta {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.fitness-delta.is-up {
+  color: var(--ff-up);
+}
+
+.fitness-delta.is-down {
+  color: #ff5a63;
+}
+
+.fitness-segments {
+  display: flex;
+  flex: 0 0 auto;
+  padding: 2px;
+  border-radius: 9px;
+  background: #1c1e24;
+}
+
+.fitness-segments a {
+  min-width: 2.1rem;
+  min-height: 1.7rem;
+  padding: 0 0.35rem;
+  border-radius: 7px;
+  color: var(--ff-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.7rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.fitness-segments a.is-selected {
+  background: #3a3d46;
+  color: #fff;
+}
+
+.fitness-plot {
+  margin-top: 0.2rem;
+}
+
+.fitness-bar {
+  fill: #e10600;
+}
+
+.fitness-bar.is-now {
+  fill: #ff4d57;
+}
+
+.fitness-tick {
+  fill: var(--ff-muted);
+  font-size: 15px;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.fitness-notes,
+.fitness-activity,
+.fitness-month-rows,
+.fitness-splits,
+.fitness-metrics,
+.fitness-records ul,
+.fitness-days ol {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fitness-notes li {
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--ff-line);
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+
+.fitness-statline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0.45rem 0 0;
+}
+
+.fitness-statline div {
+  min-width: 0;
+}
+
+.fitness-statline dt {
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fitness-statline dd {
+  margin: 0.05rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-activity li + li {
+  border-top: 1px solid var(--ff-line);
+}
+
+.fitness-activity a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.05rem 0.6rem;
+  padding: 0.45rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fitness-activity span,
+.fitness-activity em,
+.fitness-records em {
+  color: var(--ff-muted);
+  font-style: normal;
+  font-size: 0.75rem;
+}
+
+.fitness-activity strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-activity em {
+  grid-column: 1 / -1;
+}
+
+.fitness-records {
+  margin-top: 0.7rem;
+}
+
+.fitness-records ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.fitness-records li {
+  padding: 0.4rem 0.5rem;
+  border-radius: 10px;
+  background: #14161c;
+}
+
+.fitness-records strong {
+  display: block;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-month-rows li,
+.fitness-splits li,
+.fitness-days li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.28rem 0;
+  border-top: 1px solid var(--ff-line);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-days summary {
+  margin-top: 0.35rem;
+  min-height: 2.25rem;
+  color: var(--ff-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.fitness-metrics {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.fitness-metrics > li {
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--ff-line);
+}
+
+.fitness-metric-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+
+.fitness-metric-head strong {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-metrics p {
+  margin: 0.1rem 0 0;
+  color: var(--ff-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.fitness-floor .fitness-setup,
+.fitness-floor .node-ticker {
+  color: #f5f6f8;
+}
+
+@media (min-width: 840px) {
+  .fitness-board {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 0.4rem 1.25rem;
+    align-items: start;
+  }
+
+  .fitness-analytics-block {
+    grid-column: 1 / -1;
+  }
+
+  .fitness-metrics {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.25rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .fitness-segments a {
+    min-width: 1.85rem;
+    min-height: 2rem;
+    line-height: 2rem;
+  }
+}

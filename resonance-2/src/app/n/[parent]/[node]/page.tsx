@@ -7,7 +7,6 @@ import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { PrivatePage } from "@/components/private-notice";
 import { FitnessDetail } from "@/components/fitness-detail";
-import { AnalyticsMirror, RunsMirror, StepsMirror } from "@/components/fitness-mirror";
 import { manualImportDetail } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { LiveNodeFace } from "@/components/live-node-face";
@@ -23,10 +22,8 @@ import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
 import { FITNESS_NODES, fitnessLegacyHref, publicFitnessDetail } from "@/lib/fitness-board";
-import { buildAnalytics, buildRunsView, buildStepsView, parseStepSpan } from "@/lib/fitness-present";
-import { loadFitnessBundle, loadFitnessNode } from "@/lib/fitness-store";
-import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
-import { shortcutWorkoutsAsWrites } from "@/lib/fitness-workouts";
+import { parseStepSpan } from "@/lib/fitness-present";
+import { loadFitnessNode } from "@/lib/fitness-store";
 import { aiStockRole } from "@/data/ai-stock-roles";
 import { retiredAiNodeHref } from "@/lib/ai-stocks";
 import { retiredCryptoNodeHref } from "@/lib/crypto-nodes";
@@ -192,49 +189,9 @@ export default async function NodeDetailPage({
       );
     }
     if (nodeId === "steps" || nodeId === "runs" || nodeId === "analytics") {
-      const [floor, bundle, publicMode] = await Promise.all([
-        loadOperatorFloor(),
-        loadFitnessBundle(),
-        isPublicMode(),
-      ]);
-      const workouts = [
-        ...bundle.workouts,
-        ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
-        ...nrcRunsAsWrites(bundle.nrcRuns),
-      ];
-      const steps = nodeId === "steps" ? buildStepsView({
-        metrics: bundle.metrics,
-        today: bundle.today,
-        span: parseStepSpan(query.span),
-        publicMode,
-      }) : null;
-      const runs = nodeId === "runs" ? buildRunsView({
-        workouts,
-        today: bundle.today,
-        publicMode,
-      }) : null;
-      const analytics = nodeId === "analytics" ? buildAnalytics({
-        metrics: bundle.metrics,
-        workouts,
-        today: bundle.today,
-        publicMode,
-      }) : null;
-      return (
-        <OperatorShell
-          storageMessage={
-            floor.storageMessage ??
-            (bundle.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
-          }
-          storageDetail={floor.storageDetail}
-        >
-          <Link href={`/n/${parent.id}`} className="calendar-back">
-            {parent.label}
-          </Link>
-          {steps ? <StepsMirror view={steps} /> : null}
-          {runs ? <RunsMirror view={runs} /> : null}
-          {analytics ? <AnalyticsMirror metrics={analytics} /> : null}
-        </OperatorShell>
-      );
+      const hash = nodeId === "runs" ? "activity" : nodeId === "analytics" ? "analytics" : "steps";
+      const span = nodeId === "steps" ? `?span=${parseStepSpan(query.span)}` : "";
+      permanentRedirect(`/n/fitness${span}#${hash}`);
     }
     const [floor, fitness, publicMode] = await Promise.all([
       loadOperatorFloor(),

@@ -233,12 +233,14 @@ describe("fitness manual copy", () => {
     assert.equal(file.includes("INSERT INTO fitness_nrc_runs"), false);
     const parent = readFileSync(path.join(root, "src/app/n/[parent]/page.tsx"), "utf8");
     const fitness = parent.slice(parent.indexOf('parent.id === "fitness"'));
-    assert.match(fitness, /buildFitnessStory/);
+    assert.match(fitness, /FitnessFloor/);
     assert.match(fitness, /publicMode/);
+    assert.match(fitness, /buildStepsView/);
     assert.ok(fitness.indexOf('await requireRole("owner")') < fitness.indexOf("loadFitnessBundle"));
     const node = readFileSync(path.join(root, "src/app/n/[parent]/[node]/page.tsx"), "utf8");
     assert.match(node, /nodeId === "manual"/);
     assert.match(node, /manualImportDetail/);
+    assert.match(node, /permanentRedirect\(`\/n\/fitness/);
     const cabinet = readFileSync(path.join(root, "cabinet/fitness-manual.md"), "utf8");
     assert.match(cabinet, /POST \/api\/fitness\/manual/);
     assert.match(cabinet, /GET \/api\/fitness\/manual/);

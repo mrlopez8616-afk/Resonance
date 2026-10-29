@@ -223,7 +223,14 @@ function drillRedirect(path: string): string | null {
   const moneyChild = new RegExp(`^/n/money/(${SLUG})$`).exec(path);
   if (moneyChild?.[1]) return `/n/finance/${moneyChild[1]}`;
   if (path === "/n/ai" || path === "/n/stocks") return "/n/ai-stocks";
-  if (path === "/n/fitness/activity") return "/n/fitness/steps";
+  if (
+    path === "/n/fitness/activity" ||
+    path === "/n/fitness/steps" ||
+    path === "/n/fitness/runs" ||
+    path === "/n/fitness/analytics"
+  ) {
+    return "/n/fitness";
+  }
   if (path === "/fights/main-card" || path === "/fights/prelims") return "/fights";
   return null;
 }

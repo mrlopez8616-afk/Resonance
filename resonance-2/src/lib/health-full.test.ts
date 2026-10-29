@@ -339,7 +339,11 @@ describe("health full probe", () => {
     const activity = resolveDrillDown("/n/fitness/activity");
     const legacyCard = resolveDrillDown("/fights/main-card");
     assert.equal(predictions.ok && predictions.path, "/n/fight-desk");
-    assert.equal(activity.ok && activity.path, "/n/fitness/steps");
+    assert.equal(activity.ok && activity.path, "/n/fitness");
+    const steps = resolveDrillDown("/n/fitness/steps");
+    const runs = resolveDrillDown("/n/fitness/runs");
+    assert.equal(steps.ok && steps.path, "/n/fitness");
+    assert.equal(runs.ok && runs.path, "/n/fitness");
     assert.equal(legacyCard.ok && legacyCard.path, "/fights");
     assert.equal(drillDownBroken("/n/not-a-node", "private"), true);
     assert.equal(drillDownBroken("/settings/security", "private"), false);
