@@ -162,7 +162,10 @@ const NOT_CONNECTED = "not connected";
 const LESSON_CAP = 220;
 
 function cleanText(value: string): string {
-  return stripMoneyText(value).replace(/\s+/g, " ").trim();
+  return stripMoneyText(value)
+    .replace(/\$/g, "dollars")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function clip(value: string, max: number): string {
