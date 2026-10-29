@@ -95,6 +95,7 @@ const HOME_GLYPHS = new Set([
   "lessons",
   "roundtable",
   "chain-security",
+  "visitors",
 ]);
 
 /** Home ids stay exact. Week and month fitness tiles share a mark by suffix. */
@@ -238,6 +239,15 @@ function NodeGlyph({ id }: { id: string }) {
         <path d="M4.5 8.5h15l-1.2-3h-12.6z" {...stroke} />
         <path d="M5 8.5h14V19H5z" {...stroke} />
         <path d="M9 13.5h6" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "visitors") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <circle cx="8" cy="9" r="2.2" {...stroke} />
+        <circle cx="16" cy="9" r="2.2" {...stroke} />
+        <path d="M4.2 17c.7-2.2 2.2-3.2 3.8-3.2s3.1 1 3.8 3.2M12.2 17c.7-2.2 2.2-3.2 3.8-3.2s3.1 1 3.8 3.2" {...stroke} />
       </svg>
     );
   }

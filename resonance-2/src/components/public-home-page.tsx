@@ -21,7 +21,8 @@ import type { ChainSecurityHomeModel } from "@/lib/chain-security";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
-import { financePublicHomeFace, publicHomeNodeCount } from "@/lib/home-faces";
+import { financePublicHomeFace, publicHomeNodeCount, visitorsHomeFace } from "@/lib/home-faces";
+import { readVisitorSummary } from "@/lib/visitors-store";
 import { loadRoundtableHome } from "@/lib/roundtable-store";
 import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { hasMoneyText, publicHref, publicRecordLabel, stripMoneyText } from "@/lib/public-mode";
@@ -61,7 +62,7 @@ function safeLine(line: string): string | null {
 }
 
 export async function PublicHomePage() {
-  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome, roundtableHome] =
+  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome, roundtableHome, visitors] =
     await Promise.all([
     loadPublicFloor(),
     loadFitnessHome(),
@@ -88,6 +89,10 @@ export async function PublicHomePage() {
     loadRoundtableHome(true).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return roundtableHomeFallback;
+    }),
+    readVisitorSummary().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return null;
     }),
   ]);
   const bets = betsLoaded.status === "unavailable" ? [] : betsLoaded.bets;
@@ -160,6 +165,7 @@ export async function PublicHomePage() {
         }}
       />
       <RoundtableHomeCard card={roundtableHome} />
+      <NodeFace face={visitorsHomeFace(visitors)} />
       <ChainSecurityHomeCard
         publicMode
         card={{

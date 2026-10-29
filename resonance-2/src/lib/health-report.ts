@@ -114,6 +114,7 @@ export const HEALTH_TILES: readonly HealthTarget[] = [
   { id: "lessons", name: "Lessons", path: "/n/lessons" },
   { id: "roundtable", name: "Roundtable", path: "/n/roundtable" },
   { id: "chain-security", name: "Chain Security", path: "/n/chain-security" },
+  { id: "visitors", name: "Visitors", path: "/n/visitors" },
 ];
 
 const CONTROL_VIEW_NAMES: Record<(typeof CONTROL_VIEWS)[number], string> = {
@@ -177,6 +178,7 @@ export function healthPages(): HealthTarget[] {
     { id: "health", name: "Health", path: "/n/health" },
     { id: "roundtable", name: "Roundtable", path: "/n/roundtable" },
     { id: "chain-security", name: "Chain Security", path: "/n/chain-security" },
+    { id: "visitors", name: "Visitors", path: "/n/visitors" },
     { id: "control", name: "Control Room", path: "/n/control" },
   );
   for (const view of CONTROL_VIEWS) {

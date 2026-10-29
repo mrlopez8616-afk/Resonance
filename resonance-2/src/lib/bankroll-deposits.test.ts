@@ -120,6 +120,7 @@ describe("bankroll deposit validation", () => {
     assert.equal(voidEmbedded?.sql, voidFile);
     assert.equal(voidFile.includes("INSERT"), false);
     assert.equal(/^\s*delete\b/im.test(voidFile), false);
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "042_visitor_counts");
     assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "043_health_auto_export_token");
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id }), /reason must be a string/);
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id, reason: "  " }), /reason is required/);

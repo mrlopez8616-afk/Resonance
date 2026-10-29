@@ -321,10 +321,10 @@ describe("uniform home tiles", () => {
     assert.equal(privateHomeNodeCount({ owner: true, health: true }), 12);
     assert.equal(privateHomeNodeCount({ owner: true, health: false }), 11);
     assert.equal(privateHomeNodeCount({ owner: false, health: false }), 9);
-    assert.equal(publicHomeNodeCount({ fight: true, health: true }), 12);
-    assert.equal(publicHomeNodeCount({ fight: false, health: false }), 10);
+    assert.equal(publicHomeNodeCount({ fight: true, health: true }), 13);
+    assert.equal(publicHomeNodeCount({ fight: false, health: false }), 11);
     assert.equal(privateHomeNodeCount({ owner: true, health: true, shelved: [] }), 13);
-    assert.equal(publicHomeNodeCount({ fight: true, health: true, shelved: [] }), 13);
+    assert.equal(publicHomeNodeCount({ fight: true, health: true, shelved: [] }), 14);
     const owner = faceGridPlan(12, DESKTOP_FACE_BOX);
     const pub = faceGridPlan(10, DESKTOP_FACE_BOX);
     const phone = faceGridPlan(12, { width: 361, height: 586, gap: 5.6 }, true);
