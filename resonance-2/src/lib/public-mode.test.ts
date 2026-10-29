@@ -1077,6 +1077,7 @@ describe("public render scan", () => {
       "/n/roundtable/[thread]/page.tsx",
       "/n/system/page.tsx",
       "/n/system/live/page.tsx",
+      "/n/visitors/page.tsx",
       "/tv/page.tsx",
       "/n/youtube/page.tsx",
       "/n/youtube/channel/page.tsx",

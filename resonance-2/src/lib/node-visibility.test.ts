@@ -23,8 +23,8 @@ describe("shelved nodes", () => {
 
     assert.equal(privateHomeNodeCount({ owner: true, health: true }), 12);
     assert.equal(privateHomeNodeCount({ owner: true, health: true, shelved: [] }), 13);
-    assert.equal(publicHomeNodeCount({ fight: true, health: true }), 12);
-    assert.equal(publicHomeNodeCount({ fight: true, health: true, shelved: [] }), 13);
+    assert.equal(publicHomeNodeCount({ fight: true, health: true }), 13);
+    assert.equal(publicHomeNodeCount({ fight: true, health: true, shelved: [] }), 14);
 
     assert.equal(navHrefShelved("/n/fitness"), true);
     assert.equal(navHrefShelved("/n/fitness/steps"), true);

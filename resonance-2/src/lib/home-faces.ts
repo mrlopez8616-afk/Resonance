@@ -57,7 +57,7 @@ export function publicHomeNodeCount(input: {
   shelved?: readonly string[];
 }): number {
   const shelvedParent = nodeShelved("fitness", input.shelved) ? 1 : 0;
-  return 11 - shelvedParent + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
+  return 12 - shelvedParent + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
 }
 
 /** Columns and rows that keep every square inside the box. Phone stays on 3. */
@@ -277,6 +277,34 @@ export function financePublicHomeFace(
       status: "locked",
       live: false,
       locked: true,
+    },
+    true,
+  );
+}
+
+/** Public and private visitor tile. Counts only. A failed read stays "No data yet". */
+export function visitorsHomeFace(summary: { todayVisitors: number; totalVisitors: number } | null): HomeFace {
+  if (!summary) {
+    return finish(
+      {
+        id: "visitors",
+        href: "/n/visitors",
+        name: "Visitors",
+        headline: "No data yet",
+        status: "No data yet",
+        live: false,
+      },
+      true,
+    );
+  }
+  return finish(
+    {
+      id: "visitors",
+      href: "/n/visitors",
+      name: "Visitors",
+      headline: String(summary.todayVisitors),
+      status: `${summary.totalVisitors} total`,
+      live: true,
     },
     true,
   );

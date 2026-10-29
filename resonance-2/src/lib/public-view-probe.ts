@@ -117,6 +117,7 @@ export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "GET", path: "/api/youtube/bricks", loggedOut: "401", auth: "owner session" },
   { method: "POST", path: "/api/youtube/bricks", loggedOut: "401", auth: "sync bearer" },
   { method: "PATCH", path: "/api/youtube/bricks", loggedOut: "401", auth: "sync bearer" },
+  { method: "POST", path: "/api/visitors", loggedOut: "204 empty", auth: "anonymous increment only" },
 ];
 
 function issue(id: PublicViewIssueId, name: string, path: string, status: "ok" | "error" = "error"): HealthIssue {
@@ -346,6 +347,7 @@ function closedWrite(status: number, path: string): boolean {
   if (path === "/api/auth/passkey/login/options") {
     return status === 200 || status === 400 || status === 401 || status === 503;
   }
+  if (path === "/api/visitors") return status === 204;
   return status === 401 || status === 403 || status === 503;
 }
 
@@ -449,6 +451,7 @@ async function loadHandlers(): Promise<{
     events,
     xrp,
     bricks,
+    visitors,
   ] = await Promise.all([
     import("@/app/api/approvals/route"),
     import("@/app/api/approvals/[id]/decision/route"),
@@ -497,6 +500,7 @@ async function loadHandlers(): Promise<{
     import("@/app/api/system/events/route"),
     import("@/app/api/xrp-price/route"),
     import("@/app/api/youtube/bricks/route"),
+    import("@/app/api/visitors/route"),
   ]);
 
   const threadGet: Handler = (incoming) => thread.GET(incoming, { params: Promise.resolve({ id: "rt-example" }) });
@@ -576,6 +580,7 @@ async function loadHandlers(): Promise<{
       { method: "POST", path: "/api/storage/migrate", call: storageMigrate.POST },
       { method: "POST", path: "/api/youtube/bricks", call: bricks.POST },
       { method: "PATCH", path: "/api/youtube/bricks", call: bricks.PATCH },
+      { method: "POST", path: "/api/visitors", call: visitors.POST },
     ],
   };
 }

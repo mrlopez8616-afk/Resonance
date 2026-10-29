@@ -819,6 +819,26 @@ WHERE NOT EXISTS (
 );
 `;
 
+export const VISITOR_COUNTS_SQL = `-- Anonymous visitor counts. Number 042.
+-- 041 inserted the public-node lesson. This file creates two tables.
+-- It stores a daily page-view count and a daily unique count.
+-- The unique key is a salted hash. The raw address and browser are not columns.
+
+CREATE TABLE IF NOT EXISTS visitor_days (
+  day date PRIMARY KEY,
+  page_views integer NOT NULL DEFAULT 0,
+  unique_visitors integer NOT NULL DEFAULT 0,
+  CONSTRAINT visitor_days_views_chk CHECK (page_views >= 0),
+  CONSTRAINT visitor_days_uniques_chk CHECK (unique_visitors >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS visitor_seen (
+  day date NOT NULL,
+  visitor_hash text NOT NULL,
+  PRIMARY KEY (day, visitor_hash)
+);
+`;
+
 export const MARKET_QUOTES_SQL = `-- Last good public market quote. Number 040.
 -- 039 inserted the health-route lesson. This file creates one table.
 -- It inserts no rows and does not change positions, fills, or balances.
@@ -887,5 +907,6 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "039_health_route_lesson", sql: HEALTH_ROUTE_LESSON_SQL },
   { id: "040_market_quotes", sql: MARKET_QUOTES_SQL },
   { id: "041_public_node_lesson", sql: PUBLIC_NODE_LESSON_SQL },
+  { id: "042_visitor_counts", sql: VISITOR_COUNTS_SQL },
   { id: "043_health_auto_export_token", sql: HEALTH_AUTO_EXPORT_TOKEN_SQL },
 ];
