@@ -536,7 +536,7 @@ describe("health auto export settings copy", () => {
     const file = readFileSync(path.join(root, "db/migrations/043_health_auto_export_token.sql"), "utf8");
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "043_health_auto_export_token");
     assert.equal(embedded?.sql, file);
-    assert.equal(EMBEDDED_MIGRATIONS.some((entry) => entry.id.startsWith("042")), false);
+    assert.equal(EMBEDDED_MIGRATIONS.some((entry) => entry.id === "042_visitor_counts"), true);
     assert.equal(file.includes("INSERT"), false);
     assert.match(file, /042 is reserved/);
   });

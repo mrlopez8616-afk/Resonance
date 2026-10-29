@@ -313,6 +313,9 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
       ? bits("unavailable", "storage unavailable")
       : logBits(card.count, incidentDays, now, "no rows"),
   );
+  tiles.visitors = bits("ok", "loaded");
+  pages.visitors = bits("ok", "loaded");
+
   pages["chain-security"] = fromSettled(chainFeed, (feed) =>
     logBits(
       feed.count,

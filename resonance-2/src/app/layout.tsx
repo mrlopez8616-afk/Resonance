@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist_Mono, Inter } from "next/font/google";
 import { headers } from "next/headers";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { VisitorBeacon } from "@/components/visitor-beacon";
 import { PATH_HEADER, isLoginPage } from "@/lib/auth-core";
 import { requireSession } from "@/lib/auth-session";
 import "./globals.css";
@@ -63,6 +65,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     >
       <body className="min-h-full">
         <ServiceWorkerRegister />
+        <VisitorBeacon />
+        <Analytics />
         {children}
       </body>
     </html>
