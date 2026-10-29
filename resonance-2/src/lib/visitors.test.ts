@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { NextRequest } from "next/server";
 import { newDb } from "pg-mem";
 import { POST } from "@/app/api/visitors/route";
-import { isVisitorCountPost, planAccess } from "@/lib/auth-core";
+import { isLoggedOutVisitorHit, isVisitorCountPost, planAccess } from "@/lib/auth-core";
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
 import { proxy } from "@/proxy";
@@ -43,12 +43,48 @@ describe("anonymous visitors", () => {
     else process.env.AUTH_SESSION_SECRET = previous;
   });
 
-  it("does not redirect a logged-out POST /api/visitors", async () => {
+  it("does not redirect a logged-out login-page POST /api/visitors", async () => {
     process.env.AUTH_PASSWORD_HASH = "$argon2id$v=19$m=19456,t=2,p=1$dummy";
     process.env.AUTH_TOTP_SECRET = "JBSWY3DPEHPK3PXP";
     process.env.AUTH_SESSION_SECRET = "visitor-salt-for-tests";
     assert.equal(isVisitorCountPost("/api/visitors", "POST"), true);
     assert.equal(isVisitorCountPost("/api/visitors", "GET"), false);
+    assert.equal(
+      isLoggedOutVisitorHit({
+        bodyPath: "/login",
+        referer: "https://resonance3.vercel.app/login?next=%2F",
+        origin: "https://resonance3.vercel.app",
+      }),
+      true,
+    );
+    assert.equal(
+      isLoggedOutVisitorHit({
+        bodyPath: "/",
+        referer: "https://resonance3.vercel.app/",
+        origin: "https://resonance3.vercel.app",
+      }),
+      true,
+    );
+    assert.equal(
+      isLoggedOutVisitorHit({
+        bodyPath: "/n/crypto",
+        referer: "https://resonance3.vercel.app/login",
+        origin: "https://resonance3.vercel.app",
+      }),
+      false,
+    );
+    assert.equal(
+      planAccess({
+        pathname: "/api/visitors",
+        method: "POST",
+        sessionToken: null,
+        bearerOk: false,
+        loginConfigured: true,
+        nextPath: "/api/visitors",
+        loginVisitorHit: true,
+      }).kind,
+      "allow",
+    );
     assert.equal(
       planAccess({
         pathname: "/api/visitors",
@@ -58,7 +94,7 @@ describe("anonymous visitors", () => {
         loginConfigured: true,
         nextPath: "/api/visitors",
       }).kind,
-      "allow",
+      "deny",
     );
     const posted = await proxy(
       new NextRequest("https://resonance3.vercel.app/api/visitors", {
@@ -66,14 +102,41 @@ describe("anonymous visitors", () => {
         headers: {
           "content-type": "application/json",
           "user-agent": "Mozilla/5.0 Chrome/120.0.0.0",
+          referer: "https://resonance3.vercel.app/login",
         },
-        body: JSON.stringify({ path: "/" }),
+        body: JSON.stringify({ path: "/login" }),
       }),
     );
     assert.notEqual(posted.status, 307);
     assert.notEqual(posted.status, 302);
     assert.equal(posted.headers.get("location"), null);
     assert.equal(posted.headers.get("x-middleware-next"), "1");
+    const landing = await proxy(
+      new NextRequest("https://resonance3.vercel.app/api/visitors", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "user-agent": "Mozilla/5.0 Chrome/120.0.0.0",
+          referer: "https://resonance3.vercel.app/",
+        },
+        body: JSON.stringify({ path: "/" }),
+      }),
+    );
+    assert.equal(landing.headers.get("location"), null);
+    assert.equal(landing.headers.get("x-middleware-next"), "1");
+    const floor = await proxy(
+      new NextRequest("https://resonance3.vercel.app/api/visitors", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "user-agent": "Mozilla/5.0 Chrome/120.0.0.0",
+          referer: "https://resonance3.vercel.app/login",
+        },
+        body: JSON.stringify({ path: "/n/crypto" }),
+      }),
+    );
+    assert.equal(floor.status, 401);
+    assert.equal(floor.headers.get("location"), null);
     const read = await proxy(new NextRequest("https://resonance3.vercel.app/api/visitors"));
     assert.equal(read.status, 401);
     assert.equal(read.headers.get("location"), null);
@@ -131,7 +194,7 @@ describe("anonymous visitors", () => {
         new Request("https://resonance3.vercel.app/api/visitors", {
           method: "POST",
           headers,
-          body: JSON.stringify({ path: "/n/crypto?token=secret" }),
+          body: JSON.stringify({ path: "/login?next=/" }),
         }),
       );
     const first = await hit();
@@ -155,6 +218,14 @@ describe("anonymous visitors", () => {
       }),
     );
     assert.equal(bot.status, 204);
+    const floor = await POST(
+      new Request("https://resonance3.vercel.app/api/visitors", {
+        method: "POST",
+        headers: { ...headers, "x-forwarded-for": "203.0.113.11" },
+        body: JSON.stringify({ path: "/n/crypto" }),
+      }),
+    );
+    assert.equal(floor.status, 204);
 
     const summary = await readVisitorSummary(new Date("2026-10-29T20:00:00.000Z"));
     const today = summary.days.find((day) => day.day === new Date().toISOString().slice(0, 10));

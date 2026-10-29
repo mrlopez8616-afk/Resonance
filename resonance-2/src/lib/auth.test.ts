@@ -419,7 +419,27 @@ describe("login core", { concurrency: false }, () => {
     );
     assert.equal(
       planAccess({ ...base, pathname: "/api/visitors", method: "POST", nextPath: "/api/visitors" }).kind,
+      "deny",
+    );
+    assert.equal(
+      planAccess({
+        ...base,
+        pathname: "/api/visitors",
+        method: "POST",
+        nextPath: "/api/visitors",
+        loginVisitorHit: true,
+      }).kind,
       "allow",
+    );
+    assert.equal(
+      planAccess({
+        ...base,
+        pathname: "/api/visitors",
+        method: "POST",
+        nextPath: "/api/visitors",
+        sessionToken: "a".repeat(43),
+      }).kind,
+      "allow-session",
     );
     assert.equal(
       planAccess({ ...base, pathname: "/api/visitors", method: "GET", nextPath: "/api/visitors" }).kind,
@@ -557,6 +577,7 @@ describe("login core", { concurrency: false }, () => {
         "041_public_node_lesson",
         "042_visitor_counts",
         "043_health_auto_export_token",
+        "044_future_idea_membership",
       ],
     );
     const ids = (await sqlQuery<{ id: string }>(`SELECT id FROM schema_migrations ORDER BY id`)).map(
@@ -624,6 +645,7 @@ describe("login core", { concurrency: false }, () => {
         "041_public_node_lesson",
         "042_visitor_counts",
         "043_health_auto_export_token",
+        "044_future_idea_membership",
       ],
     );
     const filled = await applyMigrations(EMBEDDED_MIGRATIONS);

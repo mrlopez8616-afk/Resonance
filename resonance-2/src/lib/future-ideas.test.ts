@@ -266,6 +266,35 @@ describe("future ideas store", { concurrency: false }, () => {
     assert.equal(third.skipped.includes("027_future_ideas_seeds"), true);
   });
 
+  it("inserts the membership idea once and leaves an edit alone", async () => {
+    const membership = readFileSync(path.join(root, "db/migrations/044_future_idea_membership.sql"), "utf8");
+    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "044_future_idea_membership");
+    assert.equal(embedded?.sql, membership);
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "044_future_idea_membership");
+    const title =
+      "Membership access tier — paid membership granting access to explore Resonance (Oct 29, 2026)";
+    await sqlQuery(`DELETE FROM schema_migrations WHERE id = '044_future_idea_membership'`);
+    const seeded = await applyMigrations([{ id: "044_future_idea_membership", sql: membership }]);
+    assert.deepEqual(seeded.applied, ["044_future_idea_membership"]);
+    const ideas = await readIdeas();
+    const row = ideas.find((idea) => idea.id === "membership-access-tier");
+    assert.equal(row?.title, title);
+    assert.equal(row?.note, "");
+    assert.equal(row?.status, "idea");
+    assert.equal(row?.addedOn, "2026-10-29");
+    assert.equal(ideas.filter((idea) => idea.title === title).length, 1);
+
+    await sqlQuery(`UPDATE future_ideas SET title = 'Membership, renamed' WHERE id = 'membership-access-tier'`);
+    await sqlQuery(`DELETE FROM schema_migrations WHERE id = '044_future_idea_membership'`);
+    const again = await applyMigrations([{ id: "044_future_idea_membership", sql: membership }]);
+    assert.deepEqual(again.applied, ["044_future_idea_membership"]);
+    const after = await readIdeas();
+    const renamed = after.filter((idea) => idea.id === "membership-access-tier");
+    assert.equal(renamed.length, 1);
+    assert.equal(renamed[0]?.title, "Membership, renamed");
+    assert.equal(after.filter((idea) => idea.title === title).length, 0);
+  });
+
   it("lets the owner add, edit, and archive, and keeps dollars off the public list", async () => {
     const signedOut = await POST(
       new Request("https://resonance3.vercel.app/api/ideas", {

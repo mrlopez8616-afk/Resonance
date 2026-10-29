@@ -854,6 +854,25 @@ CREATE TABLE IF NOT EXISTS market_quotes (
 );
 `;
 
+export const FUTURE_IDEA_MEMBERSHIP_SQL = `-- Future Ideas seed. Number 044.
+-- One membership idea from Oct 29, 2026.
+-- A row is skipped when that title or seed id is already stored, so an edit is left alone.
+
+INSERT INTO future_ideas (id, title, note, status, added_on)
+SELECT
+  'membership-access-tier',
+  'Membership access tier — paid membership granting access to explore Resonance (Oct 29, 2026)',
+  '',
+  'idea',
+  '2026-10-29'::date
+WHERE NOT EXISTS (
+  SELECT 1 FROM future_ideas WHERE title = 'Membership access tier — paid membership granting access to explore Resonance (Oct 29, 2026)'
+)
+AND NOT EXISTS (
+  SELECT 1 FROM future_ideas WHERE id = 'membership-access-tier'
+);
+`;
+
 export const HEALTH_AUTO_EXPORT_TOKEN_SQL = `-- Health Auto Export ingest token. Number 043.
 -- 042 is reserved by the visitor-analytics pull request.
 -- If 042 is still free when this file is merged, leave the number at 043.
@@ -909,4 +928,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "041_public_node_lesson", sql: PUBLIC_NODE_LESSON_SQL },
   { id: "042_visitor_counts", sql: VISITOR_COUNTS_SQL },
   { id: "043_health_auto_export_token", sql: HEALTH_AUTO_EXPORT_TOKEN_SQL },
+  { id: "044_future_idea_membership", sql: FUTURE_IDEA_MEMBERSHIP_SQL },
 ];

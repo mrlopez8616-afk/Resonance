@@ -774,6 +774,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "041_public_node_lesson",
         "042_visitor_counts",
         "043_health_auto_export_token",
+        "044_future_idea_membership",
       ],
     );
     assert.equal(

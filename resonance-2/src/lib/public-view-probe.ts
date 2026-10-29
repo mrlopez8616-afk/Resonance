@@ -117,7 +117,7 @@ export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "GET", path: "/api/youtube/bricks", loggedOut: "401", auth: "owner session" },
   { method: "POST", path: "/api/youtube/bricks", loggedOut: "401", auth: "sync bearer" },
   { method: "PATCH", path: "/api/youtube/bricks", loggedOut: "401", auth: "sync bearer" },
-  { method: "POST", path: "/api/visitors", loggedOut: "204 empty", auth: "anonymous increment only" },
+  { method: "POST", path: "/api/visitors", loggedOut: "204 empty", auth: "login or landing page only" },
 ];
 
 function issue(id: PublicViewIssueId, name: string, path: string, status: "ok" | "error" = "error"): HealthIssue {

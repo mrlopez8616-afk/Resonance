@@ -5,8 +5,9 @@ import { useEffect } from "react";
 
 /**
  * One anonymous hit per navigation. No cookie is written.
- * The root layout mounts this on the login screen and on every signed-in
- * page, including Public view, so those visits are counted.
+ * Logged-out, this only runs on the login screen, and only that page counts.
+ * A signed-in page, including Public view, sends the session and counts too.
+ * The floor stays behind login.
  */
 export function VisitorBeacon() {
   const pathname = usePathname();
