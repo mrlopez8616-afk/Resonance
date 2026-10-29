@@ -212,6 +212,40 @@ export function isHealthFullApi(pathname: string): boolean {
   return pathname === "/api/health/full";
 }
 
+/**
+ * Anonymous page-view counter. POST only. The route returns 204 and writes
+ * nothing except the daily count. Any other method is denied with 401.
+ */
+export function isVisitorCountPost(pathname: string, method: string): boolean {
+  return pathname === "/api/visitors" && method.toUpperCase() === "POST";
+}
+
+/** The sign-in screen, or the floor URL a logged-out visit is sent there from. */
+export function isLoginLandingPath(pathname: string): boolean {
+  const path = (pathname.split("?")[0]?.split("#")[0] ?? "").replace(/\/+$/, "") || "/";
+  return path === "/" || isLoginPage(path);
+}
+
+/**
+ * A logged-out counter hit. The body names the login screen or the landing
+ * page, and a Referer, when the browser sends one, names the same place.
+ */
+export function isLoggedOutVisitorHit(input: {
+  bodyPath: string | null;
+  referer: string | null;
+  origin: string;
+}): boolean {
+  if (!input.bodyPath || !isLoginLandingPath(input.bodyPath)) return false;
+  const referer = input.referer?.trim() ?? "";
+  if (!referer) return true;
+  try {
+    const url = new URL(referer);
+    return url.origin === input.origin && isLoginLandingPath(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function isLoginPage(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
@@ -234,12 +268,20 @@ export function planAccess(input: {
   bearerOk: boolean;
   loginConfigured: boolean;
   nextPath: string;
+  /** Logged-out POST /api/visitors whose body is the login or landing page. */
+  loginVisitorHit?: boolean;
 }): AccessPlan {
   const { pathname } = input;
   if (isPublicAsset(pathname) || isAuthApi(pathname) || isLoginPage(pathname)) {
     return { kind: "allow" };
   }
   const method = input.method.toUpperCase();
+  if (pathname === "/api/visitors") {
+    if (!isVisitorCountPost(pathname, method)) return { kind: "deny" };
+    if (input.loginVisitorHit) return { kind: "allow" };
+    if (input.loginConfigured && isSessionToken(input.sessionToken)) return { kind: "allow-session" };
+    return { kind: "deny" };
+  }
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     if (isHealthFullApi(pathname)) {
       if (method !== "GET" && method !== "HEAD") return { kind: "deny" };

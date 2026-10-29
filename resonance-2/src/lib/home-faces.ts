@@ -34,9 +34,9 @@ export const HOME_FACE_SLOTS = ["glyph", "name", "headline", "status"] as const;
 export const DESKTOP_FACE_BOX = { width: 1324, height: 738, gap: 6.4 } as const;
 
 /**
- * Private home paints five parents plus build, control, YouTube, system, and lessons.
+ * Private home paints the parents plus build, control, YouTube, system, and lessons.
  * Owner adds roundtable and chain security. Health is owner-only.
- * A shelved parent is one fewer square. Pass `shelved: []` to count the full floor.
+ * A shelved parent is one fewer square. Pass `shelved: ["fitness"]` to count the floor without Fitness.
  */
 export function privateHomeNodeCount(input: {
   owner: boolean;
@@ -48,8 +48,8 @@ export function privateHomeNodeCount(input: {
 }
 
 /**
- * Public home paints the same owner floor, including finance and roundtable.
- * Fight Desk and Health are optional. Fitness was one of the nine always-on tiles.
+ * Public home paints the same owner floor, including finance, fitness, and roundtable.
+ * Fight Desk and Health are optional. A shelved Fitness tile is one fewer square.
  */
 export function publicHomeNodeCount(input: {
   fight: boolean;

@@ -4,12 +4,31 @@ import { attachSessionCookie } from "@/lib/auth-cookie";
 import {
   PATH_HEADER,
   SESSION_COOKIE,
+  isLoggedOutVisitorHit,
   isLoginConfigured,
   planAccess,
   safeNextPath,
 } from "@/lib/auth-core";
+import { safeVisitPath } from "@/lib/visitors";
 import { authorizePresentedCredentials } from "@/lib/auth-store";
 import { bearerMatchesBackupSecret, bearerMatchesSyncSecret } from "@/lib/sync-auth-core";
+
+async function loginVisitorHit(request: NextRequest): Promise<boolean> {
+  if (request.method !== "POST" || request.nextUrl.pathname !== "/api/visitors") return false;
+  let bodyPath: string | null = null;
+  try {
+    const body = await request.clone().json();
+    const raw = body && typeof body === "object" && "path" in body ? (body as { path?: unknown }).path : null;
+    bodyPath = safeVisitPath(raw);
+  } catch {
+    bodyPath = null;
+  }
+  return isLoggedOutVisitorHit({
+    bodyPath,
+    referer: request.headers.get("referer"),
+    origin: request.nextUrl.origin,
+  });
+}
 
 function continueWithPath(request: NextRequest) {
   const headers = new Headers(request.headers);
@@ -29,8 +48,11 @@ function unauthorized() {
  * the root layout can validate the row. GET /api is session-or-Bearer, including
  * routes added later (GET /api/fights/breakdown). GET /api/finance is the
  * exception: the sync Bearer does not open it. GET /api/health/full is the
- * other exception: the route checks RESONANCE_HEALTH_TOKEN itself. Writes keep
- * their own checks.
+ * other exception: the route checks RESONANCE_HEALTH_TOKEN itself.
+ * Logged-out POST /api/visitors is allowed only for the login screen and the
+ * landing page, and it is not a login redirect. A signed-in beacon, including
+ * Public view, still needs its session. Other writes keep their own checks.
+ * Pages stay behind login.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -44,6 +66,7 @@ export async function proxy(request: NextRequest) {
     bearerOk: backupCron ? bearerMatchesBackupSecret(authorization) : bearerMatchesSyncSecret(authorization),
     loginConfigured: isLoginConfigured(),
     nextPath: `${pathname}${search}`,
+    loginVisitorHit: await loginVisitorHit(request),
   });
 
   if (plan.kind === "deny") return unauthorized();

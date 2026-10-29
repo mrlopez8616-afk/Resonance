@@ -37,7 +37,10 @@ import {
   type HealthBits,
   type HealthFullReport,
   type HealthIssue,
+  type IngestCounts,
 } from "@/lib/health-report";
+import { HEALTH_AUTO_EXPORT_SOURCE } from "@/lib/health-auto-export";
+import { sqlQuery } from "@/lib/pg/client";
 import { runPublicViewProbe } from "@/lib/public-view-probe";
 import { AI_STOCK_TICKERS } from "@/lib/ai-stocks";
 import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
@@ -389,7 +392,78 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
       },
     ];
   }
-  return assembleHealth(now.toISOString(), tiles, pages, issues);
+  const counts = await loadIngestCounts(now);
+  return assembleHealth(now.toISOString(), tiles, pages, issues, counts);
+}
+
+function utcDay(now: Date): string {
+  return now.toISOString().slice(0, 10);
+}
+
+function asDay(value: unknown): string | null {
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString().slice(0, 10);
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  return null;
+}
+
+function laterDay(left: string | null, right: string | null): string | null {
+  if (!left) return right;
+  if (!right) return left;
+  return left > right ? left : right;
+}
+
+function earlierDay(left: string | null, right: string | null): string | null {
+  if (!left) return right;
+  if (!right) return left;
+  return left < right ? left : right;
+}
+
+/** Counts only. No step totals, distances, addresses, or hashes. */
+async function loadIngestCounts(now: Date): Promise<IngestCounts> {
+  const day = utcDay(now);
+  const empty: IngestCounts = {
+    visitorsToday: { day, pageViews: 0, uniqueVisitors: 0 },
+    healthAutoExport: { stepDays: 0, workouts: 0, earliestDate: null, latestDate: null },
+  };
+  try {
+    const [visitors, steps, workouts] = await Promise.all([
+      sqlQuery<{ page_views: number; unique_visitors: number }>(
+        `SELECT page_views, unique_visitors FROM visitor_days WHERE day = $1::date`,
+        [day],
+      ),
+      sqlQuery<{ step_days: number; earliest: unknown; latest: unknown }>(
+        `SELECT COUNT(DISTINCT day)::int AS step_days, MIN(day) AS earliest, MAX(day) AS latest
+         FROM fitness_metrics
+         WHERE source = $1 AND metric = 'step_count'`,
+        [HEALTH_AUTO_EXPORT_SOURCE],
+      ),
+      sqlQuery<{ workouts: number; earliest: unknown; latest: unknown }>(
+        `SELECT COUNT(*)::int AS workouts, MIN(started_at) AS earliest, MAX(started_at) AS latest
+         FROM fitness_workouts
+         WHERE source = $1`,
+        [HEALTH_AUTO_EXPORT_SOURCE],
+      ),
+    ]);
+    const visitor = visitors[0];
+    const step = steps[0];
+    const workout = workouts[0];
+    return {
+      visitorsToday: {
+        day,
+        pageViews: Number(visitor?.page_views) || 0,
+        uniqueVisitors: Number(visitor?.unique_visitors) || 0,
+      },
+      healthAutoExport: {
+        stepDays: Number(step?.step_days) || 0,
+        workouts: Number(workout?.workouts) || 0,
+        earliestDate: earlierDay(asDay(step?.earliest), asDay(workout?.earliest)),
+        latestDate: laterDay(asDay(step?.latest), asDay(workout?.latest)),
+      },
+    };
+  } catch (error) {
+    if (isStorageUnavailable(error)) return empty;
+    return empty;
+  }
 }
 
 export async function loadHealthFull(now = new Date()): Promise<HealthFullReport> {

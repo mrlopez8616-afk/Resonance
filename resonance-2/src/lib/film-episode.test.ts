@@ -223,8 +223,8 @@ async function walk(snap: FilmSnapshot): Promise<string> {
 }
 
 describe("episode 1 filming view", () => {
-  it("keeps fitness shelved and the film path free of query noise", () => {
-    assert.ok(SHELVED_NODES.includes("fitness"));
+  it("keeps the film path free of query noise", () => {
+    assert.equal(SHELVED_NODES.includes("fitness"), false);
     assert.equal(filmHref("/film"), true);
     assert.equal(filmHref("/film/crypto/network"), true);
     assert.equal(filmHref("/film?public=1"), false);

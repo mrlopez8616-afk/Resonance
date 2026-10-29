@@ -65,8 +65,9 @@ describe("spot quote cache", () => {
     const file = readFileSync(join(root, "db/migrations/040_market_quotes.sql"), "utf8");
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "040_market_quotes");
     assert.equal(embedded?.sql, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "042_visitor_counts");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "043_health_auto_export_token");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "042_visitor_counts");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "043_health_auto_export_token");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "044_future_idea_membership");
     assert.equal(file.includes("INSERT"), false);
     assert.match(file, /CREATE TABLE IF NOT EXISTS market_quotes/);
   });

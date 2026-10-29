@@ -15,6 +15,7 @@ import {
   presentIdeas,
   publicIdeaText,
   seedIdeas,
+  type Idea,
 } from "@/lib/future-ideas";
 import { readIdeas } from "@/lib/future-ideas-store";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
@@ -101,6 +102,23 @@ describe("future ideas copy", () => {
     assert.equal(shared.find((card) => card.id === "driving-tracker")?.addedLabel, "Oct 11, 2026");
     assert.equal(publicIdeaText("$40"), "");
     assert.equal(ideaSlug("$1/day per-node DCA"), "1-day-per-node-dca");
+    const rewards: Idea = {
+      id: "resonance-member-rewards",
+      title: "Resonance Member Rewards",
+      note: "Parked. Not a build.",
+      status: "someday",
+      tags: ["owner"],
+      addedOn: "2026-10-29",
+      archivedAt: null,
+      createdAt: "2026-10-29T17:00:00.000Z",
+      updatedAt: "2026-10-29T17:00:00.000Z",
+    };
+    const privateBoard = presentIdeas([rewards], { publicMode: false });
+    assert.equal(privateBoard[0]?.title, "Resonance Member Rewards");
+    assert.equal(privateBoard[0]?.status, "someday");
+    const publicBoard = presentIdeas([rewards, ...seedIdeas()], { publicMode: true });
+    assert.equal(publicBoard.some((card) => card.id === "resonance-member-rewards"), false);
+    assert.equal(JSON.stringify(publicBoard).includes("protein"), false);
     assert.match(readFileSync(path.join(root, "src/components/build-floor.tsx"), "utf8"), /href: "\/n\/ideas"/);
     assert.match(readFileSync(path.join(root, "src/app/n/ideas/page.tsx"), "utf8"), /href="\/n\/build"/);
   });
@@ -264,6 +282,49 @@ describe("future ideas store", { concurrency: false }, () => {
     const third = await applyMigrations([{ id: "027_future_ideas_seeds", sql: seedsFile }]);
     assert.deepEqual(third.applied, []);
     assert.equal(third.skipped.includes("027_future_ideas_seeds"), true);
+  });
+
+  it("inserts the membership idea once and leaves an edit alone", async () => {
+    const membership = readFileSync(path.join(root, "db/migrations/044_future_idea_membership.sql"), "utf8");
+    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "044_future_idea_membership");
+    assert.equal(embedded?.sql, membership);
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "044_future_idea_membership");
+    const title =
+      "Membership access tier — paid membership granting access to explore Resonance (Oct 29, 2026)";
+    await sqlQuery(`DELETE FROM schema_migrations WHERE id = '044_future_idea_membership'`);
+    const seeded = await applyMigrations([{ id: "044_future_idea_membership", sql: membership }]);
+    assert.deepEqual(seeded.applied, ["044_future_idea_membership"]);
+    const ideas = await readIdeas();
+    const row = ideas.find((idea) => idea.id === "membership-access-tier");
+    assert.equal(row?.title, title);
+    assert.equal(row?.note, "");
+    assert.equal(row?.status, "idea");
+    assert.equal(row?.addedOn, "2026-10-29");
+    assert.equal(ideas.filter((idea) => idea.title === title).length, 1);
+    const rewards = ideas.find((idea) => idea.id === "resonance-member-rewards");
+    assert.equal(rewards?.title, "Resonance Member Rewards");
+    assert.equal(rewards?.status, "someday");
+    assert.deepEqual(rewards?.tags, ["owner"]);
+    assert.equal(rewards?.addedOn, "2026-10-29");
+    assert.match(rewards?.note ?? "", /down the road, lock it in/);
+    assert.equal(presentIdeas(ideas, { publicMode: false }).some((card) => card.id === "resonance-member-rewards"), true);
+    assert.equal(presentIdeas(ideas, { publicMode: true }).some((card) => card.id === "resonance-member-rewards"), false);
+    assert.equal(JSON.stringify(presentIdeas(ideas, { publicMode: true })).includes("protein"), false);
+
+    await sqlQuery(`UPDATE future_ideas SET title = 'Membership, renamed' WHERE id = 'membership-access-tier'`);
+    await sqlQuery(`UPDATE future_ideas SET note = 'Edited rewards.' WHERE id = 'resonance-member-rewards'`);
+    await sqlQuery(`DELETE FROM schema_migrations WHERE id = '044_future_idea_membership'`);
+    const again = await applyMigrations([{ id: "044_future_idea_membership", sql: membership }]);
+    assert.deepEqual(again.applied, ["044_future_idea_membership"]);
+    const after = await readIdeas();
+    const renamed = after.filter((idea) => idea.id === "membership-access-tier");
+    assert.equal(renamed.length, 1);
+    assert.equal(renamed[0]?.title, "Membership, renamed");
+    assert.equal(after.filter((idea) => idea.title === title).length, 0);
+    const rewardsAfter = after.filter((idea) => idea.id === "resonance-member-rewards");
+    assert.equal(rewardsAfter.length, 1);
+    assert.equal(rewardsAfter[0]?.note, "Edited rewards.");
+    assert.equal(rewardsAfter[0]?.status, "someday");
   });
 
   it("lets the owner add, edit, and archive, and keeps dollars off the public list", async () => {
