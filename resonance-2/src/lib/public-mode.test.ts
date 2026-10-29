@@ -1179,6 +1179,7 @@ describe("public render scan", () => {
     assert.equal(home?.html.includes("$80,000"), false);
     assert.match(home?.html ?? "", /href="\/n\/crypto"/);
     assert.match(home?.html ?? "", /href="\/n\/ai-stocks"/);
+    assert.match(home?.html ?? "", /href="\/n\/fitness"/);
     assert.match(home?.html ?? "", /href="\/n\/build"/);
     assert.match(home?.html ?? "", /Build/);
     assert.match(home?.html ?? "", /40%/);

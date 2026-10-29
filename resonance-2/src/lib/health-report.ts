@@ -92,10 +92,11 @@ export type VisitorTodayCounts = {
   uniqueVisitors: number;
 };
 
-/** Health Auto Export presence. Counts and a date, not step totals or distances. */
+/** Health Auto Export presence. Counts and dates, not step totals or distances. */
 export type HealthAutoExportCounts = {
   stepDays: number;
   workouts: number;
+  earliestDate: string | null;
   latestDate: string | null;
 };
 
@@ -120,7 +121,7 @@ export type HealthTarget = {
   path: string;
 };
 
-/** Owner home floor with fitness shelved. Twelve squares. */
+/** Owner home probe tiles. Fitness is a page below, not one of these squares. */
 export const HEALTH_TILES: readonly HealthTarget[] = [
   { id: "crypto", name: "Crypto", path: "/n/crypto" },
   { id: "ai-stocks", name: "AI Stocks", path: "/n/ai-stocks" },
@@ -413,7 +414,7 @@ function dayOrNull(value: unknown): string | null {
 export function emptyIngestCounts(day = "1970-01-01"): IngestCounts {
   return {
     visitorsToday: { day: dayOrNull(day) ?? "1970-01-01", pageViews: 0, uniqueVisitors: 0 },
-    healthAutoExport: { stepDays: 0, workouts: 0, latestDate: null },
+    healthAutoExport: { stepDays: 0, workouts: 0, earliestDate: null, latestDate: null },
   };
 }
 
@@ -434,6 +435,7 @@ function cleanCounts(value: unknown, day: string): IngestCounts {
     healthAutoExport: {
       stepDays: whole(healthRow?.stepDays),
       workouts: whole(healthRow?.workouts),
+      earliestDate: dayOrNull(healthRow?.earliestDate),
       latestDate: dayOrNull(healthRow?.latestDate),
     },
   };

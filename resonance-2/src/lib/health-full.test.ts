@@ -271,7 +271,13 @@ describe("health full probe", () => {
       issues: [],
       counts: {
         visitorsToday: { day: "2026-10-28", pageViews: 4, uniqueVisitors: 2, ip: "203.0.113.10" },
-        healthAutoExport: { stepDays: 3, workouts: 1, latestDate: "$12", qty: 9000 },
+        healthAutoExport: {
+          stepDays: 3,
+          workouts: 1,
+          earliestDate: "2026-08-23",
+          latestDate: "$12",
+          qty: 9000,
+        },
       },
       tiles: report.tiles.map((row) =>
         row.id === "crypto" ? { ...row, name: "Crypto $1", usd: 50, reason: "quote fresh" } : row,
@@ -297,6 +303,7 @@ describe("health full probe", () => {
     });
     assert.equal(body.counts.healthAutoExport.stepDays, 3);
     assert.equal(body.counts.healthAutoExport.workouts, 1);
+    assert.equal(body.counts.healthAutoExport.earliestDate, "2026-08-23");
     assert.equal(body.counts.healthAutoExport.latestDate, null);
     assert.equal(JSON.stringify(body.counts).includes("203.0.113.10"), false);
     assert.equal(JSON.stringify(body.counts).includes("qty"), false);

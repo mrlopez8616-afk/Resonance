@@ -1,11 +1,11 @@
 /**
  * Nodes taken off the floor. Pages, tables, routes, and APIs stay.
  *
- * Restore Fitness: remove `"fitness"` from `SHELVED_NODES`.
- * The home tile, nav links, /tv graph point, and system-map links come back.
- * `/n/fitness` keeps working either way.
+ * The list is empty, so Fitness is on the home floor, the system map, and /tv.
+ * The parent is `/n/fitness`. Steps is `/n/fitness/steps`.
+ * Add an id here to hide that node again.
  */
-export const SHELVED_NODES = ["fitness"] as const;
+export const SHELVED_NODES: readonly string[] = [];
 
 export function nodeShelved(id: string, shelved: readonly string[] = SHELVED_NODES): boolean {
   return shelved.includes(id);
