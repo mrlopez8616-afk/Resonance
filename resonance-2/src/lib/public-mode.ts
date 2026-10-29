@@ -40,6 +40,9 @@ export function publicModeEnabled(value: string | null | undefined): boolean {
 const HIDDEN_PREFIXES = [
   "/log",
   "/settings/security",
+  "/settings/integrations",
+  "/api/settings/health-auto-export-token",
+  "/api/ingest/health-auto-export",
   "/api/finance",
   "/api/bets",
   "/api/deposits",

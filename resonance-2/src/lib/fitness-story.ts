@@ -817,7 +817,7 @@ function buildPeriod(
     );
   }
   const notes: string[] = [];
-  if (heart.value !== null) {
+  if (!publicMode && heart.value !== null) {
     notes.push(
       clean(
         metaLine([
@@ -829,7 +829,7 @@ function buildPeriod(
       ),
     );
   }
-  if (mileMerge.runHr !== null && mileMerge.runHr > 0) {
+  if (!publicMode && mileMerge.runHr !== null && mileMerge.runHr > 0) {
     notes.push(
       clean(
         metaLine([
@@ -986,7 +986,7 @@ function scrubStory(story: FitnessStory, publicMode: boolean): FitnessStory {
     periods: story.periods.map((period) => ({
       ...period,
       aside: period.aside ? text(period.aside) : null,
-      notes: period.notes.map(text),
+      notes: period.notes.filter((note) => !/\bbpm\b/i.test(note)).map(text),
       figures: period.figures.map((item) => ({
         ...item,
         value: text(item.value),

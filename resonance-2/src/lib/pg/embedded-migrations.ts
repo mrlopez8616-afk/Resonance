@@ -834,6 +834,19 @@ CREATE TABLE IF NOT EXISTS market_quotes (
 );
 `;
 
+export const HEALTH_AUTO_EXPORT_TOKEN_SQL = `-- Health Auto Export ingest token. Number 043.
+-- 042 is reserved by the visitor-analytics pull request.
+-- If 042 is still free when this file is merged, leave the number at 043.
+-- The token is stored only as a sha256 hex digest. The plaintext is not stored.
+-- A second run changes nothing.
+
+CREATE TABLE IF NOT EXISTS health_auto_export_tokens (
+  id integer PRIMARY KEY CHECK (id = 1),
+  token_hash text NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -874,4 +887,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "039_health_route_lesson", sql: HEALTH_ROUTE_LESSON_SQL },
   { id: "040_market_quotes", sql: MARKET_QUOTES_SQL },
   { id: "041_public_node_lesson", sql: PUBLIC_NODE_LESSON_SQL },
+  { id: "043_health_auto_export_token", sql: HEALTH_AUTO_EXPORT_TOKEN_SQL },
 ];

@@ -547,6 +547,7 @@ describe("login core", { concurrency: false }, () => {
         "039_health_route_lesson",
         "040_market_quotes",
         "041_public_node_lesson",
+        "043_health_auto_export_token",
       ],
     );
     const ids = (await sqlQuery<{ id: string }>(`SELECT id FROM schema_migrations ORDER BY id`)).map(
@@ -612,6 +613,7 @@ describe("login core", { concurrency: false }, () => {
         "039_health_route_lesson",
         "040_market_quotes",
         "041_public_node_lesson",
+        "043_health_auto_export_token",
       ],
     );
     const filled = await applyMigrations(EMBEDDED_MIGRATIONS);

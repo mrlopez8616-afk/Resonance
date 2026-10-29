@@ -235,7 +235,12 @@ export function fitnessHomeFace(input: {
   lines: readonly string[];
   publicMode: boolean;
 }): HomeFace {
-  const lines = input.lines.filter((line) => line.trim() && !(input.publicMode && hasMoneyText(line)));
+  const lines = input.lines.filter((line) => {
+    if (!line.trim()) return false;
+    if (!input.publicMode) return true;
+    if (hasMoneyText(line)) return false;
+    return !/\bbpm\b/i.test(line);
+  });
   const value = input.value?.trim() && !(input.publicMode && hasMoneyText(input.value)) ? input.value.trim() : "";
   const unit = input.unit?.trim() ?? "";
   const headline = value || lines[0] || NOT_CONNECTED;

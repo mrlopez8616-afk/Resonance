@@ -725,6 +725,7 @@ function workoutSecondary(workout: WorkoutSample): string {
     type,
     formatCivilDate(workout.day),
     pace,
+    workout.miles === null ? null : `${(workout.miles * 1.609344).toFixed(1)} km`,
     workout.heartRateAvg === null ? null : `${formatCount(workout.heartRateAvg)} bpm`,
     workout.energyKcal === null ? null : `${formatCount(workout.energyKcal)} kcal`,
     shownSource(workout.sourceLabel),
@@ -831,6 +832,40 @@ function heartRows(metrics: readonly MetricSample[], today: string): FitnessRow[
       .join(" · ");
     return [{ id: day, primary, secondary }];
   });
+}
+
+function withoutBpm(text: string | null): string | null {
+  if (!text) return text;
+  const parts = text.split(" · ").filter((part) => !/\bbpm\b/i.test(part));
+  const next = parts.join(" · ").trim();
+  return next.length > 0 ? next : null;
+}
+
+/** Counts, miles, and pace stay. Heart-rate numbers and the heart chart do not. */
+export function publicFitnessDetail(detail: FitnessNodeDetail): FitnessNodeDetail {
+  if (detail.id === "heart") {
+    const days = detail.rows.length;
+    if (days === 0) return { ...detail, rows: [], heart: [], bars: [] };
+    const label = days === 1 ? "day recorded" : "days recorded";
+    return {
+      ...detail,
+      headline: String(days),
+      detail: label,
+      rows: [{ id: "recorded", primary: `${days} ${days === 1 ? "day" : "days"}`, secondary: "recorded" }],
+      heart: [],
+      bars: [],
+    };
+  }
+  return {
+    ...detail,
+    rows: detail.rows.map((row) => ({
+      ...row,
+      primary: withoutBpm(row.primary) ?? row.primary,
+      secondary: withoutBpm(row.secondary),
+    })),
+    bars: (detail.bars ?? []).map((bar) => ({ ...bar, caption: withoutBpm(bar.caption) ?? "" })),
+    heart: [],
+  };
 }
 
 export function fitnessNode(
