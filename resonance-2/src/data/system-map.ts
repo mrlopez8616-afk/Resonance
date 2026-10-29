@@ -67,6 +67,7 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     children: [
       { id: "steps", label: "Steps", href: "/n/fitness/steps" },
       { id: "runs", label: "Runs", href: "/n/fitness/runs" },
+      { id: "analytics", label: "Analytics", href: "/n/fitness/analytics" },
     ],
   },
   {

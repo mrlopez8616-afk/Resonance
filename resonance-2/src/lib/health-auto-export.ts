@@ -281,6 +281,8 @@ function workoutRows(workouts: unknown[]): FitnessWorkoutWrite[] {
       payload.miles = distance.miles;
       payload.km = distance.km;
     }
+    const splits = splitRows(workout);
+    if (splits.length > 0) payload.splits = splits;
     rows.set(externalId, {
       source: HEALTH_AUTO_EXPORT_SOURCE,
       externalId,
@@ -301,11 +303,90 @@ function workoutRows(workouts: unknown[]): FitnessWorkoutWrite[] {
   return [...rows.values()];
 }
 
+function metricKey(name: string): string {
+  return name.trim().toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function restingUnits(units: string): boolean {
+  const normalized = units.trim().toLowerCase();
+  return (
+    normalized === "" ||
+    normalized === "count" ||
+    normalized === "bpm" ||
+    normalized === "count/min" ||
+    normalized === "beats/min" ||
+    normalized === "beats per minute"
+  );
+}
+
+/**
+ * One resting heart rate per Chicago day.
+ * The latest sample that day wins. A later request with the same external id replaces it.
+ */
+function restingRows(metrics: unknown[]): FitnessMetricWrite[] {
+  const best = new Map<string, { qty: number; iso: string; source: string }>();
+  for (const metric of metrics) {
+    const record = asRecord(metric);
+    if (!record) continue;
+    const name = typeof record.name === "string" ? record.name : "";
+    if (metricKey(name) !== "restingheartrate") continue;
+    const fallback = cleanUnits(record.units) || "bpm";
+    for (const entry of asArray(record.data)) {
+      const point = asRecord(entry);
+      if (!point) continue;
+      const at = parseWhen(point.date ?? point.endDate ?? point.startDate);
+      const qty = numberOrNull(point.qty);
+      const units = cleanUnits(point.units) || fallback;
+      if (!at || qty === null || qty <= 0 || qty > 220 || !restingUnits(units)) continue;
+      const source = typeof point.source === "string" ? point.source.trim().slice(0, 80) : "";
+      const current = best.get(at.day);
+      if (!current || at.iso >= current.iso) best.set(at.day, { qty, iso: at.iso, source });
+    }
+  }
+  return [...best.entries()].map(([day, row]) => ({
+    source: HEALTH_AUTO_EXPORT_SOURCE,
+    externalId: `resting_heart_rate:${day}:bpm`,
+    metric: "resting_heart_rate",
+    day,
+    recordedAt: row.iso || null,
+    qty: decimalString(row.qty),
+    units: "bpm",
+    qtyMin: null,
+    qtyMax: null,
+    origin: "health-auto-export" as const,
+    payload: {
+      metric: "resting_heart_rate",
+      day,
+      units: "bpm",
+      source: row.source || null,
+      aggregation: "day",
+      dailyTotal: true,
+    },
+  }));
+}
+
+/** Lap rows that already carry distance and duration. Missing pieces are skipped, never filled in. */
+function splitRows(workout: Record<string, unknown>): { miles: string; durationSec: string }[] {
+  const raw = workout.splits ?? workout.laps;
+  if (!Array.isArray(raw)) return [];
+  const splits: { miles: string; durationSec: string }[] = [];
+  for (const entry of raw) {
+    const record = asRecord(entry);
+    if (!record) continue;
+    const distance = workoutDistance(record);
+    const duration = numberOrNull(record.duration ?? record.durationSec);
+    if (!distance?.miles || duration === null || duration <= 0) continue;
+    splits.push({ miles: distance.miles, durationSec: decimalString(duration) });
+  }
+  return splits;
+}
+
 /** Health Auto Export REST API JSON, version 2: `{ data: { metrics, workouts } }`. */
 export function parseHealthAutoExport(body: unknown): FitnessWrites {
   const root = asRecord(body);
   const data = asRecord(root?.data) ?? root;
-  const metrics = stepRows(stepPoints(asArray(data?.metrics ?? data?.metric)));
+  const listed = asArray(data?.metrics ?? data?.metric);
+  const metrics = [...stepRows(stepPoints(listed)), ...restingRows(listed)];
   const workouts = workoutRows(asArray(data?.workouts ?? data?.workout));
   return { metrics, workouts };
 }

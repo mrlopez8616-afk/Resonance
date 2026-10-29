@@ -110,6 +110,7 @@ function glyphKind(id: string): string {
   if (id === "pace" || id.endsWith("-pace")) return "pace";
   if (id === "lifting" || id.endsWith("-lifting")) return "lifting";
   if (id === "manual" || id.endsWith("-manual")) return "manual";
+  if (id === "analytics" || id.endsWith("-analytics")) return "analytics";
   return id;
 }
 
@@ -324,6 +325,14 @@ function NodeGlyph({ id }: { id: string }) {
       <svg viewBox="0 0 24 24">
         <path d="M3 12h18" {...stroke} />
         <path d="M6 8v8M8.6 9.4v5.2M15.4 9.4v5.2M18 8v8" {...stroke} />
+      </svg>
+    );
+  }
+  if (kind === "analytics") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M4 16l4.5-5 3.2 3.2L19 7" {...stroke} />
+        <path d="M14.5 7H19v4.5" {...stroke} />
       </svg>
     );
   }

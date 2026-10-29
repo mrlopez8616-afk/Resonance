@@ -25,6 +25,7 @@ export function HealthAutoExportGuide() {
       </dl>
       <h3>Steps</h3>
       <p>Health metrics. Select step_count only. Aggregate data on. Interval 1 day.</p>
+      <p>Optional. Also select resting_heart_rate, one value per day. A later export replaces that day.</p>
       <h3>Workouts</h3>
       <p>
         Workouts on. Leave route data off. Leave per-second workout metrics off. Distance, energy, and

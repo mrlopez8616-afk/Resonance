@@ -135,9 +135,11 @@ function privateKey(value: unknown): boolean {
   return Object.entries(value).some(([key, child]) => PRIVATE_KEY.test(key) || privateKey(child));
 }
 
-/** True when a logged-out body carries a dollar amount, a wallet, or a private field. */
+const HEART_FIELD = /\bbpm\b|heart[_ -]?rate|resting_heart|"avgHeart"|"maxHeart"/i;
+
+/** True when a logged-out body carries a dollar amount, a wallet, a heart-rate field, or a private field. */
 export function payloadLeaksPrivate(text: string): boolean {
-  if (hasMoneyText(text) || WALLET.test(text)) return true;
+  if (hasMoneyText(text) || WALLET.test(text) || HEART_FIELD.test(text)) return true;
   try {
     const parsed = JSON.parse(text) as unknown;
     return publicPayloadLeaks(parsed).length > 0 || privateKey(parsed);

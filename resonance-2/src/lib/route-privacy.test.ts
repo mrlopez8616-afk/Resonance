@@ -10,7 +10,9 @@ import { POST as passkeyVerify } from "@/app/api/auth/passkey/login/verify/route
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
 import { publicFitnessDetail } from "@/lib/fitness-board";
+import { NextRequest } from "next/server";
 import { drillDownBroken } from "@/lib/health-report";
+import { proxy } from "@/proxy";
 import { isHiddenInPublicMode } from "@/lib/public-mode";
 import { ROUTE_AUDIT, htmlHasErrorBoundary, payloadLeaksPrivate, runPublicViewProbe } from "@/lib/public-view-probe";
 import { createSession } from "@/lib/auth-store";
@@ -94,8 +96,8 @@ describe("logged-out privacy", () => {
     }
   });
 
-  it("keeps fitness steps and runs open in public view", () => {
-    for (const path of ["/n/fitness/steps", "/n/fitness/runs"]) {
+  it("keeps fitness steps, runs, and analytics open in public view", () => {
+    for (const path of ["/n/fitness/steps", "/n/fitness/runs", "/n/fitness/analytics"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
       assert.equal(drillDownBroken(path, "public"), false, path);
       assert.equal(drillDownBroken(path, "private"), false, path);
@@ -133,6 +135,8 @@ describe("logged-out privacy", () => {
   it("names a failure when a logged-out body carries a dollar amount", () => {
     assert.equal(payloadLeaksPrivate('{"ok":false,"error":"Unauthorized."}'), false);
     assert.equal(payloadLeaksPrivate('{"balance":"$12.00"}'), true);
+    assert.equal(payloadLeaksPrivate('{"heartRateAvg":154}'), true);
+    assert.equal(payloadLeaksPrivate("154 bpm"), true);
     assert.equal(payloadLeaksPrivate("no data yet"), false);
   });
 
@@ -180,6 +184,15 @@ describe("logged-out privacy", () => {
     );
     assert.equal(passkey.status, 401);
     assert.equal(payloadLeaksPrivate(await passkey.text()), false);
+
+    const loggedOutSteps = await proxy(new NextRequest("https://resonance3.vercel.app/n/fitness/steps"));
+    assert.notEqual(loggedOutSteps.status, 200);
+    assert.equal(loggedOutSteps.status === 307 || loggedOutSteps.status === 302, true);
+    assert.equal(payloadLeaksPrivate(await loggedOutSteps.text()), false);
+    const loggedOutRuns = await proxy(new NextRequest("https://resonance3.vercel.app/n/fitness/runs"));
+    assert.notEqual(loggedOutRuns.status, 200);
+    const loggedOutAnalytics = await proxy(new NextRequest("https://resonance3.vercel.app/n/fitness/analytics"));
+    assert.notEqual(loggedOutAnalytics.status, 200);
 
     const issues = await runPublicViewProbe();
     const errors = issues.filter((row) => row.status === "error");

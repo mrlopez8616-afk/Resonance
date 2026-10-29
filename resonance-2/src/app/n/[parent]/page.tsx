@@ -19,6 +19,7 @@ import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
+import { buildAnalytics } from "@/lib/fitness-present";
 import { buildFitnessStory, parseStoryRange } from "@/lib/fitness-story";
 import { loadFitnessBundle } from "@/lib/fitness-store";
 import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
@@ -211,19 +212,26 @@ export default async function ParentNodePage({
       isPublicMode(),
       loadFitnessManual(),
     ]);
+    const workouts = [
+      ...bundle.workouts,
+      ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
+      ...nrcRunsAsWrites(bundle.nrcRuns),
+    ];
     const story = buildFitnessStory({
       metrics: bundle.metrics,
-      workouts: [
-        ...bundle.workouts,
-        ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
-        ...nrcRunsAsWrites(bundle.nrcRuns),
-      ],
+      workouts,
       manuals: manual.entries,
       today: bundle.today,
       publicMode,
       stepsRange,
       runsRange,
     });
+    const streak = buildAnalytics({
+      metrics: bundle.metrics,
+      workouts,
+      today: bundle.today,
+      publicMode,
+    }).find((metric) => metric.id === "step-streak");
     return (
       <OperatorShell
         storageMessage={
@@ -237,7 +245,15 @@ export default async function ParentNodePage({
         <Link href="/" className="calendar-back">
           Floor
         </Link>
-        <FitnessStoryView story={story} stepsRange={stepsRange} runsRange={runsRange} />
+        <FitnessStoryView
+          story={story}
+          stepsRange={stepsRange}
+          runsRange={runsRange}
+          analytics={{
+            headline: streak && streak.value !== "not recorded" ? streak.value : "not recorded",
+            status: "step streak",
+          }}
+        />
         {publicMode ? null : (
           <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
         )}

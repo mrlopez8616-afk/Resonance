@@ -166,7 +166,7 @@ describe("fitness ingest", { concurrency: false }, () => {
     assert.deepEqual(home.line, { value: "3.9", unit: "mi this week" });
     const cards = await loadFitnessCards("2026-10-07");
     assert.equal(cards.availability, "unavailable");
-    assert.equal(cards.cards.length, 5);
+    assert.equal(cards.cards.length, 6);
     assert.equal(cards.cards.find((card) => card.id === "manual")?.detail, "not recorded");
   });
 

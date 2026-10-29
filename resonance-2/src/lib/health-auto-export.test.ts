@@ -164,6 +164,73 @@ describe("health auto export parse", () => {
     assert.equal(late?.qty, "0.5");
   });
 
+  it("keeps one resting heart rate per Chicago day and replaces it", () => {
+    const parsed = parseHealthAutoExport({
+      data: {
+        metrics: [
+          {
+            name: "resting_heart_rate",
+            units: "count/min",
+            data: [
+              { qty: 58, date: "2026-10-11 06:00:00 -0500" },
+              { qty: 61, date: "2026-10-11 21:00:00 -0500" },
+              { qty: 59, date: "2026-10-12 07:00:00 -0500" },
+            ],
+          },
+        ],
+      },
+    });
+    assert.deepEqual(
+      parsed.metrics.map((row) => [row.day, row.qty, row.externalId, row.metric]),
+      [
+        ["2026-10-11", "61", "resting_heart_rate:2026-10-11:bpm", "resting_heart_rate"],
+        ["2026-10-12", "59", "resting_heart_rate:2026-10-12:bpm", "resting_heart_rate"],
+      ],
+    );
+    const again = parseHealthAutoExport({
+      data: {
+        metrics: [
+          {
+            name: "Resting Heart Rate",
+            units: "bpm",
+            data: [{ qty: 55, date: "2026-10-11 08:00:00 -0500" }],
+          },
+        ],
+      },
+    });
+    assert.equal(again.metrics[0]?.externalId, "resting_heart_rate:2026-10-11:bpm");
+    assert.equal(again.metrics[0]?.qty, "55");
+    assert.equal(again.metrics[0]?.payload && (again.metrics[0].payload as { dailyTotal?: boolean }).dailyTotal, true);
+  });
+
+  it("stores lap splits and still drops the route", () => {
+    const parsed = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "split-run",
+            name: "Running",
+            start: "2026-09-10 07:00:00 -0500",
+            duration: 1800,
+            distance: { qty: 3, units: "mi" },
+            route: [{ latitude: 41.881, longitude: -87.623 }],
+            splits: [
+              { distance: { qty: 1, units: "mi" }, duration: 500 },
+              { distance: { qty: 1, units: "mi" }, duration: 520 },
+              { duration: 400 },
+            ],
+          },
+        ],
+      },
+    });
+    const payload = parsed.workouts[0]?.payload as { splits?: { miles: string; durationSec: string }[] };
+    assert.equal(payload.splits?.length, 2);
+    assert.equal(payload.splits?.[0]?.miles, "1");
+    assert.equal(JSON.stringify(payload).includes("41.881"), false);
+    const plain = parseHealthAutoExport(nrcWorkout);
+    assert.equal(JSON.stringify(plain.workouts[0]?.payload).includes("splits"), false);
+  });
+
   it("keeps miles and kilometers for a Nike Run Club run and drops the route", () => {
     const parsed = parseHealthAutoExport(nrcWorkout);
     const run = parsed.workouts[0];

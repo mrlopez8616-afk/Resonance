@@ -117,6 +117,7 @@ const PARENT_LABELS: Record<string, string> = {
 const CHILD_TITLES: Record<string, string> = {
   steps: "Steps",
   runs: "Runs",
+  analytics: "Analytics",
   lifting: "Lifting",
   heart: "Heart",
   manual: "Manual import",
@@ -359,7 +360,8 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     if (parts[1] === "youtube") return youtubePhoneTrail(parts);
     if (parts[1] === "crawl-walk-run") return crawlWalkRunPhoneTrail(parts);
     const parentId = parts[1];
-    if (!parentId || parts.length > 3) return homeTrail();
+    const runDetail = parentId === "fitness" && parts[2] === "runs" && parts.length === 4;
+    if (!parentId || (parts.length > 3 && !runDetail)) return homeTrail();
     if (parentId === "ideas") {
       if (parts.length !== 2) return homeTrail();
       const build: PhoneTarget = { href: "/n/build", label: "Build" };
@@ -441,6 +443,14 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     const parentLabel = PARENT_LABELS[parentId];
     if (!parentLabel) return homeTrail();
     const parent: PhoneTarget = { href: `/n/${parentId}`, label: parentLabel };
+    if (parentId === "fitness" && parts[2] === "runs" && parts.length === 4) {
+      const runs: PhoneTarget = { href: "/n/fitness/runs", label: "Runs" };
+      const runId = parts[3] ?? "";
+      return {
+        back: runs,
+        crumbs: [HOME, parent, runs, { href: `/n/fitness/runs/${runId}`, label: "Run" }],
+      };
+    }
     const nodeId = parts[2];
     if (!nodeId) return { back: FLOOR, crumbs: [HOME, parent] };
     return {
