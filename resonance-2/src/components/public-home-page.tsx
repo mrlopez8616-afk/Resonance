@@ -3,7 +3,8 @@ import { HealthHomeCard } from "@/components/machine-health-floor";
 import { YouTubeHomeCard } from "@/components/youtube-node";
 import { ChainSecurityHomeCard } from "@/components/chain-security-floor";
 import { LessonsHomeCard } from "@/components/lessons-floor";
-import { NodeFaceGrid } from "@/components/node-face";
+import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { RoundtableHomeCard } from "@/components/roundtable-floor";
 import { ThisWeek } from "@/components/this-week";
 import { PublicHome } from "@/components/public-floor";
 import { SystemHomeCard } from "@/components/system-map";
@@ -20,7 +21,11 @@ import type { ChainSecurityHomeModel } from "@/lib/chain-security";
 import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
-import { publicHomeNodeCount } from "@/lib/home-faces";
+import { financePublicHomeFace, publicHomeNodeCount } from "@/lib/home-faces";
+import { formatCivilDate } from "@/lib/calendar-time";
+import { loadFinancePage } from "@/lib/finance/store";
+import { loadRoundtableHome } from "@/lib/roundtable-store";
+import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { hasMoneyText, publicHref, publicRecordLabel, stripMoneyText } from "@/lib/public-mode";
 import { loadBetsForPage, loadCalendarForPage } from "@/lib/store-page";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -45,6 +50,12 @@ const chainHomeFallback: ChainSecurityHomeModel = {
   lines: [],
 };
 
+const roundtableHomeFallback: RoundtableHomeModel = {
+  unavailable: true,
+  count: 0,
+  lines: [],
+};
+
 function safeLine(line: string): string | null {
   if (hasMoneyText(line)) return null;
   const next = stripMoneyText(line);
@@ -52,7 +63,7 @@ function safeLine(line: string): string | null {
 }
 
 export async function PublicHomePage() {
-  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome] =
+  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome, financePage, roundtableHome] =
     await Promise.all([
     loadPublicFloor(),
     loadFitnessHome(),
@@ -75,6 +86,14 @@ export async function PublicHomePage() {
     loadChainSecurityHome(true).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return chainHomeFallback;
+    }),
+    loadFinancePage().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return null;
+    }),
+    loadRoundtableHome(true).catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return roundtableHomeFallback;
     }),
   ]);
   const bets = betsLoaded.status === "unavailable" ? [] : betsLoaded.bets;
@@ -130,6 +149,14 @@ export async function PublicHomePage() {
               ? null
               : buildHome.percentLabel,
         }}
+        finance={financePublicHomeFace(
+          financePage?.status === "live"
+            ? {
+                accountCount: financePage.snapshot.accounts.length,
+                asOfLine: `as of ${formatCivilDate(financePage.snapshot.asOf)}`,
+              }
+            : null,
+        )}
       />
       <ControlHomeCard lines={controlHome.lines} live={controlHome.live} publicMode />
       {healthHome ? <HealthHomeCard report={healthHome.report} /> : null}
@@ -145,6 +172,7 @@ export async function PublicHomePage() {
               : lessonsHome.latestTitle,
         }}
       />
+      <RoundtableHomeCard card={roundtableHome} />
       <ChainSecurityHomeCard
         publicMode
         card={{

@@ -120,7 +120,7 @@ describe("bankroll deposit validation", () => {
     assert.equal(voidEmbedded?.sql, voidFile);
     assert.equal(voidFile.includes("INSERT"), false);
     assert.equal(/^\s*delete\b/im.test(voidFile), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "040_market_quotes");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "041_public_node_lesson");
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id }), /reason must be a string/);
     assert.throws(() => parseBankrollDepositVoid({ id: DEPOSIT.id, reason: "  " }), /reason is required/);
     assert.throws(() => parseBankrollDepositVoid({ id: "Missing", reason: "duplicate" }), /lowercase slug/);
@@ -146,9 +146,10 @@ describe("bankroll deposit validation", () => {
         },
       ],
     }));
-    assert.match(publicCard, /Deposits/);
-    assert.match(publicCard, /\+28\.62%/);
+    assert.equal(publicCard.includes("Deposits"), false);
+    assert.match(publicCard, /Record/);
     assert.equal(publicCard.includes("$"), false);
+    assert.equal(publicCard.includes("6.84"), false);
     assert.equal(publicCard.includes("voided"), false);
     const privateList = render(createElement(BankrollLedgerView, {
       ledger,

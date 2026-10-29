@@ -35,8 +35,8 @@ describe("edmonton event merge", { concurrency: false }, () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === MIGRATION_ID);
     assert.equal(embedded?.sql, file);
     assert.equal(splitSqlStatements(file).some((statement) => /^delete\b/i.test(statement)), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-6)?.id, MIGRATION_ID);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "040_market_quotes");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-7)?.id, MIGRATION_ID);
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "041_public_node_lesson");
 
     setSqlClientForTests(memorySql());
     await applyMigrations(EMBEDDED_MIGRATIONS.filter((entry) => entry.id !== MIGRATION_ID));

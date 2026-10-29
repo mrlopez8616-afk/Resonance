@@ -336,9 +336,10 @@ describe("backup snapshots", () => {
     assert.equal(BACKUP_RUNS_SQL, file);
     assert.equal(file.includes("INSERT"), false);
     assert.equal(/^\s*delete\b/im.test(file), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "038_backup_runs");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "039_health_route_lesson");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "040_market_quotes");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "038_backup_runs");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "039_health_route_lesson");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "040_market_quotes");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "041_public_node_lesson");
     const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {
       crons: { path: string; schedule: string }[];
     };

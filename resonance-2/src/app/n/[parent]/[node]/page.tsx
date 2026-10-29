@@ -3,7 +3,6 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { ChildValueCard } from "@/components/child-value-card";
 import { PositionBook } from "@/components/position-book";
 import { PublicNodePage, TreasuryCard } from "@/components/public-floor";
-import { PrivatePage } from "@/components/private-notice";
 import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { FitnessDetail } from "@/components/fitness-detail";
@@ -17,7 +16,7 @@ import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadFinancePage, readFinanceNetWorthSeries } from "@/lib/finance/store";
-import { financeDetail, financeNode } from "@/lib/finance/view";
+import { financeDetail, financeNode, publicFinanceDetail } from "@/lib/finance/view";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
@@ -111,7 +110,6 @@ export default async function NodeDetailPage({
   }
   const parent = parentById(parentId);
   if (await isPublicMode()) {
-    if (parent?.id === "finance" || parent?.id === "fight-desk") return <PrivatePage />;
     if (parent?.id === "crypto" || parent?.id === "ai-stocks") {
       const node = FLOOR_NODES.find((item) => item.id === nodeId && item.status !== "empty");
       if (!node || nodeParent(node.id) !== parent.id) notFound();
@@ -146,9 +144,14 @@ export default async function NodeDetailPage({
   if (parent?.id === "finance") {
     await requireRole("owner");
     if (!financeNode(nodeId)) notFound();
-    const finance = await loadFinancePage();
+    const [finance, publicMode] = await Promise.all([loadFinancePage(), isPublicMode()]);
     const series = finance.status === "live" ? await readFinanceNetWorthSeries() : [];
-    const detail = finance.status === "live" ? financeDetail(finance.snapshot, nodeId, series) : null;
+    const detail =
+      finance.status === "live"
+        ? publicMode
+          ? publicFinanceDetail(finance.snapshot, nodeId, series)
+          : financeDetail(finance.snapshot, nodeId, series)
+        : null;
     return (
       <OperatorShell
         storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
@@ -209,7 +212,11 @@ export default async function NodeDetailPage({
   }
   if (parent?.id === "fight-desk") {
     if (nodeId !== "bankroll") notFound();
-    const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
+    const [floor, bankroll, publicMode] = await Promise.all([
+      loadOperatorFloor(),
+      loadBankroll(),
+      isPublicMode(),
+    ]);
     return (
       <OperatorShell
         storageMessage={
@@ -222,7 +229,11 @@ export default async function NodeDetailPage({
           {parent.label}
         </Link>
         {bankroll.ledger ? (
-          <BankrollLedgerView ledger={bankroll.ledger} deposits={bankroll.deposits} />
+          <BankrollLedgerView
+            ledger={bankroll.ledger}
+            deposits={bankroll.deposits}
+            publicMode={publicMode}
+          />
         ) : (
           <p className="parent-empty" role="status">
             {bankroll.storageDetail ?? "unavailable"}

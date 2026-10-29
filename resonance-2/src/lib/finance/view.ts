@@ -1,5 +1,6 @@
 import { formatCivilDate } from "@/lib/calendar-time";
 import { civilDaysBetween, type FinanceSnapshot } from "@/lib/finance/schema";
+import { hasMoneyText, stripMoneyText } from "@/lib/public-mode";
 
 export const FINANCE_STALE_MS = 48 * 60 * 60 * 1000;
 export const FINANCE_FEE_CARD_DAYS = 30;
@@ -488,5 +489,113 @@ export function financeDetail(
     amounts: node.id === "fees" ? feeAmounts(snapshot) : history,
     amountLabel: node.id === "fees" ? "Fees by month" : node.id === "net-worth" ? "Net worth" : null,
     tables: tables.flatMap((item) => (item ? [item] : [])),
+  };
+}
+
+const MONEY_COLUMN = /balance|available|limit|amount|income|spend|\bnet\b|median|\bmin\b|\bmax\b|owed|fee/i;
+
+function spendShare(snapshot: FinanceSnapshot): string | null {
+  const income = snapshot.cashFlow.thisMonth.income;
+  const spend = snapshot.cashFlow.thisMonth.spend;
+  if (!(income > 0) || !Number.isFinite(spend)) return null;
+  return `${((spend / income) * 100).toFixed(1)}%`;
+}
+
+/** Public finance cards. Counts and one spend share. No balances. */
+export function publicFinanceCards(snapshot: FinanceSnapshot): FinanceCardModel[] {
+  const unlinked = notLinkedCount(snapshot);
+  const owed = linkedDebts(snapshot).length;
+  const recurring = snapshot.recurring.length;
+  const fees = feesSince(snapshot, FINANCE_FEE_CARD_DAYS).length;
+  const accounts = snapshot.accounts.length;
+  const partial = snapshot.coverage.missing.length > 0;
+  const alert = topAlert(snapshot);
+  const safeAlert = alert ? stripMoneyText(alert) : "";
+  const days = `${snapshot.cashFlow.thisMonth.daysElapsed} days in`;
+  return [
+    {
+      id: "cash-flow",
+      title: "Cash Flow",
+      href: "/n/finance/cash-flow",
+      headline: spendShare(snapshot) ?? String(snapshot.cashFlow.thisMonth.daysElapsed),
+      lines: [days],
+      bars: null,
+    },
+    {
+      id: "bills",
+      title: "Bills & Subscriptions",
+      href: "/n/finance/bills",
+      headline: String(recurring),
+      lines: keep(recurringLines(snapshot), 3),
+      bars: null,
+    },
+    {
+      id: "debt",
+      title: "Debt",
+      href: "/n/finance/debt",
+      headline: String(owed),
+      lines: keep([unlinked > 0 ? `${unlinked} not linked` : null], 2),
+      bars: null,
+    },
+    {
+      id: "net-worth",
+      title: "Net Worth",
+      href: "/n/finance/net-worth",
+      headline: String(accounts),
+      lines: keep([partial ? "partial" : `${accounts} linked`], 2),
+      bars: null,
+    },
+    {
+      id: "fees",
+      title: "Fees & Alerts",
+      href: "/n/finance/fees",
+      headline: String(fees),
+      lines: keep([safeAlert || null], 2),
+      bars: null,
+    },
+  ];
+}
+
+function scrubMoneyTable(table: FinanceTableModel): FinanceTableModel | null {
+  const keepColumn = table.columns.map((column, index) => {
+    if (MONEY_COLUMN.test(column)) return false;
+    return !table.rows.some((row) => hasMoneyText(row[index] ?? ""));
+  });
+  const columns = table.columns.filter((_, index) => keepColumn[index]);
+  if (columns.length === 0) return null;
+  const rows = table.rows.map((row) =>
+    row
+      .filter((_, index) => keepColumn[index])
+      .map((cell) => stripMoneyText(cell)),
+  );
+  return { title: table.title, columns, rows };
+}
+
+/** Same finance page, with balances, charts, and dollar text removed. */
+export function publicFinanceDetail(
+  snapshot: FinanceSnapshot,
+  nodeId: string,
+  series: readonly NetWorthPoint[] = [],
+): FinanceDetailModel | null {
+  const detail = financeDetail(snapshot, nodeId, series);
+  if (!detail) return null;
+  const card = publicFinanceCards(snapshot).find((item) => item.id === financeNode(nodeId)?.id);
+  return {
+    ...detail,
+    headline: card?.headline ?? null,
+    lines: (card?.lines ?? []).filter((line) => line.trim() && !hasMoneyText(line)),
+    partial: detail.partial,
+    missing: detail.missing.map((item) => stripMoneyText(item)).filter((item) => item && !hasMoneyText(item)),
+    alerts: detail.alerts.flatMap((alert) => {
+      const message = stripMoneyText(alert.message);
+      return message && !hasMoneyText(message) ? [{ severity: alert.severity, message }] : [];
+    }),
+    flow: null,
+    amounts: null,
+    amountLabel: null,
+    tables: detail.tables.flatMap((table) => {
+      const next = scrubMoneyTable(table);
+      return next ? [next] : [];
+    }),
   };
 }

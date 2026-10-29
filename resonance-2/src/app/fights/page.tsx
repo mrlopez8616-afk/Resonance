@@ -1,6 +1,6 @@
 import { FightIndex } from "@/components/fight-board";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import {
   betBookLine,
@@ -17,8 +17,7 @@ export const metadata = {
 };
 
 export default async function FightsPage() {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
   const [book, calendar, breakdowns] = await Promise.all([
     loadBetsForPage(),
     loadCalendarForPage(),
@@ -53,6 +52,7 @@ export default async function FightsPage() {
               ? "seed-only"
               : "live"
         }
+        publicMode={publicMode}
       />
     </OperatorShell>
   );

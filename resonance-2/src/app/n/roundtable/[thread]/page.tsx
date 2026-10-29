@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RoundtableThread } from "@/components/roundtable-thread";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { isPublicMode } from "@/lib/public-mode-server";
@@ -21,8 +20,7 @@ export default async function RoundtableThreadPage({
   params: Promise<{ thread: string }>;
 }) {
   await requireRole("owner");
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
 
   const { thread: id } = await params;
   if (!isRoundtableId(id)) notFound();
@@ -30,7 +28,7 @@ export default async function RoundtableThreadPage({
   let view = null;
   let unavailable = false;
   try {
-    view = await loadRoundtableThread(id, await isPublicMode());
+    view = await loadRoundtableThread(id, publicMode);
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
     unavailable = true;
@@ -42,7 +40,7 @@ export default async function RoundtableThreadPage({
       <Link href={ROUNDTABLE_HREF} className="calendar-back">
         Roundtable
       </Link>
-      {view ? <RoundtableThread view={view} /> : null}
+      {view ? <RoundtableThread view={view} reply={!publicMode} /> : null}
     </OperatorShell>
   );
 }

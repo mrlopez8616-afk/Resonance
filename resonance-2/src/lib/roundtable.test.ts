@@ -155,13 +155,17 @@ describe("roundtable copy", () => {
     const home = roundtableHomeModel(threads, { publicMode: false });
     assert.equal(home?.count, 4);
     assert.deepEqual(home?.lines, ["Wire $40 on Thursday", "Steps are in", "Third"]);
-    assert.equal(roundtableHomeModel(threads, { publicMode: true }), null);
-    assert.equal(JSON.stringify(roundtableHomeModel(threads, { publicMode: true })), "null");
+    const sharedHome = roundtableHomeModel(threads, { publicMode: true });
+    assert.equal(sharedHome?.count, 4);
+    assert.deepEqual(sharedHome?.lines, ["Wire on Thursday", "Steps are in", "Third"]);
+    assert.equal(JSON.stringify(sharedHome).includes("$"), false);
 
     const cards = presentRoundtableCards(threads, false);
     assert.equal(cards?.some((card) => card.id === "rt-yt"), false);
     assert.equal(JSON.stringify(cards).includes("Episode cut"), false);
-    assert.equal(presentRoundtableCards(threads, true), null);
+    const sharedCards = presentRoundtableCards(threads, true);
+    assert.equal(sharedCards?.find((card) => card.id === "rt-bills")?.title, "Wire on Thursday");
+    assert.equal(JSON.stringify(sharedCards).includes("$"), false);
     const bill = cards?.find((card) => card.id === "rt-bills");
     assert.equal(bill?.agentName, "Finance Desk");
     assert.equal(bill?.title, "Wire $40 on Thursday");
@@ -185,7 +189,10 @@ describe("roundtable copy", () => {
     const shown = presentRoundtableThread(thread, false);
     assert.equal(shown?.messages[0]?.authorLabel, "Finance Desk");
     assert.equal(shown?.messages[0]?.body, "Send $40 today.");
-    assert.equal(presentRoundtableThread(thread, true), null);
+    const sharedThread = presentRoundtableThread(thread, true);
+    assert.equal(sharedThread?.title, "Wire on Thursday");
+    assert.equal(sharedThread?.messages[0]?.body, "Send today.");
+    assert.equal(JSON.stringify(sharedThread).includes("$"), false);
     assert.equal(presentRoundtableThread({ ...thread, audience: "youtube" }, false), null);
 
     const floor = await import("@/components/roundtable-floor");
@@ -238,16 +245,17 @@ describe("roundtable copy", () => {
     assert.match(home, /loadRoundtableHome/);
     assert.match(home, /session\?\.role === "owner" \? <RoundtableHomeCard/);
     const publicHome = readFileSync(path.join(root, "src/components/public-home-page.tsx"), "utf8");
-    assert.equal(publicHome.includes("Roundtable"), false);
-    assert.equal(publicHome.includes("loadRoundtable"), false);
+    assert.match(publicHome, /RoundtableHomeCard/);
+    assert.match(publicHome, /loadRoundtableHome\(true\)/);
 
     const parent = readFileSync(path.join(root, "src/app/n/roundtable/page.tsx"), "utf8");
     assert.ok(parent.indexOf('await requireRole("owner")') < parent.indexOf("await loadRoundtableCards"));
-    assert.ok(parent.indexOf("blockedPublicPage") < parent.indexOf("await loadRoundtableCards"));
+    assert.equal(parent.includes("blockedPublicPage"), false);
     assert.match(parent, /href="\/"/);
     const child = readFileSync(path.join(root, "src/app/n/roundtable/[thread]/page.tsx"), "utf8");
     assert.ok(child.indexOf('await requireRole("owner")') < child.indexOf("await loadRoundtableThread"));
-    assert.ok(child.indexOf("blockedPublicPage") < child.indexOf("await loadRoundtableThread"));
+    assert.equal(child.includes("blockedPublicPage"), false);
+    assert.match(child, /reply=\{!publicMode\}/);
     assert.match(child, /Roundtable/);
     const reply = readFileSync(path.join(root, "src/components/roundtable-reply.tsx"), "utf8");
     assert.equal(reply.includes("youtube"), false);

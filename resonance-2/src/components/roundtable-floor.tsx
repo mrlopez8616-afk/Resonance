@@ -10,7 +10,7 @@ export function RoundtableHomeCard({ card }: { card: RoundtableHomeModel }) {
   return <NodeFace face={roundtableHomeFace(card)} />;
 }
 
-export function RoundtableParent({ cards }: { cards: RoundtableCard[] }) {
+export function RoundtableParent({ cards, publicMode = false }: { cards: RoundtableCard[]; publicMode?: boolean }) {
   if (cards.length === 0) {
     return (
       <p className="parent-empty" role="status">
@@ -31,6 +31,7 @@ export function RoundtableParent({ cards }: { cards: RoundtableCard[] }) {
             headline: card.title,
             status: [card.when, card.countLabel].filter(Boolean).join(" · "),
             live: true,
+            publicMode,
           })}
         />
       ))}

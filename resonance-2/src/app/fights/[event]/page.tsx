@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { blockedPublicPage } from "@/components/private-notice";
 import { staticFightCard } from "@/data/dwcs-cards";
 import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import { eventPageHref, eventTimeBucket, legacyFightNodeHref, resolveFightEventPage } from "@/lib/fight-desk";
@@ -13,8 +12,6 @@ export default async function FightEventRedirect({
 }: {
   params: Promise<{ event: string }>;
 }) {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
   const { event } = await params;
   const legacy = legacyFightNodeHref(event);
   if (legacy) redirect(legacy);

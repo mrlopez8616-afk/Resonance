@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ApprovalsParent } from "@/components/approvals-parent";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { loadApprovalBoard } from "@/lib/approvals-store";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -12,9 +11,6 @@ export const metadata = {
 };
 
 export default async function ApprovalsPage() {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
-
   let board: Awaited<ReturnType<typeof loadApprovalBoard>> | null = null;
   let unavailable = false;
   try {

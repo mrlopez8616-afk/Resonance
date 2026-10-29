@@ -335,9 +335,9 @@ export function scoreFeeds(
 }
 
 /**
- * Public mode drops Approvals and Finance.
- * Finance is the snapshot feed and the Finance Desk row. Bots and the other
- * feeds stay, and this view carries no amounts.
+ * Public mode keeps the approval counts and drops the finance feed.
+ * Finance is the snapshot feed and the Finance Desk row. Approval titles are
+ * already stripped of dollar amounts. Bots and the other feeds stay.
  */
 export function presentControlRoom(room: ControlRoom, publicMode: boolean): ControlRoomView {
   if (!publicMode) {
@@ -348,7 +348,7 @@ export function presentControlRoom(room: ControlRoom, publicMode: boolean): Cont
     };
   }
   return {
-    approvals: null,
+    approvals: room.approvals,
     agents: room.agents.filter((agent) => agent.id !== "finance-desk"),
     feeds: room.feeds.filter((feed) => feed.checked && feed.id !== "finance"),
   };

@@ -194,9 +194,10 @@ describe("control room agents", () => {
 });
 
 describe("control room public hide", () => {
-  it("drops approvals and finance and keeps the other scoreboard", () => {
+  it("keeps approval counts, drops finance, and keeps the other scoreboard", () => {
     const view = presentControlRoom(room(), true);
-    assert.equal(view.approvals, null);
+    assert.ok(view.approvals);
+    assert.equal(JSON.stringify(view.approvals).includes("$"), false);
     assert.equal(
       view.agents.some((agent) => agent.id === "finance-desk" || agent.name === "Finance Desk"),
       false,
@@ -211,25 +212,26 @@ describe("control room public hide", () => {
     const packed = JSON.stringify(view);
     assert.equal(packed.includes("$"), false);
     assert.equal(packed.includes("1,200"), false);
-    assert.equal(controlHomeLines(view).some((line) => /pending|finance|\$/i.test(line)), false);
+    assert.equal(controlHomeLines(view).some((line) => /finance|\$/i.test(line)), false);
+    assert.match(controlHomeLines(view).join(" "), /pending/);
 
     const cards = controlParentCards(view, NOW);
     assert.deepEqual(
       cards.map((card) => card.id),
-      ["bots", "feeds"],
+      ["approvals", "bots", "feeds"],
     );
-    assert.equal(cards.some((card) => card.href === "/n/approvals" || card.label === "Approvals"), false);
+    assert.equal(cards.some((card) => card.href === "/n/control/approvals" && card.label === "Approvals"), true);
   });
 
-  it("hides the approvals child route and leaves the cockpit visible", () => {
-    assert.equal(isHiddenInPublicMode("/n/control/approvals"), true);
+  it("opens the approvals child route and leaves the cockpit visible", () => {
+    assert.equal(isHiddenInPublicMode("/n/control/approvals"), false);
     assert.equal(isHiddenInPublicMode("/n/control"), false);
     assert.equal(isHiddenInPublicMode("/n/control/bots"), false);
     assert.equal(isHiddenInPublicMode("/n/control/feeds"), false);
 
     const child = readFileSync(join(root, "src/app/n/control/[view]/page.tsx"), "utf8");
     const ui = readFileSync(join(root, "src/components/control-room.tsx"), "utf8");
-    assert.ok(child.indexOf("await blockedPublicPage") < child.indexOf("await loadControlRoom"));
+    assert.equal(child.includes("blockedPublicPage"), false);
     assert.match(ui, /href="\/n\/approvals"/);
     assert.equal(ui.includes("<form"), false);
     assert.equal(ui.includes("ApprovalDecision"), false);

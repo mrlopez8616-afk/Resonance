@@ -74,6 +74,22 @@ nodeModule._load = function load(request: string, parent: unknown, isMain: boole
   ) {
     return { __esModule: true, default: LinkStandIn };
   }
+  if (normalized === "next/navigation" || normalized.includes("next/dist/client/components/navigation")) {
+    return {
+      __esModule: true,
+      useRouter() {
+        return { push() {}, refresh() {}, replace() {} };
+      },
+      usePathname() {
+        return "/";
+      },
+      useSearchParams() {
+        return new URLSearchParams();
+      },
+      redirect() {},
+      notFound() {},
+    };
+  }
   return originalLoad(request, parent, isMain);
 };
 
@@ -535,7 +551,120 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   const stockNode = render(createElement(PublicNodePage, { ticker: "NVDA", holding: nvda }));
   const suiNode = render(createElement(PublicNodePage, { ticker: "SUI", holding: sui }));
   const treasury = render(createElement(TreasuryCard));
-  const fight = render(createElement(PublicFightRecord, { record: "4-1" }));
+  const predictions = await import("@/components/predictions-floor");
+  const financeView = await import("@/lib/finance/view");
+  const financeUi = await import("@/components/finance-floor");
+  const financeDetailUi = await import("@/components/finance-detail");
+  const financeFixture = await import("@/lib/finance/fixture");
+  const approvalsUi = await import("@/components/approvals-floor");
+  const roundtableLib = await import("@/lib/roundtable");
+  const roundtableUi = await import("@/components/roundtable-floor");
+  const snapshot = financeFixture.SYNTHETIC_FINANCE_SNAPSHOT;
+  const financeCards = financeView.publicFinanceCards(snapshot);
+  const debt = financeView.publicFinanceDetail(snapshot, "debt");
+  const netWorth = financeView.publicFinanceDetail(snapshot, "net-worth");
+  const fight = render(
+    createElement(predictions.PredictionsFloor, {
+      ledger: null,
+      bookFacts: { open: 2, deskOpen: 2, atRiskLabel: "$4.00", recordLabel: "4-1 · 0 sold · 0 void" },
+      publicMode: true,
+    }),
+  );
+  const bankrollHtml = render(
+    createElement(predictions.BankrollLedgerView, {
+      publicMode: true,
+      deposits: [{ id: "dep", date: "2026-10-01", amount: "50.00", voidedAt: null, voidReason: null }],
+      ledger: {
+        start: "100.00",
+        asOf: "2026-10-01",
+        bankroll: "120.00",
+        bankrollLabel: "$120.00",
+        atRisk: "4.00",
+        atRiskLabel: "$4.00",
+        cash: "116.00",
+        cashLabel: "$116.00",
+        open: 1,
+        deskOpen: 1,
+        recordLabel: "4-1 · 0 sold · 0 void",
+        realizedLabel: "$20.00",
+        roiLabel: "+16.67%",
+        suggestedStake: "1.00",
+        suggestedStakeLabel: "Flat $1/fight",
+        depositTotal: "50.00",
+        depositTotalLabel: "+$50.00",
+        depositShareLabel: "+41.67%",
+        cards: [
+          {
+            slug: "ufc",
+            title: "UFC",
+            href: "/fights/past/ufc",
+            date: "2026-10-01",
+            dateLabel: "Oct 1",
+            recordLabel: "1-0",
+            pnlLabel: "+$20.00",
+          },
+        ],
+        tiers: [
+          {
+            id: "STRONG",
+            label: "STRONG",
+            recordLabel: "1-0",
+            pnlLabel: "+$20.00",
+            atRiskLabel: "$4.00",
+            open: 1,
+          },
+        ],
+        before: [],
+      },
+    }),
+  );
+  const finance = [
+    render(createElement(financeUi.FinanceFloor, { asOf: snapshot.asOf, stale: false, cards: financeCards, publicMode: true })),
+    debt ? render(createElement(financeDetailUi.FinanceDetail, { detail: debt, asOf: snapshot.asOf, stale: false })) : "",
+    netWorth ? render(createElement(financeDetailUi.FinanceDetail, { detail: netWorth, asOf: snapshot.asOf, stale: false })) : "",
+  ].join("\n");
+  const approvalHtml = render(
+    createElement(approvalsUi.ApprovalList, {
+      mode: "pending",
+      publicMode: true,
+      items: [
+        {
+          id: "appr_publicmodeexample",
+          createdAt: "2026-10-29T15:00:00.000Z",
+          requestedByAgent: "Robinhood Ops",
+          title: "Send $1,200",
+          detail: "Wire $40 today",
+          category: "transfer",
+          node: null,
+          status: "pending",
+          decidedBy: null,
+          decidedAt: null,
+          decisionNote: null,
+          idempotencyKey: "floor-desk:public",
+        },
+      ],
+    }),
+  );
+  const roundtableHtml = render(
+    createElement(roundtableUi.RoundtableParent, {
+      publicMode: true,
+      cards:
+        roundtableLib.presentRoundtableCards(
+          [
+            {
+              id: "rt-wire",
+              agentId: "finance-desk",
+              title: "Wire $40",
+              audience: "founder",
+              createdAt: "2026-10-29T15:00:00.000Z",
+              updatedAt: "2026-10-29T15:00:00.000Z",
+              messageCount: 1,
+            },
+          ],
+          true,
+        ) ?? [],
+    }),
+  );
   const section = buildSection();
   const backupRun = {
     startedAt: "2026-10-28T08:00:00.000Z",
@@ -679,6 +808,15 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/fitness", html: fitness },
     { path: "/n/fitness/steps", html: steps },
     { path: "/n/fight-desk", html: fight },
+    { path: "/fights", html: fight },
+    { path: "/n/fight-desk/bankroll", html: bankrollHtml },
+    { path: "/n/finance", html: finance },
+    { path: "/n/finance/debt", html: finance },
+    { path: "/n/approvals", html: approvalHtml },
+    { path: "/n/approvals/pending", html: approvalHtml },
+    { path: "/n/roundtable", html: roundtableHtml },
+    { path: "/n/roundtable/rt-example", html: roundtableHtml },
+    { path: "/n/control/approvals", html: "Approvals 2 pending" },
     { path: "/n/build", html: build },
     { path: "/n/build/platform", html: buildSectionHtml },
     { path: "/n/backup", html: backupHtml },
@@ -792,30 +930,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/settings", html: settings },
     ...(await publicTrackerPages(render)),
   ];
-  const blocked = [
-    "/n/finance",
-    "/n/finance/debt",
-    "/n/fight-desk/bankroll",
-    "/settings/security",
-    "/log",
-    "/fights",
-    "/fights/upcoming",
-    "/fights/past",
-    "/fights/upcoming/ufc-333",
-    "/fights/past/ufc-332",
-    "/fights/ufc",
-    "/fights/ufc-300",
-    "/fights/ufc-300/main",
-    "/fights/main-card",
-    "/fights/prelims",
-    "/fights/contender-series",
-    "/n/approvals",
-    "/n/approvals/pending",
-    "/n/approvals/done",
-    "/n/control/approvals",
-    "/n/roundtable",
-    "/n/roundtable/rt-example",
-  ].map((path) => ({ path, html: hidden }));
+  const blocked = ["/settings/security", "/log"].map((path) => ({ path, html: hidden }));
   return [...visible, ...blocked];
 }
 
@@ -1069,8 +1184,9 @@ describe("public render scan", () => {
     const controlPage = pages.find((page) => page.path === "/n/control");
     assert.match(controlPage?.html ?? "", /Bots/);
     assert.match(controlPage?.html ?? "", /Feeds/);
-    assert.equal(controlPage?.html.includes("Approvals"), false);
+    assert.match(controlPage?.html ?? "", /Approvals/);
     assert.equal(controlPage?.html.includes("Finance"), false);
+    assert.equal(controlPage?.html.includes("$"), false);
     const controlFeeds = pages.find((page) => page.path === "/n/control/feeds");
     assert.match(controlFeeds?.html ?? "", /XRP daily closes/);
     assert.equal(controlFeeds?.html.includes("$"), false);
@@ -1151,48 +1267,56 @@ describe("public render scan", () => {
     assert.equal(brickDetail?.html.includes("$"), false);
   });
 
-  it("hides finance, the bankroll, the log, security, and fights", () => {
+  it("opens every node and still hides the log, security, and money APIs", () => {
     for (const path of [
-      "/n/finance",
-      "/n/finance/net-worth",
-      "/n/money",
-      "/n/fight-desk/bankroll",
       "/settings/security",
       "/log",
-      "/fights",
-      "/fights/upcoming",
-      "/fights/past",
-      "/fights/ufc",
       "/api/fills",
       "/api/bets/stake",
       "/api/deposits/void",
       "/api/spot-price",
+      "/api/finance/snapshot",
+      "/api/fights/breakdown",
       "/api/settings/fitness-token",
       "/api/fitness/token",
       "/api/settings/owner-pin",
-      "/n/approvals",
-      "/n/approvals/pending",
-      "/n/approvals/done",
       "/api/approvals",
       "/api/approvals/appr_example/decision",
-      "/n/control/approvals",
-      "/n/roundtable",
-      "/n/roundtable/rt-example",
       "/api/roundtable",
       "/api/roundtable/rt-example",
       "/api/roundtable/rt-example/reply",
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/n/control/approvals", "/n/finance", "/n/finance/net-worth", "/n/finance/debt", "/n/fight-desk", "/n/fight-desk/bankroll", "/fights", "/fights/upcoming", "/fights/past", "/fights/ufc", "/n/approvals", "/n/approvals/pending", "/n/approvals/done", "/n/roundtable", "/n/roundtable/rt-example", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
-    assert.ok(hidden.length >= 8);
+    assert.deepEqual(hidden.map((page) => page.path).sort(), ["/log", "/settings/security"]);
     for (const page of hidden) {
       assert.match(page.html, /Private/);
       assert.equal(page.html.includes("$"), false);
     }
+    for (const page of pages) {
+      if (isHiddenInPublicMode(page.path)) continue;
+      const html = page.path === "/n/crypto/xrp-trigger" ? page.html.replaceAll("$1.55", "") : page.html;
+      const leaks = publicTextLeaks(html).filter((id) => {
+        if (id === "token" && page.path.startsWith("/n/chain-security")) return false;
+        if (id !== "shares" || !page.path.startsWith("/n/system")) return true;
+        return /\bshares?\b/i.test(html.replaceAll("SUI share", ""));
+      });
+      assert.equal(leaks.join(","), "", `${page.path} leaked ${leaks.join(",")}`);
+      assert.equal(html.includes("$"), false, page.path);
+    }
+    const desk = pages.find((page) => page.path === "/n/fight-desk");
+    assert.match(desk?.html ?? "", /\/n\/fight-desk\/bankroll/);
+    assert.match(desk?.html ?? "", /href="\/fights"/);
+    assert.equal(desk?.html.includes("$"), false);
+    const bankroll = pages.find((page) => page.path === "/n/fight-desk/bankroll");
+    assert.match(bankroll?.html ?? "", /4-1/);
+    assert.match(bankroll?.html ?? "", /\+16\.67%/);
+    assert.equal(bankroll?.html.includes("$"), false);
+    assert.equal(bankroll?.html.includes("50.00"), false);
   });
 });
 

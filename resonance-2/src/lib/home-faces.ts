@@ -46,7 +46,7 @@ export function privateHomeNodeCount(input: {
 }
 
 /**
- * Public home paints the same floor without finance, roundtable, or the owner gate.
+ * Public home paints the same owner floor, including finance and roundtable.
  * Fight Desk and Health are optional. Fitness was one of the nine always-on tiles.
  */
 export function publicHomeNodeCount(input: {
@@ -55,7 +55,7 @@ export function publicHomeNodeCount(input: {
   shelved?: readonly string[];
 }): number {
   const shelvedParent = nodeShelved("fitness", input.shelved) ? 1 : 0;
-  return 9 - shelvedParent + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
+  return 11 - shelvedParent + (input.fight ? 1 : 0) + (input.health ? 1 : 0);
 }
 
 /** Columns and rows that keep every square inside the box. Phone stays on 3. */
@@ -250,6 +250,35 @@ export function fitnessHomeFace(input: {
       live: Boolean(value || lines.length > 0),
     },
     input.publicMode,
+  );
+}
+
+/** Public finance tile. The headline is the linked-account count. No balance. */
+export function financePublicHomeFace(input: { accountCount: number; asOfLine: string } | null): HomeFace {
+  if (!input) {
+    return finish(
+      {
+        id: "finance",
+        href: "/n/finance",
+        name: "Finance",
+        headline: NOT_CONNECTED,
+        status: NOT_RECORDED,
+        live: false,
+      },
+      true,
+    );
+  }
+  const count = Number.isInteger(input.accountCount) && input.accountCount > 0 ? input.accountCount : 0;
+  return finish(
+    {
+      id: "finance",
+      href: "/n/finance",
+      name: "Finance",
+      headline: String(count),
+      status: input.asOfLine.trim() || NOT_RECORDED,
+      live: count > 0,
+    },
+    true,
   );
 }
 

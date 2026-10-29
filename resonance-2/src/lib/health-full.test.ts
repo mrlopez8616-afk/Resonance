@@ -13,12 +13,14 @@ import {
   assembleHealth,
   betsBits,
   bits,
+  drillDownBroken,
   fightDeskBits,
   financeBits,
   groupQuoteBits,
   healthPages,
   publicHealthReport,
   quoteBits,
+  resolveDrillDown,
   surface,
   type HealthBits,
   type HealthFullReport,
@@ -303,6 +305,41 @@ describe("health full probe", () => {
     assert.equal(broken.ok, false);
     assert.equal(broken.summary.status, "error");
     assert.equal(broken.summary.error, HEALTH_TILES.length + healthPages().length);
+  });
+
+  it("flags a drill-down that 404s, loops, or stays private", () => {
+    for (const target of [...HEALTH_TILES, ...healthPages()]) {
+      assert.equal(drillDownBroken(target.path, "private"), false, target.path);
+      assert.equal(drillDownBroken(target.path, "public"), false, target.path);
+    }
+    const predictions = resolveDrillDown("/n/predictions");
+    const activity = resolveDrillDown("/n/fitness/activity");
+    const legacyCard = resolveDrillDown("/fights/main-card");
+    assert.equal(predictions.ok && predictions.path, "/n/fight-desk");
+    assert.equal(activity.ok && activity.path, "/n/fitness/steps");
+    assert.equal(legacyCard.ok && legacyCard.path, "/fights");
+    assert.equal(drillDownBroken("/n/not-a-node", "private"), true);
+    assert.equal(drillDownBroken("/settings/security", "private"), false);
+    assert.equal(drillDownBroken("/settings/security", "public"), true);
+    assert.equal(drillDownBroken("/log", "public"), true);
+    const report = assembleHealth(NOW.toISOString(), okFacts(), okFacts());
+    assert.equal(report.summary.status, "ok");
+    assert.equal(report.pages.some((row) => row.reason === "drill-down broken"), false);
+    assert.equal(JSON.stringify(report).includes("$"), false);
+    const forced = publicHealthReport({
+      checkedAt: NOW.toISOString(),
+      tiles: HEALTH_TILES.map((target) =>
+        target.id === "fight-desk"
+          ? { ...surface(target, bits("ok", "loaded")), path: "/n/not-a-node" }
+          : surface(target, bits("ok", "loaded")),
+      ),
+      pages: healthPages().map((target) => surface(target, bits("ok", "loaded"))),
+    });
+    const fight = forced.tiles.find((row) => row.id === "fight-desk");
+    assert.equal(fight?.status, "error");
+    assert.equal(fight?.reason, "drill-down broken");
+    assert.equal(fight?.path, "/n/fight-desk");
+    assert.equal(JSON.stringify(forced).includes("$"), false);
   });
 
   it("fetches a missing or old crypto quote once and does not reload the floor", () => {

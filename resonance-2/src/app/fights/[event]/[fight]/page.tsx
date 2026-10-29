@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { FightDetail } from "@/components/fight-board";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { canonicalEventSlug } from "@/lib/fight-event-alias";
 import { resolveFightView } from "@/lib/fight-breakdowns";
 import { eventPageHref, eventTimeBucket, resolveFightEventPage } from "@/lib/fight-desk";
@@ -53,8 +53,7 @@ export default async function FightPage({
   params: Promise<{ event: string; fight: string }>;
   searchParams: Promise<{ node?: string | string[] }>;
 }) {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
   const { event, fight: slug } = await params;
   const requestedNode = oneQuery((await searchParams).node);
   const canonical = canonicalEventSlug(event);
@@ -100,6 +99,7 @@ export default async function FightPage({
           )}
           availability={availability}
           resultsAvailability={resultsAvailability}
+          publicMode={publicMode}
         />
       </OperatorShell>
     );
@@ -154,6 +154,7 @@ export default async function FightPage({
         hideEmpty
         availability={availability}
         resultsAvailability={resultsAvailability}
+        publicMode={publicMode}
       />
     </OperatorShell>
   );

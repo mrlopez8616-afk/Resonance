@@ -8,16 +8,15 @@ import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
 import { ParentGlance } from "@/components/parent-glance";
 import { PositionRollupView } from "@/components/position-book";
-import { PublicFightRecord, PublicGroupFloor } from "@/components/public-floor";
-import { PrivatePage } from "@/components/private-notice";
+import { PublicGroupFloor } from "@/components/public-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { PredictionsFloor } from "@/components/predictions-floor";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadPublicFloor } from "@/lib/public-load";
-import { hasMoneyText, publicRecordLabel, scrubTextFields } from "@/lib/public-mode";
+import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
-import { financeCards } from "@/lib/finance/view";
+import { financeCards, publicFinanceCards } from "@/lib/finance/view";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { buildFitnessStory, parseStoryRange } from "@/lib/fitness-story";
 import { loadFitnessBundle } from "@/lib/fitness-store";
@@ -80,19 +79,21 @@ export default async function ParentNodePage({
   if (!parent) notFound();
 
   if (await isPublicMode()) {
-    if (parent.id === "finance") return <PrivatePage />;
     if (parent.id === "fight-desk") {
-      const bankroll = await loadBankroll();
+      const [floor, bankroll] = await Promise.all([loadOperatorFloor(), loadBankroll()]);
+      const ledger = bankroll.ledger;
       return (
         <OperatorShell
-          storageMessage={bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
-          storageDetail={bankroll.storageDetail}
+          storageMessage={
+            floor.storageMessage ??
+            (bankroll.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+          }
+          storageDetail={floor.storageDetail ?? bankroll.storageDetail}
         >
-          <Link href="/" className="calendar-back">
-            Floor
-          </Link>
-          <PublicFightRecord
-            record={publicRecordLabel(bankroll.ledger?.recordLabel ?? bankroll.bookFacts?.recordLabel)}
+          <PredictionsFloor
+            ledger={ledger}
+            bookFacts={ledger ? null : bankroll.bookFacts}
+            publicMode
           />
         </OperatorShell>
       );
@@ -176,7 +177,7 @@ export default async function ParentNodePage({
 
   if (parent.id === "finance") {
     await requireRole("owner");
-    const finance = await loadFinancePage();
+    const [finance, publicMode] = await Promise.all([loadFinancePage(), isPublicMode()]);
     return (
       <OperatorShell
         storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
@@ -188,7 +189,8 @@ export default async function ParentNodePage({
           <FinanceFloor
             asOf={finance.snapshot.asOf}
             stale={finance.stale}
-            cards={financeCards(finance.snapshot)}
+            cards={publicMode ? publicFinanceCards(finance.snapshot) : financeCards(finance.snapshot)}
+            publicMode={publicMode}
           />
         ) : finance.status === "waiting" ? (
           <FinanceWaiting />

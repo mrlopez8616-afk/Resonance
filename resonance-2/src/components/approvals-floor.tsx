@@ -5,13 +5,16 @@ import {
   formatApprovalWhen,
   type Approval,
 } from "@/lib/approvals";
+import { stripMoneyText } from "@/lib/public-mode";
 
 export function ApprovalList({
   items,
   mode,
+  publicMode = false,
 }: {
   items: readonly Approval[];
   mode: "pending" | "done";
+  publicMode?: boolean;
 }) {
   const heading = mode === "pending" ? "Pending" : "Done";
   const countLine =
@@ -32,18 +35,21 @@ export function ApprovalList({
         <div className="approval-list">
           {items.map((item) => {
             const result = decisionLine(item);
+            const title = publicMode ? stripMoneyText(item.title) || "Request" : item.title;
+            const detail = publicMode && item.detail ? stripMoneyText(item.detail) : item.detail;
+            const note = publicMode && item.decisionNote ? stripMoneyText(item.decisionNote) : item.decisionNote;
             return (
               <article key={item.id} className="approval-card" data-approval-id={item.id}>
-                <h3>{item.title}</h3>
+                <h3>{title}</h3>
                 <p className="approval-meta">{approvalMeta(item)}</p>
-                {item.detail ? <p className="approval-detail">{item.detail}</p> : null}
+                {detail ? <p className="approval-detail">{detail}</p> : null}
                 <p className="approval-when">Asked {formatApprovalWhen(item.createdAt)}</p>
-                {mode === "pending" ? (
+                {mode === "pending" && !publicMode ? (
                   <ApprovalDecision id={item.id} title={item.title} />
                 ) : result ? (
                   <p className="approval-result">{result}</p>
                 ) : null}
-                {item.decisionNote ? <p className="approval-detail">{item.decisionNote}</p> : null}
+                {note ? <p className="approval-detail">{note}</p> : null}
               </article>
             );
           })}
