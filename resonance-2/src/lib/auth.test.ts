@@ -547,6 +547,7 @@ describe("login core", { concurrency: false }, () => {
         "039_health_route_lesson",
         "040_market_quotes",
         "041_public_node_lesson",
+        "042_visitor_counts",
         "043_health_auto_export_token",
       ],
     );
@@ -613,6 +614,7 @@ describe("login core", { concurrency: false }, () => {
         "039_health_route_lesson",
         "040_market_quotes",
         "041_public_node_lesson",
+        "042_visitor_counts",
         "043_health_auto_export_token",
       ],
     );
