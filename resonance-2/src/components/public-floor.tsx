@@ -202,6 +202,7 @@ export function PublicNodePage({
         <NodeSquare dashed label={`${ticker} node`}>
           <div className="live-face">
             <h2 className="node-ticker">{ticker}</h2>
+            <p className="parent-empty">No data yet</p>
           </div>
         </NodeSquare>
       </section>
