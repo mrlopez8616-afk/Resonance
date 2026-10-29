@@ -235,7 +235,7 @@ export default async function NodeDetailPage({
           />
         ) : (
           <p className="parent-empty" role="status">
-            {bankroll.storageDetail ?? "unavailable"}
+            {publicMode ? "No data yet" : (bankroll.storageDetail ?? "No data yet")}
           </p>
         )}
       </OperatorShell>
