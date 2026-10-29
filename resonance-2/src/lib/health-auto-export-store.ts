@@ -130,7 +130,10 @@ export async function writeHealthAutoExport(
     for (const slice of chunks(workouts, HEALTH_AUTO_EXPORT_DB_BATCH)) {
       await upsertFitnessRows({ metrics: [], workouts: slice });
     }
-    return { steps: metrics.length, workouts: workouts.length };
+    return {
+    steps: metrics.filter((row) => row.metric === "step_count").length,
+    workouts: workouts.length,
+  };
   }
   await ensureFitnessStore();
   for (const slice of chunks(metrics, HEALTH_AUTO_EXPORT_DB_BATCH)) {
@@ -139,7 +142,10 @@ export async function writeHealthAutoExport(
   for (const slice of chunks(workouts, HEALTH_AUTO_EXPORT_DB_BATCH)) {
     await upsertWorkoutBatch(slice);
   }
-  return { steps: metrics.length, workouts: workouts.length };
+  return {
+    steps: metrics.filter((row) => row.metric === "step_count").length,
+    workouts: workouts.length,
+  };
 }
 
 export async function readHealthAutoExportTokenHash(): Promise<string | null> {

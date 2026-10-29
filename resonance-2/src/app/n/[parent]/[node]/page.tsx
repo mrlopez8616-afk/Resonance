@@ -7,6 +7,7 @@ import { FinanceDetail } from "@/components/finance-detail";
 import { FinanceWaiting } from "@/components/finance-floor";
 import { PrivatePage } from "@/components/private-notice";
 import { FitnessDetail } from "@/components/fitness-detail";
+import { AnalyticsMirror, RunsMirror, StepsMirror } from "@/components/fitness-mirror";
 import { manualImportDetail } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { LiveNodeFace } from "@/components/live-node-face";
@@ -22,7 +23,10 @@ import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
 import { FITNESS_NODES, fitnessLegacyHref, publicFitnessDetail } from "@/lib/fitness-board";
-import { loadFitnessNode } from "@/lib/fitness-store";
+import { buildAnalytics, buildRunsView, buildStepsView, parseStepSpan } from "@/lib/fitness-present";
+import { loadFitnessBundle, loadFitnessNode } from "@/lib/fitness-store";
+import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
+import { shortcutWorkoutsAsWrites } from "@/lib/fitness-workouts";
 import { aiStockRole } from "@/data/ai-stock-roles";
 import { retiredAiNodeHref } from "@/lib/ai-stocks";
 import { retiredCryptoNodeHref } from "@/lib/crypto-nodes";
@@ -92,7 +96,7 @@ export default async function NodeDetailPage({
   searchParams,
 }: {
   params: Promise<{ parent: string; node: string }>;
-  searchParams: Promise<{ range?: string | string[] }>;
+  searchParams: Promise<{ range?: string | string[]; span?: string | string[] }>;
 }) {
   const [{ parent: parentId, node: nodeId }, query] = await Promise.all([params, searchParams]);
   const range = parseLotRangeQuery(query.range);
@@ -184,6 +188,51 @@ export default async function NodeDetailPage({
             {parent.label}
           </Link>
           <FitnessDetail detail={manualImportDetail(manual.entries, { publicMode })} />
+        </OperatorShell>
+      );
+    }
+    if (nodeId === "steps" || nodeId === "runs" || nodeId === "analytics") {
+      const [floor, bundle, publicMode] = await Promise.all([
+        loadOperatorFloor(),
+        loadFitnessBundle(),
+        isPublicMode(),
+      ]);
+      const workouts = [
+        ...bundle.workouts,
+        ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
+        ...nrcRunsAsWrites(bundle.nrcRuns),
+      ];
+      const steps = nodeId === "steps" ? buildStepsView({
+        metrics: bundle.metrics,
+        today: bundle.today,
+        span: parseStepSpan(query.span),
+        publicMode,
+      }) : null;
+      const runs = nodeId === "runs" ? buildRunsView({
+        workouts,
+        today: bundle.today,
+        publicMode,
+      }) : null;
+      const analytics = nodeId === "analytics" ? buildAnalytics({
+        metrics: bundle.metrics,
+        workouts,
+        today: bundle.today,
+        publicMode,
+      }) : null;
+      return (
+        <OperatorShell
+          storageMessage={
+            floor.storageMessage ??
+            (bundle.availability === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null)
+          }
+          storageDetail={floor.storageDetail}
+        >
+          <Link href={`/n/${parent.id}`} className="calendar-back">
+            {parent.label}
+          </Link>
+          {steps ? <StepsMirror view={steps} /> : null}
+          {runs ? <RunsMirror view={runs} /> : null}
+          {analytics ? <AnalyticsMirror metrics={analytics} /> : null}
         </OperatorShell>
       );
     }

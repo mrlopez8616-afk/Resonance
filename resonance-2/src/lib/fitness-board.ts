@@ -16,6 +16,7 @@ export const FITNESS_RUNS_EMPTY = FITNESS_NOT_RECORDED;
 export const FITNESS_NODES = [
   { id: "steps", title: "Steps" },
   { id: "runs", title: "Runs" },
+  { id: "analytics", title: "Analytics" },
   { id: "lifting", title: "Lifting" },
   { id: "heart", title: "Heart" },
   { id: "manual", title: "Manual import" },
@@ -622,13 +623,13 @@ export function fitnessCards(
   const bars = runBars(workouts, today);
   const heart = heartPoints(metrics, today);
   return FITNESS_NODES.map((node) => {
-    if (node.id === "manual") {
+    if (node.id === "manual" || node.id === "analytics") {
       return {
         id: node.id,
         title: node.title,
         href: `/n/fitness/${node.id}`,
         headline: null,
-        detail: FITNESS_NOT_RECORDED,
+        detail: node.id === "analytics" ? "streaks and trends" : FITNESS_NOT_RECORDED,
         bars: [] as FitnessRunBar[],
         heart: [] as FitnessHeartPoint[],
       };
@@ -876,6 +877,18 @@ export function fitnessNode(
 ): FitnessNodeDetail | null {
   const node = FITNESS_NODES.find((item) => item.id === id);
   if (!node || node.id === "manual") return null;
+  if (node.id === "analytics") {
+    return {
+      id: node.id,
+      title: node.title,
+      headline: null,
+      detail: "streaks and trends",
+      rows: [],
+      weeks: [],
+      months: [],
+      pace: [],
+    };
+  }
   const cards = fitnessCards(metrics, workouts, today);
   const card = cards.find((item) => item.id === node.id);
   const rows =

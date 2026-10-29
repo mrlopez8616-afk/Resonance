@@ -204,21 +204,36 @@ function ChartBlock({
   );
 }
 
+function analyticsFace(line: { headline: string; status: string } | null): HomeFace {
+  return {
+    id: "analytics",
+    glyph: "analytics",
+    href: "/n/fitness/analytics",
+    name: "Analytics",
+    headline: line?.headline ?? "not recorded",
+    status: line?.status ?? "Resonance Analytics",
+    live: Boolean(line && line.headline !== "not recorded"),
+    tone: "",
+  };
+}
+
 export function FitnessStoryView({
   story,
   stepsRange,
   runsRange,
+  analytics = null,
 }: {
   story: FitnessStory;
   stepsRange: StoryRange;
   runsRange: StoryRange;
+  analytics?: { headline: string; status: string } | null;
 }) {
   return (
     <div className="fitness-story">
       {story.periods.map((period) => {
         const faces = period.figures.map((item) => figureFace(period.id, item));
         if (period.id === "week") {
-          faces.push(liftingFace(story), manualFace(story.manual));
+          faces.push(liftingFace(story), manualFace(story.manual), analyticsFace(analytics));
         }
         return (
           <section key={period.id} className="fitness-period" aria-label={period.title}>

@@ -3526,6 +3526,14 @@ a.fighter-link {
   min-width: 0;
 }
 
+.fitness-chart .home-tick {
+  font-size: 16px;
+}
+
+.fitness-chart .home-tick-compact {
+  font-size: 13px;
+}
+
 .fitness-story {
   display: flex;
   flex-direction: column;
@@ -3678,6 +3686,192 @@ a.fighter-link {
 
 .fitness-totals strong {
   font-weight: 600;
+}
+
+.fitness-mirror {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.fitness-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fitness-average {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.fitness-trend {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.fitness-trend.is-up {
+  color: var(--ok);
+}
+
+.fitness-trend.is-down {
+  color: var(--live);
+}
+
+.fitness-span {
+  width: min(100%, 22rem);
+}
+
+.fitness-highlights,
+.fitness-days ol,
+.fitness-month-list,
+.fitness-split-list,
+.fitness-run-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fitness-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.fitness-highlights li,
+.fitness-analytics-card {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.fitness-days summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.fitness-days ol,
+.fitness-split-list,
+.fitness-month-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fitness-days li,
+.fitness-split-list li,
+.fitness-month-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.fitness-run-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.fitness-run-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fitness-run-distance {
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+}
+
+.fitness-run-meta,
+.fitness-how {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.fitness-pr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.55rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fitness-pr-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.fitness-pr-grid span,
+.fitness-analytics-card h3 {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fitness-pr-grid strong {
+  font-size: 1.15rem;
+}
+
+.fitness-pr-grid em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.78rem;
+}
+
+.fitness-analytics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fitness-analytics-card h3 {
+  margin: 0 0 0.35rem;
+}
+
+.fitness-analytics-card .fitness-average {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+@media (max-width: 720px) {
+  .fitness-month-list li {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .fitness-span {
+    width: 100%;
+  }
 }
 
 .fitness-log {

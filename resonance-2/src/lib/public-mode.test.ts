@@ -18,7 +18,7 @@ import { visibleLessons, type Lesson } from "@/lib/lessons";
 import { presentBricks, type BrickItem, type BrickOverlay } from "@/lib/youtube-bricks";
 import { holdingChildModel } from "@/lib/child-card";
 import { financePublicHomeFace } from "@/lib/home-faces";
-import type { FitnessCard, FitnessNodeDetail } from "@/lib/fitness-board";
+import type { FitnessCard } from "@/lib/fitness-board";
 import { assembleLiveFace } from "@/lib/live-face";
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
@@ -162,19 +162,6 @@ function fitnessCards(): FitnessCard[] {
     { id: "steps", title: "Steps", href: "/n/fitness/steps", headline: "8420", detail: "today" },
     { id: "runs", title: "Runs", href: "/n/fitness/runs", headline: "3.2 mi", detail: "this week" },
   ];
-}
-
-function stepsDetail(): FitnessNodeDetail {
-  return {
-    id: "steps",
-    title: "Steps",
-    headline: "8420",
-    detail: "today",
-    rows: [{ id: "today", primary: "8420", secondary: "steps" }],
-    weeks: [],
-    months: [],
-    pace: [],
-  };
 }
 
 function buildSection(): BuildSectionView {
@@ -372,13 +359,14 @@ async function publicTrackerPages(
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, { FitnessDetail }, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi, healthUi, health] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, mirror, present, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi, healthUi, health] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
       import("@/components/catalyst-calendar"),
       import("@/components/fitness-grid"),
-      import("@/components/fitness-detail"),
+      import("@/components/fitness-mirror"),
+      import("@/lib/fitness-present"),
       import("@/components/calendar-desk"),
       import("@/components/calendar-day-page"),
       import("@/components/system-map"),
@@ -694,7 +682,60 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     createElement(BuildSectionBody, { section, now: NOW, showPr: false }),
   );
   const fitness = render(createElement(FitnessGrid, { cards: fitnessCards() }));
-  const steps = render(createElement(FitnessDetail, { detail: stepsDetail() }));
+  const stepMetric = (day: string, qty: number) => ({
+    source: "health-auto-export",
+    externalId: `step_count:${day}:count`,
+    metric: "step_count",
+    day,
+    recordedAt: `${day}T12:00:00.000Z`,
+    qty: String(qty),
+    units: "count",
+    qtyMin: null,
+    qtyMax: null,
+    origin: "health-auto-export" as const,
+    payload: { dailyTotal: true },
+  });
+  const publicRun = {
+    source: "health-auto-export",
+    externalId: "public-run",
+    name: "Running",
+    startedAt: "2026-10-20T12:00:00.000Z",
+    endedAt: null,
+    durationSec: "1680",
+    distanceQty: "3.2",
+    distanceUnits: "mi",
+    energyKcal: "320",
+    heartRateAvg: "154",
+    heartRateMin: null,
+    heartRateMax: "176",
+    origin: "health-auto-export" as const,
+    payload: { name: "Running" },
+  };
+  const stepsView = present.buildStepsView({
+    metrics: [stepMetric("2026-10-28", 9000), stepMetric("2026-10-29", 10000)],
+    today: "2026-10-29",
+    span: "w",
+    publicMode: true,
+  });
+  const runsView = present.buildRunsView({
+    workouts: [publicRun],
+    today: "2026-10-29",
+    publicMode: true,
+  });
+  const analyticsView = present.buildAnalytics({
+    metrics: [stepMetric("2026-10-28", 9000), stepMetric("2026-10-29", 10000)],
+    workouts: [publicRun],
+    today: "2026-10-29",
+    publicMode: true,
+  });
+  const steps = render(createElement(mirror.StepsMirror, { view: stepsView }));
+  const runsPage = render(createElement(mirror.RunsMirror, { view: runsView }));
+  const analyticsPage = render(createElement(mirror.AnalyticsMirror, { metrics: analyticsView }));
+  assert.equal(steps.includes("<svg"), true);
+  assert.equal(analyticsPage.includes("<svg"), true);
+  assert.equal(/bpm|heartRate|resting_heart/i.test(`${steps}${runsPage}${analyticsPage}`), false);
+  assert.equal(`${steps}${runsPage}${analyticsPage}`.includes("154"), false);
+  assert.equal(`${steps}${runsPage}${analyticsPage}`.includes("176"), false);
   const calendar = render(
     createElement(CalendarDesk, {
       events: [scrubbed],
@@ -810,6 +851,8 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/ai-stocks/nvda", html: stockNode },
     { path: "/n/fitness", html: fitness },
     { path: "/n/fitness/steps", html: steps },
+    { path: "/n/fitness/runs", html: runsPage },
+    { path: "/n/fitness/analytics", html: analyticsPage },
     { path: "/n/fight-desk", html: fight },
     { path: "/fights", html: fight },
     { path: "/n/fight-desk/bankroll", html: bankrollHtml },
@@ -1061,6 +1104,7 @@ describe("public render scan", () => {
       "/n/build/[section]/page.tsx",
       "/n/backup/page.tsx",
       "/n/crypto/xrp-trigger/page.tsx",
+      "/n/fitness/runs/[run]/page.tsx",
       "/n/approvals/page.tsx",
       "/n/approvals/[view]/page.tsx",
       "/n/control/page.tsx",
@@ -1105,6 +1149,8 @@ describe("public render scan", () => {
       "/n/ai-stocks/nvda",
       "/n/fitness",
       "/n/fitness/steps",
+      "/n/fitness/runs",
+      "/n/fitness/analytics",
       "/n/fight-desk",
       "/n/build",
       "/n/build/platform",
@@ -1308,7 +1354,7 @@ describe("public render scan", () => {
     ]) {
       assert.equal(isHiddenInPublicMode(path), true, path);
     }
-    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/control", "/n/control/bots", "/n/control/feeds", "/n/control/approvals", "/n/fight-desk", "/n/fight-desk/bankroll", "/fights", "/fights/upcoming", "/fights/past", "/fights/ufc", "/n/approvals", "/n/approvals/pending", "/n/approvals/done", "/n/roundtable", "/n/roundtable/rt-example", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
+    for (const path of ["/", "/film", "/film/crypto", "/film/ai-stocks", "/n/crypto", "/n/crypto/xrp-trigger", "/n/ai-stocks", "/n/ai-stocks/catalysts", "/n/build", "/n/backup", "/n/crawl-walk-run", "/n/crawl-walk-run/built", "/n/crawl-walk-run/built/youtube", "/n/health", "/n/ideas", "/n/lessons", "/n/chain-security", "/n/chain-security/autheo-theo", "/n/system", "/n/system/live", "/n/fitness", "/n/fitness/steps", "/n/fitness/runs", "/n/fitness/analytics", "/n/control", "/n/control/bots", "/n/control/feeds", "/n/control/approvals", "/n/fight-desk", "/n/fight-desk/bankroll", "/fights", "/fights/upcoming", "/fights/past", "/fights/ufc", "/n/approvals", "/n/approvals/pending", "/n/approvals/done", "/n/roundtable", "/n/roundtable/rt-example", "/calendar", "/settings", "/api/settings/public-mode", "/fights/tiers", "/fights/tiers/strong", "/fights/tiers/strong/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton", "/fights/tiers/cards/ufc-edmonton/strong"]) {
       assert.equal(isHiddenInPublicMode(path), false, path);
     }
     const hidden = pages.filter((page) => isHiddenInPublicMode(page.path));
