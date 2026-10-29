@@ -33,6 +33,8 @@ export default async function SettingsPage() {
         {on ? null : (
           <p>
             <Link href="/settings/security#owner-pin">Security</Link>
+            {" · "}
+            <Link href="/settings/integrations">Integrations</Link>
           </p>
         )}
       </section>

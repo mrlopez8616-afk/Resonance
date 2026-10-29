@@ -1085,6 +1085,7 @@ describe("public render scan", () => {
       "/n/[parent]/[node]/page.tsx",
       "/settings/page.tsx",
       "/settings/security/page.tsx",
+      "/settings/integrations/page.tsx",
     ];
     assert.deepEqual(found.sort(), expected.sort());
     for (const path of [
@@ -1270,6 +1271,9 @@ describe("public render scan", () => {
   it("opens every node and still hides the log, security, and money APIs", () => {
     for (const path of [
       "/settings/security",
+      "/settings/integrations",
+      "/api/settings/health-auto-export-token",
+      "/api/ingest/health-auto-export",
       "/log",
       "/api/fills",
       "/api/bets/stake",

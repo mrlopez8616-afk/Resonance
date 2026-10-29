@@ -45,7 +45,7 @@ describe("sui coinbase balance store", () => {
     const file = readFileSync(path.join(root, "db/migrations/034_sui_coinbase_balance.sql"), "utf8");
     assert.equal(SUI_COINBASE_BALANCE_SQL, file);
     assert.equal(file.includes("INSERT"), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "041_public_node_lesson");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "043_health_auto_export_token");
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "034_sui_coinbase_balance");
     assert.equal(embedded?.sql, file);
 

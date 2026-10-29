@@ -13,8 +13,8 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: appRoot,
   experimental: {
-    // A Sept 1 backfill can post several weeks of Health samples in one body.
-    // This buffer applies only when proxy is enabled. Week-sized chunks stay smaller.
+    // Shortcuts ingest buffer. Health Auto Export stays under Vercel's ~4.5 MB
+    // function body cap and uses the app's batch requests for a full-history export.
     proxyClientMaxBodySize: "32mb",
   },
   async headers() {

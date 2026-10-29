@@ -20,7 +20,7 @@ import { financeDetail, financeNode, publicFinanceDetail } from "@/lib/finance/v
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
-import { FITNESS_NODES, fitnessLegacyHref } from "@/lib/fitness-board";
+import { FITNESS_NODES, fitnessLegacyHref, publicFitnessDetail } from "@/lib/fitness-board";
 import { loadFitnessNode } from "@/lib/fitness-store";
 import { aiStockRole } from "@/data/ai-stock-roles";
 import { retiredAiNodeHref } from "@/lib/ai-stocks";
@@ -190,11 +190,13 @@ export default async function NodeDetailPage({
         </OperatorShell>
       );
     }
-    const [floor, fitness] = await Promise.all([
+    const [floor, fitness, publicMode] = await Promise.all([
       loadOperatorFloor(),
       loadFitnessNode(nodeId),
+      isPublicMode(),
     ]);
     if (!fitness.detail) notFound();
+    const detail = publicMode ? publicFitnessDetail(fitness.detail) : fitness.detail;
     return (
       <OperatorShell
         storageMessage={
@@ -206,7 +208,7 @@ export default async function NodeDetailPage({
         <Link href={`/n/${parent.id}`} className="calendar-back">
           {parent.label}
         </Link>
-        <FitnessDetail detail={fitness.detail} />
+        <FitnessDetail detail={detail} />
       </OperatorShell>
     );
   }
