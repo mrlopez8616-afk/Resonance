@@ -3,7 +3,7 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { PrivatePage } from "@/components/private-notice";
-import { FitnessStoryView } from "@/components/fitness-story";
+import { FitnessFloor } from "@/components/fitness-floor";
 import { FitnessTokenCopy } from "@/components/fitness-token-copy";
 import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
@@ -19,8 +19,7 @@ import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
-import { buildAnalytics } from "@/lib/fitness-present";
-import { buildFitnessStory, parseStoryRange } from "@/lib/fitness-story";
+import { buildAnalytics, buildRunsView, buildStepsView, parseStepSpan } from "@/lib/fitness-present";
 import { loadFitnessBundle } from "@/lib/fitness-store";
 import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
 import { shortcutWorkoutsAsWrites } from "@/lib/fitness-workouts";
@@ -68,7 +67,7 @@ export default async function ParentNodePage({
   searchParams,
 }: {
   params: Promise<{ parent: string }>;
-  searchParams: Promise<{ range?: string | string[]; steps?: string | string[]; runs?: string | string[] }>;
+  searchParams: Promise<{ range?: string | string[]; span?: string | string[] }>;
 }) {
   const [{ parent: id }, query] = await Promise.all([params, searchParams]);
   const range = parseLotRangeQuery(query.range);
@@ -204,8 +203,7 @@ export default async function ParentNodePage({
 
   if (parent.id === "fitness") {
     await requireRole("owner");
-    const stepsRange = parseStoryRange(query.steps);
-    const runsRange = parseStoryRange(query.runs);
+    const span = parseStepSpan(query.span);
     const [floor, bundle, publicMode, manual] = await Promise.all([
       loadOperatorFloor(),
       loadFitnessBundle(),
@@ -217,21 +215,19 @@ export default async function ParentNodePage({
       ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
       ...nrcRunsAsWrites(bundle.nrcRuns),
     ];
-    const story = buildFitnessStory({
+    const steps = buildStepsView({
       metrics: bundle.metrics,
-      workouts,
-      manuals: manual.entries,
       today: bundle.today,
+      span,
       publicMode,
-      stepsRange,
-      runsRange,
     });
-    const streak = buildAnalytics({
+    const runs = buildRunsView({ workouts, today: bundle.today, publicMode });
+    const analytics = buildAnalytics({
       metrics: bundle.metrics,
       workouts,
       today: bundle.today,
       publicMode,
-    }).find((metric) => metric.id === "step-streak");
+    });
     return (
       <OperatorShell
         storageMessage={
@@ -242,21 +238,15 @@ export default async function ParentNodePage({
         }
         storageDetail={floor.storageDetail}
       >
-        <Link href="/" className="calendar-back">
-          Floor
-        </Link>
-        <FitnessStoryView
-          story={story}
-          stepsRange={stepsRange}
-          runsRange={runsRange}
-          analytics={{
-            headline: streak && streak.value !== "not recorded" ? streak.value : "not recorded",
-            status: "step streak",
-          }}
-        />
-        {publicMode ? null : (
-          <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
-        )}
+        <div className="fitness-floor">
+          <Link href="/" className="calendar-back">
+            Floor
+          </Link>
+          <FitnessFloor steps={steps} runs={runs} analytics={analytics} />
+          {publicMode ? null : (
+            <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
+          )}
+        </div>
       </OperatorShell>
     );
   }

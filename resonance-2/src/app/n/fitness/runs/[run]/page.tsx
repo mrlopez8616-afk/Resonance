@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RunDetailMirror } from "@/components/fitness-mirror";
+import { RunDetailMirror } from "@/components/fitness-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { buildRunDetail } from "@/lib/fitness-present";
@@ -43,10 +43,12 @@ export default async function RunDetailPage({ params }: { params: Promise<{ run:
       }
       storageDetail={floor.storageDetail}
     >
-      <Link href="/n/fitness/runs" className="calendar-back">
-        Runs
-      </Link>
-      <RunDetailMirror detail={detail} />
+      <div className="fitness-floor">
+        <Link href="/n/fitness#activity" className="calendar-back">
+          Fitness
+        </Link>
+        <RunDetailMirror detail={detail} />
+      </div>
     </OperatorShell>
   );
 }

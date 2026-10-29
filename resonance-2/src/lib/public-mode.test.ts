@@ -18,7 +18,6 @@ import { visibleLessons, type Lesson } from "@/lib/lessons";
 import { presentBricks, type BrickItem, type BrickOverlay } from "@/lib/youtube-bricks";
 import { holdingChildModel } from "@/lib/child-card";
 import { financePublicHomeFace } from "@/lib/home-faces";
-import type { FitnessCard } from "@/lib/fitness-board";
 import { assembleLiveFace } from "@/lib/live-face";
 import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
@@ -155,13 +154,6 @@ function sampleBook(): PublicFloorModel {
   const inputs = NINE.map((ticker, index) => bookInput(ticker, values[index] ?? 1));
   inputs.push(bookInput("XRP", 5000, { firstBuyPrice: 0.5, livePrice: 2, daily: [] }));
   return toPublicFloor(inputs);
-}
-
-function fitnessCards(): FitnessCard[] {
-  return [
-    { id: "steps", title: "Steps", href: "/n/fitness/steps", headline: "8420", detail: "today" },
-    { id: "runs", title: "Runs", href: "/n/fitness/runs", headline: "3.2 mi", detail: "this week" },
-  ];
 }
 
 function buildSection(): BuildSectionView {
@@ -359,13 +351,12 @@ async function publicTrackerPages(
 }
 
 async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html: string }[]> {
-  const [{ BuildParent, BuildSectionBody }, floor, catalysts, { FitnessGrid }, mirror, present, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi, healthUi, health] =
+  const [{ BuildParent, BuildSectionBody }, floor, catalysts, fitnessFloor, present, { CalendarDesk }, { CalendarDayView }, system, lenses, liveGraph, trigger, triggerFloor, controlUi, control, youtubeUi, youtube, brickUi, healthUi, health] =
     await Promise.all([
       import("@/components/build-floor"),
       import("@/components/public-floor"),
       import("@/components/catalyst-calendar"),
-      import("@/components/fitness-grid"),
-      import("@/components/fitness-mirror"),
+      import("@/components/fitness-floor"),
       import("@/lib/fitness-present"),
       import("@/components/calendar-desk"),
       import("@/components/calendar-day-page"),
@@ -681,7 +672,6 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   const buildSectionHtml = render(
     createElement(BuildSectionBody, { section, now: NOW, showPr: false }),
   );
-  const fitness = render(createElement(FitnessGrid, { cards: fitnessCards() }));
   const stepMetric = (day: string, qty: number) => ({
     source: "health-auto-export",
     externalId: `step_count:${day}:count`,
@@ -728,14 +718,20 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     today: "2026-10-29",
     publicMode: true,
   });
-  const steps = render(createElement(mirror.StepsMirror, { view: stepsView }));
-  const runsPage = render(createElement(mirror.RunsMirror, { view: runsView }));
-  const analyticsPage = render(createElement(mirror.AnalyticsMirror, { metrics: analyticsView }));
-  assert.equal(steps.includes("<svg"), true);
-  assert.equal(analyticsPage.includes("<svg"), true);
-  assert.equal(/bpm|heartRate|resting_heart/i.test(`${steps}${runsPage}${analyticsPage}`), false);
-  assert.equal(`${steps}${runsPage}${analyticsPage}`.includes("154"), false);
-  assert.equal(`${steps}${runsPage}${analyticsPage}`.includes("176"), false);
+  const fitnessPage = render(
+    createElement(fitnessFloor.FitnessFloor, { steps: stepsView, runs: runsView, analytics: analyticsView }),
+  );
+  const steps = fitnessPage;
+  const runsPage = fitnessPage;
+  const analyticsPage = fitnessPage;
+  assert.match(fitnessPage, /Steps/);
+  assert.match(fitnessPage, /Activity/);
+  assert.match(fitnessPage, /Resonance Analytics/);
+  assert.match(fitnessPage, /span=d/);
+  assert.equal(fitnessPage.includes("<svg"), true);
+  assert.equal(/bpm|heartRate|resting_heart/i.test(fitnessPage), false);
+  assert.equal(fitnessPage.includes("154"), false);
+  assert.equal(fitnessPage.includes("176"), false);
   const calendar = render(
     createElement(CalendarDesk, {
       events: [scrubbed],
@@ -849,7 +845,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       html: render(createElement(triggerFloor.XrpTriggerFloor, { view: triggerView, publicMode: true })),
     },
     { path: "/n/ai-stocks/nvda", html: stockNode },
-    { path: "/n/fitness", html: fitness },
+    { path: "/n/fitness", html: fitnessPage },
     { path: "/n/fitness/steps", html: steps },
     { path: "/n/fitness/runs", html: runsPage },
     { path: "/n/fitness/analytics", html: analyticsPage },
