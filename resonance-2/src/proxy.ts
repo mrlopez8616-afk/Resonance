@@ -29,8 +29,10 @@ function unauthorized() {
  * the root layout can validate the row. GET /api is session-or-Bearer, including
  * routes added later (GET /api/fights/breakdown). GET /api/finance is the
  * exception: the sync Bearer does not open it. GET /api/health/full is the
- * other exception: the route checks RESONANCE_HEALTH_TOKEN itself. Writes keep
- * their own checks.
+ * other exception: the route checks RESONANCE_HEALTH_TOKEN itself.
+ * POST /api/visitors is allowlisted so a logged-out or Public-view beacon
+ * increments the counter and gets 204, not a login redirect. Other writes
+ * keep their own checks.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

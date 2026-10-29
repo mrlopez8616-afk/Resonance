@@ -85,6 +85,25 @@ export type HealthIssue = {
   path: string;
 };
 
+/** Today's anonymous counter. No address, agent, or hash. */
+export type VisitorTodayCounts = {
+  day: string;
+  pageViews: number;
+  uniqueVisitors: number;
+};
+
+/** Health Auto Export presence. Counts and a date, not step totals or distances. */
+export type HealthAutoExportCounts = {
+  stepDays: number;
+  workouts: number;
+  latestDate: string | null;
+};
+
+export type IngestCounts = {
+  visitorsToday: VisitorTodayCounts;
+  healthAutoExport: HealthAutoExportCounts;
+};
+
 export type HealthFullReport = {
   ok: boolean;
   checkedAt: string;
@@ -92,6 +111,7 @@ export type HealthFullReport = {
   tiles: HealthSurface[];
   pages: HealthSurface[];
   issues: HealthIssue[];
+  counts: IngestCounts;
 };
 
 export type HealthTarget = {
@@ -377,6 +397,48 @@ function cleanSurface(value: unknown, fallback: HealthTarget): HealthSurface {
   };
 }
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function whole(value: unknown): number {
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(number) || number < 0) return 0;
+  return Math.min(Math.round(number), 1_000_000_000);
+}
+
+function dayOrNull(value: unknown): string | null {
+  if (typeof value !== "string" || !DAY.test(value) || value.includes("$")) return null;
+  return value;
+}
+
+export function emptyIngestCounts(day = "1970-01-01"): IngestCounts {
+  return {
+    visitorsToday: { day: dayOrNull(day) ?? "1970-01-01", pageViews: 0, uniqueVisitors: 0 },
+    healthAutoExport: { stepDays: 0, workouts: 0, latestDate: null },
+  };
+}
+
+function cleanCounts(value: unknown, day: string): IngestCounts {
+  const fallback = emptyIngestCounts(day);
+  if (!value || typeof value !== "object") return fallback;
+  const row = value as Partial<IngestCounts>;
+  const visitors = row.visitorsToday;
+  const health = row.healthAutoExport;
+  const visitorRow = visitors && typeof visitors === "object" ? visitors : null;
+  const healthRow = health && typeof health === "object" ? health : null;
+  return {
+    visitorsToday: {
+      day: dayOrNull(visitorRow?.day) ?? fallback.visitorsToday.day,
+      pageViews: whole(visitorRow?.pageViews),
+      uniqueVisitors: whole(visitorRow?.uniqueVisitors),
+    },
+    healthAutoExport: {
+      stepDays: whole(healthRow?.stepDays),
+      workouts: whole(healthRow?.workouts),
+      latestDate: dayOrNull(healthRow?.latestDate),
+    },
+  };
+}
+
 function rowFor(raw: readonly unknown[], target: HealthTarget, index: number): unknown {
   const match = raw.find((row) => asRow(row).id === target.id);
   return match ?? raw[index];
@@ -408,6 +470,7 @@ export function publicHealthReport(input: {
   tiles?: unknown;
   pages?: unknown;
   issues?: unknown;
+  counts?: unknown;
 }): HealthFullReport {
   const tileTargets = HEALTH_TILES;
   const pageTargets = healthPages();
@@ -424,9 +487,10 @@ export function publicHealthReport(input: {
   const summary = healthSummary(tiles, pages);
   const status: HealthStatus = issueErrors > 0 ? "error" : summary.status;
   const checkedAt = cleanString(input.checkedAt, "");
+  const checked = Number.isFinite(Date.parse(checkedAt)) ? checkedAt : new Date(0).toISOString();
   return {
     ok: status === "ok",
-    checkedAt: Number.isFinite(Date.parse(checkedAt)) ? checkedAt : new Date(0).toISOString(),
+    checkedAt: checked,
     summary: {
       ...summary,
       status,
@@ -435,6 +499,7 @@ export function publicHealthReport(input: {
     tiles,
     pages,
     issues,
+    counts: cleanCounts(input.counts, checked.slice(0, 10)),
   };
 }
 
@@ -604,6 +669,7 @@ export function assembleHealth(
   tileFacts: Readonly<Record<string, HealthBits>>,
   pageFacts: Readonly<Record<string, HealthBits>>,
   issues: readonly HealthIssue[] = [],
+  counts?: IngestCounts,
 ): HealthFullReport {
   const missing = failedBits("error");
   return publicHealthReport({
@@ -611,5 +677,6 @@ export function assembleHealth(
     tiles: HEALTH_TILES.map((target) => surface(target, tileFacts[target.id] ?? missing)),
     pages: healthPages().map((target) => surface(target, pageFacts[target.id] ?? missing)),
     issues: [...issues],
+    counts,
   });
 }

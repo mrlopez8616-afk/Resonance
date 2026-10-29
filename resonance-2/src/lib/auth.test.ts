@@ -418,6 +418,14 @@ describe("login core", { concurrency: false }, () => {
       "allow",
     );
     assert.equal(
+      planAccess({ ...base, pathname: "/api/visitors", method: "POST", nextPath: "/api/visitors" }).kind,
+      "allow",
+    );
+    assert.equal(
+      planAccess({ ...base, pathname: "/api/visitors", method: "GET", nextPath: "/api/visitors" }).kind,
+      "deny",
+    );
+    assert.equal(
       planAccess({
         ...base,
         pathname: "/api/finance/snapshot",

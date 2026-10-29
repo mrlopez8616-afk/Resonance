@@ -269,6 +269,10 @@ describe("health full probe", () => {
       summary: report.summary,
       secret: "token health-token balance $50",
       issues: [],
+      counts: {
+        visitorsToday: { day: "2026-10-28", pageViews: 4, uniqueVisitors: 2, ip: "203.0.113.10" },
+        healthAutoExport: { stepDays: 3, workouts: 1, latestDate: "$12", qty: 9000 },
+      },
       tiles: report.tiles.map((row) =>
         row.id === "crypto" ? { ...row, name: "Crypto $1", usd: 50, reason: "quote fresh" } : row,
       ),
@@ -285,6 +289,17 @@ describe("health full probe", () => {
     assert.equal(body.secret, undefined);
     assert.equal(body.summary.surfaces, HEALTH_TILES.length + healthPages().length);
     assert.equal(Object.hasOwn(body, "secret"), false);
+    assert.deepEqual(Object.keys(body.counts).sort(), ["healthAutoExport", "visitorsToday"]);
+    assert.deepEqual(body.counts.visitorsToday, {
+      day: "2026-10-28",
+      pageViews: 4,
+      uniqueVisitors: 2,
+    });
+    assert.equal(body.counts.healthAutoExport.stepDays, 3);
+    assert.equal(body.counts.healthAutoExport.workouts, 1);
+    assert.equal(body.counts.healthAutoExport.latestDate, null);
+    assert.equal(JSON.stringify(body.counts).includes("203.0.113.10"), false);
+    assert.equal(JSON.stringify(body.counts).includes("qty"), false);
 
     const crypto = body.tiles.find((row) => row.id === "crypto");
     assert.equal(crypto?.name, "Crypto");

@@ -212,6 +212,14 @@ export function isHealthFullApi(pathname: string): boolean {
   return pathname === "/api/health/full";
 }
 
+/**
+ * Anonymous page-view counter. POST only. The route returns 204 and writes
+ * nothing except the daily count. Any other method is denied with 401.
+ */
+export function isVisitorCountPost(pathname: string, method: string): boolean {
+  return pathname === "/api/visitors" && method.toUpperCase() === "POST";
+}
+
 export function isLoginPage(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
@@ -240,6 +248,8 @@ export function planAccess(input: {
     return { kind: "allow" };
   }
   const method = input.method.toUpperCase();
+  if (isVisitorCountPost(pathname, method)) return { kind: "allow" };
+  if (pathname === "/api/visitors") return { kind: "deny" };
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     if (isHealthFullApi(pathname)) {
       if (method !== "GET" && method !== "HEAD") return { kind: "deny" };

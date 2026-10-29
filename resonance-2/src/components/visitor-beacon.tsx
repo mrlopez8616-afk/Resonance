@@ -3,7 +3,11 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-/** One anonymous hit per navigation. No cookie is written. */
+/**
+ * One anonymous hit per navigation. No cookie is written.
+ * The root layout mounts this on the login screen and on every signed-in
+ * page, including Public view, so those visits are counted.
+ */
 export function VisitorBeacon() {
   const pathname = usePathname();
   useEffect(() => {
@@ -15,6 +19,8 @@ export function VisitorBeacon() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ path }),
       keepalive: true,
+      redirect: "manual",
+      credentials: "same-origin",
     });
   }, [pathname]);
   return null;
