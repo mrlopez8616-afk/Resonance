@@ -232,6 +232,11 @@ export function publicIdeaText(value: string): string {
   return stripped;
 }
 
+/** Tag `owner` stays on the private board and is not teased in Public view. */
+export function ownerOnlyIdea(tags: readonly string[]): boolean {
+  return tags.some((tag) => tag.trim().toLowerCase() === "owner");
+}
+
 function cleanTags(tags: readonly string[], publicMode: boolean): string[] {
   const next: string[] = [];
   for (const tag of tags) {
@@ -249,7 +254,7 @@ export function presentIdeas(
   const archivedOnly = options.publicMode ? false : Boolean(options.archivedOnly);
   const pool = rows.filter((row) => {
     const archived = row.archivedAt !== null;
-    if (options.publicMode && archived) return false;
+    if (options.publicMode && (archived || ownerOnlyIdea(row.tags))) return false;
     return archivedOnly ? archived : !archived;
   });
   const cards: IdeaCard[] = [];
