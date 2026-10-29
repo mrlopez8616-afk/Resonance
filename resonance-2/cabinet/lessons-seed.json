@@ -676,5 +676,18 @@
     "sources": [
       "founder request, Oct 28 2026"
     ]
+  },
+  {
+    "id": "LL-050",
+    "date": "2026-10-29",
+    "title": "Every node opens in Public mode",
+    "category": "build process",
+    "what_changed": "Every node opens in Public mode, Fight Desk included. Dollar figures on those pages become a record, a win rate, an ROI percent, or a count. Stakes, payouts, bankroll, deposits, and position dollars stay off the shared screen.",
+    "why": "On Oct 29, 2026 the Fight Desk home tile did not open in Public mode. The route block answered with Private, so the drill-down looked broken.",
+    "lesson": "The Public mode route block made Fight Desk look broken. Every node now opens in Public mode with $ swapped for %.",
+    "public_safe": true,
+    "sources": [
+      "founder report, Oct 29 2026"
+    ]
   }
 ]

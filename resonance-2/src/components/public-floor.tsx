@@ -3,7 +3,7 @@ import { LotBarChart } from "@/components/lot-bar-chart";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { NodeSquare } from "@/components/node-square";
 import type { BuildHomeCard } from "@/lib/build-tracker";
-import { bookHomeFace, buildHomeFace, fightHomeFace, fitnessHomeFace, tileFace } from "@/lib/home-faces";
+import { bookHomeFace, buildHomeFace, fightHomeFace, fitnessHomeFace, tileFace, type HomeFace } from "@/lib/home-faces";
 import { publicLotChartModel, type PublicLotBar } from "@/lib/lot-bars";
 import { nodeShelved } from "@/lib/node-visibility";
 import {
@@ -71,12 +71,14 @@ export function PublicHome({
   fitness,
   fightRecord,
   buildHome,
+  finance = null,
 }: {
   crypto: PublicGroup;
   aiStocks: PublicGroup;
   fitness: { headline: string | null; unit: string | null; lines: readonly string[] };
   fightRecord: string | null;
   buildHome: BuildHomeCard | null;
+  finance?: HomeFace | null;
 }) {
   const fight = fightHomeFace({
     publicMode: true,
@@ -112,6 +114,7 @@ export function PublicHome({
           growthLabel: aiStocks.growthLabel,
         })}
       />
+      {finance ? <NodeFace face={finance} /> : null}
       {nodeShelved("fitness") ? null : (
         <NodeFace
           face={fitnessHomeFace({

@@ -407,7 +407,7 @@ describe("phone tabs", () => {
     assert.equal(phoneTabActive("/n/approvals", "/n/approvals"), true);
     assert.equal(phoneTabActive("/n/approvals", "/n/approvals/pending"), true);
     assert.equal(phoneTabActive("/n/approvals", "/n/build"), false);
-    assert.equal(phoneTabHidden("/n/approvals", true), true);
+    assert.equal(phoneTabHidden("/n/approvals", true), false);
     assert.equal(phoneTabHidden("/log", true), true);
     assert.equal(phoneTabHidden("/n/approvals", false), false);
     assert.equal(phoneTabHidden("/", true), false);

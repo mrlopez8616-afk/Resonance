@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { FighterCareerView } from "@/components/fighter-career";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { appendSettledResults, type CareerFight } from "@/lib/fighter-careers";
 import { readFighterCareer } from "@/lib/fighter-careers-store";
@@ -25,8 +24,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function FighterCareerPage({ params }: { params: Promise<{ slug: string }> }) {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
   const { slug } = await params;
   if (!SLUG.test(slug)) notFound();
 

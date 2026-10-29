@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
 import { FightPromotion } from "@/components/fight-board";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { fightPromotions, type FightPromotionId } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export async function FightPromotionRoute({ promotionId }: { promotionId: FightPromotionId }) {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
   const [book, card] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const promotion = fightPromotions({ bets, events: card.events }).find((row) => row.id === promotionId);
@@ -23,7 +22,7 @@ export async function FightPromotionRoute({ promotionId }: { promotionId: FightP
   );
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail}>
-      <FightPromotion promotion={promotion} availability={availability} />
+      <FightPromotion promotion={promotion} availability={availability} publicMode={publicMode} />
     </OperatorShell>
   );
 }

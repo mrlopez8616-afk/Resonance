@@ -5,6 +5,7 @@ import { CRAWL_WALK_RUN } from "@/lib/crawl-walk-run";
 import { FINANCE_NODES } from "@/lib/finance/view";
 import { FITNESS_NODES } from "@/lib/fitness-board";
 import { CRYPTO_HOME_TICKERS, HOME_QUOTE_MAX_AGE_MS } from "@/lib/home-lines";
+import { isHiddenInPublicMode } from "@/lib/public-mode";
 
 export const HEALTH_STATUSES = ["ok", "unavailable", "error"] as const;
 export type HealthStatus = (typeof HEALTH_STATUSES)[number];
@@ -36,6 +37,7 @@ export const HEALTH_REASONS = [
   "scored",
   "not scored",
   "no messages yet",
+  "drill-down broken",
 ] as const;
 
 export type HealthReason = (typeof HEALTH_REASONS)[number];
@@ -165,6 +167,92 @@ export function healthPages(): HealthTarget[] {
   return pages;
 }
 
+const SLUG = "[a-z0-9][a-z0-9-]*";
+
+function drillRedirect(path: string): string | null {
+  if (path === "/n/predictions" || path === "/n/fights") return "/n/fight-desk";
+  const predictionChild = new RegExp(`^/n/predictions/(${SLUG})$`).exec(path);
+  if (predictionChild?.[1]) return `/n/fight-desk/${predictionChild[1]}`;
+  if (path === "/n/money") return "/n/finance";
+  const moneyChild = new RegExp(`^/n/money/(${SLUG})$`).exec(path);
+  if (moneyChild?.[1]) return `/n/finance/${moneyChild[1]}`;
+  if (path === "/n/ai" || path === "/n/stocks") return "/n/ai-stocks";
+  if (path === "/n/fitness/activity") return "/n/fitness/steps";
+  if (path === "/fights/main-card" || path === "/fights/prelims") return "/fights";
+  return null;
+}
+
+function knownFloorRoute(path: string): boolean {
+  if (path === "/" || path === "/calendar" || path === "/settings" || path === "/tv" || path === "/login") return true;
+  if (path === "/log" || path === "/settings/security") return true;
+  if (path === "/film" || path.startsWith("/film/")) return true;
+  const listed = new Set([...HEALTH_TILES, ...healthPages()].map((target) => target.path));
+  if (listed.has(path)) return true;
+  if (new RegExp(`^/calendar/\\d{4}-\\d{2}-\\d{2}$`).test(path)) return true;
+  if (new RegExp(`^/fights/(?:upcoming|past)/${SLUG}$`).test(path)) return true;
+  if (path === "/fights/tiers" || path.startsWith("/fights/tiers/")) return true;
+  if (new RegExp(`^/fights/fighters/${SLUG}$`).test(path)) return true;
+  if (new RegExp(`^/fights/${SLUG}$`).test(path)) return true;
+  if (new RegExp(`^/fights/${SLUG}/${SLUG}$`).test(path)) return true;
+  if (new RegExp(`^/n/chain-security/${SLUG}$`).test(path)) return true;
+  if (new RegExp(`^/n/roundtable/${SLUG}$`).test(path)) return true;
+  if (new RegExp(`^/n/youtube/(?:gear|bricks)/${SLUG}$`).test(path)) return true;
+  if (new RegExp(`^/n/crawl-walk-run/${SLUG}(?:/${SLUG})?$`).test(path)) return true;
+  if (path === "/n/ai-stocks/catalysts" || path.startsWith("/n/ai-stocks/catalysts/")) return true;
+  if (new RegExp(`^/n/build/${SLUG}$`).test(path)) {
+    return BUILD_NODES.some((node) => path === `/n/build/${node}`);
+  }
+  if (new RegExp(`^/n/finance/${SLUG}$`).test(path)) {
+    return FINANCE_NODES.some((node) => path === `/n/finance/${node.id}`);
+  }
+  if (new RegExp(`^/n/fitness/${SLUG}$`).test(path)) {
+    return FITNESS_NODES.some((node) => path === `/n/fitness/${node.id}`);
+  }
+  if (new RegExp(`^/n/control/${SLUG}$`).test(path)) {
+    return CONTROL_VIEWS.some((view) => path === `/n/control/${view}`);
+  }
+  if (path === "/n/approvals/pending" || path === "/n/approvals/done") return true;
+  if (new RegExp(`^/n/crypto/${SLUG}$`).test(path)) {
+    if (path === "/n/crypto/xrp-trigger") return true;
+    return CRYPTO_HOME_TICKERS.some((ticker) => path === `/n/crypto/${ticker.toLowerCase()}`);
+  }
+  if (new RegExp(`^/n/ai-stocks/${SLUG}$`).test(path)) {
+    return AI_STOCK_TICKERS.some((ticker) => path === `/n/ai-stocks/${ticker.toLowerCase()}`);
+  }
+  return false;
+}
+
+/** Follow permanent redirects. A loop or an unknown path does not render. */
+export function resolveDrillDown(href: string): { ok: true; path: string } | { ok: false } {
+  let path = (href.split("?")[0] || "/").replace(/\/+$/, "") || "/";
+  const seen = new Set<string>();
+  for (let hop = 0; hop < 6; hop += 1) {
+    if (seen.has(path)) return { ok: false };
+    seen.add(path);
+    const next = drillRedirect(path);
+    if (!next) return knownFloorRoute(path) ? { ok: true, path } : { ok: false };
+    path = next;
+  }
+  return { ok: false };
+}
+
+/**
+ * A home tile or node card is broken when its href 404s, loops, or
+ * public mode would still answer with the private gate.
+ */
+export function drillDownBroken(href: string, mode: "private" | "public"): boolean {
+  const resolved = resolveDrillDown(href);
+  if (!resolved.ok) return true;
+  if (mode === "public" && isHiddenInPublicMode(resolved.path)) return true;
+  return false;
+}
+
+function applyDrillDown(surface: HealthSurface, href: string): HealthSurface {
+  const path = surface.path || href;
+  if (!drillDownBroken(path, "private") && !drillDownBroken(path, "public")) return surface;
+  return { ...surface, path: href, status: "error", stale: false, reason: "drill-down broken" };
+}
+
 export function ageSeconds(at: string | null | undefined, now: Date): number | null {
   if (!at) return null;
   const stamp = at.length === 10 ? `${at}T00:00:00.000Z` : at;
@@ -277,8 +365,12 @@ export function publicHealthReport(input: {
   const pageTargets = healthPages();
   const rawTiles = Array.isArray(input.tiles) ? input.tiles : [];
   const rawPages = Array.isArray(input.pages) ? input.pages : [];
-  const tiles = tileTargets.map((target, index) => cleanSurface(rowFor(rawTiles, target, index), target));
-  const pages = pageTargets.map((target, index) => cleanSurface(rowFor(rawPages, target, index), target));
+  const tiles = tileTargets.map((target, index) =>
+    applyDrillDown(cleanSurface(rowFor(rawTiles, target, index), target), target.path),
+  );
+  const pages = pageTargets.map((target, index) =>
+    applyDrillDown(cleanSurface(rowFor(rawPages, target, index), target), target.path),
+  );
   const summary = healthSummary(tiles, pages);
   const checkedAt = cleanString(input.checkedAt, "");
   return {

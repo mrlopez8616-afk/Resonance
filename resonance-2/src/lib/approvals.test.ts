@@ -400,14 +400,16 @@ describe("approval queue", { concurrency: false }, () => {
     ]);
     assert.equal(still[0]?.status, "pending");
 
-    for (const path of ["/n/approvals", "/n/approvals/pending", "/n/approvals/done", "/api/approvals"]) {
-      assert.equal(isHiddenInPublicMode(path), true, path);
-    }
+    assert.equal(isHiddenInPublicMode("/api/approvals"), true);
+    assert.equal(isHiddenInPublicMode("/n/approvals"), false);
+    assert.equal(isHiddenInPublicMode("/n/approvals/pending"), false);
+    assert.equal(isHiddenInPublicMode("/n/approvals/done"), false);
     const parent = readFileSync(path.join(root, "src/app/n/approvals/page.tsx"), "utf8");
     const view = readFileSync(path.join(root, "src/app/n/approvals/[view]/page.tsx"), "utf8");
     const toolbar = readFileSync(path.join(root, "src/components/operator-toolbar.tsx"), "utf8");
-    assert.ok(parent.indexOf("blockedPublicPage") < parent.indexOf("loadApprovalBoard"));
-    assert.ok(view.indexOf("blockedPublicPage") < view.indexOf("listApprovals"));
+    assert.equal(parent.includes("blockedPublicPage"), false);
+    assert.equal(view.includes("blockedPublicPage"), false);
+    assert.match(view, /publicMode/);
     assert.match(toolbar, /phoneTabHidden/);
     assert.match(toolbar, /publicMode \? null/);
   });

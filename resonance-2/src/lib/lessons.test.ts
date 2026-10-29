@@ -356,6 +356,29 @@ describe("lessons api", { concurrency: false }, () => {
     await sqlQuery(`DELETE FROM lessons`);
   });
 
+  it("inserts LL-050 once and leaves an edited row alone", async () => {
+    const file = readFileSync(path.join(root, "db/migrations/041_public_node_lesson.sql"), "utf8");
+    const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "041_public_node_lesson");
+    assert.equal(embedded?.sql, file);
+    assert.equal(file.includes("UPDATE"), false);
+    assert.equal(/^\s*delete\b/im.test(file), false);
+    for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
+    for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
+    assert.equal(await countLessons(), 1);
+    const rows = await sqlQuery<{ lesson: string; date: Date | string }>(
+      `SELECT lesson, "date" FROM lessons WHERE id = 'LL-050'`,
+    );
+    const storedDay = rows[0]?.date;
+    const day = storedDay instanceof Date ? storedDay.toISOString().slice(0, 10) : String(storedDay ?? "").slice(0, 10);
+    assert.equal(day, "2026-10-29");
+    await sqlQuery(`UPDATE lessons SET lesson = 'edited' WHERE id = 'LL-050'`);
+    for (const statement of splitSqlStatements(file)) await sqlQuery(statement);
+    const kept = await sqlQuery<{ lesson: string }>(`SELECT lesson FROM lessons WHERE id = 'LL-050'`);
+    assert.equal(kept[0]?.lesson, "edited");
+    assert.match(rows[0]?.lesson ?? "", /Public mode route block made Fight Desk look broken/);
+    await sqlQuery(`DELETE FROM lessons`);
+  });
+
   it("upserts one row, stores an unknown category, and keeps Founder's call", async () => {
     const longCategory = "desk-habit-not-on-a-list";
     assert.ok(longCategory.length < LESSON_CAPS.category);
@@ -505,10 +528,10 @@ describe("lessons api", { concurrency: false }, () => {
       public_safe: boolean;
       sources: string[];
     }>;
-    assert.equal(seed.length, 49);
+    assert.equal(seed.length, 50);
     assert.deepEqual(
       seed.map((row) => row.id),
-      Array.from({ length: 49 }, (_, index) => `LL-${String(index + 1).padStart(3, "0")}`),
+      Array.from({ length: 50 }, (_, index) => `LL-${String(index + 1).padStart(3, "0")}`),
     );
     const tile = seed.find((row) => row.id === "LL-048");
     assert.ok(tile);
@@ -516,6 +539,12 @@ describe("lessons api", { concurrency: false }, () => {
     const probe = seed.find((row) => row.id === "LL-049");
     assert.ok(probe);
     assert.equal(probe.date, "2026-10-28");
+    const opened = seed.find((row) => row.id === "LL-050");
+    assert.ok(opened);
+    assert.equal(opened.date, "2026-10-29");
+    assert.equal(opened.public_safe, true);
+    assert.match(opened.lesson, /Public mode route block made Fight Desk look broken/);
+    assert.match(opened.lesson, /\$ swapped for %/);
     assert.equal(probe.public_safe, true);
     assert.equal(probe.lesson.includes("$"), false);
     assert.equal(
@@ -548,8 +577,8 @@ describe("lessons api", { concurrency: false }, () => {
     );
     assert.equal(posted.status, 200);
     const postedBody = await posted.json();
-    assert.equal(postedBody.upserted, 49);
-    assert.equal(await countLessons(), 49);
+    assert.equal(postedBody.upserted, 50);
+    assert.equal(await countLessons(), 50);
     const stored = postedBody.lessons.find((row: { id: string }) => row.id === "LL-042");
     assert.equal(stored.what_changed, dedupe.what_changed);
     assert.equal(stored.why, dedupe.why);
@@ -564,15 +593,15 @@ describe("lessons api", { concurrency: false }, () => {
       }),
     );
     assert.equal(again.status, 200);
-    assert.equal(await countLessons(), 49);
+    assert.equal(await countLessons(), 50);
     const againBody = await again.json();
     assert.equal(againBody.lessons.find((row: { id: string }) => row.id === "LL-042").created_at, createdAt);
 
     const read = await GET(new Request(url, { headers: { authorization: "Bearer hub-secret" } }));
     const readBody = await read.json();
     assert.equal(readBody.public, false);
-    assert.equal(readBody.count, 49);
-    assert.equal(readBody.lessons[0].id, "LL-049");
+    assert.equal(readBody.count, 50);
+    assert.equal(readBody.lessons[0].id, "LL-050");
     const privateRow = readBody.lessons.find((row: { id: string }) => row.id === "LL-021");
     assert.equal(privateRow.public_safe, false);
     assert.ok(privateRow.sources.length > 0);
@@ -581,7 +610,7 @@ describe("lessons api", { concurrency: false }, () => {
     const lessons = readBody.lessons.map(fromJson);
     const publicView = lessonsPayload(lessons, true);
     assert.equal(publicView.public, true);
-    assert.equal(publicView.count, 48);
+    assert.equal(publicView.count, 49);
     assert.equal(publicView.lessons.some((row) => row.id === "LL-021"), false);
     assert.equal(publicView.lessons.some((row) => "sources" in row), false);
     const publicDedupe = publicView.lessons.find((row) => row.id === "LL-042");

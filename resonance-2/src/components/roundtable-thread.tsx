@@ -1,7 +1,7 @@
 import { RoundtableReply } from "@/components/roundtable-reply";
 import { ROUNDTABLE_EMPTY, type RoundtableThreadView } from "@/lib/roundtable";
 
-export function RoundtableThread({ view }: { view: RoundtableThreadView }) {
+export function RoundtableThread({ view, reply = true }: { view: RoundtableThreadView; reply?: boolean }) {
   return (
     <div className="roundtable-thread">
       <header className="log-header">
@@ -26,7 +26,7 @@ export function RoundtableThread({ view }: { view: RoundtableThreadView }) {
           ))}
         </ol>
       )}
-      <RoundtableReply threadId={view.id} />
+      {reply ? <RoundtableReply threadId={view.id} /> : null}
     </div>
   );
 }

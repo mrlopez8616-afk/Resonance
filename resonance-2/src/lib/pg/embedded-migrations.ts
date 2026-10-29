@@ -799,6 +799,26 @@ WHERE NOT EXISTS (
 );
 `;
 
+export const PUBLIC_NODE_LESSON_SQL = `-- Public node lesson. Number 041.
+-- 040 created market_quotes. This file inserts one lesson
+-- when that id is absent, and does not change a row that is already stored.
+
+INSERT INTO lessons (id, date, title, category, what_changed, why, lesson, public_safe, sources)
+SELECT
+  'LL-050',
+  DATE '2026-10-29',
+  'Every node opens in Public mode',
+  'build process',
+  'Every node opens in Public mode, Fight Desk included. Dollar figures on those pages become a record, a win rate, an ROI percent, or a count. Stakes, payouts, bankroll, deposits, and position dollars stay off the shared screen.',
+  'On Oct 29, 2026 the Fight Desk home tile did not open in Public mode. The route block answered with Private, so the drill-down looked broken.',
+  'The Public mode route block made Fight Desk look broken. Every node now opens in Public mode with $ swapped for %.',
+  true,
+  '["founder report, Oct 29 2026"]'::jsonb
+WHERE NOT EXISTS (
+  SELECT 1 FROM lessons WHERE id = 'LL-050'
+);
+`;
+
 export const MARKET_QUOTES_SQL = `-- Last good public market quote. Number 040.
 -- 039 inserted the health-route lesson. This file creates one table.
 -- It inserts no rows and does not change positions, fills, or balances.
@@ -853,4 +873,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "038_backup_runs", sql: BACKUP_RUNS_SQL },
   { id: "039_health_route_lesson", sql: HEALTH_ROUTE_LESSON_SQL },
   { id: "040_market_quotes", sql: MARKET_QUOTES_SQL },
+  { id: "041_public_node_lesson", sql: PUBLIC_NODE_LESSON_SQL },
 ];

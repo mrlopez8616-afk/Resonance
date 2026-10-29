@@ -138,15 +138,14 @@ export async function readFounderThreads(): Promise<RoundtableThreadSummary[]> {
   return threads;
 }
 
-export async function loadRoundtableHome(): Promise<RoundtableHomeModel> {
-  const model = roundtableHomeModel(await readFounderThreads(), { publicMode: false });
+export async function loadRoundtableHome(publicMode = false): Promise<RoundtableHomeModel> {
+  const model = roundtableHomeModel(await readFounderThreads(), { publicMode });
   return model ?? { unavailable: true, count: 0, lines: [] };
 }
 
-/** Founder cards. Public mode skips the query and returns null. */
+/** Founder cards. Public mode strips dollar amounts from the titles. */
 export async function loadRoundtableCards(publicMode: boolean): Promise<RoundtableCard[] | null> {
-  if (publicMode) return null;
-  return presentRoundtableCards(await readFounderThreads(), false);
+  return presentRoundtableCards(await readFounderThreads(), publicMode);
 }
 
 /** Founder thread, including messages. A youtube row and a missing row are both null. */
@@ -155,13 +154,12 @@ export async function readFounderThread(id: string): Promise<RoundtableThread | 
   return readThread(id, { founderOnly: true });
 }
 
-/** Founder thread for the page. Public mode skips the query. */
+/** Founder thread for the page. Public mode strips dollar amounts. */
 export async function loadRoundtableThread(
   id: string,
   publicMode: boolean,
 ): Promise<RoundtableThreadView | null> {
-  if (publicMode) return null;
-  return presentRoundtableThread(await readFounderThread(id), false);
+  return presentRoundtableThread(await readFounderThread(id), publicMode);
 }
 
 function sameAgentMessage(existing: RoundtableMessage, post: AgentPost): boolean {

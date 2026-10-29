@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { FightEvent, ListedFightEvent } from "@/components/fight-board";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { applyStaticCard, staticFightCard } from "@/data/dwcs-cards";
 import { deskFightsForEvent } from "@/lib/fight-breakdowns";
 import {
@@ -38,8 +38,7 @@ export async function FightEventScreen({
   event: string;
   bucket: FightTimeBucket;
 }) {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
   const legacy = legacyFightNodeHref(event);
   if (legacy) redirect(legacy);
   const canonical = canonicalEventSlug(event);
@@ -102,6 +101,7 @@ export async function FightEventScreen({
           availability={availability}
           resultsAvailability={resultsAvailability}
           past={past}
+          publicMode={publicMode}
         />
       ) : (
         <ListedFightEvent
@@ -116,6 +116,7 @@ export async function FightEventScreen({
           availability={availability}
           resultsAvailability={resultsAvailability}
           past={past}
+          publicMode={publicMode}
         />
       )}
     </OperatorShell>

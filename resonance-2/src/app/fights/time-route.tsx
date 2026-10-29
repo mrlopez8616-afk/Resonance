@@ -1,13 +1,12 @@
 import { FightTimeList } from "@/components/fight-board";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
+import { isPublicMode } from "@/lib/public-mode-server";
 import { fightTimeBoards, type FightTimeBucket } from "@/lib/fight-desk";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { betBookLine, loadBetsForPage, loadCalendarForPage, withStaleDetail } from "@/lib/store-page";
 
 export async function FightTimeScreen({ bucket }: { bucket: FightTimeBucket }) {
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
   const [book, calendar] = await Promise.all([loadBetsForPage(), loadCalendarForPage()]);
   const bets = book.status === "unavailable" ? [] : book.bets;
   const boards = fightTimeBoards({ bets, events: calendar.events });
@@ -26,7 +25,7 @@ export async function FightTimeScreen({ bucket }: { bucket: FightTimeBucket }) {
 
   return (
     <OperatorShell storageMessage={storageMessage} storageDetail={storageDetail}>
-      <FightTimeList bucket={bucket} events={boards[bucket]} />
+      <FightTimeList bucket={bucket} events={boards[bucket]} publicMode={publicMode} />
     </OperatorShell>
   );
 }

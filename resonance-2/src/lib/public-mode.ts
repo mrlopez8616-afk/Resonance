@@ -32,16 +32,14 @@ export function publicModeEnabled(value: string | null | undefined): boolean {
 
 /**
  * Routes that stay off a shared screen.
- * `/n/build` and `/n/system` are not in this list: they stay visible.
- * Fight Desk itself stays; only the bankroll child is hidden.
- * The tier tracker under `/fights/tiers` stays too, and it prints percents only.
+ * Node pages stay on. Dollars on those pages are swapped for a record,
+ * a win rate, an ROI percent, or a count before render.
+ * The operator log, the security settings, and the money APIs stay hidden.
+ * Those APIs return stakes, balances, and write actions, not a node page.
  */
 const HIDDEN_PREFIXES = [
   "/log",
   "/settings/security",
-  "/n/finance",
-  "/n/money",
-  "/fights",
   "/api/finance",
   "/api/bets",
   "/api/deposits",
@@ -53,17 +51,12 @@ const HIDDEN_PREFIXES = [
   "/api/settings/fitness-token",
   "/api/fitness/token",
   "/api/settings/owner-pin",
-  "/n/approvals",
   "/api/approvals",
-  "/n/control/approvals",
-  "/n/roundtable",
   "/api/roundtable",
 ] as const;
 
 export function isHiddenInPublicMode(pathname: string): boolean {
   const path = (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";
-  if (path === "/n/fight-desk/bankroll") return true;
-  if (path === "/fights/tiers" || path.startsWith("/fights/tiers/")) return false;
   return HIDDEN_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 

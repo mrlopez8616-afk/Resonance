@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ControlChild } from "@/components/control-room";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { isControlView, presentControlRoom } from "@/lib/control-room";
@@ -35,10 +34,6 @@ export default async function ControlChildPage({
   await requireRole("owner");
   const { view } = await params;
   if (!isControlView(view)) notFound();
-  if (view === "approvals") {
-    const blocked = await blockedPublicPage();
-    if (blocked) return blocked;
-  }
 
   const publicMode = await isPublicMode();
   const now = new Date();

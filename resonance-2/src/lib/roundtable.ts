@@ -1,5 +1,6 @@
 import { SECRET_OR_ACCOUNT_ERROR, payloadLooksSecret, textLooksSecret } from "@/lib/approvals";
 import { SYSTEM_AGENTS } from "@/data/system-map";
+import { stripMoneyText } from "@/lib/public-mode";
 
 export const ROUNDTABLE_EMPTY = "no messages yet";
 export const ROUNDTABLE_HREF = "/n/roundtable";
@@ -136,16 +137,20 @@ export function formatRoundtableWhen(iso: string): string {
   }).format(date);
 }
 
+function publicRoundtableText(value: string): string {
+  const next = stripMoneyText(value);
+  return next || "Message";
+}
+
 /**
  * Home lines from founder threads the page already loaded.
- * Public mode returns null so titles never reach the client.
+ * Public mode keeps the count and strips dollar amounts from titles.
  * An empty board says `no messages yet` and does not invent a thread.
  */
 export function roundtableHomeModel(
   threads: readonly RoundtableThreadSummary[],
   options: { publicMode: boolean; unavailable?: boolean },
 ): RoundtableHomeModel | null {
-  if (options.publicMode) return null;
   if (options.unavailable) return { unavailable: true, count: 0, lines: [] };
   const founder = threads.filter((thread) => thread.audience === "founder");
   if (founder.length === 0) {
@@ -154,43 +159,44 @@ export function roundtableHomeModel(
   return {
     unavailable: false,
     count: founder.length,
-    lines: founder.slice(0, 3).map((thread) => roundtableLine(thread.title)),
+    lines: founder.slice(0, 3).map((thread) =>
+      options.publicMode ? publicRoundtableText(roundtableLine(thread.title)) : roundtableLine(thread.title),
+    ),
   };
 }
 
-/** Parent cards. Public mode and youtube threads stay off the floor. */
+/** Parent cards. Youtube threads stay off the floor. Public mode strips dollar text. */
 export function presentRoundtableCards(
   threads: readonly RoundtableThreadSummary[],
   publicMode: boolean,
 ): RoundtableCard[] | null {
-  if (publicMode) return null;
   return threads
     .filter((thread) => thread.audience === "founder")
     .map((thread) => ({
       id: thread.id,
       href: roundtableHref(thread.id),
       agentName: roundtableAgentName(thread.agentId) ?? "Agent",
-      title: thread.title.trim(),
+      title: publicMode ? publicRoundtableText(thread.title) : thread.title.trim(),
       when: formatRoundtableWhen(thread.updatedAt),
       countLabel: roundtableCountLabel(thread.messageCount),
     }));
 }
 
-/** Thread page. Youtube and public mode return null so the body is not rendered. */
+/** Thread page. A youtube thread stays off. Public mode strips dollar text and the page hides the reply box. */
 export function presentRoundtableThread(
   thread: RoundtableThread | null,
   publicMode: boolean,
 ): RoundtableThreadView | null {
-  if (publicMode || !thread || thread.audience !== "founder") return null;
+  if (!thread || thread.audience !== "founder") return null;
   return {
     id: thread.id,
     agentName: roundtableAgentName(thread.agentId) ?? "Agent",
-    title: thread.title.trim(),
+    title: publicMode ? publicRoundtableText(thread.title) : thread.title.trim(),
     countLabel: roundtableCountLabel(thread.messageCount),
     messages: thread.messages.map((message) => ({
       id: message.id,
       authorLabel: roundtableAuthorLabel(message.authorKind, message.authorId),
-      body: message.body,
+      body: publicMode ? publicRoundtableText(message.body) : message.body,
       when: formatRoundtableWhen(message.createdAt),
     })),
   };

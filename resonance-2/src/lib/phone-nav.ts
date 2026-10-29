@@ -46,7 +46,7 @@ export function phoneTabHidden(
 ): boolean {
   if (navHrefShelved(href, shelved)) return true;
   if (!publicMode) return false;
-  return href === "/log" || href === "/n/approvals";
+  return href === "/log";
 }
 
 /** Left-edge start zone, in CSS pixels. */

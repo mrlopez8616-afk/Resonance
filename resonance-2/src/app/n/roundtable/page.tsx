@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { RoundtableParent } from "@/components/roundtable-floor";
-import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { loadRoundtableCards } from "@/lib/roundtable-store";
@@ -15,13 +14,12 @@ export const metadata = {
 
 export default async function RoundtablePage() {
   await requireRole("owner");
-  const blocked = await blockedPublicPage();
-  if (blocked) return blocked;
+  const publicMode = await isPublicMode();
 
   let cards = null;
   let unavailable = false;
   try {
-    cards = await loadRoundtableCards(await isPublicMode());
+    cards = await loadRoundtableCards(publicMode);
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
     unavailable = true;
@@ -32,7 +30,7 @@ export default async function RoundtablePage() {
       <Link href="/" className="calendar-back">
         Floor
       </Link>
-      {cards ? <RoundtableParent cards={cards} /> : null}
+      {cards ? <RoundtableParent cards={cards} publicMode={publicMode} /> : null}
     </OperatorShell>
   );
 }

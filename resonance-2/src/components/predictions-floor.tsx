@@ -13,23 +13,28 @@ import { formatCivilDate } from "@/lib/calendar-time";
 import { tileFace } from "@/lib/home-faces";
 import type { TierSegment } from "@/lib/home-visuals";
 import { parentById, parentCardHref } from "@/lib/node-parents";
+import { hasMoneyText, publicRecordLabel } from "@/lib/public-mode";
 
 export function PredictionsFloor({
   ledger,
   bookFacts = null,
   segments = null,
   bankrollLine = null,
+  publicMode = false,
 }: {
   ledger: BankrollLedger | null;
   /** Bet book facts when the dollar ledger could not be named. */
   bookFacts?: BankrollBookFacts | null;
   segments?: readonly TierSegment[] | null;
   bankrollLine?: readonly number[] | null;
+  publicMode?: boolean;
 }) {
   const face = ledger ? bankrollHomeFace(ledger) : null;
   const deskOpen = ledger?.deskOpen ?? bookFacts?.deskOpen ?? null;
   const fightsOpen = deskOpen === null ? null : deskOpen === 1 ? "1 open" : `${deskOpen} open`;
   const label = parentById("fight-desk")?.label ?? "Fight Desk";
+  const record = publicRecordLabel(ledger?.recordLabel ?? bookFacts?.recordLabel);
+  const roi = ledger && /%$/.test(ledger.roiLabel) && !hasMoneyText(ledger.roiLabel) ? ledger.roiLabel : null;
   return (
     <>
       <Link href="/" className="calendar-back">
@@ -37,7 +42,12 @@ export function PredictionsFloor({
       </Link>
       <header className="log-header">
         <p className="log-kicker">{label}</p>
-        {face ? (
+        {publicMode ? (
+          <>
+            <h2 className="log-title">{record ?? label}</h2>
+            <p className="log-meta">{record ? "record" : "unavailable"}</p>
+          </>
+        ) : face ? (
           <>
             <h2 className="log-title">{face.headline}</h2>
             <p className="log-meta">{face.priceLine}</p>
@@ -49,7 +59,7 @@ export function PredictionsFloor({
           </>
         )}
       </header>
-      <PredictionsVisual segments={segments} bankroll={bankrollLine} />
+      {publicMode ? null : <PredictionsVisual segments={segments} bankroll={bankrollLine} />}
       <NodeFaceGrid label="Fight Desk nodes">
         <NodeFace
           face={tileFace({
@@ -57,11 +67,16 @@ export function PredictionsFloor({
             glyph: "fight-desk",
             href: `${parentCardHref("fight-desk")}/bankroll`,
             name: "Bankroll",
-            headline: ledger?.bankrollLabel ?? (bookFacts ? "deposits unavailable" : "unavailable"),
-            status: ledger
-              ? `${ledger.atRiskLabel} at risk`
-              : bookFacts?.recordLabel ?? null,
-            live: face !== null,
+            headline: publicMode
+              ? (record ?? (bookFacts ? "deposits unavailable" : "unavailable"))
+              : (ledger?.bankrollLabel ?? (bookFacts ? "deposits unavailable" : "unavailable")),
+            status: publicMode
+              ? (roi ?? (record ? "record" : null))
+              : ledger
+                ? `${ledger.atRiskLabel} at risk`
+                : bookFacts?.recordLabel ?? null,
+            live: publicMode ? record !== null : face !== null,
+            publicMode,
           })}
         />
         <NodeFace
@@ -73,6 +88,7 @@ export function PredictionsFloor({
             headline: fightsOpen,
             status: fightsOpen ? "open" : null,
             live: fightsOpen !== null,
+            publicMode,
           })}
         />
       </NodeFaceGrid>
@@ -97,7 +113,8 @@ export function BankrollLedgerView({
   deposits?: readonly BankrollDepositLine[];
   publicMode?: boolean;
 }) {
-  const depositLine = bankrollDepositLine(ledger, publicMode);
+  const depositLine = publicMode ? null : bankrollDepositLine(ledger, false);
+  const roi = /%$/.test(ledger.roiLabel) && !hasMoneyText(ledger.roiLabel) ? ledger.roiLabel : null;
   return (
     <div className="log-canvas">
       <header className="log-header">
@@ -109,44 +126,67 @@ export function BankrollLedgerView({
             : `From ${formatUsd(ledger.start)} on ${formatCivilDate(ledger.asOf)}`}
         </p>
       </header>
+      {publicMode ? (
+        <>
+          <dl className="bankroll-stats">
+            <div>
+              <dt>Record</dt>
+              <dd>{ledger.recordLabel}</dd>
+            </div>
+            {roi ? (
+              <div>
+                <dt>ROI</dt>
+                <dd>{roi}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <section className="bankroll-section" aria-label="Card history">
+            <h3>Cards</h3>
+            <CardList cards={ledger.cards} empty="No in-scope cards yet" publicMode />
+          </section>
+          <section className="bankroll-section" aria-label="STRONG vs LEAN">
+            <h3>STRONG vs LEAN</h3>
+            <ol>
+              {ledger.tiers.map((tier) => (
+                <li key={tier.id} className="fight-card">
+                  <h3>{tier.label}</h3>
+                  <p className="fight-result">{tier.recordLabel}</p>
+                  <p>{tier.open === 1 ? "1 open" : `${tier.open} open`}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </>
+      ) : (
       <dl className="bankroll-stats">
-        {publicMode ? null : (
           <div>
             <dt>At risk</dt>
             <dd>{ledger.atRiskLabel}</dd>
           </div>
-        )}
-        {publicMode ? null : (
           <div>
             <dt>Available cash</dt>
             <dd>{ledger.cashLabel}</dd>
           </div>
-        )}
         {depositLine ? (
           <div>
             <dt>Deposits</dt>
             <dd>{depositLine}</dd>
           </div>
         ) : null}
-        {publicMode ? null : (
           <div>
             <dt>Record</dt>
             <dd>{ledger.recordLabel}</dd>
           </div>
-        )}
-        {publicMode ? null : (
           <div>
             <dt>ROI</dt>
             <dd>{ledger.roiLabel}</dd>
           </div>
-        )}
-        {publicMode ? null : (
           <div>
             <dt>{FLAT_STAKE_LABEL}</dt>
             <dd>{ledger.suggestedStakeLabel}</dd>
           </div>
-        )}
       </dl>
+      )}
       {publicMode ? null : (
         <>
           <section className="bankroll-section" aria-label="Card history">
@@ -202,7 +242,15 @@ function DepositList({ deposits }: { deposits: readonly BankrollDepositLine[] })
   );
 }
 
-function CardList({ cards, empty }: { cards: BankrollLedger["cards"]; empty: string }) {
+function CardList({
+  cards,
+  empty,
+  publicMode = false,
+}: {
+  cards: BankrollLedger["cards"];
+  empty: string;
+  publicMode?: boolean;
+}) {
   if (cards.length === 0) return <p className="calendar-quiet">{empty}</p>;
   return (
     <ol>
@@ -212,7 +260,7 @@ function CardList({ cards, empty }: { cards: BankrollLedger["cards"]; empty: str
             <p className="log-kicker">{card.dateLabel}</p>
             <h3>{card.title}</h3>
             <p className="fight-result">
-              {card.recordLabel} · {card.pnlLabel}
+              {publicMode ? card.recordLabel : `${card.recordLabel} · ${card.pnlLabel}`}
             </p>
           </Link>
         </li>

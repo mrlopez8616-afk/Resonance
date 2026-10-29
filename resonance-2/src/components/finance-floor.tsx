@@ -24,10 +24,12 @@ export function FinanceFloor({
   asOf,
   stale,
   cards,
+  publicMode = false,
 }: {
   asOf: string;
   stale: boolean;
   cards: readonly FinanceCardModel[];
+  publicMode?: boolean;
 }) {
   return (
     <>
@@ -44,6 +46,7 @@ export function FinanceFloor({
               headline: card.headline,
               status: card.lines[0] ?? null,
               live: card.headline !== null,
+              publicMode,
             })}
           />
         ))}

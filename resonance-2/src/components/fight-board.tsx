@@ -7,6 +7,7 @@ import { NodeFace, NodeFaceGrid } from "@/components/node-face";
 import { SubmissionTiles } from "@/components/submission-tiles";
 import { submissionBoards } from "@/lib/fight-submission";
 import { flatStakeFightLine } from "@/lib/bankroll";
+import { stripMoneyText } from "@/lib/public-mode";
 import { isDecimalString } from "@/lib/decimal";
 import type { CalendarEvent } from "@/data/calendar";
 import { chicagoDay, civilWeekdayLong, formatCivilDate } from "@/lib/calendar-time";
@@ -264,12 +265,23 @@ function ValueCard({
   label,
   bets,
   availability,
+  publicMode = false,
 }: {
   href: string;
   label: string;
   bets: readonly Bet[];
   availability: BookAvailability;
+  publicMode?: boolean;
 }) {
+  if (publicMode) {
+    const count = bets.length;
+    return (
+      <Link href={href} className="fight-card">
+        <h3>{label}</h3>
+        <p>{count === 1 ? "1 fight" : `${count} fights`}</p>
+      </Link>
+    );
+  }
   const face = safeCardMoney(bets);
   const line =
     availability === "unavailable"
@@ -420,9 +432,11 @@ export function FightTimeList({
 export function FightPromotion({
   promotion,
   availability = "live",
+  publicMode = false,
 }: {
   promotion: DeskPromotion;
   availability?: BookAvailability;
+  publicMode?: boolean;
 }) {
   return (
     <div className="log-canvas">
@@ -444,6 +458,7 @@ export function FightPromotion({
                 label={event.title}
                 bets={event.bets}
                 availability={availability}
+                publicMode={publicMode}
               />
             </li>
           ))}
@@ -711,10 +726,12 @@ function OddsColumn({
   side,
   bets,
   hideEmpty = false,
+  publicMode = false,
 }: {
   side: FighterSide;
   bets: readonly Bet[];
   hideEmpty?: boolean;
+  publicMode?: boolean;
 }) {
   const books = hideEmpty ? side.books.filter((row) => row.moneyline != null) : side.books;
   return (
@@ -735,9 +752,11 @@ function OddsColumn({
         {books.map((row) => (
           <Field key={row.book} label={row.book} value={moneyline(row.moneyline)} />
         ))}
-        {bets.map((bet, index) => (
-          <Field key={`${bet.id}:${index}`} label="Your ticket" value={ticketLine(bet)} />
-        ))}
+        {publicMode
+          ? null
+          : bets.map((bet, index) => (
+              <Field key={`${bet.id}:${index}`} label="Your ticket" value={ticketLine(bet)} />
+            ))}
       </dl>
     </div>
   );
@@ -752,6 +771,7 @@ export function FightDetail({
   hideEmpty = false,
   availability = "live",
   resultsAvailability = "live",
+  publicMode = false,
 }: {
   fight: CatalogFight;
   bets: readonly Bet[];
@@ -761,8 +781,10 @@ export function FightDetail({
   hideEmpty?: boolean;
   availability?: BookAvailability;
   resultsAvailability?: BookAvailability;
+  publicMode?: boolean;
 }) {
   const stakes = betsOnFight(bets, fight.slug);
+  const text = (value: string) => (publicMode ? stripMoneyText(value) : value);
   const ticketsFor = (name: string) =>
     stakes.filter((bet) => bet.pick === name || bet.pick.includes(name));
   const labels = fight.A.stats.map((row) => row.label);
@@ -862,8 +884,8 @@ export function FightDetail({
               {labels.map((label, index) => (
                 <tr key={`${label}:${index}`}>
                   <th scope="row">{label}</th>
-                  <td>{fight.A.stats[index]?.value ?? "—"}</td>
-                  <td>{fight.B.stats[index]?.value ?? "—"}</td>
+                  <td>{text(fight.A.stats[index]?.value ?? "—")}</td>
+                  <td>{text(fight.B.stats[index]?.value ?? "—")}</td>
                 </tr>
               ))}
             </tbody>
@@ -881,7 +903,7 @@ export function FightDetail({
               ) : (
                 <ul className="fight-last5">
                   {side.last5.map((row, rowIndex) => (
-                    <li key={`${rowIndex}:${row}`}>{row}</li>
+                    <li key={`${rowIndex}:${row}`}>{text(row)}</li>
                   ))}
                 </ul>
               )}
@@ -916,14 +938,14 @@ export function FightDetail({
           {fight.stakePlan ? (
             <Field label="Stake" value={fight.stakePlan === "PLAY" ? "PLAY" : "free"} />
           ) : null}
-          {fight.tierNote ? <Field label="KO gate" value={fight.tierNote} /> : null}
-          {!hideEmpty || fight.why ? <Field label="Why" value={fight.why ?? "—"} /> : null}
+          {fight.tierNote ? <Field label="KO gate" value={text(fight.tierNote)} /> : null}
+          {!hideEmpty || fight.why ? <Field label="Why" value={text(fight.why ?? "—")} /> : null}
           {fight.xFactor ? <Field label="X-factor" value={fight.xFactor} /> : null}
         </dl>
         {fight.edges.length > 0 ? (
           <ul className="fight-last5">
             {fight.edges.map((edge, index) => (
-              <li key={`${index}:${edge}`}>{edge}</li>
+              <li key={`${index}:${edge}`}>{text(edge)}</li>
             ))}
           </ul>
         ) : null}
@@ -940,8 +962,8 @@ export function FightDetail({
         </p>
         ) : null}
         <div className="fight-split">
-          <OddsColumn side={fight.A} bets={ticketsFor(fight.A.name)} hideEmpty={hideEmpty} />
-          <OddsColumn side={fight.B} bets={ticketsFor(fight.B.name)} hideEmpty={hideEmpty} />
+          <OddsColumn side={fight.A} bets={ticketsFor(fight.A.name)} hideEmpty={hideEmpty} publicMode={publicMode} />
+          <OddsColumn side={fight.B} bets={ticketsFor(fight.B.name)} hideEmpty={hideEmpty} publicMode={publicMode} />
         </div>
       </section>
       ) : null}
@@ -970,7 +992,7 @@ export function FightDetail({
       </section>
       ) : null}
 
-      {show("stake") ? (
+      {show("stake") && !publicMode ? (
       <section className="calendar-day-section" aria-label="Stake">
         <h3>Founder stake</h3>
         {stakes.length === 0 ? (
