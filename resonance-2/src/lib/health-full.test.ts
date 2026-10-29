@@ -268,6 +268,7 @@ describe("health full probe", () => {
       checkedAt: NOW.toISOString(),
       summary: report.summary,
       secret: "token health-token balance $50",
+      issues: [],
       tiles: report.tiles.map((row) =>
         row.id === "crypto" ? { ...row, name: "Crypto $1", usd: 50, reason: "quote fresh" } : row,
       ),
@@ -322,9 +323,26 @@ describe("health full probe", () => {
     assert.equal(drillDownBroken("/settings/security", "private"), false);
     assert.equal(drillDownBroken("/settings/security", "public"), true);
     assert.equal(drillDownBroken("/log", "public"), true);
+    assert.equal(drillDownBroken("/n/finance", "public"), false);
+    assert.equal(drillDownBroken("/n/finance/net-worth", "public"), false);
+    assert.equal(drillDownBroken("/n/finance", "private"), false);
     const report = assembleHealth(NOW.toISOString(), okFacts(), okFacts());
     assert.equal(report.summary.status, "ok");
+    assert.equal(report.issues.length, 0);
     assert.equal(report.pages.some((row) => row.reason === "drill-down broken"), false);
+    const locked = assembleHealth(NOW.toISOString(), okFacts(), okFacts(), [
+      {
+        id: "finance-lock-href",
+        name: "Finance tile still has a link",
+        status: "error",
+        path: "/n/finance",
+      },
+    ]);
+    assert.equal(locked.ok, false);
+    assert.equal(locked.summary.status, "error");
+    assert.equal(locked.issues[0]?.name, "Finance tile still has a link");
+    const financePage = locked.pages.find((row) => row.path === "/n/finance");
+    assert.notEqual(financePage?.reason, "drill-down broken");
     assert.equal(JSON.stringify(report).includes("$"), false);
     const forced = publicHealthReport({
       checkedAt: NOW.toISOString(),

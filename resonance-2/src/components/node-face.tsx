@@ -8,6 +8,7 @@ import type { HomeFace } from "@/lib/home-faces";
  */
 export function NodeFace({ face, onRemove }: { face: HomeFace; onRemove?: () => void }) {
   const tone = face.tone ? ` is-${face.tone}` : "";
+  const locked = face.locked === true || face.href === "";
   const body = (
     <>
       <span className="node-face-glyph" aria-hidden="true">
@@ -20,8 +21,8 @@ export function NodeFace({ face, onRemove }: { face: HomeFace; onRemove?: () => 
   );
   return (
     <article
-      className={`node-face${face.live ? " is-live" : " is-offline"}`}
-      aria-label={face.name}
+      className={`node-face${face.live ? " is-live" : " is-offline"}${face.locked ? " is-locked" : ""}`}
+      aria-label={face.locked ? `${face.name}, private` : face.name}
       data-node-face={face.id}
     >
       {onRemove ? (
@@ -38,12 +39,20 @@ export function NodeFace({ face, onRemove }: { face: HomeFace; onRemove?: () => 
           <span aria-hidden>×</span>
         </button>
       ) : null}
-      {face.href ? (
+      {face.locked ? (
+        <span className="node-face-lock" data-lock-badge>
+          <LockMark />
+          Private
+        </span>
+      ) : null}
+      {face.href && !locked ? (
         <Link href={face.href} className="node-face-link" title={`Open ${face.name}`}>
           {body}
         </Link>
       ) : (
-        <div className="node-face-link">{body}</div>
+        <div className="node-face-link" data-locked={face.locked ? "true" : undefined}>
+          {body}
+        </div>
       )}
     </article>
   );
@@ -101,6 +110,15 @@ function glyphKind(id: string): string {
   if (id === "lifting" || id.endsWith("-lifting")) return "lifting";
   if (id === "manual" || id.endsWith("-manual")) return "manual";
   return id;
+}
+
+function LockMark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="6" y="11" width="12" height="9" rx="1.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8.5 11V8.2a3.5 3.5 0 0 1 7 0V11" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
 }
 
 function NodeGlyph({ id }: { id: string }) {

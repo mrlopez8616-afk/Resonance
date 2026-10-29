@@ -18,6 +18,7 @@ import {
   fightDeskHomeFace,
   fightHomeFace,
   financeHomeFaceTile,
+  financePublicHomeFace,
   fitnessHomeFace,
   healthHomeFace,
   lessonsHomeFace,
@@ -451,5 +452,32 @@ describe("uniform home tiles", () => {
     const chain = chainHomeFace({ unavailable: false, count: 2, lines: [] }, false);
     assert.equal(chain.headline, "2");
     assert.equal(chain.status, "logged");
+  });
+
+  it("keeps the public Finance tile visible and unlinked", async () => {
+    const ui = await faceUi();
+    const face = financePublicHomeFace({ accountCount: 4, asOfLine: "as of Oct 8 · $80,000" });
+    assert.equal(face.href, "");
+    assert.equal(face.locked, true);
+    assert.equal(face.name, "Finance");
+    assert.equal(face.headline, "Private");
+    assert.equal(face.headline.includes("$"), false);
+    const html = markup(ui, face);
+    assert.match(html, /data-lock-badge/);
+    assert.match(html, /Private/);
+    assert.equal(/<a[\s>]/.test(html), false);
+    assert.equal(html.includes('href="'), false);
+    const crypto = bookHomeFace({
+      id: "crypto",
+      name: "Crypto",
+      href: "/n/crypto",
+      publicMode: true,
+      summary: null,
+      connected: true,
+      mover: null,
+      weightLabel: "12.0%",
+      growthLabel: null,
+    });
+    assert.match(markup(ui, crypto), /href="\/n\/crypto"/);
   });
 });

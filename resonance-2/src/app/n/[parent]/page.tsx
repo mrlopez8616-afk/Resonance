@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
+import { PrivatePage } from "@/components/private-notice";
 import { FitnessStoryView } from "@/components/fitness-story";
 import { FitnessTokenCopy } from "@/components/fitness-token-copy";
 import { CatalystEntry } from "@/components/catalyst-calendar";
@@ -16,7 +17,7 @@ import { loadBankroll } from "@/lib/bankroll-load";
 import { loadPublicFloor } from "@/lib/public-load";
 import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
-import { financeCards, publicFinanceCards } from "@/lib/finance/view";
+import { financeCards } from "@/lib/finance/view";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { buildFitnessStory, parseStoryRange } from "@/lib/fitness-story";
 import { loadFitnessBundle } from "@/lib/fitness-store";
@@ -176,8 +177,9 @@ export default async function ParentNodePage({
     }
 
   if (parent.id === "finance") {
+    if (await isPublicMode()) return <PrivatePage />;
     await requireRole("owner");
-    const [finance, publicMode] = await Promise.all([loadFinancePage(), isPublicMode()]);
+    const finance = await loadFinancePage();
     return (
       <OperatorShell
         storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
@@ -189,8 +191,8 @@ export default async function ParentNodePage({
           <FinanceFloor
             asOf={finance.snapshot.asOf}
             stale={finance.stale}
-            cards={publicMode ? publicFinanceCards(finance.snapshot) : financeCards(finance.snapshot)}
-            publicMode={publicMode}
+            cards={financeCards(finance.snapshot)}
+            publicMode={false}
           />
         ) : finance.status === "waiting" ? (
           <FinanceWaiting />

@@ -36,7 +36,9 @@ import {
   triggerBits,
   type HealthBits,
   type HealthFullReport,
+  type HealthIssue,
 } from "@/lib/health-report";
+import { runPublicViewProbe } from "@/lib/public-view-probe";
 import { AI_STOCK_TICKERS } from "@/lib/ai-stocks";
 import { EQUITY_FACE_TICKERS, loadEquityQuotes } from "@/lib/equity-price";
 import { CRYPTO_HOME_TICKERS } from "@/lib/home-lines";
@@ -371,7 +373,20 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     ),
   );
 
-  return assembleHealth(now.toISOString(), tiles, pages);
+  let issues: HealthIssue[];
+  try {
+    issues = await runPublicViewProbe();
+  } catch {
+    issues = [
+      {
+        id: "public-page-error",
+        name: "Public view probe failed",
+        status: "error",
+        path: "/",
+      },
+    ];
+  }
+  return assembleHealth(now.toISOString(), tiles, pages, issues);
 }
 
 export async function loadHealthFull(now = new Date()): Promise<HealthFullReport> {

@@ -22,8 +22,6 @@ import { loadLessonsHome } from "@/lib/lessons-store";
 import type { LessonsHomeModel } from "@/lib/lessons";
 import { loadPublicFloor } from "@/lib/public-load";
 import { financePublicHomeFace, publicHomeNodeCount } from "@/lib/home-faces";
-import { formatCivilDate } from "@/lib/calendar-time";
-import { loadFinancePage } from "@/lib/finance/store";
 import { loadRoundtableHome } from "@/lib/roundtable-store";
 import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { hasMoneyText, publicHref, publicRecordLabel, stripMoneyText } from "@/lib/public-mode";
@@ -63,7 +61,7 @@ function safeLine(line: string): string | null {
 }
 
 export async function PublicHomePage() {
-  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome, financePage, roundtableHome] =
+  const [floor, fitness, bankroll, calendar, betsLoaded, buildHome, lessonsHome, controlHome, healthHome, chainHome, roundtableHome] =
     await Promise.all([
     loadPublicFloor(),
     loadFitnessHome(),
@@ -86,10 +84,6 @@ export async function PublicHomePage() {
     loadChainSecurityHome(true).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return chainHomeFallback;
-    }),
-    loadFinancePage().catch((error: unknown) => {
-      if (!isStorageUnavailable(error)) throw error;
-      return null;
     }),
     loadRoundtableHome(true).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
@@ -149,14 +143,7 @@ export async function PublicHomePage() {
               ? null
               : buildHome.percentLabel,
         }}
-        finance={financePublicHomeFace(
-          financePage?.status === "live"
-            ? {
-                accountCount: financePage.snapshot.accounts.length,
-                asOfLine: `as of ${formatCivilDate(financePage.snapshot.asOf)}`,
-              }
-            : null,
-        )}
+        finance={financePublicHomeFace()}
       />
       <ControlHomeCard lines={controlHome.lines} live={controlHome.live} publicMode />
       {healthHome ? <HealthHomeCard report={healthHome.report} /> : null}
