@@ -244,10 +244,17 @@ describe("health auto export parse", () => {
     const distance = normalizeDistance(5.2, "km");
     assert.ok(distance);
     assert.ok(Math.abs(Number(run?.distanceQty) - distance.miles) < 0.0001);
-    const payload = run?.payload as { miles?: string; km?: string; source?: string };
+    const payload = run?.payload as {
+      miles?: string;
+      km?: string;
+      source?: string;
+      heart?: { t: string; bpm: string }[];
+    };
     assert.equal(payload.source, "Nike Run Club");
     assert.ok(Math.abs(Number(payload.km) - 5.2) < 0.001);
+    assert.deepEqual(payload.heart, [{ t: "2026-09-12T11:41:00.000Z", bpm: "154" }]);
     assert.equal(JSON.stringify(run?.payload).includes("41.881"), false);
+    assert.equal(JSON.stringify(run?.payload).includes("latitude"), false);
     assert.equal(JSON.stringify(run?.payload).includes("heartRateData"), false);
     const again = parseHealthAutoExport({
       data: {
@@ -276,6 +283,209 @@ describe("health auto export parse", () => {
         ],
       },
     }).workouts[0]?.externalId);
+  });
+
+  it("stores Nike metrics and splits a fine distance series without guessing", async () => {
+    const atMinute = (minute: number) =>
+      new Date(Date.parse("2026-09-12T11:40:00.000Z") + minute * 60_000).toISOString().replace(".000Z", "Z");
+    const fineDistance = Array.from({ length: 21 }, (_, minute) => ({
+      date: atMinute(minute),
+      qty: 0.1,
+      units: "mi",
+    }));
+    const fine = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "fine-run",
+            name: "Running",
+            start: "2026-09-12T11:40:00Z",
+            end: "2026-09-12T12:01:00Z",
+            source: "Nike Run Club",
+            elevationUp: { qty: 42.5, units: "m" },
+            elevationDown: { qty: 40, units: "ft" },
+            route: [{ latitude: 41.881, longitude: -87.623, timestamp: atMinute(0) }],
+            heartRateData: [
+              { date: "2026-09-12T11:40:10Z", Avg: 150 },
+              { date: "2026-09-12T11:40:40Z", Avg: 156 },
+              { date: "2026-09-12T11:41:00Z", Avg: 160 },
+            ],
+            walkingAndRunningDistance: fineDistance,
+            activeEnergy: [
+              { date: atMinute(0), qty: 12, units: "kcal" },
+              { date: atMinute(1), qty: 13, units: "kcal" },
+            ],
+          },
+        ],
+      },
+    });
+    const payload = fine.workouts[0]?.payload as {
+      elevationUp?: { qty: string; units: string };
+      elevationDown?: { qty: string; units: string };
+      heart?: { t: string; bpm: string }[];
+      distanceSeries?: { t: string; miles: string }[];
+      energySeries?: { t: string; kcal: string }[];
+      splits?: { miles: string; durationSec: string }[];
+    };
+    assert.deepEqual(payload.elevationUp, { qty: "42.5", units: "m" });
+    assert.deepEqual(payload.elevationDown, { qty: "40", units: "ft" });
+    assert.deepEqual(payload.heart, [
+      { t: "2026-09-12T11:40:00.000Z", bpm: "153" },
+      { t: "2026-09-12T11:41:00.000Z", bpm: "160" },
+    ]);
+    assert.equal(payload.distanceSeries?.length, 21);
+    assert.equal(payload.distanceSeries?.[0]?.miles, "0.1");
+    assert.deepEqual(payload.energySeries, [
+      { t: "2026-09-12T11:40:00.000Z", kcal: "12" },
+      { t: "2026-09-12T11:41:00.000Z", kcal: "13" },
+    ]);
+    assert.deepEqual(payload.splits, [
+      { miles: "1", durationSec: "540" },
+      { miles: "1", durationSec: "600" },
+    ]);
+    assert.equal(fine.workouts[0]?.energyKcal, "25");
+    const stored = JSON.stringify(payload);
+    assert.equal(stored.includes("41.881"), false);
+    assert.equal(stored.includes("latitude"), false);
+    assert.equal(stored.includes("longitude"), false);
+    assert.equal(stored.includes("heartRateData"), false);
+    assert.equal(stored.includes("route"), false);
+
+    const coarse = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "coarse-run",
+            name: "Running",
+            start: "2026-09-12T11:40:00Z",
+            distance: { qty: 1, units: "mi" },
+            walkingAndRunningDistance: [
+              { date: atMinute(0), qty: 0.5, units: "mi" },
+              { date: atMinute(30), qty: 0.5, units: "mi" },
+            ],
+            elevationUp: { qty: 10, units: "floors" },
+          },
+        ],
+      },
+    });
+    const coarsePayload = coarse.workouts[0]?.payload as { splits?: unknown; distanceSeries?: unknown[]; elevationUp?: unknown };
+    assert.equal(coarsePayload.splits, undefined);
+    assert.equal(coarsePayload.elevationUp, undefined);
+    assert.equal(coarsePayload.distanceSeries?.length, 2);
+
+    const wholeMile = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "wide-sample",
+            name: "Running",
+            start: "2026-09-12T11:40:00Z",
+            walkingAndRunningDistance: [
+              { date: atMinute(0), qty: 0.2, units: "mi" },
+              { date: atMinute(1), qty: 1.2, units: "mi" },
+            ],
+          },
+        ],
+      },
+    });
+    assert.equal((wholeMile.workouts[0]?.payload as { splits?: unknown }).splits, undefined);
+
+    const hole = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "hole-run",
+            name: "Running",
+            start: "2026-09-12T11:40:00Z",
+            walkingAndRunningDistance: [
+              { date: atMinute(0), qty: 0.1, units: "mi" },
+              { date: atMinute(1), qty: 0.1, units: "mi" },
+              { date: atMinute(6), qty: 0.1, units: "mi" },
+            ],
+          },
+        ],
+      },
+    });
+    assert.equal((hole.workouts[0]?.payload as { splits?: unknown }).splits, undefined);
+
+    const laps = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "lap-run",
+            name: "Running",
+            start: "2026-09-12T11:40:00Z",
+            splits: [{ distance: { qty: 1, units: "mi" }, duration: 500 }],
+            walkingAndRunningDistance: fineDistance,
+          },
+        ],
+      },
+    });
+    assert.deepEqual((laps.workouts[0]?.payload as { splits?: { durationSec: string }[] }).splits, [
+      { miles: "1", durationSec: "500" },
+    ]);
+
+    const seriesOnly = parseHealthAutoExport({
+      data: {
+        workouts: [
+          {
+            id: "series-only",
+            name: "Running",
+            start: "2026-09-12T11:40:00Z",
+            walkingAndRunningDistance: fineDistance.slice(0, 10),
+          },
+        ],
+      },
+    });
+    assert.equal(seriesOnly.workouts[0]?.distanceQty, "1");
+    assert.equal(seriesOnly.workouts[0]?.distanceUnits, "mi");
+    assert.deepEqual((seriesOnly.workouts[0]?.payload as { splits?: { durationSec: string }[] }).splits, [
+      { miles: "1", durationSec: "540" },
+    ]);
+
+    const { buildRunDetail } = await import("@/lib/fitness-present");
+    const { RunDetailMirror } = await import("@/components/fitness-floor");
+    const workouts = fine.workouts;
+    const owner = buildRunDetail({ workouts, today: "2026-09-12", id: "health-auto-export:fine-run", publicMode: false });
+    const shared = buildRunDetail({ workouts, today: "2026-09-12", id: "health-auto-export:fine-run", publicMode: true });
+    assert.ok(owner);
+    assert.ok(shared);
+    assert.equal(owner.elevation, "42.5 m up · 40 ft down");
+    assert.equal(owner.route, "Route: not available from Nike");
+    assert.equal(owner.splits.length, 2);
+    assert.equal(owner.heart?.length, 2);
+    assert.equal(owner.heart?.[0]?.bpm, 153);
+    assert.equal(shared.heart, undefined);
+    assert.equal(shared.avgHeart, undefined);
+    assert.equal(shared.maxHeart, undefined);
+    assert.equal(JSON.stringify(shared).includes("heart"), false);
+    assert.equal(JSON.stringify(shared).includes("bpm"), false);
+    const ownerHtml = render(createElement(RunDetailMirror, { detail: owner }));
+    const publicHtml = render(createElement(RunDetailMirror, { detail: shared }));
+    assert.match(ownerHtml, /Heart rate/);
+    assert.match(ownerHtml, /153 bpm/);
+    assert.match(ownerHtml, /Route: not available from Nike/);
+    assert.match(ownerHtml, /42\.5 m up/);
+    assert.match(ownerHtml, /Split 1/);
+    assert.match(publicHtml, /Route: not available from Nike/);
+    assert.match(publicHtml, /42\.5 m up/);
+    assert.match(publicHtml, /40 ft down/);
+    assert.match(publicHtml, /Split 1/);
+    assert.equal(/Heart rate|bpm|heartRate/i.test(publicHtml), false);
+    assert.equal(publicHtml.includes("153"), false);
+    assert.equal(publicHtml.includes("160"), false);
+    assert.equal(publicHtml.includes("155"), false);
+
+    const bare = buildRunDetail({
+      workouts: coarse.workouts,
+      today: "2026-09-12",
+      id: "health-auto-export:coarse-run",
+      publicMode: false,
+    });
+    assert.equal(bare?.splitsNote, "No splits in this export.");
+    assert.equal(bare?.elevation, "not recorded");
+    assert.equal(bare?.route, "Route: not available from Nike");
+    assert.deepEqual(bare?.heart, []);
   });
 
   it("compares the digest in constant time and ignores a short hash", () => {
@@ -464,6 +674,12 @@ describe("health auto export ingest", { concurrency: false }, () => {
     assert.equal(steps.detail?.rows.some((row) => row.primary.includes("steps")), true);
 
     await postIngest(nrcWorkout, token);
+    const bundle = await loadFitnessBundle("2026-09-12");
+    const storedRun = bundle.workouts.find((row) => row.externalId === "nrc-2026-09-12");
+    const storedPayload = storedRun?.payload as { heart?: { bpm: string }[] };
+    assert.deepEqual(storedPayload.heart, [{ t: "2026-09-12T11:41:00.000Z", bpm: "154" }]);
+    assert.equal(JSON.stringify(storedRun?.payload).includes("heartRateData"), false);
+    assert.equal(JSON.stringify(storedRun?.payload).includes("41.881"), false);
     const runs = await loadFitnessNode("runs", "2026-09-12");
     assert.match(runs.detail?.rows.map((row) => row.primary).join(" ") ?? "", /mi/);
     assert.match(runs.detail?.rows.map((row) => row.secondary ?? "").join(" ") ?? "", /km/);
@@ -589,6 +805,9 @@ describe("health auto export settings copy", () => {
     assert.match(html, new RegExp(HEALTH_AUTO_EXPORT_HEADER_NAME));
     assert.match(html, /step_count/);
     assert.match(html, /Aggregate data on/);
+    assert.match(html, /Include Workout Metrics ON/);
+    assert.match(html, /Time Grouping Minutes/);
+    assert.match(html, /Route OFF/);
     assert.match(html, /Batch Requests/);
     assert.match(html, /4\.5 MB/);
     assert.match(html, /full history/);

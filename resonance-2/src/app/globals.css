@@ -5434,6 +5434,18 @@ a.fighter-link {
   font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
+.fitness-hr-line {
+  fill: none;
+  stroke: #ff5a63;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.fitness-hr-line-dot {
+  fill: #ff5a63;
+}
+
 .fitness-notes,
 .fitness-activity,
 .fitness-month-rows,
