@@ -58,12 +58,12 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? null;
   const authorization = request.headers.get("authorization");
-  const backupCron = pathname === "/api/cron/backup";
+  const cronRoute = pathname === "/api/cron/backup" || pathname === "/api/cron/youtube";
   const plan = planAccess({
     pathname,
     method: request.method,
     sessionToken: token,
-    bearerOk: backupCron ? bearerMatchesBackupSecret(authorization) : bearerMatchesSyncSecret(authorization),
+    bearerOk: cronRoute ? bearerMatchesBackupSecret(authorization) : bearerMatchesSyncSecret(authorization),
     loginConfigured: isLoginConfigured(),
     nextPath: `${pathname}${search}`,
     loginVisitorHit: await loginVisitorHit(request),

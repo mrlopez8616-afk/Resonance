@@ -288,7 +288,8 @@ describe("future ideas store", { concurrency: false }, () => {
     const membership = readFileSync(path.join(root, "db/migrations/044_future_idea_membership.sql"), "utf8");
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "044_future_idea_membership");
     assert.equal(embedded?.sql, membership);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "045_youtube_analytics");
     const title =
       "Membership access tier — paid membership granting access to explore Resonance (Oct 29, 2026)";
     await sqlQuery(`DELETE FROM schema_migrations WHERE id = '044_future_idea_membership'`);

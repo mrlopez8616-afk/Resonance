@@ -71,6 +71,8 @@ export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "POST", path: "/api/chain-security", loggedOut: "401", auth: "sync bearer" },
   { method: "GET", path: "/api/cron/backup", loggedOut: "401", auth: "CRON_SECRET or sync bearer" },
   { method: "POST", path: "/api/cron/backup", loggedOut: "401", auth: "CRON_SECRET or sync bearer" },
+  { method: "GET", path: "/api/cron/youtube", loggedOut: "401", auth: "CRON_SECRET or sync bearer" },
+  { method: "POST", path: "/api/cron/youtube", loggedOut: "401", auth: "CRON_SECRET or sync bearer" },
   { method: "POST", path: "/api/deposits/void", loggedOut: "401", auth: "sync bearer" },
   { method: "GET", path: "/api/fights/bankroll", loggedOut: "401", auth: "sync bearer" },
   { method: "POST", path: "/api/fights/bankroll/deposit", loggedOut: "401", auth: "sync bearer" },
@@ -114,6 +116,9 @@ export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "GET", path: "/api/youtube/bricks", loggedOut: "401", auth: "owner session" },
   { method: "POST", path: "/api/youtube/bricks", loggedOut: "401", auth: "sync bearer" },
   { method: "PATCH", path: "/api/youtube/bricks", loggedOut: "401", auth: "sync bearer" },
+  { method: "GET", path: "/api/youtube/oauth/start", loggedOut: "401", auth: "owner session" },
+  { method: "GET", path: "/api/youtube/oauth/callback", loggedOut: "401", auth: "owner session" },
+  { method: "GET", path: "/api/youtube/yesterday", loggedOut: "401", auth: "sync bearer" },
   { method: "POST", path: "/api/visitors", loggedOut: "204 empty", auth: "login or landing page only" },
 ];
 
@@ -345,6 +350,8 @@ const SYNC_WRITES = new Set([
   "PATCH /api/youtube/bricks",
   "GET /api/cron/backup",
   "POST /api/cron/backup",
+  "GET /api/cron/youtube",
+  "POST /api/cron/youtube",
   "GET /api/fights/bankroll",
 ]);
 
@@ -457,6 +464,10 @@ async function loadHandlers(): Promise<{
     xrp,
     bricks,
     visitors,
+    youtubeCron,
+    youtubeStart,
+    youtubeCallback,
+    youtubeYesterday,
   ] = await Promise.all([
     import("@/app/api/approvals/route"),
     import("@/app/api/approvals/[id]/decision/route"),
@@ -506,6 +517,10 @@ async function loadHandlers(): Promise<{
     import("@/app/api/xrp-price/route"),
     import("@/app/api/youtube/bricks/route"),
     import("@/app/api/visitors/route"),
+    import("@/app/api/cron/youtube/route"),
+    import("@/app/api/youtube/oauth/start/route"),
+    import("@/app/api/youtube/oauth/callback/route"),
+    import("@/app/api/youtube/yesterday/route"),
   ]);
 
   const threadGet: Handler = (incoming) => thread.GET(incoming, { params: Promise.resolve({ id: "rt-example" }) });
@@ -540,6 +555,9 @@ async function loadHandlers(): Promise<{
       { path: "/api/system/events", call: events.GET },
       { path: "/api/xrp-price", call: xrp.GET },
       { path: "/api/youtube/bricks", call: bricks.GET },
+      { path: "/api/youtube/oauth/start", call: youtubeStart.GET },
+      { path: "/api/youtube/oauth/callback", call: youtubeCallback.GET },
+      { path: "/api/youtube/yesterday", call: youtubeYesterday.GET },
     ],
     writes: [
       { method: "POST", path: "/api/approvals", call: approvals.POST },
@@ -559,6 +577,8 @@ async function loadHandlers(): Promise<{
       { method: "POST", path: "/api/chain-security", call: chain.POST },
       { method: "GET", path: "/api/cron/backup", call: backup.GET },
       { method: "POST", path: "/api/cron/backup", call: backup.POST },
+      { method: "GET", path: "/api/cron/youtube", call: youtubeCron.GET },
+      { method: "POST", path: "/api/cron/youtube", call: youtubeCron.POST },
       { method: "POST", path: "/api/deposits/void", call: deposits.POST },
       { method: "GET", path: "/api/fights/bankroll", call: bankroll.GET },
       { method: "POST", path: "/api/fights/bankroll/deposit", call: deposit.POST },

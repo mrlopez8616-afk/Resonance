@@ -37,9 +37,24 @@ export const CHANNEL_STATS = [
 
 export type ChannelStatRow = { id: string; label: string; value: string };
 
-/** No YouTube Data API or Analytics connection exists, so every value is NOT_CONNECTED. */
-export function channelStatRows(): ChannelStatRow[] {
-  return CHANNEL_STATS.map((stat) => ({ id: stat.id, label: stat.label, value: NOT_CONNECTED }));
+/** No source yet: every value is NOT_CONNECTED. A connected screen passes the three strings. */
+export function channelStatRows(values?: {
+  subscribers: string;
+  views: string;
+  videos: string;
+} | null): ChannelStatRow[] {
+  const stored = values
+    ? {
+        subscribers: values.subscribers,
+        "views-28d": values.views,
+        videos: values.videos,
+      }
+    : null;
+  return CHANNEL_STATS.map((stat) => ({
+    id: stat.id,
+    label: stat.label,
+    value: stored?.[stat.id as keyof typeof stored] || NOT_CONNECTED,
+  }));
 }
 
 export type YouTubeBrickCard = {
@@ -64,9 +79,16 @@ function gearCountLabel(count: number): string {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
+export type YouTubeChannelFace = {
+  figure: string;
+  status: string | null;
+  live: boolean;
+};
+
 export function youtubeParentCards(
   gear: readonly YouTubeGear[] = YOUTUBE_GEAR,
   brick: YouTubeBrickCard = BRICK_UNCONNECTED,
+  channel?: YouTubeChannelFace,
 ): YouTubeCard[] {
   const fresh = gear.filter((item) => item.isNew).length;
   return [
@@ -74,9 +96,9 @@ export function youtubeParentCards(
       id: "channel",
       label: "Channel",
       href: "/n/youtube/channel",
-      figure: `Stats ${NOT_CONNECTED}`,
-      lines: [],
-      live: false,
+      figure: channel?.figure ?? `Stats ${NOT_CONNECTED}`,
+      lines: channel?.status ? [channel.status] : [],
+      live: channel?.live ?? false,
     },
     {
       id: "gear",
@@ -97,8 +119,8 @@ export function youtubeParentCards(
   ];
 }
 
-export function youtubeHomeLines(gear: readonly YouTubeGear[] = YOUTUBE_GEAR): string[] {
-  return [`Channel ${NOT_CONNECTED}`, `Gear: ${gearCountLabel(gear.length).toLowerCase()}`, "Brick Tracker"];
+export function youtubeHomeLines(gear: readonly YouTubeGear[] = YOUTUBE_GEAR, channelLine?: string): string[] {
+  return [channelLine?.trim() || `Channel ${NOT_CONNECTED}`, `Gear: ${gearCountLabel(gear.length).toLowerCase()}`, "Brick Tracker"];
 }
 
 export function gearHref(id: string): string {

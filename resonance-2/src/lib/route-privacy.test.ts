@@ -38,6 +38,8 @@ const SECRET_NAMES = [
   "CRON_SECRET",
   "DATABASE_URL",
   "BLOB_READ_WRITE_TOKEN",
+  "GOOGLE_YT_CLIENT_ID",
+  "GOOGLE_YT_CLIENT_SECRET",
 ];
 
 function memorySql(): SqlClient {
