@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const RESONANCE3_PROJECT_ID = "prj_X4ZJXArkUXpdjBJ4sKSzjkkKsVlT";
 
-const IGNORE_COMMAND = "exit 1";
+const IGNORE_COMMAND =
+  'if [ -z "$VERCEL_PROJECT_ID" ]; then exit 1; fi; if [ "$VERCEL_PROJECT_ID" = "prj_X4ZJXArkUXpdjBJ4sKSzjkkKsVlT" ] && [ "$VERCEL_ENV" = "production" ]; then exit 1; fi; exit 0';
 
 const libDir = path.dirname(fileURLToPath(import.meta.url));
 const resonance2Root = path.resolve(libDir, "../..");
@@ -72,19 +73,19 @@ describe("vercel ignoreCommand", () => {
       name: "resonance3 preview skips",
       projectId: RESONANCE3_PROJECT_ID,
       vercelEnv: "preview",
-      code: 1,
+      code: 0,
     },
     {
       name: "another project production skips",
       projectId: "prj_other",
       vercelEnv: "production",
-      code: 1,
+      code: 0,
     },
     {
       name: "another project preview skips",
       projectId: "prj_other",
       vercelEnv: "preview",
-      code: 1,
+      code: 0,
     },
     {
       name: "unset project id builds",
