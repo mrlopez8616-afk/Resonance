@@ -1,5 +1,21 @@
 import Link from "next/link";
-import type { AnalyticsMetric, RunDetailView, RunsView, StepBarModel, StepSpan, StepsView } from "@/lib/fitness-present";
+import {
+  fitnessRangeHref,
+  fitnessTabHref,
+  type ActivityHistory,
+  type AnalyticsMetric,
+  type FitnessTab,
+  type HistoryDay,
+  type HistoryMonth,
+  type HistoryWeek,
+  type HistoryYear,
+  type PrModel,
+  type RunDetailView,
+  type RunsView,
+  type StepBarModel,
+  type StepSpan,
+  type StepsView,
+} from "@/lib/fitness-present";
 
 const SPANS: readonly { id: StepSpan; label: string }[] = [
   { id: "d", label: "D" },
@@ -45,26 +61,126 @@ function Bars({ bars, label, tall = false }: { bars: readonly StepBarModel[]; la
   );
 }
 
+function RangeNav({ label, span, base }: { label: string; span: StepSpan; base: string }) {
+  return (
+    <nav className="fitness-segments" aria-label={label}>
+      {SPANS.map((item) => {
+        const selected = span === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={fitnessRangeHref(base, item.id)}
+            className={selected ? "is-selected" : undefined}
+            aria-current={selected ? "true" : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function Records({ records, note }: { records: readonly PrModel[]; note?: string | null }) {
+  if (records.length === 0) return null;
+  return (
+    <div className="fitness-records" aria-label="Records">
+      <h3>Records</h3>
+      <ul>
+        {records.map((record) => (
+          <li key={record.id}>
+            <span>{record.label}</span>
+            <strong>{record.value}</strong>
+            <em>{record.when}</em>
+          </li>
+        ))}
+      </ul>
+      {note ? <p className="fitness-quiet">{note}</p> : null}
+    </div>
+  );
+}
+
+function HistoryDayRow({ day }: { day: HistoryDay }) {
+  return (
+    <li>
+      <span>{day.href ? <Link href={day.href}>{day.label}</Link> : day.label}</span>
+      <strong>{day.value}</strong>
+      {day.lines && day.lines.length > 0 ? (
+        <ol>
+          {day.lines.map((line) => (
+            <li key={line.id}>{line.href ? <Link href={line.href}>{line.value}</Link> : line.value}</li>
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+}
+
+function HistoryWeeks({ weeks }: { weeks: readonly HistoryWeek[] }) {
+  return weeks.map((week) => (
+    <details key={week.id} className="fitness-history-week">
+      <summary>
+        <span>{week.label}</span>
+        <strong>{week.summary}</strong>
+      </summary>
+      <ol className="fitness-history-days">
+        {week.days.map((day) => (
+          <HistoryDayRow key={day.id} day={day} />
+        ))}
+      </ol>
+    </details>
+  ));
+}
+
+function HistoryMonth({ month }: { month: HistoryMonth }) {
+  return (
+    <details className="fitness-history-month">
+      <summary>
+        <span>{month.label}</span>
+        <strong>{month.summary}</strong>
+      </summary>
+      <HistoryWeeks weeks={month.weeks} />
+    </details>
+  );
+}
+
+function HistoryYear({ year }: { year: HistoryYear }) {
+  return (
+    <details className="fitness-history-year">
+      <summary>
+        <span>{year.label}</span>
+        <strong>{year.summary}</strong>
+      </summary>
+      {year.months.map((month) => (
+        <HistoryMonth key={month.id} month={month} />
+      ))}
+    </details>
+  );
+}
+
+function History({ history }: { history: ActivityHistory }) {
+  if (history.weeks.length === 0 && history.months.length === 0 && history.years.length === 0) return null;
+  return (
+    <section className="fitness-history" aria-label="History">
+      <h3>History</h3>
+      {history.monthLabel ? <h4>{history.monthLabel}</h4> : null}
+      <HistoryWeeks weeks={history.weeks} />
+      {history.months.map((month) => (
+        <HistoryMonth key={month.id} month={month} />
+      ))}
+      {history.years.map((year) => (
+        <HistoryYear key={year.id} year={year} />
+      ))}
+    </section>
+  );
+}
+
 function StepsBlock({ steps }: { steps: StepsView }) {
   return (
     <section className="fitness-block" id="steps" aria-label="Steps">
       <div className="fitness-block-top">
         <h2>Steps</h2>
-        <nav className="fitness-segments" aria-label="Step range">
-          {SPANS.map((span) => {
-            const selected = steps.span === span.id;
-            return (
-              <Link
-                key={span.id}
-                href={`/n/fitness?span=${span.id}#steps`}
-                className={selected ? "is-selected" : undefined}
-                aria-current={selected ? "true" : undefined}
-              >
-                {span.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <RangeNav label="Step range" span={steps.span} base="/n/fitness" />
       </div>
       {steps.average ? (
         <p className="fitness-hero">
@@ -86,97 +202,34 @@ function StepsBlock({ steps }: { steps: StepsView }) {
           ))}
         </ul>
       ) : null}
-      {steps.days.length > 0 ? (
-        <details className="fitness-days">
-          <summary>
-            {steps.days.length} {steps.days.length === 1 ? "day" : "days"}
-          </summary>
-          <ol>
-            {steps.days.map((day) => (
-              <li key={day.id}>
-                <span>{day.label}</span>
-                <strong>{day.steps}</strong>
-              </li>
-            ))}
-          </ol>
-        </details>
-      ) : null}
+      <Records records={steps.records} />
+      <History history={steps.history} />
     </section>
   );
 }
 
-function ActivityBlock({ runs }: { runs: RunsView }) {
-  const month = runs.months[0];
+function RunsBlock({ runs }: { runs: RunsView }) {
   return (
-    <section className="fitness-block" id="activity" aria-label="Activity">
+    <section className="fitness-block" id="runs" aria-label="Runs">
       <div className="fitness-block-top">
-        <h2>Activity</h2>
-        {month ? <p className="fitness-quiet">{month.label}</p> : null}
+        <h2>Runs</h2>
+        <RangeNav label="Run range" span={runs.span} base="/n/fitness?tab=runs" />
       </div>
-      {month ? (
-        <dl className="fitness-statline">
-          <div>
-            <dt>Runs</dt>
-            <dd>{month.runs}</dd>
-          </div>
-          <div>
-            <dt>Distance</dt>
-            <dd>{month.miles}</dd>
-          </div>
-          <div>
-            <dt>Time</dt>
-            <dd>{month.time}</dd>
-          </div>
-          <div>
-            <dt>Pace</dt>
-            <dd>{month.pace}</dd>
-          </div>
-        </dl>
-      ) : null}
-      {runs.months.length > 1 ? (
-        <ul className="fitness-month-rows" aria-label="Earlier months">
-          {runs.months.slice(1, 4).map((row) => (
-            <li key={row.id}>
-              <span>{row.label}</span>
-              <strong>
-                {row.runs} · {row.miles} · {row.pace}
-              </strong>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {runs.empty ? (
-        <p className="fitness-quiet" role="status">
-          {runs.empty}
+      {runs.average ? (
+        <p className="fitness-hero">
+          <strong>{runs.average}</strong>
+          <span>{runs.averageLabel}</span>
         </p>
       ) : (
-        <ol className="fitness-activity">
-          {runs.cards.map((run) => (
-            <li key={run.id}>
-              <Link href={run.href}>
-                <span>{run.date}</span>
-                <strong>{run.distance}</strong>
-                <em>{[run.duration, run.pace, run.energy, run.avgHeart].filter(Boolean).join(" · ")}</em>
-              </Link>
-            </li>
-          ))}
-        </ol>
+        <p className="fitness-quiet" role="status">
+          {runs.empty ?? runs.rangeEmpty}
+        </p>
       )}
-      {runs.prs.length > 0 ? (
-        <div className="fitness-records" aria-label="Records">
-          <h3>Records</h3>
-          <ul>
-            {runs.prs.map((pr) => (
-              <li key={pr.id}>
-                <span>{pr.label}</span>
-                <strong>{pr.value}</strong>
-                <em>{pr.when}</em>
-              </li>
-            ))}
-          </ul>
-          {runs.prNote ? <p className="fitness-quiet">{runs.prNote}</p> : null}
-        </div>
-      ) : null}
+      {runs.trend ? <p className={`fitness-delta is-${runs.trendTone}`}>{runs.trend}</p> : null}
+      {runs.hourlyNote ? <p className="fitness-quiet">{runs.hourlyNote}</p> : null}
+      <Bars bars={runs.bars} label="Runs" tall />
+      <Records records={runs.prs} note={runs.prNote} />
+      <History history={runs.history} />
     </section>
   );
 }
@@ -205,20 +258,38 @@ function AnalyticsBlock({ metrics }: { metrics: readonly AnalyticsMetric[] }) {
   );
 }
 
-/** One Fitness screen: steps chart, activity, and analytics. Run detail is the drill-down. */
+/** Steps and Runs share one screen. A run detail is the drill-down. */
 export function FitnessFloor({
+  tab = "steps",
   steps,
   runs,
   analytics,
 }: {
+  tab?: FitnessTab;
   steps: StepsView;
   runs: RunsView;
   analytics: readonly AnalyticsMetric[];
 }) {
+  const span = tab === "runs" ? runs.span : steps.span;
   return (
     <div className="fitness-board">
-      <StepsBlock steps={steps} />
-      <ActivityBlock runs={runs} />
+      <nav className="fitness-segments fitness-tabs" aria-label="Activity">
+        <Link
+          href={fitnessTabHref("steps", span)}
+          className={tab === "steps" ? "is-selected" : undefined}
+          aria-current={tab === "steps" ? "page" : undefined}
+        >
+          Steps
+        </Link>
+        <Link
+          href={fitnessTabHref("runs", span)}
+          className={tab === "runs" ? "is-selected" : undefined}
+          aria-current={tab === "runs" ? "page" : undefined}
+        >
+          Runs
+        </Link>
+      </nav>
+      {tab === "runs" ? <RunsBlock runs={runs} /> : <StepsBlock steps={steps} />}
       <AnalyticsBlock metrics={analytics} />
     </div>
   );

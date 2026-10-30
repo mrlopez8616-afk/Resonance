@@ -1,5 +1,21 @@
 import Link from "next/link";
-import type { AnalyticsMetric, RunDetailView, RunsView, StepBarModel, StepSpan, StepsView } from "@/lib/fitness-present";
+import {
+  fitnessRangeHref,
+  fitnessTabHref,
+  type ActivityHistory,
+  type AnalyticsMetric,
+  type FitnessTab,
+  type HistoryDay,
+  type HistoryMonth,
+  type HistoryWeek,
+  type HistoryYear,
+  type PrModel,
+  type RunDetailView,
+  type RunsView,
+  type StepBarModel,
+  type StepSpan,
+  type StepsView,
+} from "@/lib/fitness-present";
 
 const SPANS: readonly { id: StepSpan; label: string }[] = [
   { id: "d", label: "D" },
@@ -45,26 +61,154 @@ function FitnessBars({ bars, label }: { bars: readonly StepBarModel[]; label: st
   );
 }
 
-export function StepsMirror({ view }: { view: StepsView }) {
+function RangeNav({ label, span, base }: { label: string; span: StepSpan; base: string }) {
+  return (
+    <nav className="lot-range fitness-span" aria-label={label}>
+      {SPANS.map((item) => {
+        const selected = span === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={fitnessRangeHref(base, item.id)}
+            className={selected ? "is-selected" : undefined}
+            aria-current={selected ? "true" : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function FitnessTabs({ tab, span = "w" }: { tab: FitnessTab; span?: StepSpan }) {
+  const tabs: readonly { id: FitnessTab; label: string }[] = [
+    { id: "steps", label: "Steps" },
+    { id: "runs", label: "Runs" },
+  ];
+  return (
+    <nav className="lot-range fitness-activity-tabs" aria-label="Activity">
+      {tabs.map((item) => {
+        const selected = tab === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={fitnessTabHref(item.id, span)}
+            className={selected ? "is-selected" : undefined}
+            aria-current={selected ? "page" : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function Records({ records, note }: { records: readonly PrModel[]; note?: string | null }) {
+  if (records.length === 0) return null;
+  return (
+    <section className="fitness-totals" aria-label="Records">
+      <h3>Records</h3>
+      <ul className="fitness-pr-grid">
+        {records.map((record) => (
+          <li key={record.id}>
+            <span>{record.label}</span>
+            <strong>{record.value}</strong>
+            <em>{record.when}</em>
+          </li>
+        ))}
+      </ul>
+      {note ? <p className="fitness-how">{note}</p> : null}
+    </section>
+  );
+}
+
+function HistoryDayRow({ day }: { day: HistoryDay }) {
+  return (
+    <li>
+      <span>{day.href ? <Link href={day.href}>{day.label}</Link> : day.label}</span>
+      <strong>{day.value}</strong>
+      {day.lines && day.lines.length > 0 ? (
+        <ol>
+          {day.lines.map((line) => (
+            <li key={line.id}>{line.href ? <Link href={line.href}>{line.value}</Link> : line.value}</li>
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+}
+
+function HistoryWeeks({ weeks }: { weeks: readonly HistoryWeek[] }) {
+  return weeks.map((week) => (
+    <details key={week.id} className="fitness-history-week">
+      <summary>
+        <span>{week.label}</span>
+        <strong>{week.summary}</strong>
+      </summary>
+      <ol className="fitness-history-days">
+        {week.days.map((day) => (
+          <HistoryDayRow key={day.id} day={day} />
+        ))}
+      </ol>
+    </details>
+  ));
+}
+
+function HistoryMonthBlock({ month }: { month: HistoryMonth }) {
+  return (
+    <details className="fitness-history-month">
+      <summary>
+        <span>{month.label}</span>
+        <strong>{month.summary}</strong>
+      </summary>
+      <HistoryWeeks weeks={month.weeks} />
+    </details>
+  );
+}
+
+function HistoryYearBlock({ year }: { year: HistoryYear }) {
+  return (
+    <details className="fitness-history-year">
+      <summary>
+        <span>{year.label}</span>
+        <strong>{year.summary}</strong>
+      </summary>
+      {year.months.map((month) => (
+        <HistoryMonthBlock key={month.id} month={month} />
+      ))}
+    </details>
+  );
+}
+
+function hasHistory(history: ActivityHistory): boolean {
+  return history.weeks.length > 0 || history.months.length > 0 || history.years.length > 0;
+}
+
+function ActivityHistoryView({ history }: { history: ActivityHistory }) {
+  if (!hasHistory(history)) return null;
+  return (
+    <section className="fitness-history" aria-label="History">
+      <h3>History</h3>
+      {history.monthLabel ? <h4>{history.monthLabel}</h4> : null}
+      <HistoryWeeks weeks={history.weeks} />
+      {history.months.map((month) => (
+        <HistoryMonthBlock key={month.id} month={month} />
+      ))}
+      {history.years.map((year) => (
+        <HistoryYearBlock key={year.id} year={year} />
+      ))}
+    </section>
+  );
+}
+
+export function StepsMirror({ view, rangeBase = "/n/fitness/steps" }: { view: StepsView; rangeBase?: string }) {
   return (
     <section className="fitness-mirror" aria-label="Steps">
       <header className="fitness-chart-head">
         <h2 className="node-ticker">Steps</h2>
-        <nav className="lot-range fitness-span" aria-label="Step range">
-          {SPANS.map((span) => {
-            const selected = view.span === span.id;
-            return (
-              <Link
-                key={span.id}
-                href={`/n/fitness/steps?span=${span.id}`}
-                className={selected ? "is-selected" : undefined}
-                aria-current={selected ? "true" : undefined}
-              >
-                {span.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <RangeNav label="Step range" span={view.span} base={rangeBase} />
       </header>
       {view.average ? (
         <>
@@ -87,106 +231,46 @@ export function StepsMirror({ view }: { view: StepsView }) {
           ))}
         </ul>
       ) : null}
-      {view.days.length > 0 ? (
-        <details className="fitness-days">
-          <summary>
-            {view.days.length} {view.days.length === 1 ? "day" : "days"}
-          </summary>
-          <ol>
-            {view.days.map((day) => (
-              <li key={day.id}>
-                <span>{day.label}</span>
-                <strong>{day.steps}</strong>
-              </li>
-            ))}
-          </ol>
-        </details>
-      ) : null}
+      <Records records={view.records} />
+      <ActivityHistoryView history={view.history} />
     </section>
   );
 }
 
-function RunFacts({
-  distance,
-  duration,
-  pace,
-  energy,
-  avgHeart,
+export function RunsMirror({
+  view,
+  rangeBase = "/n/fitness?tab=runs",
 }: {
-  distance: string;
-  duration: string;
-  pace: string;
-  energy: string | null;
-  avgHeart?: string;
+  view: RunsView;
+  rangeBase?: string;
 }) {
   return (
-    <>
-      <strong className="fitness-run-distance">{distance}</strong>
-      <p className="fitness-run-meta">
-        {[duration, pace, energy, avgHeart].filter(Boolean).join(" · ")}
-      </p>
-    </>
-  );
-}
-
-export function RunsMirror({ view }: { view: RunsView }) {
-  return (
     <section className="fitness-mirror" aria-label="Runs">
-      <header className="live-head">
+      <header className="fitness-chart-head">
         <h2 className="node-ticker">Runs</h2>
+        <RangeNav label="Run range" span={view.span} base={rangeBase} />
       </header>
+      {view.average ? (
+        <>
+          <p className="fitness-kicker">{view.averageLabel}</p>
+          <p className="fitness-average">{view.average}</p>
+          {view.trend ? <p className={`fitness-trend is-${view.trendTone}`}>{view.trend}</p> : null}
+        </>
+      ) : null}
+      {view.hourlyNote ? <p className="fitness-empty">{view.hourlyNote}</p> : null}
+      {view.bars.length > 0 ? <FitnessBars bars={view.bars} label="Runs" /> : null}
       {view.empty ? (
         <p className="fitness-empty" role="status">
           {view.empty}
         </p>
-      ) : (
-        <ol className="fitness-run-list">
-          {view.cards.map((run) => (
-            <li key={run.id}>
-              <Link href={run.href} className="fitness-run-card">
-                <span className="fitness-run-date">{run.date}</span>
-                <RunFacts
-                  distance={run.distance}
-                  duration={run.duration}
-                  pace={run.pace}
-                  energy={run.energy}
-                  avgHeart={run.avgHeart}
-                />
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
-      {view.months.length > 0 ? (
-        <section className="fitness-totals" aria-label="Monthly totals">
-          <h3>Months</h3>
-          <ul className="fitness-month-list">
-            {view.months.map((month) => (
-              <li key={month.id}>
-                <span>{month.label}</span>
-                <strong>
-                  {month.runs} {month.runs === "1" ? "run" : "runs"} · {month.miles} · {month.time} · {month.pace}
-                </strong>
-              </li>
-            ))}
-          </ul>
-        </section>
       ) : null}
-      {view.prs.length > 0 ? (
-        <section className="fitness-totals" aria-label="Personal records">
-          <h3>Records</h3>
-          <ul className="fitness-pr-grid">
-            {view.prs.map((pr) => (
-              <li key={pr.id}>
-                <span>{pr.label}</span>
-                <strong>{pr.value}</strong>
-                <em>{pr.when}</em>
-              </li>
-            ))}
-          </ul>
-          {view.prNote ? <p className="fitness-how">{view.prNote}</p> : null}
-        </section>
+      {view.rangeEmpty ? (
+        <p className="fitness-empty" role="status">
+          {view.rangeEmpty}
+        </p>
       ) : null}
+      <Records records={view.prs} note={view.prNote} />
+      <ActivityHistoryView history={view.history} />
     </section>
   );
 }
@@ -236,7 +320,7 @@ export function AnalyticsMirror({ metrics }: { metrics: readonly AnalyticsMetric
             {metric.detail ? <p className="fitness-trend">{metric.detail}</p> : null}
             {metric.bars.length > 0 ? <FitnessBars bars={metric.bars} label={metric.title} /> : null}
             <p className="fitness-how">
-              <span>How it's calculated. </span>
+              <span>{"How it's calculated. "}</span>
               {metric.how}
             </p>
           </article>

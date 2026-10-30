@@ -19,7 +19,7 @@ import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
-import { buildAnalytics, buildRunsView, buildStepsView, parseStepSpan } from "@/lib/fitness-present";
+import { buildAnalytics, buildRunsView, buildStepsView, parseFitnessTab, parseStepSpan } from "@/lib/fitness-present";
 import { loadFitnessBundle } from "@/lib/fitness-store";
 import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
 import { shortcutWorkoutsAsWrites } from "@/lib/fitness-workouts";
@@ -67,7 +67,7 @@ export default async function ParentNodePage({
   searchParams,
 }: {
   params: Promise<{ parent: string }>;
-  searchParams: Promise<{ range?: string | string[]; span?: string | string[] }>;
+  searchParams: Promise<{ range?: string | string[]; span?: string | string[]; tab?: string | string[] }>;
 }) {
   const [{ parent: id }, query] = await Promise.all([params, searchParams]);
   const range = parseLotRangeQuery(query.range);
@@ -203,6 +203,7 @@ export default async function ParentNodePage({
 
   if (parent.id === "fitness") {
     await requireRole("owner");
+    const tab = parseFitnessTab(query.tab);
     const span = parseStepSpan(query.span);
     const [floor, bundle, publicMode, manual] = await Promise.all([
       loadOperatorFloor(),
@@ -221,7 +222,7 @@ export default async function ParentNodePage({
       span,
       publicMode,
     });
-    const runs = buildRunsView({ workouts, today: bundle.today, publicMode });
+    const runs = buildRunsView({ workouts, today: bundle.today, span, publicMode });
     const analytics = buildAnalytics({
       metrics: bundle.metrics,
       workouts,
@@ -242,7 +243,7 @@ export default async function ParentNodePage({
           <Link href="/" className="calendar-back">
             Floor
           </Link>
-          <FitnessFloor steps={steps} runs={runs} analytics={analytics} />
+          <FitnessFloor tab={tab} steps={steps} runs={runs} analytics={analytics} />
           {publicMode ? null : (
             <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
           )}

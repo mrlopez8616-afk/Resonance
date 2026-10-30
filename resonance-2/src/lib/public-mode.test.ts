@@ -718,16 +718,19 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     today: "2026-10-29",
     publicMode: true,
   });
-  const fitnessPage = render(
-    createElement(fitnessFloor.FitnessFloor, { steps: stepsView, runs: runsView, analytics: analyticsView }),
+  const steps = render(
+    createElement(fitnessFloor.FitnessFloor, { tab: "steps", steps: stepsView, runs: runsView, analytics: analyticsView }),
   );
-  const steps = fitnessPage;
-  const runsPage = fitnessPage;
-  const analyticsPage = fitnessPage;
-  assert.match(fitnessPage, /Steps/);
-  assert.match(fitnessPage, /Activity/);
+  const runsPage = render(
+    createElement(fitnessFloor.FitnessFloor, { tab: "runs", steps: stepsView, runs: runsView, analytics: analyticsView }),
+  );
+  const analyticsPage = steps;
+  const fitnessPage = `${steps}${runsPage}`;
+  assert.match(steps, /Steps/);
+  assert.match(runsPage, /Runs/);
+  assert.match(runsPage, /tab=runs/);
   assert.match(fitnessPage, /Resonance Analytics/);
-  assert.match(fitnessPage, /span=d/);
+  assert.match(steps, /span=d/);
   assert.equal(fitnessPage.includes("<svg"), true);
   assert.equal(/bpm|heartRate|resting_heart/i.test(fitnessPage), false);
   assert.equal(fitnessPage.includes("154"), false);
