@@ -5114,6 +5114,50 @@ a.fighter-link {
   font-weight: 650;
 }
 
+.youtube-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  min-width: 0;
+}
+
+.youtube-trend,
+.youtube-videos {
+  min-width: 0;
+}
+
+.youtube-table-wrap {
+  overflow-x: auto;
+}
+
+.youtube-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.youtube-table th,
+.youtube-table td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.youtube-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.youtube-video-title {
+  min-width: 10rem;
+  white-space: normal;
+}
+
 .fresh-dot {
   width: 0.55rem;
   height: 0.55rem;

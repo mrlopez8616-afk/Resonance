@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeHealthRequest } from "@/lib/health-auth";
 import { loadHealthFull } from "@/lib/health-full-load";
+import { rememberHealthMark } from "@/lib/health-mark";
 import { publicHealthReport } from "@/lib/health-report";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ const PRIVATE = { "cache-control": "no-store" };
 /**
  * Read-only floor probe. `Authorization: Bearer $RESONANCE_HEALTH_TOKEN`.
  * The sync secret is not accepted. There is no write handler.
+ * The result is also stored as one mark so the YouTube pull can see it.
  */
 export async function GET(request: Request) {
   if (!authorizeHealthRequest(request)) {
@@ -17,6 +19,11 @@ export async function GET(request: Request) {
   }
   try {
     const report = publicHealthReport(await loadHealthFull());
+    try {
+      await rememberHealthMark(report.ok, report.checkedAt);
+    } catch {
+      // A missed mark leaves the YouTube pull on its own dependencies.
+    }
     return NextResponse.json(report, { headers: PRIVATE });
   } catch {
     return NextResponse.json(

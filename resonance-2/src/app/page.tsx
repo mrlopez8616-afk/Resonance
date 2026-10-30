@@ -35,6 +35,7 @@ import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { isPublicMode } from "@/lib/public-mode-server";
 import { privateHomeNodeCount } from "@/lib/home-faces";
 import { thisWeekItems } from "@/lib/this-week";
+import { loadYouTubeHomeLines } from "@/lib/youtube-screen";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ const chainHomeFallback: ChainSecurityHomeModel = {
 
 export default async function Home() {
   if (await isPublicMode()) return <PublicHomePage />;
-  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome, chainHome] =
+  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome, chainHome, youtubeLines] =
     await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
@@ -104,6 +105,10 @@ export default async function Home() {
     loadChainSecurityHome(false).catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return chainHomeFallback;
+    }),
+    loadYouTubeHomeLines().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return null;
     }),
   ]);
   let financeHome: FinanceHomeFace | null = null;
@@ -158,7 +163,7 @@ export default async function Home() {
       />
       <ControlHomeCard lines={controlHome.lines} live={controlHome.live} />
       {session?.role === "owner" && healthHome ? <HealthHomeCard report={healthHome.report} /> : null}
-      <YouTubeHomeCard />
+      <YouTubeHomeCard lines={youtubeLines ?? undefined} />
       <SystemHomeCard />
       <LessonsHomeCard card={lessonsHome} />
       {session?.role === "owner" ? <RoundtableHomeCard card={roundtableHome} /> : null}

@@ -211,9 +211,10 @@ describe("fighter career trends", () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "033_fighter_careers");
     assert.equal(embedded?.sql, file);
     assert.equal(file.includes("INSERT"), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "042_visitor_counts");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "043_health_auto_export_token");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "042_visitor_counts");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "043_health_auto_export_token");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "045_youtube_analytics");
 
     const parsed = parseFighterCareer({
       name: "Bravo",

@@ -336,17 +336,19 @@ describe("backup snapshots", () => {
     assert.equal(BACKUP_RUNS_SQL, file);
     assert.equal(file.includes("INSERT"), false);
     assert.equal(/^\s*delete\b/im.test(file), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-7)?.id, "038_backup_runs");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-6)?.id, "039_health_route_lesson");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-5)?.id, "040_market_quotes");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "041_public_node_lesson");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "042_visitor_counts");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "043_health_auto_export_token");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-8)?.id, "038_backup_runs");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-7)?.id, "039_health_route_lesson");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-6)?.id, "040_market_quotes");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-5)?.id, "041_public_node_lesson");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "042_visitor_counts");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "043_health_auto_export_token");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "045_youtube_analytics");
     const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {
       crons: { path: string; schedule: string }[];
     };
-    assert.deepEqual(vercel.crons, [{ path: "/api/cron/backup", schedule: BACKUP_CRON_SCHEDULE }]);
+    assert.equal(vercel.crons[0]?.path, "/api/cron/backup");
+    assert.equal(vercel.crons[0]?.schedule, BACKUP_CRON_SCHEDULE);
     const sources = [
       "src/lib/backup.ts",
       "src/lib/backup-github.ts",

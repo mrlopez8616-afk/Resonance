@@ -227,8 +227,9 @@ describe("anonymous visitors", () => {
     );
     assert.equal(floor.status, 204);
 
-    const summary = await readVisitorSummary(new Date("2026-10-29T20:00:00.000Z"));
-    const today = summary.days.find((day) => day.day === new Date().toISOString().slice(0, 10));
+    const now = new Date();
+    const summary = await readVisitorSummary(now);
+    const today = summary.days.find((day) => day.day === now.toISOString().slice(0, 10));
     assert.equal(summary.totalViews, 1);
     assert.equal(summary.totalVisitors, 1);
     assert.equal(today?.views, 1);
