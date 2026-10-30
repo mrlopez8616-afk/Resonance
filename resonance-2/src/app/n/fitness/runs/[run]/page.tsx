@@ -51,7 +51,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ run:
           detail={detail}
           publicMode={publicMode}
           updatedAt={workoutUpdatedAt(workout)}
-          backHref="/n/fitness#activity"
+          backHref="/n/fitness?tab=runs"
         />
       </div>
     </OperatorShell>

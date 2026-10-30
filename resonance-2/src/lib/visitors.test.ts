@@ -16,6 +16,7 @@ import {
   isBot,
   resetVisitorHitsForTests,
   trackingDeclined,
+  utcDay,
   visitorHash,
 } from "@/lib/visitors";
 
@@ -229,7 +230,7 @@ describe("anonymous visitors", () => {
 
     const now = new Date();
     const summary = await readVisitorSummary(now);
-    const today = summary.days.find((day) => day.day === now.toISOString().slice(0, 10));
+    const today = summary.days.find((day) => day.day === utcDay(now));
     assert.equal(summary.totalViews, 1);
     assert.equal(summary.totalVisitors, 1);
     assert.equal(today?.views, 1);

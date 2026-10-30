@@ -160,15 +160,33 @@ describe("fitness on the shared layout", () => {
     assert.match(html, /href="\/"/);
     assert.match(html, />Back</);
     assert.match(html, /id="steps"/);
-    assert.match(html, /id="activity"/);
     assert.match(html, /id="analytics"/);
     assert.match(html, /Steps/);
-    assert.match(html, /Activity/);
+    assert.match(html, /aria-label="Activity"/);
+    assert.match(html, /tab=runs/);
     assert.match(html, /Resonance Analytics/);
     assert.match(html, /span=d/);
     assert.match(html, /node-card node-card-equal/);
     assert.match(html, /154 bpm/);
+    assert.equal(html.includes('id="runs"'), false);
     assert.equal(html.includes("not recorded"), false);
+
+    const runsHtml = render(
+      createElement(floor.FitnessFloor, {
+        tab: "runs",
+        steps,
+        runs,
+        analytics,
+        updatedAt: latestFitnessUpdatedAt({ metrics: [metric("2026-11-02", 10000, run.endedAt!)], workouts: [run] }),
+      }),
+    );
+    assert.match(runsHtml, /id="runs"/);
+    assert.match(runsHtml, /tab=runs/);
+    assert.match(runsHtml, /History/);
+    assert.match(runsHtml, /Records/);
+    assert.match(runsHtml, /3\.2 mi/);
+    assert.match(runsHtml, /154 bpm/);
+    assert.equal(runsHtml.includes('id="steps"'), false);
   });
 
   it("locks heart cards in Public view and keeps their box", () => {
@@ -198,6 +216,16 @@ describe("fitness on the shared layout", () => {
     assert.match(html, /Steps/);
     assert.match(html, /<svg/);
 
+    const sharedRuns = render(
+      createElement(floor.FitnessFloor, { tab: "runs", steps, runs, analytics, publicMode: true, updatedAt: run.startedAt }),
+    );
+    assert.match(sharedRuns, /id="runs"/);
+    assert.match(sharedRuns, /3\.2 mi/);
+    assert.match(sharedRuns, /data-lock-badge/);
+    assert.equal(/bpm|heartRate|resting_heart/i.test(sharedRuns), false);
+    assert.equal(sharedRuns.includes("154"), false);
+    assert.equal(sharedRuns.includes("176"), false);
+
     const quiet = render(
       createElement(floor.FitnessFloor, {
         steps: buildStepsView({ metrics: [], today: "2026-11-02" }),
@@ -206,18 +234,33 @@ describe("fitness on the shared layout", () => {
       }),
     );
     assert.match(quiet, new RegExp(EMPTY_CARD_NOTE));
+    assert.match(quiet, /data-card="empty"/);
     assert.match(quiet, /data-node-status="not-connected"/);
     assert.equal(quiet.includes("Updated"), false);
     assert.equal(quiet.includes("not recorded"), false);
+    assert.equal(quiet.includes("No steps"), false);
+
+    const quietRuns = render(
+      createElement(floor.FitnessFloor, {
+        tab: "runs",
+        steps: buildStepsView({ metrics: [], today: "2026-11-02" }),
+        runs: buildRunsView({ workouts: [], today: "2026-11-02" }),
+        analytics: buildAnalytics({ metrics: [], workouts: [], today: "2026-11-02" }),
+      }),
+    );
+    assert.match(quietRuns, /id="runs"/);
+    assert.match(quietRuns, new RegExp(EMPTY_CARD_NOTE));
+    assert.equal(quietRuns.includes("No runs yet"), false);
+    assert.equal(quietRuns.includes("not recorded"), false);
   });
 
   it("boxes a run and locks heart rate without printing it in Public view", () => {
     const owner = buildRunDetail({ workouts: [run], today: "2026-11-02", id: "health-auto-export:layout-run" });
     assert.ok(owner);
     const ownerHtml = render(
-      createElement(floor.RunDetailMirror, { detail: owner!, updatedAt: run.startedAt, backHref: "/n/fitness#activity" }),
+      createElement(floor.RunDetailMirror, { detail: owner!, updatedAt: run.startedAt }),
     );
-    assert.match(ownerHtml, /href="\/n\/fitness#activity"/);
+    assert.match(ownerHtml, /href="\/n\/fitness\?tab=runs"/);
     assert.match(ownerHtml, /3\.2 mi/);
     assert.match(ownerHtml, /154 bpm/);
     assert.match(ownerHtml, /Updated 2:04 PM CT/);

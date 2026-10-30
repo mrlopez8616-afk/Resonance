@@ -10,7 +10,23 @@ import {
 } from "@/components/node-layout";
 import { fitnessMetricEmpty, fitnessPart } from "@/lib/fitness-layout";
 import type { NodePart } from "@/lib/node-layout";
-import type { AnalyticsMetric, RunDetailView, RunsView, StepBarModel, StepSpan, StepsView } from "@/lib/fitness-present";
+import {
+  fitnessRangeHref,
+  fitnessTabHref,
+  type ActivityHistory,
+  type AnalyticsMetric,
+  type FitnessTab,
+  type HistoryDay,
+  type HistoryMonth,
+  type HistoryWeek,
+  type HistoryYear,
+  type PrModel,
+  type RunDetailView,
+  type RunsView,
+  type StepBarModel,
+  type StepSpan,
+  type StepsView,
+} from "@/lib/fitness-present";
 
 const SPANS: readonly { id: StepSpan; label: string }[] = [
   { id: "d", label: "D" },
@@ -104,26 +120,153 @@ function floorParts(steps: StepsView, runs: RunsView, analytics: readonly Analyt
   return parts;
 }
 
+function RangeNav({ label, span, base }: { label: string; span: StepSpan; base: string }) {
+  return (
+    <nav className="fitness-segments" aria-label={label}>
+      {SPANS.map((item) => {
+        const selected = span === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={fitnessRangeHref(base, item.id)}
+            className={selected ? "is-selected" : undefined}
+            aria-current={selected ? "true" : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function ActivityTabs({ tab, span }: { tab: FitnessTab; span: StepSpan }) {
+  const tabs: readonly { id: FitnessTab; label: string }[] = [
+    { id: "steps", label: "Steps" },
+    { id: "runs", label: "Runs" },
+  ];
+  return (
+    <nav className="fitness-segments fitness-tabs" aria-label="Activity">
+      {tabs.map((item) => {
+        const selected = tab === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={fitnessTabHref(item.id, span)}
+            className={selected ? "is-selected" : undefined}
+            aria-current={selected ? "page" : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function Records({ records, note }: { records: readonly PrModel[]; note?: string | null }) {
+  if (records.length === 0) return null;
+  return (
+    <div className="fitness-records" aria-label="Records">
+      <h3>Records</h3>
+      <NodeGrid>
+        {records.map((record) => (
+          <StatCard key={record.id} label={record.label} value={record.value} detail={record.when} />
+        ))}
+      </NodeGrid>
+      {note ? <p className="node-note">{note}</p> : null}
+    </div>
+  );
+}
+
+function HistoryDayRow({ day }: { day: HistoryDay }) {
+  return (
+    <li>
+      <span>{day.href ? <Link href={day.href}>{day.label}</Link> : day.label}</span>
+      <strong>{day.value}</strong>
+      {day.lines && day.lines.length > 0 ? (
+        <ol>
+          {day.lines.map((line) => (
+            <li key={line.id}>{line.href ? <Link href={line.href}>{line.value}</Link> : line.value}</li>
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+}
+
+function HistoryWeeks({ weeks }: { weeks: readonly HistoryWeek[] }) {
+  return weeks.map((week) => (
+    <details key={week.id} className="fitness-history-week">
+      <summary>
+        <span>{week.label}</span>
+        <strong>{week.summary}</strong>
+      </summary>
+      <ol className="fitness-history-days">
+        {week.days.map((day) => (
+          <HistoryDayRow key={day.id} day={day} />
+        ))}
+      </ol>
+    </details>
+  ));
+}
+
+function HistoryMonthBlock({ month }: { month: HistoryMonth }) {
+  return (
+    <details className="fitness-history-month">
+      <summary>
+        <span>{month.label}</span>
+        <strong>{month.summary}</strong>
+      </summary>
+      <HistoryWeeks weeks={month.weeks} />
+    </details>
+  );
+}
+
+function HistoryYearBlock({ year }: { year: HistoryYear }) {
+  return (
+    <details className="fitness-history-year">
+      <summary>
+        <span>{year.label}</span>
+        <strong>{year.summary}</strong>
+      </summary>
+      {year.months.map((month) => (
+        <HistoryMonthBlock key={month.id} month={month} />
+      ))}
+    </details>
+  );
+}
+
+function hasHistory(history: ActivityHistory): boolean {
+  return history.weeks.length > 0 || history.months.length > 0 || history.years.length > 0;
+}
+
+function HistoryBlock({ history }: { history: ActivityHistory }) {
+  if (!hasHistory(history)) return null;
+  return (
+    <NodeGrid>
+      <StatCard span="list" label="History">
+        <div className="fitness-history">
+          {history.monthLabel ? <h4>{history.monthLabel}</h4> : null}
+          <HistoryWeeks weeks={history.weeks} />
+          {history.months.map((month) => (
+            <HistoryMonthBlock key={month.id} month={month} />
+          ))}
+          {history.years.map((year) => (
+            <HistoryYearBlock key={year.id} year={year} />
+          ))}
+        </div>
+      </StatCard>
+    </NodeGrid>
+  );
+}
+
 function StepsBlock({ steps }: { steps: StepsView }) {
   return (
     <div id="steps">
       <NodeSection kind="numbers" label="Steps">
         <div className="fitness-block-top">
-          <nav className="fitness-segments" aria-label="Step range">
-            {SPANS.map((span) => {
-              const selected = steps.span === span.id;
-              return (
-                <Link
-                  key={span.id}
-                  href={`/n/fitness?span=${span.id}#steps`}
-                  className={selected ? "is-selected" : undefined}
-                  aria-current={selected ? "true" : undefined}
-                >
-                  {span.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <RangeNav label="Step range" span={steps.span} base="/n/fitness" />
         </div>
         <NodeGrid>
           {steps.average ? (
@@ -140,6 +283,7 @@ function StepsBlock({ steps }: { steps: StepsView }) {
             </StatCard>
           ) : null}
         </NodeGrid>
+        {steps.average ? null : steps.hourlyNote ? <p className="node-note">{steps.hourlyNote}</p> : null}
         {steps.highlights.length > 0 ? (
           <NodeGrid>
             <StatCard span="list" label="Highlights">
@@ -151,90 +295,38 @@ function StepsBlock({ steps }: { steps: StepsView }) {
             </StatCard>
           </NodeGrid>
         ) : null}
-        {steps.days.length > 0 ? (
-          <details className="fitness-days">
-            <summary>
-              {steps.days.length} {steps.days.length === 1 ? "day" : "days"}
-            </summary>
-            <ol>
-              {steps.days.map((day) => (
-                <li key={day.id}>
-                  <span>{day.label}</span>
-                  <strong>{day.steps}</strong>
-                </li>
-              ))}
-            </ol>
-          </details>
-        ) : null}
+        <Records records={steps.records} />
+        <HistoryBlock history={steps.history} />
       </NodeSection>
     </div>
   );
 }
 
-function ActivityBlock({ runs, publicMode }: { runs: RunsView; publicMode: boolean }) {
-  const month = runs.months[0];
+function RunsBlock({ runs }: { runs: RunsView }) {
   return (
-    <div id="activity">
-      <NodeSection kind="trends" label="Activity">
-        {month ? <p className="node-note">{month.label}</p> : null}
-        {month ? (
-          <NodeGrid>
-            <NumberCard label="Runs" value={month.runs} />
-            <NumberCard label="Distance" value={month.miles} />
-            <NumberCard label="Time" value={month.time} />
-            <NumberCard label="Pace" value={month.pace} />
-          </NodeGrid>
-        ) : null}
-        {runs.months.length > 1 ? (
-          <NodeGrid>
-            <StatCard span="list" label="Earlier months">
-              <ul className="fitness-month-rows" aria-label="Earlier months">
-                {runs.months.slice(1, 4).map((row) => (
-                  <li key={row.id}>
-                    <span>{row.label}</span>
-                    <strong>
-                      {row.runs} · {row.miles} · {row.pace}
-                    </strong>
-                  </li>
-                ))}
-              </ul>
+    <div id="runs">
+      <NodeSection kind="numbers" label="Runs">
+        <div className="fitness-block-top">
+          <RangeNav label="Run range" span={runs.span} base="/n/fitness?tab=runs" />
+        </div>
+        <NodeGrid>
+          {runs.average ? (
+            <StatCard label="Runs" value={runs.average} detail={runs.averageLabel}>
+              {runs.trend ? <p className={`fitness-delta is-${runs.trendTone}`}>{runs.trend}</p> : null}
+              {runs.hourlyNote ? <p className="node-note">{runs.hourlyNote}</p> : null}
             </StatCard>
-          </NodeGrid>
-        ) : null}
-        {runs.empty ? (
-          <NodeGrid>
-            <EmptyCard label="Activity" />
-          </NodeGrid>
-        ) : (
-          <NodeGrid>
-            <StatCard span="list" label="Runs">
-              <ol className="fitness-activity">
-                {runs.cards.map((run) => (
-                  <li key={run.id}>
-                    <Link href={run.href}>
-                      <span>{run.date}</span>
-                      <strong>{run.distance}</strong>
-                      <em>
-                        {[run.duration, run.pace, run.energy, publicMode ? null : run.avgHeart].filter(Boolean).join(" · ")}
-                      </em>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
+          ) : (
+            <EmptyCard label="Runs" />
+          )}
+          {runs.bars.length > 0 ? (
+            <StatCard span="trend" label="Runs" detail={runs.averageLabel}>
+              <Bars bars={runs.bars} label="Runs" tall />
             </StatCard>
-          </NodeGrid>
-        )}
-        {runs.prs.length > 0 ? (
-          <div className="fitness-records" aria-label="Records">
-            <h3>Records</h3>
-            <NodeGrid>
-              {runs.prs.map((pr) => (
-                <StatCard key={pr.id} label={pr.label} value={pr.value} detail={pr.when} />
-              ))}
-            </NodeGrid>
-            {runs.prNote ? <p className="node-note">{runs.prNote}</p> : null}
-          </div>
-        ) : null}
+          ) : null}
+        </NodeGrid>
+        {runs.average ? null : runs.hourlyNote ? <p className="node-note">{runs.hourlyNote}</p> : null}
+        <Records records={runs.prs} note={runs.prNote} />
+        <HistoryBlock history={runs.history} />
       </NodeSection>
     </div>
   );
@@ -275,26 +367,29 @@ function AnalyticsBlock({ metrics, publicMode }: { metrics: readonly AnalyticsMe
   );
 }
 
-/** One Fitness screen: steps chart, activity, and analytics. Run detail is the drill-down. */
+/** Steps and Runs share one screen. A run detail is the drill-down. */
 export function FitnessFloor({
+  tab = "steps",
   steps,
   runs,
   analytics,
   publicMode = false,
   updatedAt = null,
 }: {
+  tab?: FitnessTab;
   steps: StepsView;
   runs: RunsView;
   analytics: readonly AnalyticsMetric[];
   publicMode?: boolean;
   updatedAt?: string | null;
 }) {
+  const span = tab === "runs" ? runs.span : steps.span;
   return (
     <NodeLayout>
       <NodeHeader name="Fitness" parts={floorParts(steps, runs, analytics, publicMode)} updatedAt={updatedAt} backHref="/" />
+      <ActivityTabs tab={tab} span={span} />
       <div className="fitness-board">
-        <StepsBlock steps={steps} />
-        <ActivityBlock runs={runs} publicMode={publicMode} />
+        {tab === "runs" ? <RunsBlock runs={runs} /> : <StepsBlock steps={steps} />}
         <AnalyticsBlock metrics={analytics} publicMode={publicMode} />
       </div>
     </NodeLayout>
@@ -317,7 +412,7 @@ export function RunDetailMirror({
   detail,
   publicMode = false,
   updatedAt = null,
-  backHref = "/n/fitness#activity",
+  backHref = "/n/fitness?tab=runs",
 }: {
   detail: RunDetailView;
   publicMode?: boolean;
