@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { NextRequest } from "next/server";
 import { FINANCE_NODES } from "@/lib/finance/view";
 import {
@@ -182,6 +179,24 @@ function tourPaths(): string[] {
   return [...paths];
 }
 
+/**
+ * Logged-out page result. A 302, 303, or 307 is the login gate.
+ * An error boundary, or a 200 that leaks private text, is a page error.
+ * Any other status is a page-status failure.
+ */
+export function loggedOutPageIssues(path: string, status: number, text: string): HealthIssue[] {
+  const statusIssues: HealthIssue[] = [];
+  const errors: HealthIssue[] = [];
+  const redirect = status === 302 || status === 303 || status === 307;
+  if (htmlHasErrorBoundary(text) || (status === 200 && payloadLeaksPrivate(text))) {
+    errors.push(issue("public-page-error", `Public page ${path} shows an error`, path));
+  }
+  if (status !== 200 && !redirect) {
+    statusIssues.push(issue("public-page-status", `Public page ${path} returned ${status}`, path));
+  }
+  return [...statusIssues, ...errors];
+}
+
 function financeLockIssues(): HealthIssue[] {
   const face = financePublicHomeFace({ accountCount: 9, asOfLine: "as of Oct 8, 2026" });
   const tile: HealthIssue[] = [];
@@ -191,16 +206,6 @@ function financeLockIssues(): HealthIssue[] {
   }
   if (face.href || face.locked !== true) {
     href.push(issue("finance-lock-href", "Finance tile still has a link", face.href || "/n/finance"));
-  }
-  const faceSource = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "../components/node-face.tsx"),
-    "utf8",
-  );
-  if (!faceSource.includes("data-lock-badge") || !faceSource.includes("face.locked")) {
-    tile.push(issue("finance-lock-tile", "Finance tile is missing its Private lock", "/"));
-  }
-  if (!faceSource.includes("!locked")) {
-    href.push(issue("finance-lock-href", "Finance tile can still render a link", "/"));
   }
   const others = otherPublicLinks();
   const drills: HealthIssue[] = [];
@@ -273,12 +278,10 @@ async function pageStatusIssues(): Promise<HealthIssue[]> {
   const errors: HealthIssue[] = [];
   for (const path of tourPaths()) {
     const response = await readResponse(() => proxy(new NextRequest(`https://resonance3.vercel.app${path}`)));
-    const redirect = response.status === 302 || response.status === 303 || response.status === 307;
-    if (htmlHasErrorBoundary(response.text) || (response.status === 200 && payloadLeaksPrivate(response.text))) {
-      errors.push(issue("public-page-error", `Public page ${path} shows an error`, path));
+    for (const row of loggedOutPageIssues(path, response.status, response.text)) {
+      if (row.id === "public-page-error") errors.push(row);
+      else status.push(row);
     }
-    if (response.status === 200 || redirect) continue;
-    status.push(issue("public-page-status", `Public page ${path} returned ${response.status}`, path));
   }
   return [
     ...settle("public-page-status", "Public pages answer", status),

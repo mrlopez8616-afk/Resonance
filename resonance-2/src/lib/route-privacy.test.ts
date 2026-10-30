@@ -14,7 +14,13 @@ import { NextRequest } from "next/server";
 import { drillDownBroken } from "@/lib/health-report";
 import { proxy } from "@/proxy";
 import { isHiddenInPublicMode } from "@/lib/public-mode";
-import { ROUTE_AUDIT, htmlHasErrorBoundary, payloadLeaksPrivate, runPublicViewProbe } from "@/lib/public-view-probe";
+import {
+  ROUTE_AUDIT,
+  htmlHasErrorBoundary,
+  loggedOutPageIssues,
+  payloadLeaksPrivate,
+  runPublicViewProbe,
+} from "@/lib/public-view-probe";
 import { createSession } from "@/lib/auth-store";
 import { SESSION_COOKIE } from "@/lib/auth-core";
 
@@ -130,6 +136,30 @@ describe("logged-out privacy", () => {
     const ingest = ROUTE_AUDIT.find((row) => row.path === "/api/ingest/health-auto-export");
     assert.equal(ingest?.method, "POST");
     assert.match(ingest?.auth ?? "", /token/i);
+  });
+
+  it("treats a logged-out home redirect as the login gate", async () => {
+    const home = await proxy(new NextRequest("https://resonance3.vercel.app/"));
+    assert.equal(home.status, 307);
+    const location = new URL(home.headers.get("location") ?? "", "https://resonance3.vercel.app");
+    assert.equal(location.pathname, "/login");
+    assert.equal(location.searchParams.get("next"), "/");
+    const text = await home.text();
+    assert.equal(htmlHasErrorBoundary(text), false);
+    assert.equal(payloadLeaksPrivate(text), false);
+    assert.deepEqual(loggedOutPageIssues("/", home.status, text), []);
+    assert.equal(loggedOutPageIssues("/", 500, "").some((row) => row.id === "public-page-status"), true);
+    const boundary = loggedOutPageIssues("/", 200, "Application error");
+    assert.equal(boundary[0]?.id, "public-page-error");
+    assert.equal(boundary[0]?.status, "error");
+    assert.equal(boundary[0]?.path, "/");
+
+    const probe = readFileSync(join(root, "src/lib/public-view-probe.ts"), "utf8");
+    assert.equal(probe.includes("readFileSync"), false);
+    assert.equal(probe.includes("node-face.tsx"), false);
+    const face = readFileSync(join(root, "src/components/node-face.tsx"), "utf8");
+    assert.equal(face.includes("data-lock-badge"), true);
+    assert.match(face, /face\.href && !locked/);
   });
 
   it("names a failure when a logged-out body carries a dollar amount", () => {
