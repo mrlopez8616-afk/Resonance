@@ -222,11 +222,13 @@ export function FitnessStoryView({
   stepsRange,
   runsRange,
   analytics = null,
+  charts = true,
 }: {
   story: FitnessStory;
   stepsRange: StoryRange;
   runsRange: StoryRange;
   analytics?: { headline: string; status: string } | null;
+  charts?: boolean;
 }) {
   return (
     <div className="fitness-story">
@@ -265,27 +267,31 @@ export function FitnessStoryView({
           </section>
         );
       })}
-      <ChartBlock chart={story.steps} stepsRange={stepsRange} runsRange={runsRange} />
-      <ChartBlock chart={story.runs} stepsRange={stepsRange} runsRange={runsRange} />
-      <section className="fitness-recent" aria-label="Recent runs">
-        <h2>
-          <Link href="/n/fitness/runs">Recent runs</Link>
-        </h2>
-        {story.recent.length === 0 ? (
-          <p className="fitness-empty">not recorded</p>
-        ) : (
-          <ol>
-            {story.recent.map((run) => (
-              <li key={run.id}>
-                <span className="fitness-run-date">{run.date}</span>
-                <span className="fitness-run-miles">{run.miles}</span>
-                {run.pace ? <span>{run.pace}</span> : null}
-                <span className="fitness-run-source">{run.source}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+      {charts ? (
+        <>
+          <ChartBlock chart={story.steps} stepsRange={stepsRange} runsRange={runsRange} />
+          <ChartBlock chart={story.runs} stepsRange={stepsRange} runsRange={runsRange} />
+          <section className="fitness-recent" aria-label="Recent runs">
+            <h2>
+              <Link href="/n/fitness/runs">Recent runs</Link>
+            </h2>
+            {story.recent.length === 0 ? (
+              <p className="fitness-empty">not recorded</p>
+            ) : (
+              <ol>
+                {story.recent.map((run) => (
+                  <li key={run.id}>
+                    <span className="fitness-run-date">{run.date}</span>
+                    <span className="fitness-run-miles">{run.miles}</span>
+                    {run.pace ? <span>{run.pace}</span> : null}
+                    <span className="fitness-run-source">{run.source}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

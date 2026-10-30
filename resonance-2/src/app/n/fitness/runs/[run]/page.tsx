@@ -44,8 +44,8 @@ export default async function RunDetailPage({ params }: { params: Promise<{ run:
       storageDetail={floor.storageDetail}
     >
       <div className="fitness-floor">
-        <Link href="/n/fitness#activity" className="calendar-back">
-          Fitness
+        <Link href="/n/fitness?tab=runs" className="calendar-back">
+          Runs
         </Link>
         <RunDetailMirror detail={detail} />
       </div>

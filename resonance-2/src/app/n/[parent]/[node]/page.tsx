@@ -22,7 +22,7 @@ import { FLOOR_NODES } from "@/data/floor-nodes";
 import type { NodeSleeve } from "@/data/sleeves";
 import { fillDeskHref } from "@/lib/fill-desk";
 import { FITNESS_NODES, fitnessLegacyHref, publicFitnessDetail } from "@/lib/fitness-board";
-import { parseStepSpan } from "@/lib/fitness-present";
+import { fitnessTabHref, parseStepSpan } from "@/lib/fitness-present";
 import { loadFitnessNode } from "@/lib/fitness-store";
 import { aiStockRole } from "@/data/ai-stock-roles";
 import { retiredAiNodeHref } from "@/lib/ai-stocks";
@@ -189,7 +189,8 @@ export default async function NodeDetailPage({
       );
     }
     if (nodeId === "steps" || nodeId === "runs" || nodeId === "analytics") {
-      const hash = nodeId === "runs" ? "activity" : nodeId === "analytics" ? "analytics" : "steps";
+      if (nodeId === "runs") permanentRedirect(fitnessTabHref("runs", parseStepSpan(query.span)));
+      const hash = nodeId === "analytics" ? "analytics" : "steps";
       const span = nodeId === "steps" ? `?span=${parseStepSpan(query.span)}` : "";
       permanentRedirect(`/n/fitness${span}#${hash}`);
     }

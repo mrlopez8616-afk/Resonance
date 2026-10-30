@@ -28,6 +28,53 @@ export type StepBarModel = {
   caption: string;
 };
 
+export type HistoryLine = {
+  id: string;
+  value: string;
+  href?: string;
+};
+
+export type HistoryDay = {
+  id: string;
+  label: string;
+  value: string;
+  href?: string;
+  lines?: HistoryLine[];
+};
+
+export type HistoryWeek = {
+  id: string;
+  label: string;
+  summary: string;
+  days: HistoryDay[];
+};
+
+export type HistoryMonth = {
+  id: string;
+  label: string;
+  summary: string;
+  weeks: HistoryWeek[];
+};
+
+export type HistoryYear = {
+  id: string;
+  label: string;
+  summary: string;
+  months: HistoryMonth[];
+};
+
+/**
+ * Weeks of the current month stay open as rows.
+ * Earlier months of this year collapse to a month.
+ * Earlier years collapse to a year, then months, then weeks.
+ */
+export type ActivityHistory = {
+  monthLabel: string | null;
+  weeks: HistoryWeek[];
+  months: HistoryMonth[];
+  years: HistoryYear[];
+};
+
 export type StepsView = {
   span: StepSpan;
   average: string | null;
@@ -37,6 +84,8 @@ export type StepsView = {
   hourlyNote: string | null;
   bars: StepBarModel[];
   highlights: { id: string; text: string }[];
+  records: PrModel[];
+  history: ActivityHistory;
   days: { id: string; label: string; steps: string }[];
   empty: string | null;
 };
@@ -70,10 +119,19 @@ export type PrModel = {
 };
 
 export type RunsView = {
+  span: StepSpan;
+  average: string | null;
+  averageLabel: string;
+  trend: string | null;
+  trendTone: "" | "up" | "down" | "flat";
+  hourlyNote: string | null;
+  bars: StepBarModel[];
+  rangeEmpty: string | null;
   cards: RunCardModel[];
   months: MonthTotalModel[];
   prs: PrModel[];
   prNote: string | null;
+  history: ActivityHistory;
   empty: string | null;
 };
 
@@ -132,10 +190,33 @@ type AnalyticsContext = {
 const NOT_RECORDED = "not recorded";
 const NOT_CONNECTED = "Not connected yet";
 
+export type FitnessTab = "steps" | "runs";
+
 export function parseStepSpan(value: string | string[] | undefined): StepSpan {
   const raw = typeof value === "string" ? value : value?.[0];
   if (raw === "d" || raw === "w" || raw === "m" || raw === "6m" || raw === "y") return raw;
   return "w";
+}
+
+export function parseFitnessTab(value: string | string[] | undefined): FitnessTab {
+  const raw = typeof value === "string" ? value : value?.[0];
+  return raw === "runs" ? "runs" : "steps";
+}
+
+/** Steps is the fitness page. Runs is the same page with `tab=runs`. */
+export function fitnessTabHref(tab: FitnessTab, span?: StepSpan): string {
+  const params = new URLSearchParams();
+  if (tab === "runs") params.set("tab", "runs");
+  if (span && span !== "w") params.set("span", span);
+  const text = params.toString();
+  return text ? `/n/fitness?${text}` : "/n/fitness";
+}
+
+export function fitnessRangeHref(base: string, span: StepSpan): string {
+  const [path, query = ""] = base.split("?");
+  const params = new URLSearchParams(query);
+  params.set("span", span);
+  return `${path}?${params.toString()}`;
 }
 
 /** True when text carries a heart-rate field or a bpm reading. */
@@ -342,49 +423,218 @@ function trendLine(
   return { text: `Down ${rounded}% from ${compare}`, tone: "down" };
 }
 
-function dayBars(days: readonly string[], steps: ReadonlyMap<string, number>, labelOf: (day: string) => string): StepBarModel[] {
+type BarCopy = {
+  point: (value: number) => string;
+  average: (value: number) => string;
+};
+
+const STEP_COPY: BarCopy = {
+  point: (value) => `${formatCount(value)} steps`,
+  average: (value) => `avg ${formatCount(value)}`,
+};
+
+const MILE_COPY: BarCopy = {
+  point: (value) => formatMiles(value),
+  average: (value) => `avg ${formatMiles(value)}`,
+};
+
+function dayBars(
+  days: readonly string[],
+  values: ReadonlyMap<string, number>,
+  labelOf: (day: string) => string,
+  copy: BarCopy,
+): StepBarModel[] {
   return days.flatMap((day) => {
-    const value = steps.get(day);
+    const value = values.get(day);
     if (value === undefined) return [];
-    return [{ id: day, label: labelOf(day), value, caption: `${formatCount(value)} steps` }];
+    return [{ id: day, label: labelOf(day), value, caption: copy.point(value) }];
   });
 }
 
-function weekAverageBars(start: string, end: string, steps: ReadonlyMap<string, number>): StepBarModel[] {
+function weekAverageBars(start: string, end: string, values: ReadonlyMap<string, number>, copy: BarCopy): StepBarModel[] {
   const bars: StepBarModel[] = [];
   for (let monday = civilWeek(start)[0] ?? start; monday <= end; monday = addCivilDays(monday, 7)) {
     const days = civilWeek(monday).filter((day) => day >= start && day <= end);
-    const average = averageRecorded(days, steps);
+    const average = averageRecorded(days, values);
     if (average === null) continue;
-    bars.push({ id: monday, label: shortDay(monday), value: average, caption: `avg ${formatCount(average)}` });
+    bars.push({ id: monday, label: shortDay(monday), value: average, caption: copy.average(average) });
   }
   return bars;
 }
 
-function monthAverageBars(start: string, end: string, steps: ReadonlyMap<string, number>): StepBarModel[] {
+function monthAverageBars(start: string, end: string, values: ReadonlyMap<string, number>, copy: BarCopy): StepBarModel[] {
   const bars: StepBarModel[] = [];
   for (let cursor = start; cursor <= end; cursor = addCivilDays(civilMonthLastDay(cursor), 1)) {
     const last = civilMonthLastDay(cursor);
     const days = eachDay(cursor, last < end ? last : end);
-    const average = averageRecorded(days, steps);
+    const average = averageRecorded(days, values);
     if (average === null) continue;
     bars.push({
       id: cursor.slice(0, 7),
       label: monthShort(cursor),
       value: average,
-      caption: `avg ${formatCount(average)}`,
+      caption: copy.average(average),
     });
   }
   return bars;
 }
 
-function chartBars(span: StepSpan, window: SpanWindow, steps: ReadonlyMap<string, number>): StepBarModel[] {
+function chartBars(
+  span: StepSpan,
+  window: SpanWindow,
+  values: ReadonlyMap<string, number>,
+  copy: BarCopy = STEP_COPY,
+): StepBarModel[] {
   if (span === "d") return [];
-  if (span === "6m") return weekAverageBars(window.start, window.end, steps);
-  if (span === "y") return monthAverageBars(window.start, window.end, steps);
+  if (span === "6m") return weekAverageBars(window.start, window.end, values, copy);
+  if (span === "y") return monthAverageBars(window.start, window.end, values, copy);
   const days = eachDay(window.start, window.end);
-  if (span === "w") return dayBars(days, steps, civilWeekdayShort);
-  return dayBars(days, steps, (day) => String(Number(day.slice(8, 10))));
+  if (span === "w") return dayBars(days, values, civilWeekdayShort, copy);
+  return dayBars(days, values, (day) => String(Number(day.slice(8, 10))), copy);
+}
+
+function weekRangeLabel(monday: string, today: string): string {
+  const sunday = addCivilDays(monday, 6);
+  const end = sunday < today ? sunday : today;
+  if (monday === end) return shortDay(monday);
+  return `${shortDay(monday)} – ${shortDay(end)}`;
+}
+
+function emptyHistory(): ActivityHistory {
+  return { monthLabel: null, weeks: [], months: [], years: [] };
+}
+
+/**
+ * File each week by its latest recorded day. The current month shows those
+ * weeks. Older months of this year collapse. Older years collapse above that.
+ */
+function buildActivityHistory<T extends { day: string }>(
+  today: string,
+  rows: readonly T[],
+  present: (row: T) => { value: string; href?: string; lines?: HistoryLine[] },
+  summarize: (rows: readonly T[]) => string,
+): ActivityHistory {
+  const byWeek = new Map<string, T[]>();
+  for (const row of rows) {
+    if (row.day > today) continue;
+    const monday = civilWeek(row.day)[0] ?? row.day;
+    const list = byWeek.get(monday) ?? [];
+    list.push(row);
+    byWeek.set(monday, list);
+  }
+  if (byWeek.size === 0) return emptyHistory();
+
+  type Bucket = { monday: string; latest: string; rows: T[] };
+  const buckets: Bucket[] = [];
+  for (const [monday, list] of byWeek) {
+    const sorted = [...list].sort((left, right) => (left.day < right.day ? 1 : -1));
+    const latest = sorted.reduce((max, row) => (row.day > max ? row.day : max), sorted[0]?.day ?? monday);
+    buckets.push({ monday, latest, rows: sorted });
+  }
+  const currentMonth = today.slice(0, 7);
+  const currentYear = today.slice(0, 4);
+  const current: Bucket[] = [];
+  const months = new Map<string, Bucket[]>();
+  const years = new Map<string, Map<string, Bucket[]>>();
+  for (const bucket of buckets) {
+    const monthKey = bucket.latest.slice(0, 7);
+    const yearKey = bucket.latest.slice(0, 4);
+    if (monthKey === currentMonth) current.push(bucket);
+    else if (yearKey === currentYear) {
+      const list = months.get(monthKey) ?? [];
+      list.push(bucket);
+      months.set(monthKey, list);
+    } else {
+      const yearMonths = years.get(yearKey) ?? new Map<string, Bucket[]>();
+      const list = yearMonths.get(monthKey) ?? [];
+      list.push(bucket);
+      yearMonths.set(monthKey, list);
+      years.set(yearKey, yearMonths);
+    }
+  }
+
+  const toWeek = (bucket: Bucket): HistoryWeek => ({
+    id: bucket.monday,
+    label: weekRangeLabel(bucket.monday, today),
+    summary: summarize(bucket.rows),
+    days: bucket.rows.map((row) => {
+      const view = present(row);
+      const day: HistoryDay = {
+        id: row.day,
+        label: `${civilWeekdayShort(row.day)}, ${formatCivilDate(row.day)}`,
+        value: view.value,
+      };
+      if (view.href) day.href = view.href;
+      if (view.lines && view.lines.length > 0) day.lines = view.lines;
+      return day;
+    }),
+  });
+  const sortBuckets = (list: Bucket[]) => [...list].sort((left, right) => (left.monday < right.monday ? 1 : -1));
+  const toMonth = (key: string, list: Bucket[]): HistoryMonth => {
+    const sorted = sortBuckets(list);
+    return {
+      id: key,
+      label: formatCivilMonth(`${key}-01`),
+      summary: summarize(sorted.flatMap((bucket) => bucket.rows)),
+      weeks: sorted.map(toWeek),
+    };
+  };
+  const weeks = sortBuckets(current).map(toWeek);
+  return {
+    monthLabel: weeks.length > 0 ? formatCivilMonth(today) : null,
+    weeks,
+    months: [...months.entries()]
+      .sort((left, right) => (left[0] < right[0] ? 1 : -1))
+      .map(([key, list]) => toMonth(key, list)),
+    years: [...years.entries()]
+      .sort((left, right) => (left[0] < right[0] ? 1 : -1))
+      .map(([year, monthMap]) => {
+        const yearMonths = [...monthMap.entries()]
+          .sort((left, right) => (left[0] < right[0] ? 1 : -1))
+          .map(([key, list]) => toMonth(key, list));
+        const yearRows = [...monthMap.values()].flatMap((list) => list.flatMap((bucket) => bucket.rows));
+        return {
+          id: year,
+          label: year,
+          summary: summarize(yearRows),
+          months: yearMonths,
+        };
+      }),
+  };
+}
+
+function stepRecords(steps: ReadonlyMap<string, number>, today: string): PrModel[] {
+  const days = [...steps.entries()].filter(([day]) => day <= today);
+  if (days.length === 0) return [];
+  const bestDay = days.reduce((best, entry) => {
+    if (entry[1] > best[1]) return entry;
+    if (entry[1] === best[1] && entry[0] > best[0]) return entry;
+    return best;
+  });
+  const weeks = new Map<string, number>();
+  for (const [day, count] of days) {
+    const monday = civilWeek(day)[0] ?? day;
+    weeks.set(monday, (weeks.get(monday) ?? 0) + count);
+  }
+  const bestWeek = [...weeks.entries()].reduce((best, entry) => {
+    if (entry[1] > best[1]) return entry;
+    if (entry[1] === best[1] && entry[0] > best[0]) return entry;
+    return best;
+  });
+  return [
+    {
+      id: "most-steps",
+      label: "Most steps",
+      value: formatCount(bestDay[1]),
+      when: formatCivilDate(bestDay[0]),
+    },
+    {
+      id: "best-week",
+      label: "Best week",
+      value: formatCount(bestWeek[1]),
+      when: weekRangeLabel(bestWeek[0], today),
+    },
+  ];
 }
 
 function stepHighlights(steps: ReadonlyMap<string, number>, today: string, windowDays: readonly string[]): { id: string; text: string }[] {
@@ -442,6 +692,9 @@ export function buildStepsView(input: {
       if (value === undefined) return [];
       return [{ id: day, label: formatCivilDate(day), steps: formatCount(value) }];
     });
+  const recorded = [...steps.entries()]
+    .filter(([day]) => day <= input.today)
+    .map(([day, count]) => ({ day, steps: count }));
   return {
     span,
     average: average === null ? null : formatCount(average),
@@ -451,6 +704,17 @@ export function buildStepsView(input: {
     hourlyNote: span === "d" ? "Hourly steps are not in this export." : null,
     bars,
     highlights: stepHighlights(steps, input.today, currentDays),
+    records: stepRecords(steps, input.today),
+    history: buildActivityHistory(
+      input.today,
+      recorded,
+      (row) => ({ value: formatCount(row.steps) }),
+      (rows) => {
+        const total = rows.reduce((sum, row) => sum + row.steps, 0);
+        const count = rows.length;
+        return `${formatCount(total)} steps · ${count} ${count === 1 ? "day" : "days"}`;
+      },
+    ),
     days,
     empty: average === null ? (span === "d" ? "No steps for today yet." : "No steps in this range yet.") : null,
   };
@@ -563,19 +827,107 @@ function personalRecords(runs: readonly RunFact[]): { prs: PrModel[]; note: stri
   };
 }
 
+function milesMap(runs: readonly RunFact[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const run of runs) {
+    if (run.miles === null) continue;
+    map.set(run.day, (map.get(run.day) ?? 0) + run.miles);
+  }
+  return map;
+}
+
+function runsSummary(runs: readonly RunFact[]): string {
+  const miles = runs.reduce((sum, run) => sum + (run.miles ?? 0), 0);
+  const timed = runs.filter((run) => paceOf(run) !== null);
+  const mileSum = timed.reduce((sum, run) => sum + (run.miles ?? 0), 0);
+  const timeSum = timed.reduce((sum, run) => sum + (run.durationSec ?? 0), 0);
+  const durationSum = runs.reduce((sum, run) => sum + (run.durationSec !== null && run.durationSec > 0 ? run.durationSec : 0), 0);
+  const pace = mileSum > 0 && timeSum > 0 ? formatPace(mileSum, timeSum) : null;
+  const parts = [`${runs.length} ${runs.length === 1 ? "run" : "runs"}`];
+  if (miles > 0) parts.push(formatMiles(miles));
+  if (durationSum > 0) parts.push(formatClock(durationSum));
+  if (pace) parts.push(pace);
+  return parts.join(" · ");
+}
+
+function runLine(run: RunFact, publicMode: boolean): string {
+  const pace = run.miles !== null && run.durationSec !== null ? formatPace(run.miles, run.durationSec) : null;
+  const parts = [
+    run.miles === null ? "distance not recorded" : formatMiles(run.miles),
+    run.durationSec === null ? null : formatClock(run.durationSec),
+    pace,
+    run.energyKcal !== null && run.energyKcal > 0 ? `${formatCount(run.energyKcal)} kcal` : null,
+    publicMode || run.heartAvg === null || !(run.heartAvg > 0) ? null : `${formatCount(run.heartAvg)} bpm`,
+  ];
+  return parts.filter((part) => part !== null).join(" · ");
+}
+
+function runsByDay(runs: readonly RunFact[]): { day: string; runs: RunFact[] }[] {
+  const map = new Map<string, RunFact[]>();
+  for (const run of runs) {
+    const list = map.get(run.day) ?? [];
+    list.push(run);
+    map.set(run.day, list);
+  }
+  return [...map.entries()].map(([day, list]) => ({ day, runs: list }));
+}
+
 export function buildRunsView(input: {
   workouts: readonly FitnessWorkoutWrite[];
   today: string;
+  span?: StepSpan;
   publicMode?: boolean;
 }): RunsView {
   const publicMode = input.publicMode === true;
+  const span = input.span ?? "w";
   const runs = runFacts(input.workouts, input.today);
   const records = personalRecords(runs);
+  const miles = milesMap(runs);
+  const window = spanWindow(span, input.today);
+  const currentDays = eachDay(window.start, window.end);
+  const previousDays = eachDay(window.previousStart, window.previousEnd);
+  const average = averageRecorded(currentDays, miles);
+  const previous = averageRecorded(previousDays, miles);
+  const trend = trendLine(average, previous, window.compare);
   return {
+    span,
+    average: average === null ? null : formatMiles(average),
+    averageLabel: span === "d" ? "today" : "daily average",
+    trend: trend?.text ?? null,
+    trendTone: trend?.tone ?? "",
+    hourlyNote: span === "d" ? "Hourly distance is not in this export." : null,
+    bars: chartBars(span, window, miles, MILE_COPY),
+    rangeEmpty:
+      runs.length === 0
+        ? null
+        : average === null
+          ? span === "d"
+            ? "No runs for today yet."
+            : "No runs in this range yet."
+          : null,
     cards: runs.map((run) => runCard(run, publicMode)),
     months: monthTotals(runs),
     prs: records.prs,
     prNote: records.note,
+    history: buildActivityHistory(
+      input.today,
+      runsByDay(runs),
+      (row) => {
+        const first = row.runs[0];
+        if (row.runs.length === 1 && first) {
+          return { value: runLine(first, publicMode), href: `/n/fitness/runs/${encodeURIComponent(first.id)}` };
+        }
+        return {
+          value: runsSummary(row.runs),
+          lines: row.runs.map((run) => ({
+            id: run.id,
+            value: runLine(run, publicMode),
+            href: `/n/fitness/runs/${encodeURIComponent(run.id)}`,
+          })),
+        };
+      },
+      (rows) => runsSummary(rows.flatMap((row) => row.runs)),
+    ),
     empty: runs.length === 0 ? "No runs yet." : null,
   };
 }
