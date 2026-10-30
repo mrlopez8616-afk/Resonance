@@ -2,7 +2,7 @@ import "server-only";
 
 import { sqlQuery } from "@/lib/pg/client";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { SKIPPED_UNHEALTHY, formatCount, presentYouTubeScreen, type YouTubeScreen } from "@/lib/youtube-analytics";
+import { SKIPPED_HEALTH_CHECK, formatCount, presentYouTubeScreen, type YouTubeScreen } from "@/lib/youtube-analytics";
 import { loadYouTubeAnalytics } from "@/lib/youtube-analytics-store";
 import { youtubeClientConfig } from "@/lib/youtube-oauth";
 import { youtubeHomeLines } from "@/lib/youtube-node";
@@ -28,8 +28,8 @@ export async function loadYouTubeHomeLines(): Promise<readonly string[] | null> 
     sqlQuery<{ subscriber_count: unknown }>(`SELECT subscriber_count FROM youtube_oauth WHERE id = 1`),
   ]);
   const last = pulls[0];
-  if (last?.message === SKIPPED_UNHEALTHY) {
-    return youtubeHomeLines(undefined, `Channel · ${SKIPPED_UNHEALTHY}`);
+  if (last?.message === SKIPPED_HEALTH_CHECK) {
+    return youtubeHomeLines(undefined, `Channel · ${SKIPPED_HEALTH_CHECK}`);
   }
   if (last?.status === "error" && last.message === "pull failed") {
     return youtubeHomeLines(undefined, "Channel · pull failed");

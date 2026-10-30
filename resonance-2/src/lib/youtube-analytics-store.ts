@@ -2,7 +2,6 @@ import "server-only";
 
 import { readHealthMark } from "@/lib/health-mark";
 import { sqlQuery, sqlTransaction, type SqlStatement } from "@/lib/pg/client";
-import { youtubeClientConfig } from "@/lib/youtube-oauth";
 import {
   emptyAnalyticsModel,
   finiteNumber,
@@ -89,25 +88,12 @@ export async function recordYouTubePull(input: {
   );
 }
 
-export async function readYouTubePullGate(now: Date): Promise<{
-  healthPasses: boolean;
-  youtubeDepsHealthy: boolean;
-}> {
+export async function readYouTubePullGate(now: Date): Promise<{ healthPasses: boolean }> {
   try {
-    await sqlQuery(`SELECT 1 AS ok`);
-  } catch {
-    return { healthPasses: false, youtubeDepsHealthy: false };
-  }
-  const envOk = youtubeClientConfig() !== null;
-  try {
-    const token = await sqlQuery(`SELECT 1 AS ok FROM youtube_oauth WHERE id = 1`);
     const mark = await readHealthMark();
-    return {
-      healthPasses: healthMarkPasses(mark, now),
-      youtubeDepsHealthy: envOk && token.length > 0,
-    };
+    return { healthPasses: healthMarkPasses(mark, now) };
   } catch {
-    return { healthPasses: false, youtubeDepsHealthy: false };
+    return { healthPasses: false };
   }
 }
 

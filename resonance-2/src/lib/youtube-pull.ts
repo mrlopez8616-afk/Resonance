@@ -15,7 +15,7 @@ import {
   updateYouTubeChannel,
 } from "@/lib/youtube-analytics-store";
 import { youtubeClientConfig } from "@/lib/youtube-oauth";
-import { SKIPPED_UNHEALTHY, decideYouTubePull, trendWindow, type YouTubeVideoMetric } from "@/lib/youtube-analytics";
+import { SKIPPED_HEALTH_CHECK, decideYouTubePull, trendWindow, type YouTubeVideoMetric } from "@/lib/youtube-analytics";
 
 export type YouTubePullResult = {
   ok: boolean;
@@ -73,13 +73,14 @@ export async function runScheduledYouTubePull(input: {
   const gate = await readYouTubePullGate(now);
   const decision = decideYouTubePull(gate);
   if (!decision.run) {
-    log(SKIPPED_UNHEALTHY);
+    const message = decision.message ?? SKIPPED_HEALTH_CHECK;
+    log(message);
     try {
-      await recordYouTubePull({ slot: input.slot, status: "skipped", message: SKIPPED_UNHEALTHY });
+      await recordYouTubePull({ slot: input.slot, status: "skipped", message });
     } catch {
       console.error("youtube pull log failed");
     }
-    return { ok: false, status: "skipped", message: SKIPPED_UNHEALTHY };
+    return { ok: false, status: "skipped", message };
   }
   try {
     const result = await pullYouTubeAnalytics(now);

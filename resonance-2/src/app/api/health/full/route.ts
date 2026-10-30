@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     try {
       await rememberHealthMark(report.ok, report.checkedAt);
     } catch {
-      // A missed mark leaves the YouTube pull on its own dependencies.
+      // The YouTube pull reads only a recorded pass. A missed write is not one.
     }
     return NextResponse.json(report, { headers: PRIVATE });
   } catch {

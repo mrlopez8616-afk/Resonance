@@ -7,13 +7,13 @@ import { newDb } from "pg-mem";
 import { GET as cronGet } from "@/app/api/cron/youtube/route";
 import { GET as yesterdayGet } from "@/app/api/youtube/yesterday/route";
 import { GET as startGet } from "@/app/api/youtube/oauth/start/route";
-import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
+import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS, YOUTUBE_ANALYTICS_SQL } from "@/lib/pg/embedded-migrations";
 import { migrate } from "@/lib/pg/migrate";
 import { rememberHealthMark } from "@/lib/health-mark";
 import {
   CRON_GATE_PLAN,
-  SKIPPED_UNHEALTHY,
+  SKIPPED_HEALTH_CHECK,
   YOUTUBE_CRON_JOBS,
   YOUTUBE_OAUTH_REDIRECT,
   YOUTUBE_SCOPES,
@@ -21,6 +21,7 @@ import {
   healthMarkPasses,
   isHobbyDailySchedule,
   presentYouTubeScreen,
+  pullFollowsHealthCheck,
   trendWindow,
   youtubeSlotForSchedule,
   type YouTubeAnalyticsModel,
@@ -83,7 +84,7 @@ function model(partial: Partial<YouTubeAnalyticsModel> = {}): YouTubeAnalyticsMo
   };
 }
 
-describe("YouTube analytics", () => {
+describe("YouTube analytics", { concurrency: false }, () => {
   const previous = {
     DATABASE_URL: process.env.DATABASE_URL,
     GOOGLE_YT_CLIENT_ID: process.env.GOOGLE_YT_CLIENT_ID,
@@ -117,10 +118,15 @@ describe("YouTube analytics", () => {
     );
     assert.deepEqual(vercel.crons[0], { path: "/api/cron/backup", schedule: BACKUP_CRON_SCHEDULE });
     assert.equal(CRON_GATE_PLAN[0]?.gated, false);
-    for (const job of YOUTUBE_CRON_JOBS) {
+    const healthHoursCt = [9, 13, 18];
+    YOUTUBE_CRON_JOBS.forEach((job, index) => {
       assert.equal(isHobbyDailySchedule(job.schedule), true, job.schedule);
       assert.equal(CRON_GATE_PLAN.some((row) => row.schedule === job.schedule && row.gated), true);
-    }
+      assert.equal(pullFollowsHealthCheck(job.schedule, healthHoursCt[index]!), true, job.schedule);
+    });
+    assert.equal(pullFollowsHealthCheck("0 15 * * *", 9), false);
+    assert.equal(pullFollowsHealthCheck("0 19 * * *", 13), false);
+    assert.equal(pullFollowsHealthCheck("0 0 * * *", 18), false);
     assert.equal(youtubeSlotForSchedule("0 16 * * *"), "after-9am-ct");
     assert.equal(youtubeSlotForSchedule("0 20 * * *"), "after-1pm-ct");
     assert.equal(youtubeSlotForSchedule("0 1 * * *"), "after-6pm-ct");
@@ -138,19 +144,13 @@ describe("YouTube analytics", () => {
     }
   });
 
-  it("runs only when the health check passed or YouTube's own dependencies are healthy", () => {
-    assert.deepEqual(decideYouTubePull({ healthPasses: true, youtubeDepsHealthy: false }), {
-      run: true,
-      message: null,
-    });
-    assert.deepEqual(decideYouTubePull({ healthPasses: false, youtubeDepsHealthy: true }), {
-      run: true,
-      message: null,
-    });
-    assert.deepEqual(decideYouTubePull({ healthPasses: false, youtubeDepsHealthy: false }), {
+  it("runs only when the latest health check passed", () => {
+    assert.deepEqual(decideYouTubePull({ healthPasses: true }), { run: true, message: null });
+    assert.deepEqual(decideYouTubePull({ healthPasses: false }), {
       run: false,
-      message: SKIPPED_UNHEALTHY,
+      message: SKIPPED_HEALTH_CHECK,
     });
+    assert.equal(SKIPPED_HEALTH_CHECK, "skipped: health check not passing");
     assert.equal(healthMarkPasses({ ok: true, checkedAt: "2026-10-30T16:00:00.000Z" }, NOW), true);
     assert.equal(healthMarkPasses({ ok: false, checkedAt: "2026-10-30T17:30:00.000Z" }, NOW), false);
     assert.equal(healthMarkPasses({ ok: true, checkedAt: "2026-10-30T10:00:00.000Z" }, NOW), false);
@@ -175,13 +175,16 @@ describe("YouTube analytics", () => {
     const text = JSON.stringify(screen);
     assert.equal(text.includes(REFRESH), false);
     assert.equal(text.includes("GOOGLE_YT"), false);
-    const skipped = presentYouTubeScreen(model({ lastStatus: "skipped", lastMessage: SKIPPED_UNHEALTHY, connected: false }), {
-      publicMode: false,
-      connectReady: false,
-      denied: false,
-    });
-    assert.equal(skipped?.skipMessage, SKIPPED_UNHEALTHY);
-    assert.equal(skipped?.homeChannelLine, `Channel · ${SKIPPED_UNHEALTHY}`);
+    const skipped = presentYouTubeScreen(
+      model({ lastStatus: "skipped", lastMessage: SKIPPED_HEALTH_CHECK, connected: false }),
+      {
+        publicMode: false,
+        connectReady: false,
+        denied: false,
+      },
+    );
+    assert.equal(skipped?.skipMessage, SKIPPED_HEALTH_CHECK);
+    assert.equal(skipped?.homeChannelLine, `Channel · ${SKIPPED_HEALTH_CHECK}`);
     assert.equal(skipped?.connectHref, null);
   });
 
@@ -201,7 +204,7 @@ describe("YouTube analytics", () => {
     assert.equal(url.toString().includes("client-secret"), false);
   });
 
-  it("stores the refresh token server-side and returns yesterday without it", async () => {
+  it("pulls after a passing health check and keeps the refresh token off yesterday", async () => {
     process.env.DATABASE_URL = "postgres://resonance:resonance@127.0.0.1:5432/resonance";
     process.env.GOOGLE_YT_CLIENT_ID = "client-id";
     process.env.GOOGLE_YT_CLIENT_SECRET = "client-secret";
@@ -322,29 +325,57 @@ describe("YouTube analytics", () => {
     assert.equal(startDenied.status, 401);
   });
 
-  it("logs skipped: system unhealthy and does not call Google", async () => {
+  it("skips when the health check failed or is missing, and writes no channel data", async () => {
     process.env.DATABASE_URL = "postgres://resonance:resonance@127.0.0.1:5432/resonance";
-    delete process.env.GOOGLE_YT_CLIENT_ID;
-    delete process.env.GOOGLE_YT_CLIENT_SECRET;
+    process.env.GOOGLE_YT_CLIENT_ID = "client-id";
+    process.env.GOOGLE_YT_CLIENT_SECRET = "client-secret";
     setSqlClientForTests(memorySql());
     await migrate();
+    await saveYouTubeConnection({
+      refreshToken: REFRESH,
+      channelId: "UC123",
+      channelTitle: "Resonance",
+      subscribers: 1240,
+      videoCount: 2,
+    });
     let fetches = 0;
     const logs: string[] = [];
     setYouTubeFetchForTests(async () => {
       fetches += 1;
       return new Response("no", { status: 500 });
     });
-    const result = await runScheduledYouTubePull({
-      now: NOW,
-      slot: "after-9am-ct",
-      log: (message) => logs.push(message),
-    });
-    assert.equal(result.status, "skipped");
-    assert.deepEqual(logs, [SKIPPED_UNHEALTHY]);
+    const log = (message: string) => logs.push(message);
+
+    const missing = await runScheduledYouTubePull({ now: NOW, slot: "after-9am-ct", log });
+    assert.equal(missing.status, "skipped");
+    assert.equal(missing.message, SKIPPED_HEALTH_CHECK);
+
+    await rememberHealthMark(false, "2026-10-30T17:30:00.000Z");
+    const failed = await runScheduledYouTubePull({ now: NOW, slot: "after-1pm-ct", log });
+    assert.equal(failed.status, "skipped");
+    assert.equal(failed.message, SKIPPED_HEALTH_CHECK);
+    assert.deepEqual(logs, [SKIPPED_HEALTH_CHECK, SKIPPED_HEALTH_CHECK]);
     assert.equal(fetches, 0);
+
+    const days = await sqlQuery(`SELECT day FROM youtube_channel_days`);
+    const videos = await sqlQuery(`SELECT video_id FROM youtube_videos`);
+    const videoDays = await sqlQuery(`SELECT video_id FROM youtube_video_days`);
+    const pulls = await sqlQuery<{ status: string; message: string }>(
+      `SELECT status, message FROM youtube_pulls ORDER BY id`,
+    );
+    assert.equal(days.length, 0);
+    assert.equal(videos.length, 0);
+    assert.equal(videoDays.length, 0);
+    assert.equal(pulls.length, 2);
+    assert.equal(
+      pulls.every((row) => row.status === "skipped" && row.message === SKIPPED_HEALTH_CHECK),
+      true,
+    );
     const loaded = await loadYouTubeAnalytics(NOW);
-    const screen = presentYouTubeScreen(loaded, { publicMode: false, connectReady: false, denied: false });
-    assert.equal(screen?.skipMessage, SKIPPED_UNHEALTHY);
+    assert.equal(loaded.days.length, 0);
+    assert.equal(loaded.videos.length, 0);
+    const screen = presentYouTubeScreen(loaded, { publicMode: false, connectReady: true, denied: false });
+    assert.equal(screen?.skipMessage, SKIPPED_HEALTH_CHECK);
     assert.equal(presentYouTubeScreen(loaded, { publicMode: true, connectReady: true, denied: false }), null);
   });
 });

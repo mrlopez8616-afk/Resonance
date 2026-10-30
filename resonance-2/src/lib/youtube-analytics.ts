@@ -5,11 +5,17 @@ import { NOT_CONNECTED, NOT_RECORDED } from "@/lib/youtube-node";
  * Pulls are three Hobby-safe daily crons, each once per day, in the UTC hour
  * that falls after the 9 AM, 1 PM, and 6 PM America/Chicago health checks
  * in both CST and CDT. Hobby may invoke a daily cron any time inside that hour.
- * A pull runs when that health check passed, or when YouTube's own dependencies
- * are healthy. Otherwise the job logs SKIPPED_UNHEALTHY and the page shows it.
+ * Those hours are 10:00–10:59 AM CST / 11:00–11:59 AM CDT, 2:00–2:59 PM CST /
+ * 3:00–3:59 PM CDT, and 7:00–7:59 PM CST / 8:00–8:59 PM CDT.
+ * A pull runs only when the latest Site Health Check passed. Postgres, the
+ * Google client env, and a stored refresh token do not open the gate.
+ * Otherwise the job logs SKIPPED_HEALTH_CHECK and writes no channel data.
  */
 
-export const SKIPPED_UNHEALTHY = "skipped: system unhealthy";
+export const SKIPPED_HEALTH_CHECK = "skipped: health check not passing";
+
+/** CST is UTC−6. CDT is UTC−5. A pull hour has to clear the check in both. */
+const CHICAGO_UTC_OFFSETS = [5, 6] as const;
 
 export const YOUTUBE_SCOPES = [
   "https://www.googleapis.com/auth/yt-analytics.readonly",
@@ -58,19 +64,19 @@ export const CRON_GATE_PLAN = [
   {
     path: "/api/cron/youtube",
     schedule: "0 16 * * *",
-    slot: "16:00 UTC hour, after the ~9 AM CT health check",
+    slot: "16:00 UTC hour (10:00–10:59 AM CST / 11:00–11:59 AM CDT), after the ~9 AM CT health check",
     gated: true,
   },
   {
     path: "/api/cron/youtube",
     schedule: "0 20 * * *",
-    slot: "20:00 UTC hour, after the ~1 PM CT health check",
+    slot: "20:00 UTC hour (2:00–2:59 PM CST / 3:00–3:59 PM CDT), after the ~1 PM CT health check",
     gated: true,
   },
   {
     path: "/api/cron/youtube",
     schedule: "0 1 * * *",
-    slot: "01:00 UTC hour, after the ~6 PM CT health check",
+    slot: "01:00 UTC hour (7:00–7:59 PM CST / 8:00–8:59 PM CDT), after the ~6 PM CT health check",
     gated: true,
   },
 ] as const;
@@ -93,12 +99,17 @@ export function youtubeSlotForSchedule(schedule: string | null | undefined): str
   return "manual";
 }
 
-export function decideYouTubePull(input: {
-  healthPasses: boolean;
-  youtubeDepsHealthy: boolean;
-}): { run: boolean; message: string | null } {
-  if (input.healthPasses || input.youtubeDepsHealthy) return { run: true, message: null };
-  return { run: false, message: SKIPPED_UNHEALTHY };
+/** True when the cron hour starts after healthHourCt in both CST and CDT. */
+export function pullFollowsHealthCheck(schedule: string, healthHourCt: number): boolean {
+  const hour = Number(schedule.trim().split(/\s+/)[1]);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return false;
+  if (!Number.isInteger(healthHourCt) || healthHourCt < 0 || healthHourCt > 23) return false;
+  return CHICAGO_UTC_OFFSETS.every((offset) => ((hour - offset + 24) % 24) > healthHourCt);
+}
+
+export function decideYouTubePull(input: { healthPasses: boolean }): { run: boolean; message: string | null } {
+  if (input.healthPasses) return { run: true, message: null };
+  return { run: false, message: SKIPPED_HEALTH_CHECK };
 }
 
 export function healthMarkPasses(
@@ -329,7 +340,7 @@ export function presentYouTubeScreen(
 ): YouTubeScreen | null {
   if (options.publicMode) return null;
   const totals = summarizeChannel(model);
-  const skipMessage = model.lastMessage === SKIPPED_UNHEALTHY ? SKIPPED_UNHEALTHY : null;
+  const skipMessage = model.lastMessage === SKIPPED_HEALTH_CHECK ? SKIPPED_HEALTH_CHECK : null;
   const failed = !skipMessage && model.lastStatus === "error" && model.lastMessage === "pull failed";
   const subscriberText = formatCount(totals.subscribers);
   const viewsText = formatCount(totals.views);
