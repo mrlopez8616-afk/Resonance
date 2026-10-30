@@ -718,6 +718,34 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     today: "2026-10-29",
     publicMode: true,
   });
+  const publicDetailRun = {
+    ...publicRun,
+    externalId: "public-detail",
+    payload: {
+      name: "Running",
+      source: "Nike Run Club",
+      elevationUp: { qty: "12", units: "m" },
+      elevationDown: { qty: "9", units: "m" },
+      splits: [
+        { miles: "1", durationSec: "500" },
+        { miles: "1", durationSec: "510" },
+      ],
+      heart: [
+        { t: "2026-10-20T12:00:00.000Z", bpm: "154" },
+        { t: "2026-10-20T12:01:00.000Z", bpm: "160" },
+      ],
+      distanceSeries: [{ t: "2026-10-20T12:00:00.000Z", miles: "0.1" }],
+      energySeries: [{ t: "2026-10-20T12:00:00.000Z", kcal: "12" }],
+    },
+  };
+  const runDetail = present.buildRunDetail({
+    workouts: [publicDetailRun],
+    today: "2026-10-29",
+    id: "health-auto-export:public-detail",
+    publicMode: true,
+  });
+  if (!runDetail) throw new Error("public run detail missing");
+  const runDetailHtml = render(createElement(fitnessFloor.RunDetailMirror, { detail: runDetail }));
   const steps = render(
     createElement(fitnessFloor.FitnessFloor, { tab: "steps", steps: stepsView, runs: runsView, analytics: analyticsView }),
   );
@@ -735,6 +763,16 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
   assert.equal(/bpm|heartRate|resting_heart/i.test(fitnessPage), false);
   assert.equal(fitnessPage.includes("154"), false);
   assert.equal(fitnessPage.includes("176"), false);
+  assert.match(runDetailHtml, /Route: not available from Nike/);
+  assert.match(runDetailHtml, /12 m up/);
+  assert.match(runDetailHtml, /9 m down/);
+  assert.match(runDetailHtml, /Split 1/);
+  assert.match(runDetailHtml, /8:20 \/mi/);
+  assert.equal(/bpm|heartRate|Heart rate|resting_heart/i.test(runDetailHtml), false);
+  assert.equal(runDetailHtml.includes("154"), false);
+  assert.equal(runDetailHtml.includes("160"), false);
+  assert.equal(JSON.stringify(runDetail).includes("heart"), false);
+  assert.equal(JSON.stringify(runDetail).includes("bpm"), false);
   const calendar = render(
     createElement(CalendarDesk, {
       events: [scrubbed],
@@ -851,6 +889,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/fitness", html: fitnessPage },
     { path: "/n/fitness/steps", html: steps },
     { path: "/n/fitness/runs", html: runsPage },
+    { path: "/n/fitness/runs/public-detail", html: runDetailHtml },
     { path: "/n/fitness/analytics", html: analyticsPage },
     { path: "/n/fight-desk", html: fight },
     { path: "/fights", html: fight },

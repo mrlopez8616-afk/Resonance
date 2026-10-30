@@ -253,6 +253,143 @@ function workoutExternalId(id: string, startIso: string, name: string): string {
   return createHash("sha256").update(`${startIso}|${name.trim().toLowerCase()}`).digest("hex");
 }
 
+const MILE_SCALE = 10_000;
+const MINUTE_MS = 60_000;
+
+type SeriesPoint = { t: string; ms: number; qty: number };
+
+function elevationUnits(units: string): string | null {
+  const normalized = units.trim().toLowerCase();
+  if (normalized === "m" || normalized === "meter" || normalized === "meters") return "m";
+  if (normalized === "ft" || normalized === "foot" || normalized === "feet") return "ft";
+  return null;
+}
+
+/** Recorded ascent or descent. Unknown units are dropped rather than labeled. */
+function elevationField(value: unknown): { qty: string; units: string } | null {
+  const parsed = qtyUnits(value);
+  if (!parsed || parsed.qty < 0) return null;
+  const units = elevationUnits(parsed.units);
+  if (!units) return null;
+  return { qty: decimalString(parsed.qty), units };
+}
+
+/**
+ * One heart-rate value per minute.
+ * Samples inside a minute are averaged. Empty minutes stay empty.
+ */
+function heartSeries(workout: Record<string, unknown>): { t: string; bpm: string }[] {
+  const buckets = new Map<string, number[]>();
+  for (const entry of asArray(workout.heartRateData)) {
+    const record = asRecord(entry);
+    if (!record) continue;
+    const at = parseWhen(record.date ?? record.startDate ?? record.endDate);
+    const bpm = numberOrNull(record.Avg ?? record.avg ?? record.qty);
+    if (!at || bpm === null || bpm <= 0 || bpm > 250) continue;
+    const minute = at.iso.slice(0, 16);
+    const list = buckets.get(minute) ?? [];
+    list.push(bpm);
+    buckets.set(minute, list);
+  }
+  return [...buckets.entries()]
+    .sort((left, right) => (left[0] < right[0] ? -1 : 1))
+    .map(([minute, values]) => ({
+      t: `${minute}:00.000Z`,
+      bpm: decimalString(values.reduce((sum, value) => sum + value, 0) / values.length),
+    }));
+}
+
+function timedSeries(raw: unknown, convert: (qty: number, units: string) => number | null): SeriesPoint[] {
+  const summed = new Map<string, { ms: number; qty: number }>();
+  for (const entry of asArray(raw)) {
+    const record = asRecord(entry);
+    if (!record) continue;
+    const at = parseWhen(record.date ?? record.startDate ?? record.endDate);
+    const parsed = qtyUnits(record);
+    if (!at || !parsed) continue;
+    const qty = convert(parsed.qty, parsed.units);
+    if (qty === null || qty < 0) continue;
+    const ms = Date.parse(at.iso);
+    if (!Number.isFinite(ms)) continue;
+    const current = summed.get(at.iso);
+    if (current) current.qty += qty;
+    else summed.set(at.iso, { ms, qty });
+  }
+  return [...summed.entries()]
+    .map(([t, row]) => ({ t, ms: row.ms, qty: row.qty }))
+    .sort((left, right) => left.ms - right.ms);
+}
+
+function distanceSeries(workout: Record<string, unknown>): SeriesPoint[] {
+  return timedSeries(
+    workout.walkingAndRunningDistance,
+    (qty, units) => normalizeDistance(qty, units)?.miles ?? null,
+  );
+}
+
+function energySeries(workout: Record<string, unknown>): SeriesPoint[] {
+  return timedSeries(workout.activeEnergy, (qty, units) => energyKcal(qty, units));
+}
+
+function seriesDistance(
+  points: readonly SeriesPoint[],
+): { miles: string; km: string; qty: string; units: string } | null {
+  const miles = points.reduce((sum, point) => sum + point.qty, 0);
+  if (!(miles > 0)) return null;
+  return {
+    miles: decimalString(miles),
+    km: decimalString(miles * KM_PER_MILE),
+    qty: decimalString(miles),
+    units: "mi",
+  };
+}
+
+/**
+ * Per-mile splits from the distance series.
+ * Fine enough means every sample is under a mile and at most a minute from the
+ * previous one, and the first sample is within a minute of the start.
+ * A mile closes on the recorded sample that reaches it.
+ * A coarser gap, or a sample that already contains a mile, yields no splits.
+ * Times are never placed between samples.
+ */
+function mileSplits(
+  startIso: string,
+  endIso: string | null,
+  points: readonly SeriesPoint[],
+): { miles: string; durationSec: string }[] {
+  const startMs = Date.parse(startIso);
+  if (!Number.isFinite(startMs) || points.length < 2) return [];
+  const endMs = endIso === null ? null : Date.parse(endIso);
+  const window = points.filter((point) => {
+    if (point.ms < startMs - 1_000) return false;
+    if (endMs !== null && Number.isFinite(endMs) && point.ms > endMs + MINUTE_MS) return false;
+    return true;
+  });
+  if (window.length < 2) return [];
+  if (window[0].ms - startMs > MINUTE_MS) return [];
+  for (let index = 1; index < window.length; index += 1) {
+    const gap = window[index].ms - window[index - 1].ms;
+    if (gap <= 0 || gap > MINUTE_MS) return [];
+  }
+  for (const point of window) {
+    if (Math.round(point.qty * MILE_SCALE) >= MILE_SCALE) return [];
+  }
+  let cumulative = 0;
+  let nextMile = MILE_SCALE;
+  let previous = startMs;
+  const splits: { miles: string; durationSec: string }[] = [];
+  for (const point of window) {
+    cumulative += Math.round(point.qty * MILE_SCALE);
+    if (cumulative < nextMile) continue;
+    const duration = (point.ms - previous) / 1000;
+    if (!(duration > 0)) return [];
+    splits.push({ miles: "1", durationSec: decimalString(duration) });
+    previous = point.ms;
+    nextMile += MILE_SCALE;
+  }
+  return splits;
+}
+
 function workoutRows(workouts: unknown[]): FitnessWorkoutWrite[] {
   const rows = new Map<string, FitnessWorkoutWrite>();
   for (const entry of workouts) {
@@ -266,7 +403,10 @@ function workoutRows(workouts: unknown[]): FitnessWorkoutWrite[] {
     const elapsed =
       end === null ? null : (new Date(end.iso).getTime() - new Date(start.iso).getTime()) / 1000;
     const duration = numberOrNull(workout.duration) ?? (elapsed !== null && elapsed > 0 ? elapsed : null);
-    const distance = workoutDistance(workout);
+    const distancePoints = distanceSeries(workout);
+    const energyPoints = energySeries(workout);
+    const summaryDistance = workoutDistance(workout);
+    const distance = summaryDistance ?? (distancePoints.length > 0 ? seriesDistance(distancePoints) : null);
     const energy = workoutEnergy(workout);
     const heart = heartSummary(workout);
     const id = typeof workout.id === "string" ? workout.id.trim() : "";
@@ -281,7 +421,27 @@ function workoutRows(workouts: unknown[]): FitnessWorkoutWrite[] {
       payload.miles = distance.miles;
       payload.km = distance.km;
     }
-    const splits = splitRows(workout);
+    const elevationUp = elevationField(workout.elevationUp);
+    const elevationDown = elevationField(workout.elevationDown);
+    if (elevationUp) payload.elevationUp = elevationUp;
+    if (elevationDown) payload.elevationDown = elevationDown;
+    const heartMinutes = heartSeries(workout);
+    if (heartMinutes.length > 0) payload.heart = heartMinutes;
+    if (distancePoints.length > 0) {
+      payload.distanceSeries = distancePoints.map((point) => ({
+        t: point.t,
+        miles: decimalString(point.qty),
+      }));
+    }
+    if (energyPoints.length > 0) {
+      payload.energySeries = energyPoints.map((point) => ({
+        t: point.t,
+        kcal: decimalString(point.qty),
+      }));
+    }
+    const recordedSplits = splitRows(workout);
+    const splits =
+      recordedSplits.length > 0 ? recordedSplits : mileSplits(start.iso, end?.iso ?? null, distancePoints);
     if (splits.length > 0) payload.splits = splits;
     rows.set(externalId, {
       source: HEALTH_AUTO_EXPORT_SOURCE,

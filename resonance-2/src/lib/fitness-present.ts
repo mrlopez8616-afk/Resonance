@@ -142,6 +142,11 @@ export type SplitModel = {
   pace: string;
 };
 
+export type HeartMinuteModel = {
+  minute: number;
+  bpm: number;
+};
+
 export type RunDetailView = {
   id: string;
   date: string;
@@ -151,9 +156,20 @@ export type RunDetailView = {
   energy: string | null;
   splits: SplitModel[];
   splitsNote: string | null;
+  /** Recorded ascent and descent, or "not recorded". */
+  elevation: string;
+  /** Nike exports do not include a GPS route. */
+  route: string;
+  /**
+   * Owner view only. Absent in Public view, so the heart-rate line is not in that markup.
+   * An empty list means the private page says heart rate was not recorded.
+   */
+  heart?: HeartMinuteModel[];
   avgHeart?: string;
   maxHeart?: string;
 };
+
+export const NIKE_ROUTE_NOTE = "Route: not available from Nike";
 
 /**
  * One analytics card. Add a builder to `ANALYTICS_BUILDERS` to grow the section.
@@ -168,6 +184,8 @@ export type AnalyticsMetric = {
   bars: StepBarModel[];
 };
 
+type ElevationReading = { qty: number; units: string };
+
 type RunFact = {
   id: string;
   day: string;
@@ -178,6 +196,9 @@ type RunFact = {
   heartAvg: number | null;
   heartMax: number | null;
   splits: { miles: number; durationSec: number }[];
+  elevationUp: ElevationReading | null;
+  elevationDown: ElevationReading | null;
+  heart: HeartMinuteModel[];
 };
 
 type AnalyticsContext = {
@@ -301,6 +322,54 @@ function restingMap(metrics: readonly FitnessMetricWrite[]): Map<string, number>
   return map;
 }
 
+function readElevation(payload: unknown, key: "elevationUp" | "elevationDown"): ElevationReading | null {
+  const record = asRecord(asRecord(payload)?.[key]);
+  if (!record) return null;
+  const qty = Number(record.qty);
+  const units = typeof record.units === "string" ? record.units.trim() : "";
+  if (!Number.isFinite(qty) || qty < 0 || !units) return null;
+  return { qty, units };
+}
+
+function readHeart(payload: unknown, startedAt: string): HeartMinuteModel[] {
+  const raw = asRecord(payload)?.heart;
+  if (!Array.isArray(raw)) return [];
+  const start = Date.parse(startedAt);
+  if (!Number.isFinite(start)) return [];
+  const points: HeartMinuteModel[] = [];
+  for (const entry of raw) {
+    const record = asRecord(entry);
+    if (!record || typeof record.t !== "string") continue;
+    const bpm = Number(record.bpm);
+    const at = Date.parse(record.t);
+    if (!Number.isFinite(bpm) || bpm <= 0 || bpm > 250) continue;
+    if (!Number.isFinite(at)) continue;
+    const minute = Math.round((at - start) / 60_000);
+    if (minute < 0 || minute > 24 * 60) continue;
+    points.push({ minute, bpm });
+  }
+  points.sort((left, right) => left.minute - right.minute);
+  const unique: HeartMinuteModel[] = [];
+  for (const point of points) {
+    if (unique.at(-1)?.minute === point.minute) continue;
+    unique.push(point);
+  }
+  return unique;
+}
+
+function formatElevationQty(qty: number): string {
+  const rounded = Math.round(qty * 10) / 10;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
+  return rounded.toFixed(1);
+}
+
+function formatElevation(up: ElevationReading | null, down: ElevationReading | null): string {
+  if (!up && !down) return NOT_RECORDED;
+  const upText = up ? `${formatElevationQty(up.qty)} ${up.units} up` : "up not recorded";
+  const downText = down ? `${formatElevationQty(down.qty)} ${down.units} down` : "down not recorded";
+  return `${upText} · ${downText}`;
+}
+
 function readSplits(payload: unknown): { miles: number; durationSec: number }[] {
   const raw = asRecord(payload)?.splits;
   if (!Array.isArray(raw)) return [];
@@ -333,6 +402,9 @@ function runFacts(workouts: readonly FitnessWorkoutWrite[], today: string): RunF
         heartAvg: row.heartRateAvg,
         heartMax: finite(write?.heartRateMax),
         splits: readSplits(write?.payload),
+        elevationUp: readElevation(write?.payload, "elevationUp"),
+        elevationDown: readElevation(write?.payload, "elevationDown"),
+        heart: readHeart(write?.payload, row.startedAt),
       };
     });
 }
@@ -957,8 +1029,13 @@ export function buildRunDetail(input: {
     energy: run.energyKcal !== null && run.energyKcal > 0 ? `${formatCount(run.energyKcal)} kcal` : null,
     splits,
     splitsNote: splits.length === 0 ? "No splits in this export." : null,
+    elevation: formatElevation(run.elevationUp, run.elevationDown),
+    route: NIKE_ROUTE_NOTE,
   };
-  if (!publicMode) Object.assign(detail, heartLabel(run.heartAvg, run.heartMax));
+  if (!publicMode) {
+    Object.assign(detail, heartLabel(run.heartAvg, run.heartMax));
+    detail.heart = run.heart;
+  }
   return detail;
 }
 

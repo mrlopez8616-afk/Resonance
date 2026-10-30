@@ -27,10 +27,7 @@ export function HealthAutoExportGuide() {
       <p>Health metrics. Select step_count only. Aggregate data on. Interval 1 day.</p>
       <p>Optional. Also select resting_heart_rate, one value per day. A later export replaces that day.</p>
       <h3>Workouts</h3>
-      <p>
-        Workouts on. Leave route data off. Leave per-second workout metrics off. Distance, energy, and
-        heart-rate average and max still arrive on the workout summary.
-      </p>
+      <p>Workouts on. Include Workout Metrics ON, Time Grouping Minutes, Route OFF.</p>
       <h3>Batch requests</h3>
       <p>On, for both automations. Each request must stay under 4.5 MB.</p>
       <h3>Backfill</h3>
