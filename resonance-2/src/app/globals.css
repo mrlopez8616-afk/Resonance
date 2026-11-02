@@ -5301,6 +5301,15 @@ a.fighter-link {
   color: #ff5a63;
 }
 
+.fitness-floor .node-layout {
+  --surface: #171a21;
+  --border: #4a5160;
+  --muted: #b4bac4;
+  --ok: #3ddc84;
+  --warning: #f5a524;
+  color: #f5f6f8;
+}
+
 .fitness-board {
   display: flex;
   flex-direction: column;
@@ -5573,6 +5582,11 @@ a.fighter-link {
   .fitness-metrics {
     grid-template-columns: 1fr 1fr;
     column-gap: 1.25rem;
+  }
+
+  .fitness-floor .node-layout .fitness-board {
+    display: flex;
+    flex-direction: column;
   }
 }
 

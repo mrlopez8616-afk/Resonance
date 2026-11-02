@@ -1,14 +1,32 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { createElement, isValidElement, type ReactNode } from "react";
 import { describe, it } from "node:test";
 import { HeartTrend, RunBars } from "@/components/fitness-charts";
-import { FitnessDetail } from "@/components/fitness-detail";
 import { fitnessCards, fitnessNode, metricSamples, workoutSamples } from "@/lib/fitness-board";
 import { manualFitnessSeed } from "@/lib/fitness-seed";
 import { readNightlyFitness } from "@/lib/fitness-nrc";
 import { parseFitnessIngest } from "@/lib/fitness-shortcuts";
 import { phoneTrail } from "@/lib/phone-nav";
+
+const cssRequire = createRequire(import.meta.url);
+const nodeModule = cssRequire("module") as {
+  _load: (request: string, parent: unknown, isMain: boolean) => unknown;
+};
+const originalLoad = nodeModule._load;
+nodeModule._load = function load(request: string, parent: unknown, isMain: boolean) {
+  const normalized = request.replace(/\\/g, "/");
+  if (normalized === "next/link" || normalized.includes("next/dist/client/link")) {
+    return {
+      __esModule: true,
+      default: function LinkStandIn(props: { href?: string; children?: ReactNode; className?: string }) {
+        return createElement("a", { href: props.href ?? "", className: props.className }, props.children);
+      },
+    };
+  }
+  return originalLoad(request, parent, isMain);
+};
 
 const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
 
@@ -198,7 +216,7 @@ describe("nightly runs and heart", () => {
     assert.equal(undated.heart.length, 0);
   });
 
-  it("shows run bars and a heart trend, and not recorded when empty", () => {
+  it("shows run bars and a heart trend, and not recorded when empty", async () => {
     const seed = manualFitnessSeed();
     const runs = fitnessNode("runs", metricSamples(seed.metrics), workoutSamples(seed.workouts), "2026-10-07");
     assert.equal(runs?.bars?.length, 2);
@@ -219,6 +237,7 @@ describe("nightly runs and heart", () => {
     const detail = fitnessNode("heart", metricSamples(withHeart.heart), [], "2026-10-07");
     assert.equal(detail?.heart?.length, 2);
     assert.equal(detail?.heart?.[0]?.resting !== null && detail?.heart?.[0]?.avg === null, true);
+    const { FitnessDetail } = await import("@/components/fitness-detail");
     const html = render(
       createElement(
         "div",
@@ -232,7 +251,8 @@ describe("nightly runs and heart", () => {
     assert.equal(html.includes("<svg"), true);
     assert.equal(html.includes("not recorded"), false);
     const emptyHtml = render(createElement(FitnessDetail, { detail: quiet! }));
-    assert.equal(emptyHtml.includes("not recorded"), true);
+    assert.match(emptyHtml, /Connect to see data/);
+    assert.equal(emptyHtml.includes("not recorded"), false);
     assert.equal(emptyHtml.includes("$"), false);
   });
 

@@ -181,10 +181,10 @@ export default async function NodeDetailPage({
           }
           storageDetail={floor.storageDetail}
         >
-          <Link href={`/n/${parent.id}`} className="calendar-back">
-            {parent.label}
-          </Link>
-          <FitnessDetail detail={manualImportDetail(manual.entries, { publicMode })} />
+          <FitnessDetail
+            detail={manualImportDetail(manual.entries, { publicMode })}
+            publicMode={publicMode}
+          />
         </OperatorShell>
       );
     }
@@ -208,10 +208,7 @@ export default async function NodeDetailPage({
         }
         storageDetail={floor.storageDetail}
       >
-        <Link href={`/n/${parent.id}`} className="calendar-back">
-          {parent.label}
-        </Link>
-        <FitnessDetail detail={detail} />
+        <FitnessDetail detail={detail} publicMode={publicMode} updatedAt={fitness.updatedAt} />
       </OperatorShell>
     );
   }

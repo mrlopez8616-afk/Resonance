@@ -8,7 +8,6 @@ import { createElement, isValidElement, type ReactNode } from "react";
 import { newDb } from "pg-mem";
 import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/fitness/manual/route";
-import { FitnessDetail } from "@/components/fitness-detail";
 import { SESSION_COOKIE } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
 import { fitnessCards, fitnessNode, metricSamples, workoutSamples } from "@/lib/fitness-board";
@@ -159,6 +158,7 @@ describe("fitness manual copy", () => {
 
     const hidden = manualImportCard(entries, { publicMode: true });
     const hiddenDetail = manualImportDetail(entries, { publicMode: true });
+    const { FitnessDetail } = await import("@/components/fitness-detail");
     const html = render(
       createElement(
         "div",
@@ -178,7 +178,8 @@ describe("fitness manual copy", () => {
 
     const empty = manualImportDetail([], { publicMode: false });
     const emptyHtml = render(createElement(FitnessDetail, { detail: empty }));
-    assert.match(emptyHtml, /not recorded/);
+    assert.match(emptyHtml, /Connect to see data/);
+    assert.equal(emptyHtml.includes("not recorded"), false);
     assert.equal(empty.rows.length, 0);
     assert.equal(empty.headline, null);
 
@@ -385,6 +386,7 @@ describe("fitness manual route", { concurrency: false }, () => {
     assert.match(face.detail ?? "", /manual/);
     assert.equal(face.headline, "6 Oct–12 Oct");
     const detail = manualImportDetail(loaded.entries, { publicMode: true });
+    const { FitnessDetail } = await import("@/components/fitness-detail");
     const html = render(createElement(FitnessDetail, { detail }));
     assert.match(html, /manual/);
     assert.match(html, /approx/);

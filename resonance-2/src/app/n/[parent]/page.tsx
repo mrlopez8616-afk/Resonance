@@ -19,6 +19,7 @@ import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
+import { latestFitnessUpdatedAt } from "@/lib/fitness-layout";
 import { buildAnalytics, buildRunsView, buildStepsView, parseStepSpan } from "@/lib/fitness-present";
 import { loadFitnessBundle } from "@/lib/fitness-store";
 import { nrcRunsAsWrites } from "@/lib/fitness-nrc";
@@ -239,10 +240,13 @@ export default async function ParentNodePage({
         storageDetail={floor.storageDetail}
       >
         <div className="fitness-floor">
-          <Link href="/" className="calendar-back">
-            Floor
-          </Link>
-          <FitnessFloor steps={steps} runs={runs} analytics={analytics} />
+          <FitnessFloor
+            steps={steps}
+            runs={runs}
+            analytics={analytics}
+            publicMode={publicMode}
+            updatedAt={latestFitnessUpdatedAt({ metrics: bundle.metrics, workouts })}
+          />
           {publicMode ? null : (
             <FitnessTokenCopy configured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())} />
           )}
