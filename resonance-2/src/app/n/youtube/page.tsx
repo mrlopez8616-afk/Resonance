@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { OperatorShell } from "@/components/operator-shell";
-import { YouTubeAnalyticsPanel, YouTubeParent } from "@/components/youtube-node";
+import { YouTubeParent } from "@/components/youtube-node";
 import { requireRole } from "@/lib/auth-session";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { brickParentCard } from "@/lib/youtube-bricks";
@@ -44,11 +43,11 @@ export default async function YouTubePage({
   else unavailable = true;
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      <YouTubeParent brick={brick} channel={screen?.channelFace} />
-      {screen ? <YouTubeAnalyticsPanel screen={screen} /> : null}
+      <YouTubeParent
+        brick={brick}
+        channel={screen?.channelFace}
+        notice={screen?.skipMessage ?? screen?.notice ?? null}
+      />
     </OperatorShell>
   );
 }

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OperatorShell } from "@/components/operator-shell";
 import { YouTubeGearDetail } from "@/components/youtube-node";
@@ -26,9 +25,6 @@ export default async function YouTubeGearDevicePage({
   const publicMode = await isPublicMode();
   return (
     <OperatorShell>
-      <Link href="/n/youtube/gear" className="calendar-back">
-        Gear
-      </Link>
       <YouTubeGearDetail item={item} publicMode={publicMode} />
     </OperatorShell>
   );

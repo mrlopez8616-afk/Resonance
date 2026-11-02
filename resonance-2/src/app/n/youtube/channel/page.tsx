@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { OperatorShell } from "@/components/operator-shell";
 import { YouTubeChannel } from "@/components/youtube-node";
 import { requireRole } from "@/lib/auth-session";
@@ -31,13 +30,11 @@ export default async function YouTubeChannelPage({
   }
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/youtube" className="calendar-back">
-        YouTube
-      </Link>
       <YouTubeChannel
         publicMode={publicMode}
-        stats={screen?.channelStats ?? null}
-        notice={screen?.skipMessage ?? screen?.notice ?? null}
+        stats={publicMode ? null : (screen?.channelStats ?? null)}
+        notice={publicMode ? null : (screen?.skipMessage ?? screen?.notice ?? null)}
+        screen={publicMode ? null : screen}
       />
     </OperatorShell>
   );
