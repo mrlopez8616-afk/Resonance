@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CatalystEventDetail } from "@/components/catalyst-calendar";
 import { OperatorShell } from "@/components/operator-shell";
 import {
   catalystBucketHref,
   catalystBucketId,
-  catalystBucketLabel,
   isCatalystBucket,
 } from "@/lib/catalyst-calendar";
 import { loadCatalystPage } from "@/lib/catalyst-page";
@@ -37,10 +35,7 @@ export default async function CatalystEventPage({
   if (!event || catalystBucketId(event, now) !== bucket) notFound();
   return (
     <OperatorShell storageMessage={store.status === "seed-only" ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href={catalystBucketHref(bucket)} className="calendar-back">
-        {catalystBucketLabel(bucket)}
-      </Link>
-      <CatalystEventDetail event={event} />
+      <CatalystEventDetail event={event} backHref={catalystBucketHref(bucket)} />
     </OperatorShell>
   );
 }

@@ -120,7 +120,7 @@ describe("future ideas copy", () => {
     assert.equal(publicBoard.some((card) => card.id === "resonance-member-rewards"), false);
     assert.equal(JSON.stringify(publicBoard).includes("protein"), false);
     assert.match(readFileSync(path.join(root, "src/components/build-floor.tsx"), "utf8"), /href: "\/n\/ideas"/);
-    assert.match(readFileSync(path.join(root, "src/app/n/ideas/page.tsx"), "utf8"), /href="\/n\/build"/);
+    assert.match(readFileSync(path.join(root, "src/components/ideas-board.tsx"), "utf8"), /backHref="\/n\/build"/);
   });
 
   it("rejects a secret, an empty title, and a status outside the board", () => {

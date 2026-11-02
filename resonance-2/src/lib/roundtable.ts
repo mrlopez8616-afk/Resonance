@@ -49,6 +49,7 @@ export type RoundtableCard = {
   title: string;
   when: string;
   countLabel: string;
+  updatedAt: string;
 };
 
 export type RoundtableMessageView = {
@@ -64,6 +65,7 @@ export type RoundtableThreadView = {
   title: string;
   countLabel: string;
   messages: RoundtableMessageView[];
+  updatedAt: string;
 };
 
 export type RoundtableHomeModel = {
@@ -179,6 +181,7 @@ export function presentRoundtableCards(
       title: publicMode ? publicRoundtableText(thread.title) : thread.title.trim(),
       when: formatRoundtableWhen(thread.updatedAt),
       countLabel: roundtableCountLabel(thread.messageCount),
+      updatedAt: thread.updatedAt,
     }));
 }
 
@@ -193,6 +196,7 @@ export function presentRoundtableThread(
     agentName: roundtableAgentName(thread.agentId) ?? "Agent",
     title: publicMode ? publicRoundtableText(thread.title) : thread.title.trim(),
     countLabel: roundtableCountLabel(thread.messageCount),
+    updatedAt: thread.updatedAt,
     messages: thread.messages.map((message) => ({
       id: message.id,
       authorLabel: roundtableAuthorLabel(message.authorKind, message.authorId),

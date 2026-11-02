@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { LessonsFloor } from "@/components/lessons-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { loadLessonPage } from "@/lib/lessons-store";
@@ -22,10 +21,7 @@ export default async function LessonsPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      {page ? <LessonsFloor cards={page.cards} showSources={!page.publicMode} /> : null}
+      {page ? <LessonsFloor cards={page.cards} showSources={!page.publicMode} /> : <LessonsFloor cards={null} showSources={false} />}
     </OperatorShell>
   );
 }

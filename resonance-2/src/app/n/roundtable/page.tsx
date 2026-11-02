@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { RoundtableParent } from "@/components/roundtable-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
@@ -27,10 +26,7 @@ export default async function RoundtablePage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      {cards ? <RoundtableParent cards={cards} publicMode={publicMode} /> : null}
+      <RoundtableParent cards={cards} publicMode={publicMode} />
     </OperatorShell>
   );
 }

@@ -57,8 +57,9 @@ export function cardSpanClass(span: CardSpan): string {
 }
 
 /**
- * Newest parseable timestamp already loaded on the page.
- * Blank and unparseable values are skipped. No stamps returns null.
+ * Newest clock time already loaded on the page.
+ * Blank, unparseable, and date-only values are skipped. No stamps returns null.
+ * A date with no time is not a timestamp, so the header can omit Updated.
  */
 export function latestTimestamp(values: readonly (string | null | undefined)[]): string | null {
   let best: string | null = null;
@@ -66,7 +67,7 @@ export function latestTimestamp(values: readonly (string | null | undefined)[]):
   for (const value of values) {
     if (value == null) continue;
     const trimmed = value.trim();
-    if (!trimmed) continue;
+    if (!trimmed || !trimmed.includes("T")) continue;
     const ms = Date.parse(trimmed);
     if (!Number.isFinite(ms) || ms <= bestMs) continue;
     bestMs = ms;

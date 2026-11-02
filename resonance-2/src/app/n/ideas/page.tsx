@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { IdeasBoard } from "@/components/ideas-board";
 import { IdeaActions, IdeaCreate } from "@/components/ideas-editor";
 import { OperatorShell } from "@/components/operator-shell";
@@ -39,18 +38,13 @@ export default async function FutureIdeasPage({
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/build" className="calendar-back">
-        Build
-      </Link>
-      {cards ? (
-        <IdeasBoard
-          cards={cards}
-          filter={filter}
-          archivedView={archivedView}
-          actions={canEdit ? (card) => <IdeaActions card={card} /> : undefined}
-          footer={canEdit && !archivedView ? <IdeaCreate today={chicagoToday()} /> : null}
-        />
-      ) : null}
+      <IdeasBoard
+        cards={cards}
+        filter={filter}
+        archivedView={archivedView}
+        actions={canEdit ? (card) => <IdeaActions card={card} /> : undefined}
+        footer={canEdit && !archivedView ? <IdeaCreate today={chicagoToday()} /> : null}
+      />
     </OperatorShell>
   );
 }

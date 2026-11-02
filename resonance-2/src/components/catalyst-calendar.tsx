@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import { tileFace } from "@/lib/home-faces";
+import { latestTimestamp, type NodePart } from "@/lib/node-layout";
 import type { CalendarEvent } from "@/data/calendar";
 import {
   CATALYST_CALENDAR_HREF,
   catalystBucketEvents,
+  catalystBucketId,
+  catalystBucketLabel,
   catalystBuckets,
   catalystDateLabel,
   catalystEntryLine,
@@ -33,6 +37,10 @@ function CountCard({ bucket }: { bucket: CatalystBucketView }) {
   );
 }
 
+function bucketParts(buckets: readonly CatalystBucketView[]): NodePart[] {
+  return buckets.map((bucket) => (bucket.count > 0 ? "live" : "missing"));
+}
+
 export function CatalystWeekCards({
   events,
   now,
@@ -43,12 +51,25 @@ export function CatalystWeekCards({
   const buckets = catalystBuckets(events, now).filter(
     (bucket) => bucket.id !== "later" || bucket.count > 0,
   );
+  const starts = events.filter((event) => catalystBucketId(event, now)).map((event) => event.start);
   return (
-    <NodeFaceGrid label="Catalyst weeks">
-      {buckets.map((bucket) => (
-        <CountCard key={bucket.id} bucket={bucket} />
-      ))}
-    </NodeFaceGrid>
+    <NodeLayout>
+      <NodeHeader
+        name="Catalysts"
+        parts={bucketParts(buckets)}
+        updatedAt={latestTimestamp(starts)}
+        backHref="/n/ai-stocks"
+      />
+      <NodeSections>
+        <NodeSection kind="lists">
+          <NodeFaceGrid label="Catalyst weeks">
+            {buckets.map((bucket) => (
+              <CountCard key={bucket.id} bucket={bucket} />
+            ))}
+          </NodeFaceGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
@@ -88,57 +109,100 @@ export function CatalystWeekList({
   now: Date;
 }) {
   const items = catalystBucketEvents(events, bucket, now);
-  if (items.length === 0) {
-    return <p className="parent-empty">Nothing scheduled</p>;
-  }
+  const starts = events.filter((event) => catalystBucketId(event, now) === bucket).map((event) => event.start);
+  const name = catalystBucketLabel(bucket);
   return (
-    <ul className="catalyst-list">
-      {items.map((event) => (
-        <li key={event.id}>
-          <Link href={event.href} className="catalyst-row">
-            <span className="catalyst-row-when">
-              {event.dateLabel} · {event.timeLabel}
-            </span>
-            <span className="catalyst-row-title">{event.title}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <NodeLayout>
+      <NodeHeader
+        name={name}
+        parts={items.length > 0 ? ["live"] : ["missing"]}
+        updatedAt={latestTimestamp(starts)}
+        backHref={CATALYST_CALENDAR_HREF}
+      />
+      <NodeSections>
+        <NodeSection kind="lists">
+          {items.length === 0 ? (
+            <NodeGrid>
+              <EmptyCard span="list" label="Nothing scheduled" />
+            </NodeGrid>
+          ) : (
+            <NodeGrid>
+              {items.map((event) => (
+                <StatCard
+                  key={event.id}
+                  span="list"
+                  label={`${event.dateLabel} · ${event.timeLabel}`}
+                  value={event.title}
+                  href={event.href}
+                />
+              ))}
+            </NodeGrid>
+          )}
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
-export function CatalystEventDetail({ event }: { event: CalendarEvent }) {
+export function CatalystEventDetail({
+  event,
+  backHref = CATALYST_CALENDAR_HREF,
+}: {
+  event: CalendarEvent;
+  backHref?: string;
+}) {
   const chips = catalystNodeChips(event);
+  const date = catalystDateLabel(event);
+  const time = catalystTimeLabel(event);
   return (
-    <article className="catalyst-detail">
-      <h2>{event.title}</h2>
-      <p className="catalyst-meta">{catalystDateLabel(event)}</p>
-      <p className="catalyst-meta">{catalystTimeLabel(event)}</p>
-      <p className="catalyst-meta">{catalystStatusLabel(event)}</p>
-      {event.location ? <p className="catalyst-meta">{event.location}</p> : null}
-      {event.note ? <p className="catalyst-note">{event.note}</p> : null}
-      {chips.length > 0 ? (
-        <div className="catalyst-chips" aria-label="Nodes">
-          {chips.map((chip) =>
-            chip.href ? (
-              <Link key={chip.label} href={chip.href} className="calendar-chip">
-                {chip.label}
-              </Link>
-            ) : (
-              <span key={chip.label} className="calendar-chip">
-                {chip.label}
-              </span>
-            ),
-          )}
-        </div>
-      ) : null}
-      {event.sourceUrl ? (
-        <p className="catalyst-meta">
-          <a href={event.sourceUrl} rel="noreferrer">
-            Source
-          </a>
-        </p>
-      ) : null}
-    </article>
+    <NodeLayout>
+      <NodeHeader
+        name={event.title || "Catalyst"}
+        parts={event.title.trim() ? ["live"] : ["missing"]}
+        updatedAt={event.start}
+        backHref={backHref}
+      />
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            {date ? <StatCard label="Date" value={date} /> : <EmptyCard label="Date" />}
+            {time ? <StatCard label="Time" value={time} /> : <EmptyCard label="Time" />}
+            <StatCard label="Status" value={catalystStatusLabel(event)} />
+            {event.location ? <StatCard label="Location" value={event.location} /> : null}
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="lists">
+          <NodeGrid>
+            {event.note ? <StatCard span="list" label="Note" value={event.note} /> : null}
+            {chips.length > 0 ? (
+              <StatCard span="list" label="Nodes">
+                <div className="catalyst-chips" aria-label="Nodes">
+                  {chips.map((chip) =>
+                    chip.href ? (
+                      <Link key={chip.label} href={chip.href} className="calendar-chip">
+                        {chip.label}
+                      </Link>
+                    ) : (
+                      <span key={chip.label} className="calendar-chip">
+                        {chip.label}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </StatCard>
+            ) : null}
+            {event.sourceUrl ? (
+              <StatCard span="list" label="Source">
+                <p className="node-card-detail">
+                  <a href={event.sourceUrl} rel="noreferrer">
+                    Source
+                  </a>
+                </p>
+              </StatCard>
+            ) : null}
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }

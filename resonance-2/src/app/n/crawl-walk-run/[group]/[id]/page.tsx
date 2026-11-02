@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CrawlWalkRunItem } from "@/components/crawl-walk-run-floor";
 import { OperatorShell } from "@/components/operator-shell";
-import { cwrDetail, cwrGroup, groupHref } from "@/lib/crawl-walk-run";
+import { cwrDetail, cwrGroup } from "@/lib/crawl-walk-run";
 
 export async function generateMetadata({
   params,
@@ -27,9 +26,6 @@ export default async function CrawlWalkRunItemPage({
   if (!detail) notFound();
   return (
     <OperatorShell>
-      <Link href={groupHref(group.id)} className="calendar-back">
-        {group.label}
-      </Link>
       <CrawlWalkRunItem detail={detail} />
     </OperatorShell>
   );

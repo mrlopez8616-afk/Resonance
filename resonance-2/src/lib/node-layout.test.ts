@@ -149,6 +149,11 @@ describe("node layout rules", () => {
     );
     assert.equal(layoutSource.includes("new Date()"), false);
     assert.equal(layoutSource.includes("Date.now"), false);
+    assert.equal(latestTimestamp([null, "", "2026-10-28"]), null);
+    assert.equal(
+      latestTimestamp(["2026-10-11T17:00:00.000Z", "2026-10-12T15:00:00.000Z"]),
+      "2026-10-12T15:00:00.000Z",
+    );
   });
 
   it("keeps one grid contract: equal height, 12 columns, and the span steps", () => {

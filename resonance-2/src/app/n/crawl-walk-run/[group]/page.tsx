@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CrawlWalkRunGroup } from "@/components/crawl-walk-run-floor";
 import { OperatorShell } from "@/components/operator-shell";
-import { CWR_HREF, cwrGroup } from "@/lib/crawl-walk-run";
+import { cwrGroup } from "@/lib/crawl-walk-run";
 
 export function generateStaticParams() {
   return [{ group: "built" }, { group: "planned" }, { group: "recommended" }];
@@ -24,9 +23,6 @@ export default async function CrawlWalkRunGroupPage({
   if (!group) notFound();
   return (
     <OperatorShell>
-      <Link href={CWR_HREF} className="calendar-back">
-        Crawl Walk Run
-      </Link>
       <CrawlWalkRunGroup group={group.id} />
     </OperatorShell>
   );

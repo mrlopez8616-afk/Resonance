@@ -97,6 +97,7 @@ export type LessonCard = {
   buildHref: string | null;
   prHref: string | null;
   prNumber: number | null;
+  updatedAt: string;
 };
 
 export type LessonsHomeModel = {
@@ -463,6 +464,7 @@ export function toLessonCard(
     buildHref: lessonBuildHref(lesson.buildItemId, buildSection),
     prHref: lesson.prNumber == null ? null : pullHref(lesson.prNumber),
     prNumber: lesson.prNumber,
+    updatedAt: lesson.updatedAt,
   };
 }
 

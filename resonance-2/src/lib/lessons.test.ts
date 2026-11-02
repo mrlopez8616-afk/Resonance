@@ -224,7 +224,9 @@ describe("lessons public filter", () => {
     assert.equal(lessonBuildHref("platform-pwa", "platform"), "/n/build/platform#platform-pwa");
     const lessonsPage = readFileSync(path.join(root, "src/app/n/lessons/page.tsx"), "utf8");
     assert.match(lessonsPage, /OperatorShell/);
-    assert.match(lessonsPage, /className="calendar-back"/);
+    const lessonsFloor = readFileSync(path.join(root, "src/components/lessons-floor.tsx"), "utf8");
+    assert.match(lessonsFloor, /NodeHeader/);
+    assert.match(lessonsFloor, /backHref="\/"/);
     const migration = readFileSync(path.join(root, "db/migrations/018_lessons.sql"), "utf8");
     assert.equal(/INSERT\s+INTO\s+lessons/i.test(migration), false);
     assert.match(migration, /018/);

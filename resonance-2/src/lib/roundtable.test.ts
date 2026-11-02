@@ -251,7 +251,8 @@ describe("roundtable copy", () => {
     const parent = readFileSync(path.join(root, "src/app/n/roundtable/page.tsx"), "utf8");
     assert.ok(parent.indexOf('await requireRole("owner")') < parent.indexOf("await loadRoundtableCards"));
     assert.equal(parent.includes("blockedPublicPage"), false);
-    assert.match(parent, /href="\/"/);
+    const floor = readFileSync(path.join(root, "src/components/roundtable-floor.tsx"), "utf8");
+    assert.match(floor, /backHref="\/"/);
     const child = readFileSync(path.join(root, "src/app/n/roundtable/[thread]/page.tsx"), "utf8");
     assert.ok(child.indexOf('await requireRole("owner")') < child.indexOf("await loadRoundtableThread"));
     assert.equal(child.includes("blockedPublicPage"), false);

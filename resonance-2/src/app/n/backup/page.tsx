@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BackupFloor } from "@/components/backup-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { backupDetailLines, loadLatestBackupRun } from "@/lib/backup";
@@ -14,9 +13,12 @@ export const metadata = {
 export default async function BackupPage() {
   const publicMode = await isPublicMode();
   let lines = backupDetailLines(null, publicMode);
+  let updatedAt: string | null = null;
   let unavailable = false;
   try {
-    lines = backupDetailLines(await loadLatestBackupRun(), publicMode);
+    const run = await loadLatestBackupRun();
+    lines = backupDetailLines(run, publicMode);
+    updatedAt = run?.startedAt ?? null;
   } catch (error) {
     if (!isStorageUnavailable(error)) throw error;
     unavailable = true;
@@ -24,10 +26,7 @@ export default async function BackupPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/build" className="calendar-back">
-        Build
-      </Link>
-      <BackupFloor lines={lines} />
+      <BackupFloor lines={lines} updatedAt={updatedAt} />
     </OperatorShell>
   );
 }
