@@ -610,8 +610,196 @@ async function loadHandlers(): Promise<{
   };
 }
 
-/** Public-view checks for /api/health/full. Failures are named issues. */
-export async function runPublicViewProbe(): Promise<HealthIssue[]> {
+export type LayoutSourceFile = {
+  path: string;
+  source: string;
+};
+
+const UNBOXED_EMPTY = [
+  /className="parent-empty"/,
+  /className="fitness-empty"/,
+  /className="calendar-quiet"/,
+  /className="log-header"/,
+  />\s*(?:not recorded|not connected|stats not connected|no data yet|no closes|no close|nothing is waiting|nothing is recorded|nothing queued|no items in this section|none)\s*</i,
+];
+
+function sourcePath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const marker = normalized.lastIndexOf("/src/");
+  return marker === -1 ? normalized.replace(/^\.\//, "") : normalized.slice(marker + 1);
+}
+
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1");
+}
+
+function resolveImport(from: string, spec: string): string | null {
+  if (spec.startsWith("@/")) return `src/${spec.slice(2)}`;
+  if (!spec.startsWith(".")) return null;
+  const dir = from.split("/").slice(0, -1);
+  const stack: string[] = [];
+  for (const part of [...dir, ...spec.split("/")]) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") stack.pop();
+    else stack.push(part);
+  }
+  return stack.join("/");
+}
+
+function lookup(files: ReadonlyMap<string, string>, base: string): string | null {
+  const candidates = [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`];
+  return candidates.find((candidate) => files.has(candidate)) ?? null;
+}
+
+function importSpecs(source: string): string[] {
+  const specs: string[] = [];
+  const from = /from\s+["']([^"']+)["']/g;
+  const dynamic = /import\(\s*["']([^"']+)["']\s*\)/g;
+  for (const pattern of [from, dynamic]) {
+    for (const match of source.matchAll(pattern)) {
+      if (match[1]) specs.push(match[1]);
+    }
+  }
+  return specs;
+}
+
+function sourceTree(start: string, files: ReadonlyMap<string, string>): string[] {
+  const seen = new Set<string>();
+  const queue = [start];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (!current || seen.has(current)) continue;
+    seen.add(current);
+    const source = files.get(current);
+    if (!source) continue;
+    for (const spec of importSpecs(source)) {
+      const base = resolveImport(current, spec);
+      if (!base) continue;
+      const next = lookup(files, base);
+      if (next) queue.push(next);
+    }
+  }
+  return [...seen];
+}
+
+function pageRoute(path: string): string {
+  const route = path
+    .replace(/^src\/app/, "")
+    .replace(/\/\([^)/]+\)/g, "")
+    .replace(/\/page\.tsx$/, "");
+  return route || "/";
+}
+
+function routePatterns(files: ReadonlyMap<string, string>): string[] {
+  const patterns: string[] = [];
+  for (const path of files.keys()) {
+    if (!/^src\/app\/.*page\.tsx$/.test(path)) continue;
+    let route = pageRoute(path);
+    if (route.includes("[[...")) {
+      const base = route.replace(/\/\[\[\.\.\.[^\]]+\]\]/g, "") || "/";
+      patterns.push(base);
+      patterns.push(`${base}/*`);
+      continue;
+    }
+    patterns.push(route.replace(/\[[^\]]+\]/g, ":param"));
+  }
+  return patterns;
+}
+
+function hrefMatches(href: string, patterns: readonly string[]): boolean {
+  return patterns.some((pattern) => {
+    if (pattern.endsWith("/*")) {
+      const base = pattern.slice(0, -2);
+      return href === base || href.startsWith(`${base}/`);
+    }
+    const body = pattern
+      .split("/")
+      .map((part) => (part.startsWith(":") ? "[^/]+" : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
+      .join("/");
+    return new RegExp(`^${body}$`).test(href);
+  });
+}
+
+function quotedHrefs(source: string): string[] {
+  const hrefs: string[] = [];
+  const attr = /href\s*=\s*(?:\{\s*)?["'`](\/[^"'`?#]*)/g;
+  const field = /href\s*:\s*["'`](\/[^"'`?#]*)/g;
+  for (const pattern of [attr, field]) {
+    for (const match of source.matchAll(pattern)) {
+      const href = match[1];
+      if (!href || href.startsWith("/api") || href.includes("$") || href.includes("{")) continue;
+      hrefs.push(href);
+    }
+  }
+  return hrefs;
+}
+
+function usesSharedHeader(tree: readonly string[], files: ReadonlyMap<string, string>): boolean {
+  let layout = false;
+  let header = false;
+  for (const path of tree) {
+    if (!path.endsWith(".tsx")) continue;
+    const source = files.get(path) ?? "";
+    if (source.includes("<NodeLayout")) layout = true;
+    if (source.includes("<NodeHeader")) header = true;
+  }
+  return layout && header;
+}
+
+/**
+ * Static layout check. The caller passes source text.
+ * The live health probe does not read component files: that read threw in
+ * production because the page sources are not in the function bundle.
+ */
+export function nodeLayoutSourceIssues(files: readonly LayoutSourceFile[]): HealthIssue[] {
+  const byPath = new Map<string, string>();
+  for (const file of files) byPath.set(sourcePath(file.path), file.source);
+  const patterns = routePatterns(byPath);
+  const pages = [...byPath.keys()].filter(
+    (path) => path === "src/app/page.tsx" || /^src\/app\/n\/(?:.+\/)?page\.tsx$/.test(path),
+  );
+  const failures: HealthIssue[] = [];
+  const seen = new Set<string>();
+  function add(name: string, path: string) {
+    const key = `${name}|${path}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    failures.push(issue("node-layout", name, path));
+  }
+  for (const page of pages) {
+    const route = pageRoute(page);
+    const tree = sourceTree(page, byPath);
+    const home = page === "src/app/page.tsx";
+    if (!home && !usesSharedHeader(tree, byPath)) {
+      add(`${page} skips the shared NodeLayout header`, route);
+    }
+    for (const file of tree) {
+      const source = stripComments(byPath.get(file) ?? "");
+      if (file.endsWith(".tsx")) {
+        for (const pattern of UNBOXED_EMPTY) {
+          if (pattern.test(source)) {
+            add(`Unboxed empty state in ${file}`, route);
+            break;
+          }
+        }
+        if (!file.endsWith("/node-header.tsx") && source.includes("calendar-back")) {
+          add(`One-off back link in ${file}`, route);
+        }
+      }
+      for (const href of quotedHrefs(source)) {
+        if (!hrefMatches(href, patterns)) add(`Broken link ${href} in ${file}`, route);
+      }
+    }
+  }
+  return failures;
+}
+
+/**
+ * Public-view checks for /api/health/full. Failures are named issues.
+ * Pass source text to include the node-layout check. Omit it on the server:
+ * the function bundle has no page sources, and a filesystem read crashes the probe.
+ */
+export async function runPublicViewProbe(sources?: readonly LayoutSourceFile[]): Promise<HealthIssue[]> {
   const [security, pages, finance, http] = await Promise.all([
     securityIssues(),
     pageStatusIssues(),
@@ -621,11 +809,15 @@ export async function runPublicViewProbe(): Promise<HealthIssue[]> {
   const drills = [...financeLockIssues(), ...http];
   const drillFailures = drills.filter((row) => row.id === "public-drill-down" && row.status === "error");
   const drillOk = drills.filter((row) => row.id !== "public-drill-down");
+  const layout = sources
+    ? settle("node-layout", "Node pages use the shared header and boxed empty states", nodeLayoutSourceIssues(sources))
+    : [];
   return [
     ...security,
     ...pages,
     ...finance,
     ...drillOk,
     ...settle("public-drill-down", "Public drill-down links resolve", drillFailures),
+    ...layout,
   ];
 }

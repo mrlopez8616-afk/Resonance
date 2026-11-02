@@ -208,7 +208,13 @@ function CardList({
   empty: string;
   publicMode?: boolean;
 }) {
-  if (cards.length === 0) return <p className="calendar-quiet">{empty}</p>;
+  if (cards.length === 0) {
+    return (
+      <NodeGrid>
+        <EmptyCard span="list" label={empty} />
+      </NodeGrid>
+    );
+  }
   return (
     <ol>
       {cards.map((card) => (

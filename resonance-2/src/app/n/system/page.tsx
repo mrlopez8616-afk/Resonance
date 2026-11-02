@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SystemMap } from "@/components/system-map";
 import { OperatorShell } from "@/components/operator-shell";
 import { parseSystemLens } from "@/data/system-map";
@@ -19,9 +18,6 @@ export default async function SystemPage({
   const publicMode = await isPublicMode();
   return (
     <OperatorShell>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
       <SystemMap lens={lens} publicMode={publicMode} />
     </OperatorShell>
   );

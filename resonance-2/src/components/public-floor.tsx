@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { LotBarChart } from "@/components/lot-bar-chart";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
-import { NodeSquare } from "@/components/node-square";
+import { EmptyCard, NodeGrid, StatCard } from "@/components/node-layout";
 import type { BuildHomeCard } from "@/lib/build-tracker";
 import { bookHomeFace, buildHomeFace, fightHomeFace, fitnessHomeFace, tileFace, type HomeFace } from "@/lib/home-faces";
 import { publicLotChartModel, type PublicLotBar } from "@/lib/lot-bars";
@@ -26,25 +26,17 @@ export function PublicHoldingFace({
   range?: string | null;
 }) {
   const chart = publicLotChartModel(bars);
+  if (chart.bars.length === 0) return <EmptyCard span={compact ? "stat" : "trend"} label="Lots" />;
   return (
-    <div className="live-face value-card parent-face child-card">
-      <header className="live-head">
-        <h2 className="node-ticker">{holding.ticker}</h2>
-        <p className="value-headline">{holding.weightLabel}</p>
-        {holding.gainLabel ? (
-          <p className="value-price">{holding.gainLabel} since first buy</p>
-        ) : null}
-      </header>
-      {chart.bars.length > 0 ? (
-        <LotBarChart
-          model={chart}
-          publicMode
-          compact={compact}
-          range={compact ? undefined : range}
-          label={`${holding.ticker} lots`}
-        />
-      ) : null}
-    </div>
+    <StatCard span={compact ? "stat" : "trend"} label="Lots">
+      <LotBarChart
+        model={chart}
+        publicMode
+        compact={compact}
+        range={compact ? undefined : range}
+        label={`${holding.ticker} lots`}
+      />
+    </StatCard>
   );
 }
 
@@ -198,22 +190,21 @@ export function PublicNodePage({
 }) {
   if (!holding) {
     return (
-      <section className="node-grid node-detail" aria-label={`${ticker} node`}>
-        <NodeSquare dashed label={`${ticker} node`}>
-          <div className="live-face">
-            <h2 className="node-ticker">{ticker}</h2>
-            <p className="parent-empty">No data yet</p>
-          </div>
-        </NodeSquare>
-      </section>
+      <NodeGrid>
+        <EmptyCard label={ticker} />
+      </NodeGrid>
     );
   }
+  const gain = holding.gainLabel ? `${holding.gainLabel} since first buy` : null;
   return (
-    <section className="node-grid node-detail" aria-label={`${ticker} node`}>
-      <NodeSquare parent home live wide label={`${ticker} node`}>
-        <PublicHoldingFace holding={holding} bars={bars} range={range} />
-      </NodeSquare>
-    </section>
+    <NodeGrid>
+      {holding.weightLabel ? (
+        <StatCard label={holding.ticker} value={holding.weightLabel} detail={gain} />
+      ) : (
+        <EmptyCard label={holding.ticker} />
+      )}
+      <PublicHoldingFace holding={holding} bars={bars} range={range} />
+    </NodeGrid>
   );
 }
 

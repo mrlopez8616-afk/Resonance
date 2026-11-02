@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NodeFace } from "@/components/node-face";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { systemHomeFace } from "@/lib/home-faces";
 import { navHrefShelved, visibleById } from "@/lib/node-visibility";
 import { financePageLocked } from "@/lib/public-mode";
@@ -258,15 +259,18 @@ export function SystemMap({ lens, publicMode = false }: { lens: SystemLensId; pu
   const Lens = lens === "nodes" ? null : LENSES[lens];
   const line = `${SYSTEM_AGENTS.length} agents · ${paintedNodeCount()} nodes · all protections on`;
   return (
-    <div className={styles.root} data-lens={lens}>
-      <header className="log-header">
-        <p className="log-kicker">{SYSTEM_PAGE.kicker}</p>
-        <h2 className="log-title">{SYSTEM_PAGE.title}</h2>
-        <p className="log-meta">{line}</p>
-      </header>
-      <NodeLinks lens={lens} />
-      {lens === "nodes" ? <NodesLens publicMode={publicMode} /> : Lens ? <Lens /> : null}
-    </div>
+    <NodeLayout>
+      <NodeHeader name="System" parts={["live"]} backHref="/" />
+      <p className="node-note">{line}</p>
+      <NodeSections>
+        <NodeSection kind="lists" label={SYSTEM_PAGE.title}>
+          <div className={styles.root} data-lens={lens}>
+            <NodeLinks lens={lens} />
+            {lens === "nodes" ? <NodesLens publicMode={publicMode} /> : Lens ? <Lens /> : null}
+          </div>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 

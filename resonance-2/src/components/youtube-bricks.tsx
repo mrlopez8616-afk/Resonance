@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import type { NodePart } from "@/lib/node-layout";
 import {
   BRICK_STATUSES,
@@ -84,7 +84,9 @@ export function YouTubeBrickList({
                 </nav>
               ) : null}
               {groups.length === 0 ? (
-                <p className="node-note">{`No ${filter} episodes.`}</p>
+                <NodeGrid>
+                  <EmptyCard span="list" label={`No ${filter} episodes.`} />
+                </NodeGrid>
               ) : (
                 <NodeGrid>
                   {groups.flatMap((group) => {
