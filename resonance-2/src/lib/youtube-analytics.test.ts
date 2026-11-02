@@ -17,6 +17,8 @@ import {
   YOUTUBE_CRON_JOBS,
   YOUTUBE_OAUTH_REDIRECT,
   YOUTUBE_SCOPES,
+  addIsoDays,
+  chicagoDate,
   decideYouTubePull,
   healthMarkPasses,
   isHobbyDailySchedule,
@@ -316,7 +318,7 @@ describe("YouTube analytics", { concurrency: false }, () => {
     );
     assert.equal(allowed.status, 200);
     const body = await allowed.json();
-    assert.equal(body.day, "2026-10-29");
+    assert.equal(body.day, addIsoDays(chicagoDate(new Date()), -1));
     assert.equal(JSON.stringify(body).includes(REFRESH), false);
 
     const cronDenied = await cronGet(new Request("https://resonance3.vercel.app/api/cron/youtube"));

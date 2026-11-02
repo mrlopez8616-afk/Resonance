@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { OperatorShell } from "@/components/operator-shell";
 import { YouTubeBrickList } from "@/components/youtube-bricks";
 import { requireRole } from "@/lib/auth-session";
@@ -32,10 +31,7 @@ export default async function YouTubeBricksPage({
   }
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/youtube" className="calendar-back">
-        YouTube
-      </Link>
-      {rows ? <YouTubeBrickList rows={rows} filter={filter} /> : null}
+      <YouTubeBrickList rows={rows} filter={filter} />
     </OperatorShell>
   );
 }

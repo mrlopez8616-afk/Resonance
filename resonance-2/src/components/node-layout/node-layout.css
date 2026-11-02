@@ -1,0 +1,259 @@
+/*
+ * One set of gap, padding, radius, border, and type for every node card.
+ * Key numbers span 3 of 12 (4 per row). Phone puts 2 per row. Narrow puts 1.
+ * Trend cards span 6. List cards span the row. Stretch keeps one height.
+ */
+
+.node-layout,
+.node-card,
+.node-section,
+.node-grid-12,
+.node-header {
+  --node-gap: 0.75rem;
+  --node-pad: 0.85rem;
+  --node-radius: 0.75rem;
+  --node-line: 1px solid var(--border);
+  --node-label-size: 0.72rem;
+  --node-value-size: 1.65rem;
+  --node-detail-size: 0.84rem;
+  --node-price-size: 0.84rem;
+  --node-card-min: 8.5rem;
+}
+
+.node-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--node-gap);
+  min-width: 0;
+}
+
+.operator-floor:has(.node-layout) {
+  height: auto;
+  min-height: 100dvh;
+}
+
+.operator-floor:has(.node-layout) .operator-main {
+  flex: none;
+  overflow: visible;
+}
+
+.node-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--node-gap);
+}
+
+.node-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--node-gap);
+}
+
+.node-header-name,
+.node-card-label,
+.node-card-value,
+.node-card-detail,
+.node-card-price,
+.node-card-lock,
+.node-card-setup,
+.node-updated,
+.node-note,
+.node-section-label,
+.node-section-empty {
+  margin: 0;
+}
+
+.node-header-name {
+  font-size: var(--node-value-size);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.node-status {
+  display: inline-flex;
+  align-items: center;
+  border: var(--node-line);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: var(--node-label-size);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.node-status-live {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+}
+
+.node-status-partial {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+
+.node-status-not-connected {
+  color: var(--muted);
+}
+
+.node-updated,
+.node-note,
+.node-card-detail,
+.node-card-price {
+  color: var(--muted);
+  font-size: var(--node-detail-size);
+  line-height: 1.35;
+}
+
+.node-card-price {
+  font-size: var(--node-price-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.node-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--node-gap);
+  min-width: 0;
+}
+
+.node-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--node-gap);
+  min-width: 0;
+}
+
+.node-section-label {
+  font-size: var(--node-label-size);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.node-section.is-empty {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 0.4rem var(--node-pad);
+  border: var(--node-line);
+  border-radius: var(--node-radius);
+  background: var(--surface);
+}
+
+.node-section-body {
+  min-width: 0;
+}
+
+.node-section-body > .node-face-grid {
+  width: 100%;
+}
+
+.node-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--node-gap);
+  align-items: stretch;
+}
+
+.node-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--node-gap);
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--node-pad);
+  border: var(--node-line);
+  border-radius: var(--node-radius);
+  background: var(--surface);
+}
+
+.node-card-equal {
+  height: 100%;
+  min-height: var(--node-card-min);
+}
+
+.node-span-3 {
+  grid-column: span 3;
+}
+
+.node-span-6 {
+  grid-column: span 6;
+}
+
+.node-span-12 {
+  grid-column: span 12;
+}
+
+.node-card-label {
+  font-size: var(--node-label-size);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.node-card-value {
+  font-size: var(--node-value-size);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.node-card-link {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--node-gap);
+  min-height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.node-card-title-link,
+.node-card-setup a {
+  color: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.node-card-setup {
+  margin-top: auto;
+}
+
+.node-card-setup a {
+  color: var(--live);
+  font-size: var(--node-detail-size);
+}
+
+.node-card-lock {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+}
+
+.node-card-lock svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+@media (max-width: 720px) {
+  .node-span-3 {
+    grid-column: span 6;
+  }
+
+  .node-span-6 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 420px) {
+  .node-span-3 {
+    grid-column: span 12;
+  }
+}

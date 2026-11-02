@@ -922,7 +922,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
       ),
     },
     { path: "/n/youtube", html: render(createElement(youtubeUi.YouTubeParent)) },
-    { path: "/n/youtube/channel", html: render(createElement(youtubeUi.YouTubeChannel)) },
+    { path: "/n/youtube/channel", html: render(createElement(youtubeUi.YouTubeChannel, { publicMode: true })) },
     { path: "/n/youtube/gear", html: render(createElement(youtubeUi.YouTubeGearList, {})) },
     {
       path: "/n/youtube/gear/mevo-start",

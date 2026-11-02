@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OperatorShell } from "@/components/operator-shell";
 import { YouTubeBrickDetail } from "@/components/youtube-bricks";
@@ -29,10 +28,7 @@ export default async function YouTubeBrickPage({ params }: { params: Promise<{ i
   if (!unavailable && !row) notFound();
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/youtube/bricks" className="calendar-back">
-        Brick Tracker
-      </Link>
-      {row ? <YouTubeBrickDetail row={row} /> : null}
+      <YouTubeBrickDetail row={row} />
     </OperatorShell>
   );
 }

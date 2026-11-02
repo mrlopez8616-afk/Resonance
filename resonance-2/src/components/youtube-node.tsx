@@ -1,11 +1,20 @@
-import Link from "next/link";
+import {
+  EmptyCard,
+  NodeGrid,
+  NodeHeader,
+  NodeLayout,
+  NodeSection,
+  NodeSections,
+  StatCard,
+} from "@/components/node-layout";
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { headlineIsEmpty, type NodePart } from "@/lib/node-layout";
 import { tileFace, youtubeHomeFace } from "@/lib/home-faces";
 import type { YouTubeScreen } from "@/lib/youtube-analytics";
 import {
+  NOT_CONNECTED,
   YOUTUBE_GEAR,
   YOUTUBE_GEAR_SOURCE,
-  channelStatRows,
   gearFields,
   gearHref,
   youtubeHomeLines,
@@ -19,70 +28,94 @@ export function YouTubeHomeCard({ lines }: { lines?: readonly string[] }) {
   return <NodeFace face={youtubeHomeFace(lines ?? youtubeHomeLines())} />;
 }
 
+function parentParts(channel?: YouTubeChannelFace, brick?: YouTubeBrickCard): NodePart[] {
+  const channelPart: NodePart = channel?.live ? "live" : channel?.status ? "partial" : "missing";
+  const brickPart: NodePart =
+    !brick || brick.figure === NOT_CONNECTED ? "missing" : brick.live ? "live" : "partial";
+  return [channelPart, brickPart];
+}
+
+/** Parent floor. Child cards only. Channel numbers live on /n/youtube/channel. */
 export function YouTubeParent({
   brick,
   channel,
+  notice,
 }: {
   brick?: YouTubeBrickCard;
   channel?: YouTubeChannelFace;
+  notice?: string | null;
 }) {
   const cards = youtubeParentCards(undefined, brick, channel);
   return (
-    <NodeFaceGrid label="YouTube">
-      {cards.map((card) => (
-        <NodeFace
-          key={card.id}
-          face={tileFace({
-            id: card.id,
-            glyph: "youtube",
-            href: card.href,
-            name: card.label,
-            headline: card.figure,
-            status: card.lines.join(" · ") || null,
-            live: card.live,
-          })}
-        />
-      ))}
-    </NodeFaceGrid>
+    <NodeLayout>
+      <NodeHeader name="YouTube" parts={parentParts(channel, brick)} backHref="/" />
+      {notice ? <p className="node-note">{notice}</p> : null}
+      <NodeSections>
+        <NodeSection kind="lists">
+          <NodeFaceGrid label="YouTube">
+            {cards.map((card) => (
+              <NodeFace
+                key={card.id}
+                face={tileFace({
+                  id: card.id,
+                  glyph: "youtube",
+                  href: card.href,
+                  name: card.label,
+                  headline: card.figure,
+                  status: card.lines.join(" · ") || null,
+                  live: card.live,
+                })}
+              />
+            ))}
+          </NodeFaceGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
-export function YouTubeChannel({
-  stats,
-  publicMode = false,
-  notice,
-}: {
-  stats?: { subscribers: string; views: string; videos: string } | null;
-  publicMode?: boolean;
-  notice?: string | null;
-}) {
-  const rows = channelStatRows(publicMode ? null : stats);
-  return (
-    <div className="control-room">
-      <header className="log-header">
-        <p className="log-kicker">YouTube</p>
-        <h2 className="log-title">Channel</h2>
-        <p className="log-meta">
-          {publicMode || !stats ? "No channel source is connected yet. Stats stay blank until one is." : "Last 28 days."}
-        </p>
-        {notice && !publicMode ? <p className="log-meta">{notice}</p> : null}
-      </header>
-      <ul className="control-list">
-        {rows.map((row) => (
-          <li key={row.id} className="control-row">
-            <div>
-              <p className="control-name">{row.label}</p>
-              <p className="control-meta">{row.value}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+type ChannelStats = { subscribers: string; views: string; videos: string };
+
+type ChannelMetric = {
+  id: string;
+  label: string;
+  value: string | null;
+  detail: string;
+};
+
+function channelMetrics(stats: ChannelStats | null | undefined, screen: YouTubeScreen | null | undefined): ChannelMetric[] {
+  const total = (id: string) => screen?.totals.find((row) => row.id === id)?.headline ?? null;
+  return [
+    {
+      id: "subscribers",
+      label: "Subscribers",
+      value: total("subscribers") ?? stats?.subscribers ?? null,
+      detail: "channel",
+    },
+    {
+      id: "views",
+      label: "Views",
+      value: total("views") ?? stats?.views ?? null,
+      detail: "28 days",
+    },
+    { id: "watch-time", label: "Watch time", value: total("watch-time"), detail: "28 days" },
+    { id: "avg-duration", label: "Avg view", value: total("avg-duration"), detail: "28 days" },
+    {
+      id: "videos",
+      label: "Videos posted",
+      value: stats?.videos ?? screen?.channelStats.videos ?? null,
+      detail: "channel",
+    },
+  ];
+}
+
+function metricParts(publicMode: boolean, metrics: readonly ChannelMetric[]): NodePart[] {
+  if (publicMode) return metrics.map(() => "missing");
+  return metrics.map((metric) => (headlineIsEmpty(metric.value) ? "missing" : "live"));
 }
 
 function TrendBars({ bars, caption }: { bars: YouTubeScreen["trend"]; caption: string }) {
-  if (bars.length === 0) return <p className="control-meta">not recorded</p>;
+  if (bars.length === 0) return null;
   const width = 640;
   const height = 148;
   const labelY = height - 8;
@@ -117,138 +150,191 @@ function TrendBars({ bars, caption }: { bars: YouTubeScreen["trend"]; caption: s
   );
 }
 
-/** Totals, 28-day trend, and the video table. Omitted entirely in Public view. */
-export function YouTubeAnalyticsPanel({ screen }: { screen: YouTubeScreen }) {
+function VideoTable({ videos }: { videos: YouTubeScreen["videos"] }) {
   return (
-    <section className="youtube-analytics" aria-label="YouTube analytics">
-      {screen.skipMessage ? (
-        <p className="parent-empty" role="status">
-          {screen.skipMessage}
-        </p>
-      ) : null}
-      {screen.notice ? <p className="control-meta">{screen.notice}</p> : null}
-      <NodeFaceGrid label="Channel totals">
-        {screen.totals.map((total) => (
-          <NodeFace
-            key={total.id}
-            face={tileFace({
-              id: total.id,
-              glyph: "youtube",
-              href: "",
-              name: total.name,
-              headline: total.headline,
-              status: total.status,
-              live: total.headline !== "not recorded" && total.headline !== "not connected",
+    <div className="youtube-table-wrap">
+      <table className="youtube-table">
+        <thead>
+          <tr>
+            <th>Video</th>
+            <th>Views</th>
+            <th>Watch time</th>
+            <th>Avg % viewed</th>
+            <th>Impressions</th>
+            <th>CTR</th>
+            <th>Likes</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody>
+          {videos.map((video) => (
+            <tr key={video.videoId}>
+              <td className="youtube-video-title">{video.title}</td>
+              <td>{video.views}</td>
+              <td>{video.watchTime}</td>
+              <td>{video.avgPercent}</td>
+              <td>{video.impressions}</td>
+              <td>{video.ctr}</td>
+              <td>{video.likes}</td>
+              <td>{video.comments}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Channel numbers, the 28-day trend, and the video table.
+ * Public view locks the number cards and does not render the private rows.
+ * The screen model has no pull timestamp, so Updated stays off this page.
+ */
+export function YouTubeChannel({
+  stats,
+  publicMode = false,
+  notice,
+  screen = null,
+  updatedAt = null,
+}: {
+  stats?: ChannelStats | null;
+  publicMode?: boolean;
+  notice?: string | null;
+  screen?: YouTubeScreen | null;
+  updatedAt?: string | null;
+}) {
+  const metrics = channelMetrics(publicMode ? null : stats, publicMode ? null : screen);
+  const shown = publicMode ? null : screen;
+  const trendReady = Boolean(shown && shown.trend.length > 0);
+  const videosReady = Boolean(shown && shown.videos.length > 0);
+  const setup =
+    !publicMode && shown?.connectHref
+      ? { href: shown.connectHref, label: shown.connectLabel ?? "Connect" }
+      : null;
+  const setupIndex = setup ? metrics.findIndex((metric) => headlineIsEmpty(metric.value)) : -1;
+  return (
+    <NodeLayout>
+      <NodeHeader
+        name="Channel"
+        parts={metricParts(publicMode, metrics)}
+        updatedAt={updatedAt}
+        backHref="/n/youtube"
+      />
+      {notice && !publicMode ? <p className="node-note">{notice}</p> : null}
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            {metrics.map((metric, index) => {
+              if (publicMode) return <StatCard key={metric.id} label={metric.label} locked />;
+              if (headlineIsEmpty(metric.value)) {
+                const link = index === setupIndex ? setup : null;
+                return (
+                  <EmptyCard
+                    key={metric.id}
+                    label={metric.label}
+                    setupHref={link?.href}
+                    setupLabel={link?.label}
+                  />
+                );
+              }
+              return <StatCard key={metric.id} label={metric.label} value={metric.value} detail={metric.detail} />;
             })}
-          />
-        ))}
-      </NodeFaceGrid>
-      <section className="youtube-trend" aria-label="28-day trend">
-        <header className="log-header">
-          <h2 className="log-title">28-day trend</h2>
-          <p className="log-meta">{screen.trendCaption}</p>
-        </header>
-        <TrendBars bars={screen.trend} caption={screen.trendCaption} />
-      </section>
-      <section className="youtube-videos" aria-label="Videos">
-        <header className="log-header">
-          <h2 className="log-title">Videos</h2>
-          <p className="log-meta">Last 28 days. Impressions and CTR stay blank when YouTube does not send them.</p>
-        </header>
-        {screen.videos.length === 0 ? (
-          <p className="control-meta">No video rows yet.</p>
-        ) : (
-          <div className="youtube-table-wrap">
-            <table className="youtube-table">
-              <thead>
-                <tr>
-                  <th>Video</th>
-                  <th>Views</th>
-                  <th>Watch time</th>
-                  <th>Avg % viewed</th>
-                  <th>Impressions</th>
-                  <th>CTR</th>
-                  <th>Likes</th>
-                  <th>Comments</th>
-                </tr>
-              </thead>
-              <tbody>
-                {screen.videos.map((video) => (
-                  <tr key={video.videoId}>
-                    <td className="youtube-video-title">{video.title}</td>
-                    <td>{video.views}</td>
-                    <td>{video.watchTime}</td>
-                    <td>{video.avgPercent}</td>
-                    <td>{video.impressions}</td>
-                    <td>{video.ctr}</td>
-                    <td>{video.likes}</td>
-                    <td>{video.comments}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-      {screen.connectHref && screen.connectLabel ? (
-        <p className="control-link">
-          <a href={screen.connectHref}>{screen.connectLabel}</a>
-        </p>
-      ) : null}
-    </section>
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="trends" empty={!trendReady}>
+          {trendReady && shown ? (
+            <NodeGrid>
+              <StatCard span="trend" label="28-day trend" detail={shown.trendCaption}>
+                <TrendBars bars={shown.trend} caption={shown.trendCaption} />
+              </StatCard>
+            </NodeGrid>
+          ) : null}
+        </NodeSection>
+        <NodeSection kind="lists" empty={!videosReady}>
+          {videosReady && shown ? (
+            <NodeGrid>
+              <StatCard
+                span="list"
+                label="Videos"
+                detail="Last 28 days. Impressions and CTR stay blank when YouTube does not send them."
+              >
+                <VideoTable videos={shown.videos} />
+              </StatCard>
+            </NodeGrid>
+          ) : null}
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
 export function YouTubeGearList({ gear = YOUTUBE_GEAR }: { gear?: readonly YouTubeGear[] }) {
+  const parts: NodePart[] = gear.length > 0 ? ["live"] : ["missing"];
   return (
-    <div className="control-room">
-      <header className="log-header">
-        <p className="log-kicker">YouTube</p>
-        <h2 className="log-title">Gear</h2>
-        <p className="log-meta">{YOUTUBE_GEAR_SOURCE}</p>
-      </header>
-      {gear.length === 0 ? (
-        <p className="control-meta">No gear listed yet.</p>
-      ) : (
-        <ul className="control-list">
-          {gear.map((item) => (
-            <li key={item.id}>
-              <Link href={gearHref(item.id)} className="control-row youtube-gear-row">
-                <div>
-                  <p className="control-name">
-                    {item.name}
-                    {item.isNew ? <span className="youtube-new"> New</span> : null}
-                  </p>
-                  <p className="control-meta">{item.role}</p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <NodeLayout>
+      <NodeHeader name="Gear" parts={parts} backHref="/n/youtube" />
+      <p className="node-note">{YOUTUBE_GEAR_SOURCE}</p>
+      <NodeSections>
+        <NodeSection kind="lists" empty={gear.length === 0}>
+          {gear.length === 0 ? null : (
+            <NodeGrid>
+              {gear.map((item) => (
+                <StatCard
+                  key={item.id}
+                  label={item.isNew ? "New" : "Gear"}
+                  value={item.name}
+                  detail={item.role}
+                  href={gearHref(item.id)}
+                />
+              ))}
+            </NodeGrid>
+          )}
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
+type GearRow = { label: string; value: string; locked: boolean };
+
+function gearRows(item: YouTubeGear, publicMode: boolean): GearRow[] {
+  const rows: GearRow[] = [];
+  for (const field of gearFields(item, publicMode)) {
+    rows.push({ label: field.label, value: field.value, locked: false });
+    if (publicMode && field.label === "Acquired") {
+      rows.push({ label: "Cost", value: "", locked: true });
+    }
+  }
+  return rows;
+}
+
 export function YouTubeGearDetail({ item, publicMode }: { item: YouTubeGear; publicMode: boolean }) {
-  const fields = gearFields(item, publicMode);
+  const rows = gearRows(item, publicMode);
+  const parts: NodePart[] = rows
+    .filter((row) => !row.locked)
+    .map((row) => (headlineIsEmpty(row.value) ? "missing" : "live"));
   return (
-    <div className="control-room">
-      <header className="log-header">
-        <p className="log-kicker">Gear</p>
-        <h2 className="log-title">{item.name}</h2>
-        {item.isNew ? <p className="log-meta">New for the launch</p> : null}
-      </header>
-      <ul className="control-list">
-        {fields.map((field) => (
-          <li key={field.label} className="control-row">
-            <div>
-              <p className="control-name">{field.label}</p>
-              <p className="control-meta">{field.value}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <NodeLayout>
+      <NodeHeader name={item.name} parts={parts} backHref="/n/youtube/gear" />
+      {item.isNew ? <p className="node-note">New for the launch</p> : null}
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            {rows.map((row) => {
+              if (row.locked) return <StatCard key={row.label} label={row.label} locked />;
+              const prose = row.value.length > 28;
+              return (
+                <StatCard
+                  key={row.label}
+                  label={row.label}
+                  value={prose ? null : row.value}
+                  detail={prose ? row.value : null}
+                />
+              );
+            })}
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
