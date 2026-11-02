@@ -1,68 +1,33 @@
-import Link from "next/link";
 import { HeartTrend, RunBars } from "@/components/fitness-charts";
-import { FitnessStepVisual } from "@/components/home-visual";
-import { NodeSquare } from "@/components/node-square";
-import { FITNESS_EMPTY, FITNESS_NOT_RECORDED, type FitnessCard } from "@/lib/fitness-board";
-import type { StepSlot } from "@/lib/home-visuals";
+import { EmptyCard, NodeGrid, StatCard } from "@/components/node-layout";
+import { fitnessMetricEmpty } from "@/lib/fitness-layout";
+import type { FitnessCard } from "@/lib/fitness-board";
 
-/** Week lines and the step chart that used to sit on the home tile. */
-export function FitnessWeekPanel({
-  lines,
-  slots,
+/**
+ * Child cards for the fitness nodes that still open one level down.
+ * The parent screen itself stays the steps, activity, and analytics floor.
+ */
+export function FitnessGrid({
+  cards,
+  publicMode = false,
 }: {
-  lines: readonly string[];
-  slots: readonly StepSlot[] | null;
+  cards: readonly FitnessCard[];
+  publicMode?: boolean;
 }) {
-  if (lines.length === 0 && !slots) return null;
   return (
-    <section className="parent-glance" aria-label="This week">
-      {lines.length > 0 ? (
-        <ul className="parent-lines">
-          {lines.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : null}
-      {slots ? <FitnessStepVisual slots={slots} /> : null}
-    </section>
-  );
-}
-
-export function FitnessGrid({ cards }: { cards: readonly FitnessCard[] }) {
-  return (
-    <section className="node-grid fitness-grid" aria-label="Fitness nodes">
+    <NodeGrid>
       {cards.map((card) => {
-        const live = card.headline !== null;
-        const emptyCopy =
-          card.id === "runs" || card.id === "heart" || card.id === "manual"
-            ? FITNESS_NOT_RECORDED
-            : FITNESS_EMPTY;
+        if (publicMode && card.id === "heart") return <StatCard key={card.id} label={card.title} locked />;
+        if (fitnessMetricEmpty(card.headline)) {
+          return <EmptyCard key={card.id} label={card.title} setupHref={card.href} setupLabel="Open" />;
+        }
         return (
-          <NodeSquare
-            key={card.id}
-            parent
-            live={live}
-            dashed={!live}
-            label={`${card.title} node`}
-          >
-            <Link href={card.href} className="node-log-link" title={`Open ${card.title}`}>
-              <div className="live-face value-card parent-face">
-                <header className="live-head">
-                  <h2 className="node-ticker">{card.title}</h2>
-                  {live ? (
-                    <p className="value-headline">{card.headline}</p>
-                  ) : (
-                    <p className="node-note value-status">{card.detail ?? emptyCopy}</p>
-                  )}
-                  {live && card.detail ? <p className="value-price">{card.detail}</p> : null}
-                </header>
-                {card.id === "runs" ? <RunBars bars={card.bars ?? []} compact /> : null}
-                {card.id === "heart" ? <HeartTrend points={card.heart ?? []} compact /> : null}
-              </div>
-            </Link>
-          </NodeSquare>
+          <StatCard key={card.id} label={card.title} value={card.headline} detail={card.detail} href={card.href}>
+            {card.id === "runs" ? <RunBars bars={card.bars ?? []} compact /> : null}
+            {card.id === "heart" ? <HeartTrend points={card.heart ?? []} compact /> : null}
+          </StatCard>
         );
       })}
-    </section>
+    </NodeGrid>
   );
 }

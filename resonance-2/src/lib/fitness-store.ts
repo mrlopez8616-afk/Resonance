@@ -16,6 +16,7 @@ import {
   type FitnessStepDay,
   type FitnessWeekFacts,
 } from "@/lib/fitness-board";
+import { latestFitnessUpdatedAt } from "@/lib/fitness-layout";
 import { fitnessLocalFile, readLocalFitness, upsertLocalFitness } from "@/lib/fitness-local";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites, NrcRunWrite } from "@/lib/fitness-types";
@@ -654,15 +655,17 @@ export async function loadFitnessCards(today = chicagoToday()): Promise<{
 export async function loadFitnessNode(
   id: string,
   today = chicagoToday(),
-): Promise<{ detail: FitnessNodeDetail | null; availability: FitnessAvailability }> {
+): Promise<{ detail: FitnessNodeDetail | null; availability: FitnessAvailability; updatedAt: string | null }> {
   try {
-    const read = present(await readFitness(today));
+    const raw = await readFitness(today);
+    const read = present(raw);
     return {
       detail: fitnessNode(id, read.metrics, read.workouts, read.today),
       availability: read.availability,
+      updatedAt: latestFitnessUpdatedAt(raw),
     };
   } catch (error) {
     console.error("fitness read failed", fitnessFailureText(error));
-    return { detail: fitnessNode(id, [], [], today), availability: "unavailable" };
+    return { detail: fitnessNode(id, [], [], today), availability: "unavailable", updatedAt: null };
   }
 }

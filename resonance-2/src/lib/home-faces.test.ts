@@ -403,7 +403,8 @@ describe("uniform home tiles", () => {
     }
     const fitness = readFileSync(path.join(root, "src/components/fitness-grid.tsx"), "utf8");
     assert.equal(fitness.includes("NodeFace"), false);
-    assert.match(fitness, /NodeSquare/);
+    assert.match(fitness, /StatCard/);
+    assert.match(fitness, /EmptyCard/);
   });
 
   it("keeps a real zero bankroll and a live bet book when deposits are missing", () => {
