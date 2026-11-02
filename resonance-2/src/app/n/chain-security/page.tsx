@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ChainSecurityFloor } from "@/components/chain-security-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
@@ -25,10 +24,7 @@ export default async function ChainSecurityPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      {feed ? <ChainSecurityFloor feed={feed} /> : null}
+      <ChainSecurityFloor feed={feed} />
     </OperatorShell>
   );
 }

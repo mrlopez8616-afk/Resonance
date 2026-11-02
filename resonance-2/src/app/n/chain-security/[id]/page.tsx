@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChainSecurityDetail } from "@/components/chain-security-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
-import { CHAIN_SECURITY_HREF, isIncidentId } from "@/lib/chain-security";
+import { isIncidentId } from "@/lib/chain-security";
 import { loadChainSecurityIncident } from "@/lib/chain-security-store";
 import { isPublicMode } from "@/lib/public-mode-server";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
@@ -35,10 +34,7 @@ export default async function ChainSecurityIncidentPage({
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href={CHAIN_SECURITY_HREF} className="calendar-back">
-        Chain Security
-      </Link>
-      {incident ? <ChainSecurityDetail incident={incident} /> : null}
+      <ChainSecurityDetail incident={incident} />
     </OperatorShell>
   );
 }

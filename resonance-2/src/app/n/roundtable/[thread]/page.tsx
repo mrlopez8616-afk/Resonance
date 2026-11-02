@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RoundtableThread } from "@/components/roundtable-thread";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { isPublicMode } from "@/lib/public-mode-server";
-import { isRoundtableId, ROUNDTABLE_HREF } from "@/lib/roundtable";
+import { isRoundtableId } from "@/lib/roundtable";
 import { loadRoundtableThread } from "@/lib/roundtable-store";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
@@ -37,10 +36,7 @@ export default async function RoundtableThreadPage({
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href={ROUNDTABLE_HREF} className="calendar-back">
-        Roundtable
-      </Link>
-      {view ? <RoundtableThread view={view} reply={!publicMode} /> : null}
+      <RoundtableThread view={view} reply={!publicMode} />
     </OperatorShell>
   );
 }

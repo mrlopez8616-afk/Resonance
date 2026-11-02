@@ -1,6 +1,9 @@
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import { chainHomeFace, tileFace } from "@/lib/home-faces";
+import type { NodePart } from "@/lib/node-layout";
 import {
+  CHAIN_SECURITY_HREF,
   type ChainSecurityFeed,
   type ChainSecurityHomeModel,
   type ExposureWatch,
@@ -14,26 +17,9 @@ function incidentStatus(incident: IncidentView): string {
   return incident.holdingChains.length > 0 ? `holding · ${line}` : line;
 }
 
-function IncidentCard({ incident }: { incident: IncidentView }) {
-  return (
-    <NodeFace
-      face={tileFace({
-        id: incident.id,
-        glyph: "chain-security",
-        href: incident.href,
-        name: incident.subject,
-        headline: incident.categoryLabel,
-        status: incidentStatus(incident),
-        live: true,
-      })}
-    />
-  );
-}
-
 function ExposureCard({ watches }: { watches: readonly ExposureWatch[] }) {
   return (
     <section className="chain-exposure" aria-label="My exposure">
-      <h3 className="brick-group">My exposure</h3>
       <NodeFaceGrid label="My exposure">
         {watches.map((watch) => {
           const first = watch.incidents[0];
@@ -70,102 +56,114 @@ export function ChainSecurityHomeCard({
   return <NodeFace face={chainHomeFace(card, publicMode)} />;
 }
 
-export function ChainSecurityFloor({ feed }: { feed: ChainSecurityFeed }) {
+function chainParts(feed: ChainSecurityFeed): NodePart[] {
+  const exposure: NodePart = feed.watches.some((watch) => watch.incidents.length > 0) ? "live" : "missing";
+  const incidents: NodePart = feed.count > 0 ? "live" : "missing";
+  return [exposure, incidents];
+}
+
+export function ChainSecurityFloor({ feed }: { feed: ChainSecurityFeed | null }) {
+  if (!feed) {
+    return (
+      <NodeLayout>
+        <NodeHeader name="Chain Security" parts={["missing"]} backHref="/" />
+        <NodeSections>
+          <NodeSection kind="lists">
+            <NodeGrid>
+              <EmptyCard span="list" label={NO_INCIDENTS_RECORDED} />
+            </NodeGrid>
+          </NodeSection>
+        </NodeSections>
+      </NodeLayout>
+    );
+  }
   return (
-    <div className="chain-security">
-      <header className="log-header">
-        <p className="log-kicker">Weekly</p>
-        <h2 className="log-title">Chain Security</h2>
-        <p className="log-meta">{feed.countLabel}</p>
-      </header>
-      <ExposureCard watches={feed.watches} />
-      {feed.groups.length === 0 ? (
-        <p className="parent-empty" role="status">
-          {NO_INCIDENTS_RECORDED}
-        </p>
-      ) : (
-        feed.groups.map((group) => (
-          <section key={group.category} aria-label={group.label}>
-            <h3 className="brick-group">{group.label}</h3>
-            <NodeFaceGrid label={group.label}>
-              {group.incidents.map((incident) => (
-                <IncidentCard key={incident.id} incident={incident} />
-              ))}
-            </NodeFaceGrid>
-          </section>
-        ))
-      )}
-    </div>
+    <NodeLayout>
+      <NodeHeader name="Chain Security" parts={chainParts(feed)} backHref="/" />
+      <p className="node-note">{feed.countLabel}</p>
+      <NodeSections>
+        <NodeSection kind="lists" label="My exposure">
+          <ExposureCard watches={feed.watches} />
+        </NodeSection>
+        <NodeSection kind="lists" label="Incidents">
+          {feed.groups.length === 0 ? (
+            <NodeGrid>
+              <EmptyCard span="list" label={NO_INCIDENTS_RECORDED} />
+            </NodeGrid>
+          ) : (
+            feed.groups.map((group) => (
+              <section key={group.category} aria-label={group.label}>
+                <h3 className="brick-group">{group.label}</h3>
+                <NodeGrid>
+                  {group.incidents.map((incident) => (
+                    <StatCard
+                      key={incident.id}
+                      span="list"
+                      label={incident.categoryLabel}
+                      value={incident.subject}
+                      detail={incidentStatus(incident)}
+                      href={incident.href}
+                    />
+                  ))}
+                </NodeGrid>
+              </section>
+            ))
+          )}
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
-export function ChainSecurityDetail({ incident }: { incident: IncidentView }) {
+function DetailLine({ label, value }: { label: string; value: string }) {
+  return <StatCard span="list" label={label} value={value} />;
+}
+
+export function ChainSecurityDetail({ incident }: { incident: IncidentView | null }) {
+  if (!incident) {
+    return (
+      <NodeLayout>
+        <NodeHeader name="Incident" parts={["missing"]} backHref={CHAIN_SECURITY_HREF} />
+        <NodeSections>
+          <NodeSection kind="lists">
+            <NodeGrid>
+              <EmptyCard span="list" label="Incident" />
+            </NodeGrid>
+          </NodeSection>
+        </NodeSections>
+      </NodeLayout>
+    );
+  }
   return (
-    <div className="control-room">
-      <header className="log-header">
-        <p className="log-kicker">{incident.categoryLabel}</p>
-        <h2 className="log-title">{incident.subject}</h2>
-      </header>
-      <ul className="control-list">
-        <li className="control-row">
-          <div>
-            <p className="control-name">Date</p>
-            <p className="control-meta">{incident.dateLabel}</p>
-          </div>
-        </li>
-        <li className="control-row">
-          <div>
-            <p className="control-name">Chain or bridge</p>
-            <p className="control-meta">{incident.subject}</p>
-          </div>
-        </li>
-        <li className="control-row">
-          <div>
-            <p className="control-name">Category</p>
-            <p className="control-meta">{incident.categoryLabel}</p>
-          </div>
-        </li>
-        {incident.holdingChains.length > 0 ? (
-          <li className="control-row">
-            <div>
-              <p className="control-name">Holding</p>
-              <p className="control-meta">{incident.holdingChains.join(", ")}</p>
-            </div>
-          </li>
-        ) : null}
-        <li className="control-row">
-          <div>
-            <p className="control-name">Cause</p>
-            <p className="control-meta">{incident.cause}</p>
-          </div>
-        </li>
-        <li className="control-row">
-          <div>
-            <p className="control-name">Loss</p>
-            <p className="control-meta">{incident.lossLabel}</p>
-          </div>
-        </li>
-        <li className="control-row">
-          <div>
-            <p className="control-name">Status</p>
-            <p className="control-meta">{incident.status}</p>
-          </div>
-        </li>
-        <li className="control-row">
-          <div>
-            <p className="control-name">Source</p>
-            <p className="control-meta">
-              {incident.sourceUrl ? (
-                <a href={incident.sourceUrl} rel="noreferrer">
-                  {incident.sourceUrl}
-                </a>
-              ) : (
-                incident.sourceLabel
-              )}
-            </p>
-          </div>
-        </li>
-      </ul>
-    </div>
+    <NodeLayout>
+      <NodeHeader name={incident.subject} parts={["live"]} backHref={CHAIN_SECURITY_HREF} />
+      <p className="node-note">{incident.categoryLabel}</p>
+      <NodeSections>
+        <NodeSection kind="lists">
+          <NodeGrid>
+            <DetailLine label="Date" value={incident.dateLabel} />
+            <DetailLine label="Chain or bridge" value={incident.subject} />
+            <DetailLine label="Category" value={incident.categoryLabel} />
+            {incident.holdingChains.length > 0 ? (
+              <DetailLine label="Holding" value={incident.holdingChains.join(", ")} />
+            ) : null}
+            <DetailLine label="Cause" value={incident.cause} />
+            <DetailLine label="Loss" value={incident.lossLabel} />
+            <DetailLine label="Status" value={incident.status} />
+            <StatCard span="list" label="Source">
+              <p className="node-card-detail">
+                {incident.sourceUrl ? (
+                  <a href={incident.sourceUrl} rel="noreferrer">
+                    {incident.sourceUrl}
+                  </a>
+                ) : (
+                  incident.sourceLabel
+                )}
+              </p>
+            </StatCard>
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }

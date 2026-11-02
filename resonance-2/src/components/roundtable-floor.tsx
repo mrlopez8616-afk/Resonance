@@ -1,5 +1,8 @@
-import { NodeFace, NodeFaceGrid } from "@/components/node-face";
-import { roundtableHomeFace, tileFace } from "@/lib/home-faces";
+import { NodeFace } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
+import { roundtableHomeFace } from "@/lib/home-faces";
+import { latestTimestamp, type NodePart } from "@/lib/node-layout";
+import { hasMoneyText } from "@/lib/public-mode";
 import {
   ROUNDTABLE_EMPTY,
   type RoundtableCard,
@@ -10,32 +13,48 @@ export function RoundtableHomeCard({ card }: { card: RoundtableHomeModel }) {
   return <NodeFace face={roundtableHomeFace(card)} />;
 }
 
-export function RoundtableParent({ cards, publicMode = false }: { cards: RoundtableCard[]; publicMode?: boolean }) {
-  if (cards.length === 0) {
-    return (
-      <p className="parent-empty" role="status">
-        {ROUNDTABLE_EMPTY}
-      </p>
-    );
-  }
+function quietBoard() {
   return (
-    <NodeFaceGrid label="Roundtable">
-      {cards.map((card) => (
-        <NodeFace
-          key={card.id}
-          face={tileFace({
-            id: card.id,
-            glyph: "roundtable",
-            href: card.href,
-            name: card.agentName,
-            headline: card.title,
-            status: [card.when, card.countLabel].filter(Boolean).join(" · "),
-            live: true,
-            publicMode,
-          })}
-        />
-      ))}
-    </NodeFaceGrid>
+    <NodeLayout>
+      <NodeHeader name="Roundtable" parts={["missing"]} backHref="/" />
+      <NodeSections>
+        <NodeSection kind="lists">
+          <NodeGrid>
+            <EmptyCard span="list" label={ROUNDTABLE_EMPTY} />
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
+export function RoundtableParent({ cards, publicMode = false }: { cards: RoundtableCard[] | null; publicMode?: boolean }) {
+  if (!cards || cards.length === 0) return quietBoard();
+  const parts: NodePart[] = ["live"];
+  return (
+    <NodeLayout>
+      <NodeHeader
+        name="Roundtable"
+        parts={parts}
+        updatedAt={latestTimestamp(cards.map((card) => card.updatedAt))}
+        backHref="/"
+      />
+      <NodeSections>
+        <NodeSection kind="lists">
+          <NodeGrid>
+            {cards.map((card) => (
+              <StatCard
+                key={card.id}
+                span="list"
+                label={card.agentName}
+                value={publicMode && hasMoneyText(card.title) ? "Message" : card.title}
+                detail={[card.when, card.countLabel].filter(Boolean).join(" · ")}
+                href={card.href}
+              />
+            ))}
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
+  );
+}

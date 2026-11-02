@@ -1,83 +1,99 @@
 import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
+import type { NodePart } from "@/lib/node-layout";
 import { cwrGroupCards, cwrItemCards } from "@/lib/crawl-walk-run-faces";
-import type { CwrDetail, CwrGroupId } from "@/lib/crawl-walk-run";
+import { CWR_BUILD_HREF, CWR_HREF, cwrItems, groupHref, type CwrDetail, type CwrGroupId } from "@/lib/crawl-walk-run";
 
 export function CrawlWalkRunParent() {
+  const groups = cwrGroupCards();
+  const parts: NodePart[] = groups.map((group) => (cwrItems(group.id).length > 0 ? "live" : "missing"));
   return (
-    <NodeFaceGrid label="Crawl Walk Run">
-      {cwrGroupCards().map((group) => (
-        <NodeFace key={group.id} face={group.face} />
-      ))}
-    </NodeFaceGrid>
+    <NodeLayout>
+      <NodeHeader name="Crawl Walk Run" parts={parts} backHref={CWR_BUILD_HREF} />
+      <NodeSections>
+        <NodeSection kind="lists">
+          <NodeFaceGrid label="Crawl Walk Run">
+            {groups.map((group) => (
+              <NodeFace key={group.id} face={group.face} />
+            ))}
+          </NodeFaceGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
 export function CrawlWalkRunGroup({ group }: { group: CwrGroupId }) {
   const items = cwrItemCards(group);
+  const parts: NodePart[] = items.cards.length > 0 ? ["live"] : ["missing"];
   return (
-    <NodeFaceGrid label={items.label}>
-      {items.cards.map((card) => (
-        <NodeFace key={card.id} face={card.face} />
-      ))}
-    </NodeFaceGrid>
+    <NodeLayout>
+      <NodeHeader name={items.label} parts={parts} backHref={CWR_HREF} />
+      <NodeSections>
+        <NodeSection kind="lists">
+          {items.cards.length === 0 ? (
+            <NodeGrid>
+              <EmptyCard span="list" label={items.label} />
+            </NodeGrid>
+          ) : (
+            <NodeFaceGrid label={items.label}>
+              {items.cards.map((card) => (
+                <NodeFace key={card.id} face={card.face} />
+              ))}
+            </NodeFaceGrid>
+          )}
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
 export function CrawlWalkRunItem({ detail }: { detail: CwrDetail }) {
   const held = detail.item.confidence === "conservative" ? "Stage held at the earlier reading." : null;
+  const meta = [
+    detail.headline,
+    detail.item.stageMet ? `${detail.stageLabel} is the current stage` : "Crawl is still open",
+    held,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div className="control-room">
-      <header className="log-header">
-        <p className="log-kicker">{detail.group.label}</p>
-        <h2 className="log-title">{detail.item.title}</h2>
-        <p className="log-meta">
-          {detail.headline}
-          {detail.item.stageMet ? ` · ${detail.stageLabel} is the current stage` : " · Crawl is still open"}
-          {held ? ` · ${held}` : ""}
-        </p>
-      </header>
-      <ul className="control-list" aria-label="Stages">
-        {detail.stages.map((stage) => (
-          <li key={stage.id} className="control-row">
-            <div>
-              <p className="control-name">{stage.current ? `${stage.label} · current` : stage.label}</p>
-              <p className="control-meta">{stage.text}</p>
-            </div>
-          </li>
-        ))}
-        <li className="control-row">
-          <div>
-            <p className="control-name">What more can be done</p>
-            <p className="control-meta">{detail.item.more}</p>
-          </div>
-        </li>
-      </ul>
-      <h3 className="brick-group">Phase lines</h3>
-      <ul className="control-list" aria-label="Phase lines">
-        {detail.phases.map((phase) => (
-          <li key={phase.id} className="control-row">
-            <div>
-              <p className="control-name">{phase.next ? `${phase.label} · next` : phase.label}</p>
-              <p className="control-meta">{phase.line}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <h3 className="brick-group">How this stage was read</h3>
-      <ul className="control-list" aria-label="Evidence">
-        <li className="control-row">
-          <div>
-            <p className="control-name">Record</p>
-            <p className="control-meta">{detail.item.evidence}</p>
-          </div>
-        </li>
-        <li className="control-row">
-          <div>
-            <p className="control-name">Sources</p>
-            <p className="control-meta">{detail.item.sources.join(" · ")}</p>
-          </div>
-        </li>
-      </ul>
-    </div>
+    <NodeLayout>
+      <NodeHeader name={detail.item.title} parts={["live"]} backHref={groupHref(detail.group.id)} />
+      <p className="node-note">{meta}</p>
+      <NodeSections>
+        <NodeSection kind="lists" label="Stages">
+          <NodeGrid>
+            {detail.stages.map((stage) => (
+              <StatCard
+                key={stage.id}
+                span="list"
+                label={stage.current ? `${stage.label} · current` : stage.label}
+                value={stage.text}
+              />
+            ))}
+            <StatCard span="list" label="What more can be done" value={detail.item.more} />
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="lists" label="Phase lines">
+          <NodeGrid>
+            {detail.phases.map((phase) => (
+              <StatCard
+                key={phase.id}
+                span="list"
+                label={phase.next ? `${phase.label} · next` : phase.label}
+                value={phase.line}
+              />
+            ))}
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="lists" label="How this stage was read">
+          <NodeGrid>
+            <StatCard span="list" label="Record" value={detail.item.evidence} />
+            <StatCard span="list" label="Sources" value={detail.item.sources.join(" · ")} />
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }

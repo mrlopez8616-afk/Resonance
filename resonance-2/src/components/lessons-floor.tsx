@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NodeFace } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import { lessonsHomeFace } from "@/lib/home-faces";
+import { latestTimestamp, type NodePart } from "@/lib/node-layout";
 import { lessonCategories, type LessonCard, type LessonsHomeModel } from "@/lib/lessons";
 import styles from "@/components/lessons-floor.module.css";
+
+const NO_LESSONS: LessonCard[] = [];
 
 function LessonEntry({ card, showSources }: { card: LessonCard; showSources: boolean }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -13,43 +17,38 @@ function LessonEntry({ card, showSources }: { card: LessonCard; showSources: boo
     if (window.location.hash === `#${card.id}`) detailsRef.current?.setAttribute("open", "");
   }, [card.id]);
   return (
-    <details ref={detailsRef} id={card.id} className={styles.entry}>
-      <summary>
-        <span className={styles.top}>
-          <time dateTime={card.date}>{card.dateLabel}</time>
-          <span className={styles.chip}>{card.category}</span>
-          <span className={styles.chevron} aria-hidden />
-        </span>
-        <span className={styles.title}>{card.title}</span>
-        <span className={styles.lesson}>{card.lesson}</span>
-      </summary>
-      <div className={styles.body}>
-        <p>
-          <span className={styles.kicker}>What changed</span>
-          {card.whatChanged}
-        </p>
-        <p>
-          <span className={styles.kicker}>Why</span>
-          {card.why}
-        </p>
-        {showSources && card.sources.length > 0 ? (
+    <StatCard span="list" label={card.category} value={card.title} detail={card.dateLabel}>
+      <p className={styles.lesson}>{card.lesson}</p>
+      <details ref={detailsRef} id={card.id}>
+        <summary className={styles.kicker}>Details</summary>
+        <div className={styles.body}>
           <p>
-            <span className={styles.kicker}>Sources</span>
-            {card.sources.join(" · ")}
+            <span className={styles.kicker}>What changed</span>
+            {card.whatChanged}
           </p>
-        ) : null}
-        {card.buildHref || card.prHref ? (
-          <p className={styles.links}>
-            {card.buildHref ? <Link href={card.buildHref}>Build</Link> : null}
-            {card.prHref ? (
-              <a href={card.prHref} rel="noreferrer">
-                #{card.prNumber}
-              </a>
-            ) : null}
+          <p>
+            <span className={styles.kicker}>Why</span>
+            {card.why}
           </p>
-        ) : null}
-      </div>
-    </details>
+          {showSources && card.sources.length > 0 ? (
+            <p>
+              <span className={styles.kicker}>Sources</span>
+              {card.sources.join(" · ")}
+            </p>
+          ) : null}
+          {card.buildHref || card.prHref ? (
+            <p className={styles.links}>
+              {card.buildHref ? <Link href={card.buildHref}>Build</Link> : null}
+              {card.prHref ? (
+                <a href={card.prHref} rel="noreferrer">
+                  #{card.prNumber}
+                </a>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
+      </details>
+    </StatCard>
   );
 }
 
@@ -57,12 +56,13 @@ export function LessonsFloor({
   cards,
   showSources,
 }: {
-  cards: LessonCard[];
+  cards: LessonCard[] | null;
   showSources: boolean;
 }) {
-  const categories = useMemo(() => lessonCategories(cards), [cards]);
+  const rows = cards ?? NO_LESSONS;
+  const categories = useMemo(() => lessonCategories(rows), [rows]);
   const [filter, setFilter] = useState("all");
-  const shown = filter === "all" ? cards : cards.filter((card) => card.category === filter);
+  const shown = filter === "all" ? rows : rows.filter((card) => card.category === filter);
   const groups: { key: string; label: string; cards: LessonCard[] }[] = [];
   for (const card of shown) {
     const last = groups[groups.length - 1];
@@ -72,50 +72,59 @@ export function LessonsFloor({
       last.cards.push(card);
     }
   }
-  const countLabel = cards.length === 1 ? "1 lesson" : `${cards.length} lessons`;
+  const parts: NodePart[] = cards === null || rows.length === 0 ? ["missing"] : ["live"];
+  const updatedAt = latestTimestamp(rows.map((card) => card.updatedAt));
+  const countLabel = rows.length === 1 ? "1 lesson" : `${rows.length} lessons`;
+  const empty = rows.length === 0 ? "No lessons yet." : "No lessons in this category.";
 
   return (
-    <div className={`lessons-floor ${styles.floor}`}>
-      <header className="log-header">
-        <p className="log-kicker">Founder</p>
-        <h2 className="log-title">Lessons</h2>
-        <p className="log-meta">{countLabel}</p>
-      </header>
-      <div className={styles.filters} role="toolbar" aria-label="Category">
-        <button
-          type="button"
-          className={styles.filter}
-          aria-pressed={filter === "all"}
-          onClick={() => setFilter("all")}
-        >
-          All
-        </button>
-        {categories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            className={styles.filter}
-            aria-pressed={filter === category}
-            onClick={() => setFilter(category)}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-      {groups.map((group) => (
-        <section key={group.key} className={styles.group} aria-label={group.label}>
-          <h2>{group.label}</h2>
-          <div className={styles.entries}>
-            {group.cards.map((card) => (
-              <LessonEntry key={card.id} card={card} showSources={showSources} />
-            ))}
-          </div>
-        </section>
-      ))}
-      {shown.length === 0 ? (
-        <p className={styles.empty}>{cards.length === 0 ? "No lessons yet." : "No lessons in this category."}</p>
-      ) : null}
-    </div>
+    <NodeLayout>
+      <NodeHeader name="Lessons" parts={parts} updatedAt={cards === null ? null : updatedAt} backHref="/" />
+      {cards ? <p className="node-note">{countLabel}</p> : null}
+      <NodeSections>
+        <NodeSection kind="lists">
+          {cards ? (
+            <div className={styles.filters} role="toolbar" aria-label="Category">
+              <button
+                type="button"
+                className={styles.filter}
+                aria-pressed={filter === "all"}
+                onClick={() => setFilter("all")}
+              >
+                All
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={styles.filter}
+                  aria-pressed={filter === category}
+                  onClick={() => setFilter(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {shown.length === 0 ? (
+            <NodeGrid>
+              <EmptyCard span="list" label={empty} />
+            </NodeGrid>
+          ) : (
+            groups.map((group) => (
+              <section key={group.key} aria-label={group.label}>
+                <h3 className="brick-group">{group.label}</h3>
+                <NodeGrid>
+                  {group.cards.map((card) => (
+                    <LessonEntry key={card.id} card={card} showSources={showSources} />
+                  ))}
+                </NodeGrid>
+              </section>
+            ))
+          )}
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 

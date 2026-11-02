@@ -1,5 +1,7 @@
 import { NodeFace } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import { tileFace } from "@/lib/home-faces";
+import type { NodePart } from "@/lib/node-layout";
 import { formatSpotPrice } from "@/lib/live-face";
 import {
   XRP_TRIGGER_HREF,
@@ -112,35 +114,51 @@ export function XrpTriggerFloor({
   view,
   publicMode,
   staleLabel = null,
+  updatedAt = null,
 }: {
   view: XrpTriggerStatus;
   publicMode: boolean;
   staleLabel?: string | null;
+  updatedAt?: string | null;
 }) {
   const line = linePrice(view.lineUsd);
+  const distance = view.distanceLabel ? distanceCopy(view, publicMode) : null;
+  const parts: NodePart[] = view.lastClose === null ? ["missing"] : staleLabel ? ["partial"] : ["live"];
   return (
-    <section className="trigger-watch" aria-label="XRP Trigger">
-      <h2>XRP Trigger</h2>
-      <p className="trigger-state">{view.stateLabel}</p>
-      {view.distanceLabel ? (
-        <p className="trigger-distance">{distanceCopy(view, publicMode)}</p>
-      ) : (
-        <p className="node-note">no close</p>
-      )}
-      {publicMode ? <p className="node-note">Line {line}</p> : null}
-      {!publicMode && view.lastClose !== null && view.ctLabel ? (
-        <p className="node-note">
-          {formatSpotPrice(view.lastClose)} close · {view.ctLabel}
-        </p>
-      ) : null}
+    <NodeLayout>
+      <NodeHeader name="XRP Trigger" parts={parts} updatedAt={updatedAt} backHref="/n/crypto" />
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            <StatCard label="State" value={view.stateLabel} />
+            {distance ? <StatCard label="Distance" value={distance} /> : <EmptyCard label="no close" />}
+            {publicMode ? <StatCard label="Line" value={line} /> : null}
+            {!publicMode && view.lastClose !== null && view.ctLabel ? (
+              <StatCard label="Close" value={`${formatSpotPrice(view.lastClose)} close`} detail={view.ctLabel} />
+            ) : null}
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="trends">
+          <NodeGrid>
+            {view.bars.length === 0 ? (
+              <EmptyCard span="trend" label="no closes" />
+            ) : (
+              <StatCard span="trend" label="Closes">
+                <TriggerBars bars={view.bars} line={view.lineUsd} publicMode={publicMode} />
+              </StatCard>
+            )}
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="lists">
+          <NodeGrid>
+            <StatCard span="list" label="Daily close" value={view.checklist.dailyClose} />
+            <StatCard span="list" label="Holds" value={view.checklist.holds} />
+            <StatCard span="list" label="Founder" value={view.checklist.founderGo} />
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
       {staleLabel ? <p className="node-note">{staleLabel}</p> : null}
-      <ol className="trigger-check">
-        <li>{view.checklist.dailyClose}</li>
-        <li>{view.checklist.holds}</li>
-        <li>{view.checklist.founderGo}</li>
-      </ol>
-      <TriggerBars bars={view.bars} line={view.lineUsd} publicMode={publicMode} />
       <p className="trigger-note">Status only. Nothing here trades.</p>
-    </section>
+    </NodeLayout>
   );
 }

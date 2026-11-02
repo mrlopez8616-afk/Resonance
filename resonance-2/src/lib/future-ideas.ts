@@ -118,6 +118,7 @@ export type IdeaCard = {
   addedOn: string;
   addedLabel: string;
   archived: boolean;
+  updatedAt: string;
 };
 
 export type IdeaJson = {
@@ -272,6 +273,7 @@ export function presentIdeas(
       addedOn: row.addedOn,
       addedLabel: ideaDateLabel(row.addedOn),
       archived: row.archivedAt !== null,
+      updatedAt: row.updatedAt,
     });
   }
   const rank = new Map<IdeaStatus, number>(IDEA_STATUSES.map((status, index) => [status, index]));
