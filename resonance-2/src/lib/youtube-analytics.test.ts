@@ -381,3 +381,21 @@ describe("YouTube analytics", { concurrency: false }, () => {
     assert.equal(presentYouTubeScreen(loaded, { publicMode: true, connectReady: true, denied: false }), null);
   });
 });
+
+it("describeGoogleFailure keeps status and reason, drops tokens", async () => {
+  const { describeGoogleFailure } = await import("./youtube-analytics");
+  const api = describeGoogleFailure(403, {
+    error: {
+      code: 403,
+      status: "PERMISSION_DENIED",
+      message: "YouTube Analytics API has not been used in project 123 before or it is disabled.",
+      errors: [{ reason: "accessNotConfigured" }],
+    },
+  });
+  assert.match(api, /^http 403 \| PERMISSION_DENIED \| accessNotConfigured \| YouTube Analytics API/);
+  const grant = describeGoogleFailure(400, { error: "invalid_grant", error_description: "Token has been expired or revoked." });
+  assert.equal(grant, "http 400 | invalid_grant | Token has been expired or revoked.");
+  const leak = describeGoogleFailure(401, { error: { message: "bad ya29.abcDEF-123 and 1//0gXYZ" } });
+  assert.ok(!leak.includes("ya29.abc") && !leak.includes("1//0gXYZ"));
+  assert.equal(describeGoogleFailure(500, null), "http 500");
+});

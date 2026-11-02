@@ -533,6 +533,39 @@ export function readTokenField(json: unknown, field: "access_token" | "refresh_t
   return token ? token : null;
 }
 
+/**
+ * One short, secret-free line describing a failed Google response, for logs.
+ * Keeps the HTTP status, Google's reason codes, and a trimmed message. Never
+ * echoes request bodies or tokens; anything token-shaped is redacted.
+ */
+export function describeGoogleFailure(status: number, json: unknown): string {
+  const parts: string[] = [`http ${status}`];
+  if (json && typeof json === "object") {
+    const record = json as Record<string, unknown>;
+    const error = record.error;
+    if (typeof error === "string") {
+      parts.push(error);
+      if (typeof record.error_description === "string") parts.push(record.error_description);
+    } else if (error && typeof error === "object") {
+      const e = error as { status?: unknown; message?: unknown; errors?: unknown };
+      if (typeof e.status === "string") parts.push(e.status);
+      if (Array.isArray(e.errors)) {
+        const reasons = e.errors
+          .map((item) => (item && typeof item === "object" ? (item as { reason?: unknown }).reason : null))
+          .filter((reason): reason is string => typeof reason === "string");
+        if (reasons.length) parts.push(reasons.join(","));
+      }
+      if (typeof e.message === "string") parts.push(e.message);
+    }
+  }
+  return parts
+    .join(" | ")
+    .replace(/ya29\.[\w.-]+/g, "[redacted]")
+    .replace(/1\/\/[\w.-]+/g, "[redacted]")
+    .replace(/\s+/g, " ")
+    .slice(0, 400);
+}
+
 export function metricUnsupported(json: unknown): boolean {
   if (!json || typeof json !== "object") return false;
   const error = (json as { error?: { message?: unknown } }).error;
