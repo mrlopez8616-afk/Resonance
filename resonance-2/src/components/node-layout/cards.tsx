@@ -34,6 +34,7 @@ export function StatCard({
   titleHref,
   locked = false,
   money = false,
+  id,
   children,
 }: {
   label: string;
@@ -44,6 +45,8 @@ export function StatCard({
   titleHref?: string;
   locked?: boolean;
   money?: boolean;
+  /** Anchor for a lesson link that points at this card. */
+  id?: string;
   children?: ReactNode;
 }) {
   const className = `${EQUAL_CARD_CLASS} ${cardSpanClass(span)}`;
@@ -89,6 +92,7 @@ export function StatCard({
   return (
     <article
       className={className}
+      id={id}
       data-span={span}
       data-card="stat"
       data-locked={locked ? "true" : undefined}

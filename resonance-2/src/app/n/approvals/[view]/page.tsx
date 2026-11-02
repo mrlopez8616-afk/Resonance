@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApprovalList } from "@/components/approvals-floor";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { isPublicMode } from "@/lib/public-mode-server";
 import { listApprovals } from "@/lib/approvals-store";
@@ -38,10 +38,16 @@ export default async function ApprovalViewPage({
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/approvals" className="calendar-back">
-        Approvals
-      </Link>
-      {items ? <ApprovalList items={items} mode={view} publicMode={publicMode} /> : null}
+      {items ? (
+        <ApprovalList items={items} mode={view} publicMode={publicMode} />
+      ) : (
+        <NodeLayout>
+          <NodeHeader name={view === "done" ? "Done" : "Pending"} parts={["missing"]} backHref="/n/approvals" />
+          <NodeSections>
+            <NodeSection kind="lists" empty />
+          </NodeSections>
+        </NodeLayout>
+      )}
     </OperatorShell>
   );
 }

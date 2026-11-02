@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { BuildParent } from "@/components/build-floor";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { backupFace, loadLatestBackupRun } from "@/lib/backup";
 import { buildHomeCard, deriveBuildSections } from "@/lib/build-tracker";
@@ -38,9 +38,6 @@ export default async function BuildPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
       {view ? (
         <BuildParent
           totalPercent={view.totalPercent}
@@ -49,7 +46,14 @@ export default async function BuildPage() {
           notes={notes}
           backup={backupFace(backupRun, pub, backupUnavailable)}
         />
-      ) : null}
+      ) : (
+        <NodeLayout>
+          <NodeHeader name="Build" parts={["missing"]} backHref="/" />
+          <NodeSections>
+            <NodeSection kind="lists" empty />
+          </NodeSections>
+        </NodeLayout>
+      )}
     </OperatorShell>
   );
 }

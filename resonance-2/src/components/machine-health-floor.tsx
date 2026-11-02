@@ -1,5 +1,7 @@
 import { NodeFace } from "@/components/node-face";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import { healthHomeFace } from "@/lib/home-faces";
+import { type NodePart } from "@/lib/node-layout";
 import { type MachineHealthReport, type MachineScore } from "@/lib/machine-health";
 
 function percentText(percent: number | null): string {
@@ -10,38 +12,42 @@ export function HealthHomeCard({ report }: { report: MachineHealthReport }) {
   return <NodeFace face={healthHomeFace(report)} />;
 }
 
-function ScoreCard({ score }: { score: MachineScore }) {
-  return (
-    <li className="control-row" data-health-score={score.id}>
-      <div>
-        <p className="control-name">{score.label}</p>
-        <p className="health-part-score">{percentText(score.percent)}</p>
-        <p className="control-meta">{score.detail}</p>
-        <p className="control-meta">{score.inputs}</p>
-      </div>
-    </li>
-  );
+function scorePart(score: MachineScore): NodePart {
+  return score.percent === null ? "missing" : "live";
 }
 
+/**
+ * Five scores plus the overall average.
+ * The report has no pull timestamp, so Updated stays off this page.
+ */
 export function HealthFloor({ report }: { report: MachineHealthReport }) {
+  const overall =
+    report.percent === null
+      ? "No score has data yet."
+      : `Average of ${report.ready} of ${report.scores.length} scores.`;
   return (
-    <div className="control-room" aria-label="Health of the Machine">
-      <header className="log-header">
-        <p className="log-kicker">Health of the Machine</p>
-        <h2 className="log-title health-overall" data-health-overall>
-          {percentText(report.percent)}
-        </h2>
-        <p className="log-meta">
-          {report.percent === null
-            ? "No score has data yet."
-            : `Average of ${report.ready} of ${report.scores.length} scores.`}
-        </p>
-      </header>
-      <ul className="control-list">
-        {report.scores.map((score) => (
-          <ScoreCard key={score.id} score={score} />
-        ))}
-      </ul>
-    </div>
+    <NodeLayout>
+      <NodeHeader name="Health of the Machine" parts={report.scores.map(scorePart)} backHref="/" />
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            {report.percent === null ? (
+              <EmptyCard label="Overall" />
+            ) : (
+              <StatCard label="Overall" value={percentText(report.percent)} detail={overall} />
+            )}
+            {report.scores.map((score) =>
+              score.percent === null ? (
+                <EmptyCard key={score.id} label={score.label} />
+              ) : (
+                <StatCard key={score.id} label={score.label} value={percentText(score.percent)} detail={score.inputs}>
+                  <p className="node-card-detail">{score.detail}</p>
+                </StatCard>
+              ),
+            )}
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }

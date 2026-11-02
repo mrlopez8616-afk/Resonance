@@ -57,6 +57,25 @@ export function cardSpanClass(span: CardSpan): string {
 }
 
 /**
+ * Newest parseable timestamp already loaded on the page.
+ * Blank and unparseable values are skipped. No stamps returns null.
+ */
+export function latestTimestamp(values: readonly (string | null | undefined)[]): string | null {
+  let best: string | null = null;
+  let bestMs = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (value == null) continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const ms = Date.parse(trimmed);
+    if (!Number.isFinite(ms) || ms <= bestMs) continue;
+    bestMs = ms;
+    best = trimmed;
+  }
+  return best;
+}
+
+/**
  * "Updated 2:04 PM CT" from a real timestamp.
  * Null, blank, and unparseable values return null so the header can omit the line.
  */
