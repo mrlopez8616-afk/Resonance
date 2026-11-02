@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BuildSectionBody } from "@/components/build-floor";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { buildSectionLabel, resolveBuildSection } from "@/lib/build-tracker";
 import { loadBuildView } from "@/lib/build-store";
@@ -47,9 +47,12 @@ export default async function BuildSectionPage({
   if (!view) {
     return (
       <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-        <Link href="/n/build" className="calendar-back">
-          Build
-        </Link>
+        <NodeLayout>
+          <NodeHeader name="Build" parts={["missing"]} backHref="/n/build" />
+          <NodeSections>
+            <NodeSection kind="lists" empty />
+          </NodeSections>
+        </NodeLayout>
       </OperatorShell>
     );
   }
@@ -69,9 +72,6 @@ export default async function BuildSectionPage({
 
   return (
     <OperatorShell>
-      <Link href="/n/build" className="calendar-back">
-        Build
-      </Link>
       <BuildSectionBody section={section} now={new Date()} showPr={!pub} lessonHrefs={lessonHrefs} />
     </OperatorShell>
   );

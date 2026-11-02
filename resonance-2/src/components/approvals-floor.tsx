@@ -1,11 +1,34 @@
 import { ApprovalDecision } from "@/components/approval-decision";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import {
   approvalMeta,
   decisionLine,
   formatApprovalWhen,
   type Approval,
 } from "@/lib/approvals";
-import { stripMoneyText } from "@/lib/public-mode";
+import { latestTimestamp, type NodePart } from "@/lib/node-layout";
+import { hasMoneyText, stripMoneyText } from "@/lib/public-mode";
+
+function approvalHasMoney(item: Approval): boolean {
+  return (
+    hasMoneyText(item.title) ||
+    hasMoneyText(item.detail) ||
+    hasMoneyText(item.decisionNote ?? "")
+  );
+}
+
+function approvalParts(items: readonly Approval[], publicMode: boolean): NodePart[] {
+  const rows: NodePart[] =
+    items.length === 0
+      ? ["missing"]
+      : items.map((item) => (publicMode && approvalHasMoney(item) ? "missing" : "live"));
+  // The count is a real reading. An empty list, or a locked money row, is the other part.
+  return ["live", ...rows];
+}
+
+function approvalUpdated(items: readonly Approval[]): string | null {
+  return latestTimestamp(items.flatMap((item) => [item.createdAt, item.decidedAt]));
+}
 
 export function ApprovalList({
   items,
@@ -17,44 +40,65 @@ export function ApprovalList({
   publicMode?: boolean;
 }) {
   const heading = mode === "pending" ? "Pending" : "Done";
-  const countLine =
-    mode === "pending"
-      ? `${items.length} waiting`
-      : `${items.length} recorded`;
+  const countLine = mode === "pending" ? "waiting" : "recorded";
   return (
-    <section className="approval-queue" aria-label={heading}>
-      <header className="approval-heading">
-        <h2>{heading}</h2>
-        <p>{countLine}</p>
-      </header>
-      {items.length === 0 ? (
-        <p className="parent-empty">
-          {mode === "pending" ? "Nothing is waiting." : "Nothing is recorded."}
-        </p>
-      ) : (
-        <div className="approval-list">
-          {items.map((item) => {
-            const result = decisionLine(item);
-            const title = publicMode ? stripMoneyText(item.title) || "Request" : item.title;
-            const detail = publicMode && item.detail ? stripMoneyText(item.detail) : item.detail;
-            const note = publicMode && item.decisionNote ? stripMoneyText(item.decisionNote) : item.decisionNote;
-            return (
-              <article key={item.id} className="approval-card" data-approval-id={item.id}>
-                <h3>{title}</h3>
-                <p className="approval-meta">{approvalMeta(item)}</p>
-                {detail ? <p className="approval-detail">{detail}</p> : null}
-                <p className="approval-when">Asked {formatApprovalWhen(item.createdAt)}</p>
-                {mode === "pending" && !publicMode ? (
-                  <ApprovalDecision id={item.id} title={item.title} />
-                ) : result ? (
-                  <p className="approval-result">{result}</p>
-                ) : null}
-                {note ? <p className="approval-detail">{note}</p> : null}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
+    <NodeLayout>
+      <NodeHeader
+        name={heading}
+        parts={approvalParts(items, publicMode)}
+        updatedAt={approvalUpdated(items)}
+        backHref="/n/approvals"
+      />
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            <StatCard label={heading} value={String(items.length)} detail={countLine} />
+          </NodeGrid>
+        </NodeSection>
+        <NodeSection kind="lists">
+          <NodeGrid>
+            {items.length === 0 ? (
+              <EmptyCard label={heading} span="list" />
+            ) : (
+              items.map((item) => {
+                if (publicMode && approvalHasMoney(item)) {
+                  const meta = approvalMeta(item);
+                  return (
+                    <StatCard
+                      key={item.id}
+                      span="list"
+                      label={hasMoneyText(meta) ? "Request" : meta}
+                      locked
+                    />
+                  );
+                }
+                const result = decisionLine(item);
+                const title = publicMode ? stripMoneyText(item.title) || "Request" : item.title;
+                const detail = publicMode && item.detail ? stripMoneyText(item.detail) : item.detail;
+                const note = publicMode && item.decisionNote ? stripMoneyText(item.decisionNote) : item.decisionNote;
+                const when = formatApprovalWhen(item.createdAt);
+                return (
+                  <StatCard
+                    key={item.id}
+                    span="list"
+                    label={approvalMeta(item)}
+                    value={title}
+                    detail={when ? `Asked ${when}` : null}
+                  >
+                    {detail ? <p className="node-card-detail">{detail}</p> : null}
+                    {mode === "pending" && !publicMode ? (
+                      <ApprovalDecision id={item.id} title={item.title} />
+                    ) : result ? (
+                      <p className="node-card-detail">{result}</p>
+                    ) : null}
+                    {note ? <p className="node-card-detail">{note}</p> : null}
+                  </StatCard>
+                );
+              })
+            )}
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }

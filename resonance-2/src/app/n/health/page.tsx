@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { HealthFloor } from "@/components/machine-health-floor";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { loadMachineHealth } from "@/lib/machine-health-load";
@@ -28,10 +28,16 @@ export default async function HealthPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      {report ? <HealthFloor report={report} /> : null}
+      {report ? (
+        <HealthFloor report={report} />
+      ) : (
+        <NodeLayout>
+          <NodeHeader name="Health of the Machine" parts={["missing"]} backHref="/" />
+          <NodeSections>
+            <NodeSection kind="numbers" empty />
+          </NodeSections>
+        </NodeLayout>
+      )}
     </OperatorShell>
   );
 }

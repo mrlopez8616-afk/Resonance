@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ControlParent } from "@/components/control-room";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { presentControlRoom } from "@/lib/control-room";
@@ -28,13 +29,19 @@ export default async function ControlRoomPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      <Link href="/tv" className="calendar-back">
-        Factory Floor
-      </Link>
-      {room ? <ControlParent view={presentControlRoom(room, publicMode)} now={now} /> : null}
+      {room ? (
+        <ControlParent view={presentControlRoom(room, publicMode)} now={now} />
+      ) : (
+        <NodeLayout>
+          <NodeHeader name="Control Room" parts={["missing"]} backHref="/" />
+          <p className="node-note">
+            <Link href="/tv">Factory Floor</Link>
+          </p>
+          <NodeSections>
+            <NodeSection kind="lists" empty />
+          </NodeSections>
+        </NodeLayout>
+      )}
     </OperatorShell>
   );
 }

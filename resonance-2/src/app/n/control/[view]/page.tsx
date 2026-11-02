@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ControlChild } from "@/components/control-room";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { isControlView, presentControlRoom } from "@/lib/control-room";
@@ -50,10 +50,16 @@ export default async function ControlChildPage({
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/n/control" className="calendar-back">
-        Control Room
-      </Link>
-      {presented ? <ControlChild view={view} room={presented} now={now} /> : null}
+      {presented ? (
+        <ControlChild view={view} room={presented} now={now} />
+      ) : (
+        <NodeLayout>
+          <NodeHeader name={TITLES[view]} parts={["missing"]} backHref="/n/control" />
+          <NodeSections>
+            <NodeSection kind="lists" empty />
+          </NodeSections>
+        </NodeLayout>
+      )}
     </OperatorShell>
   );
 }

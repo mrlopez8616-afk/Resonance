@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { ApprovalsParent } from "@/components/approvals-parent";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { loadApprovalBoard } from "@/lib/approvals-store";
+import { latestTimestamp } from "@/lib/node-layout";
 import { isStorageUnavailable, STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +23,22 @@ export default async function ApprovalsPage() {
 
   return (
     <OperatorShell storageMessage={unavailable ? STORAGE_UNAVAILABLE_BANNER : null}>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      {board ? <ApprovalsParent pending={board.pending.length} done={board.done.length} /> : null}
+      {board ? (
+        <ApprovalsParent
+          pending={board.pending.length}
+          done={board.done.length}
+          updatedAt={latestTimestamp(
+            [...board.pending, ...board.done].flatMap((item) => [item.createdAt, item.decidedAt]),
+          )}
+        />
+      ) : (
+        <NodeLayout>
+          <NodeHeader name="Approvals" parts={["missing"]} backHref="/" />
+          <NodeSections>
+            <NodeSection kind="lists" empty />
+          </NodeSections>
+        </NodeLayout>
+      )}
     </OperatorShell>
   );
 }

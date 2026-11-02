@@ -12,11 +12,16 @@ import {
   deriveNodeStatus,
   formatUpdatedCt,
   headlineIsEmpty,
+  latestTimestamp,
 } from "@/lib/node-layout";
 
 const cssRequire = createRequire(import.meta.url);
 const nodeModule = cssRequire("module") as {
+  _extensions: Record<string, (module: { _compile: (code: string, file: string) => void }, filename: string) => void>;
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
+};
+nodeModule._extensions[".css"] = (module, filename) => {
+  module._compile("module.exports = new Proxy({}, { get: (_, key) => String(key) });", filename);
 };
 
 function LinkStandIn(props: { href?: string; children?: ReactNode; className?: string; title?: string }) {
@@ -26,6 +31,10 @@ function LinkStandIn(props: { href?: string; children?: ReactNode; className?: s
 const originalLoad = nodeModule._load;
 nodeModule._load = function load(request: string, parent: unknown, isMain: boolean) {
   const normalized = request.replace(/\\/g, "/");
+  if (normalized.endsWith(".css") || normalized.includes(".module.css")) {
+    const styles = new Proxy({}, { get: (_target, key) => String(key) });
+    return { __esModule: true, default: styles };
+  }
   if (
     normalized === "next/link" ||
     normalized.endsWith("/link.js") ||
@@ -34,6 +43,22 @@ nodeModule._load = function load(request: string, parent: unknown, isMain: boole
     normalized.includes("next/dist/client/link")
   ) {
     return { __esModule: true, default: LinkStandIn };
+  }
+  if (normalized === "next/navigation" || normalized.includes("next/dist/client/components/navigation")) {
+    return {
+      __esModule: true,
+      useRouter() {
+        return { push() {}, refresh() {}, replace() {} };
+      },
+      usePathname() {
+        return "/";
+      },
+      useSearchParams() {
+        return new URLSearchParams();
+      },
+      redirect() {},
+      notFound() {},
+    };
   }
   return originalLoad(request, parent, isMain);
 };
@@ -47,9 +72,19 @@ const layoutSource = [
 
 type LayoutUi = typeof import("@/components/node-layout");
 type YouTubeUi = typeof import("@/components/youtube-node");
+type ControlUi = typeof import("@/components/control-room");
+type HealthUi = typeof import("@/components/machine-health-floor");
+type ApprovalsParentUi = typeof import("@/components/approvals-parent");
+type ApprovalsUi = typeof import("@/components/approvals-floor");
+type BuildUi = typeof import("@/components/build-floor");
 
 let ui: LayoutUi;
 let youtube: YouTubeUi;
+let controlUi: ControlUi;
+let healthUi: HealthUi;
+let approvalsParentUi: ApprovalsParentUi;
+let approvalsUi: ApprovalsUi;
+let buildUi: BuildUi;
 
 function render(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
@@ -79,6 +114,11 @@ function render(node: ReactNode): string {
 before(async () => {
   ui = await import("@/components/node-layout");
   youtube = await import("@/components/youtube-node");
+  controlUi = await import("@/components/control-room");
+  healthUi = await import("@/components/machine-health-floor");
+  approvalsParentUi = await import("@/components/approvals-parent");
+  approvalsUi = await import("@/components/approvals-floor");
+  buildUi = await import("@/components/build-floor");
 });
 
 describe("node layout rules", () => {
@@ -101,6 +141,12 @@ describe("node layout rules", () => {
     assert.equal(formatUpdatedCt("   "), null);
     assert.equal(formatUpdatedCt("not a time"), null);
     assert.equal(formatUpdatedCt("2026-11-02T20:04:00.000Z"), "Updated 2:04 PM CT");
+    assert.equal(latestTimestamp([]), null);
+    assert.equal(latestTimestamp([null, "", "not a time"]), null);
+    assert.equal(
+      latestTimestamp(["2026-11-02T18:00:00.000Z", "2026-11-02T20:04:00.000Z", "nope"]),
+      "2026-11-02T20:04:00.000Z",
+    );
     assert.equal(layoutSource.includes("new Date()"), false);
     assert.equal(layoutSource.includes("Date.now"), false);
   });
@@ -303,5 +349,273 @@ describe("YouTube on the shared layout", () => {
     assert.match(gear, /node-card-equal/);
     assert.equal(gear.includes("$"), false);
     assert.equal(gear.includes("199"), false);
+  });
+});
+
+const STAMP = "2026-11-02T20:04:00.000Z";
+const CONTROL_NOW = new Date("2026-11-02T20:12:00.000Z");
+
+describe("Control, Health, Approvals, and Build on the shared layout", () => {
+  it("keeps the control parent to child cards and stamps the header from the data", () => {
+    const parent = render(
+      createElement(controlUi.ControlParent, {
+        now: CONTROL_NOW,
+        view: {
+          approvals: {
+            pending: 1,
+            doneToday: 0,
+            pendingRows: [{ title: "Send", agent: "Architect", status: "pending", at: STAMP }],
+            doneTodayRows: [],
+          },
+          agents: [
+            { id: "robinhood-ops", name: "Robinhood Ops", at: STAMP, source: "fills" },
+            { id: "architect", name: "Architect", at: null, source: null },
+          ],
+          feeds: [
+            {
+              id: "coingecko",
+              label: "CoinGecko",
+              band: "quote",
+              at: STAMP,
+              checked: true,
+              freshness: "green",
+            },
+            { id: "github", label: "GitHub", band: "quote", at: null, checked: true, freshness: "red" },
+          ],
+        },
+      }),
+    );
+    assert.match(parent, /href="\/"/);
+    assert.match(parent, /href="\/n\/control\/approvals"/);
+    assert.match(parent, /href="\/n\/control\/bots"/);
+    assert.match(parent, /href="\/n\/control\/feeds"/);
+    assert.match(parent, /href="\/tv"/);
+    assert.match(parent, /Updated 2:04 PM CT/);
+    assert.equal(parent.includes("Open the queue"), false);
+    assert.equal(parent.includes("CoinGecko"), false);
+
+    const bots = render(
+      createElement(controlUi.ControlChild, {
+        view: "bots",
+        now: CONTROL_NOW,
+        room: {
+          approvals: null,
+          agents: [
+            { id: "robinhood-ops", name: "Robinhood Ops", at: STAMP, source: "fills" },
+            { id: "architect", name: "Architect", at: null, source: null },
+          ],
+          feeds: [],
+        },
+      }),
+    );
+    assert.match(bots, /Robinhood Ops/);
+    assert.match(bots, /Architect/);
+    assert.match(bots, new RegExp(EMPTY_CARD_NOTE));
+    assert.match(bots, /data-card="empty"/);
+    assert.match(bots, /Updated 2:04 PM CT/);
+    assert.match(bots, /href="\/n\/control"/);
+
+    const feeds = render(
+      createElement(controlUi.ControlChild, {
+        view: "feeds",
+        now: CONTROL_NOW,
+        room: {
+          approvals: null,
+          agents: [],
+          feeds: [
+            {
+              id: "xrp-closes",
+              label: "XRP daily closes",
+              band: "history",
+              at: STAMP,
+              checked: true,
+              freshness: "amber",
+            },
+            { id: "github", label: "GitHub", band: "quote", at: null, checked: true, freshness: "red" },
+          ],
+        },
+      }),
+    );
+    assert.match(feeds, /XRP daily closes/);
+    assert.match(feeds, /GitHub/);
+    assert.match(feeds, new RegExp(EMPTY_CARD_NOTE));
+    assert.match(feeds, /node-card-equal/);
+  });
+
+  it("boxes a missing health score and omits Updated when the report has no timestamp", () => {
+    const html = render(
+      createElement(healthUi.HealthFloor, {
+        report: {
+          percent: 80,
+          ready: 1,
+          tone: "steady",
+          scores: [
+            {
+              id: "allocation",
+              label: "Allocation",
+              short: "Balance",
+              detail: "100% minus the normalized gap from an equal one-ninth weight.",
+              inputs: "SUI 10.0%",
+              percent: 80,
+            },
+            {
+              id: "growth",
+              label: "Growth",
+              short: "Growth",
+              detail: "Names up since the first buy, out of the names with a gain.",
+              inputs: "not connected",
+              percent: null,
+            },
+          ],
+        },
+      }),
+    );
+    assert.match(html, /Allocation/);
+    assert.match(html, /80%/);
+    assert.match(html, /Growth/);
+    assert.match(html, /data-card="empty"/);
+    assert.match(html, new RegExp(EMPTY_CARD_NOTE));
+    assert.match(html, /node-card-equal/);
+    assert.match(html, /data-node-status="partial"/);
+    assert.equal(html.includes("Updated"), false);
+    assert.match(html, /href="\/"/);
+  });
+
+  it("keeps approvals to two child cards and locks a money request in Public view", () => {
+    const parent = render(
+      createElement(approvalsParentUi.ApprovalsParent, {
+        pending: 1,
+        done: 0,
+        updatedAt: STAMP,
+      }),
+    );
+    assert.match(parent, /href="\/n\/approvals\/pending"/);
+    assert.match(parent, /href="\/n\/approvals\/done"/);
+    assert.match(parent, /Updated 2:04 PM CT/);
+    assert.equal(parent.includes("Send"), false);
+
+    const quiet = render(createElement(approvalsParentUi.ApprovalsParent, { pending: 0, done: 0 }));
+    assert.equal(quiet.includes("Updated"), false);
+
+    const locked = render(
+      createElement(approvalsUi.ApprovalList, {
+        mode: "pending",
+        publicMode: true,
+        items: [
+          {
+            id: "appr_publicmodeexample",
+            createdAt: STAMP,
+            requestedByAgent: "Robinhood Ops",
+            title: "Send $1,200",
+            detail: "Wire $40 today",
+            category: "transfer",
+            node: null,
+            status: "pending",
+            decidedBy: null,
+            decidedAt: null,
+            decisionNote: null,
+            idempotencyKey: "floor-desk:public",
+          },
+        ],
+      }),
+    );
+    assert.match(locked, /data-lock-badge/);
+    assert.match(locked, /data-node-status="partial"/);
+    assert.match(locked, /node-card-equal/);
+    assert.match(locked, /Transfer/);
+    assert.equal(locked.includes("$"), false);
+    assert.equal(locked.includes("1,200"), false);
+    assert.equal(locked.includes("40"), false);
+    assert.match(locked, /Updated 2:04 PM CT/);
+
+    const empty = render(createElement(approvalsUi.ApprovalList, { mode: "pending", items: [] }));
+    assert.match(empty, /data-node-status="partial"/);
+    assert.match(empty, /data-card="empty"/);
+    assert.match(empty, new RegExp(EMPTY_CARD_NOTE));
+    assert.equal(empty.includes("Nothing is waiting"), false);
+    assert.equal(empty.includes("Updated"), false);
+  });
+
+  it("keeps the build parent to child cards and locks a pull request in Public view", () => {
+    const item = {
+      id: "platform-public",
+      title: "Public mode",
+      node: "platform" as const,
+      prNumber: 80,
+      status: "in_progress" as const,
+      steps: [
+        { id: "spec", label: "spec written", done: true },
+        { id: "pr-open", label: "PR open", done: true },
+        { id: "tests-build", label: "local tests and build pass", done: false },
+      ],
+      nextStep: "Verify on a phone",
+      sortOrder: 0,
+      updatedAt: STAMP,
+    };
+    const section = {
+      id: "platform",
+      label: "Platform",
+      percent: 40,
+      counts: { live: 0, inProgress: 1, queued: 0 },
+      items: [item],
+    };
+    const parent = render(
+      createElement(buildUi.BuildParent, {
+        totalPercent: 40,
+        githubFresh: true,
+        sections: [section],
+        notes: ["Next: ship the tracker"],
+        backup: {
+          id: "backup",
+          href: "/n/backup",
+          name: "Backup",
+          headline: "not recorded",
+          status: "not recorded",
+          live: false,
+          tone: "",
+        },
+      }),
+    );
+    assert.match(parent, /href="\/n\/build\/platform"/);
+    assert.match(parent, /href="\/n\/ideas"/);
+    assert.match(parent, /Future Ideas/);
+    assert.match(parent, /Crawl Walk Run/);
+    assert.match(parent, /Backup/);
+    assert.match(parent, /40%/);
+    assert.match(parent, /Next: ship the tracker/);
+    assert.match(parent, /Updated 2:04 PM CT/);
+    assert.equal(parent.includes("Verify on a phone"), false);
+    assert.equal(parent.includes("#80"), false);
+
+    const body = render(
+      createElement(buildUi.BuildSectionBody, {
+        section,
+        now: CONTROL_NOW,
+        showPr: false,
+        lessonHrefs: { "platform-public": "/n/lessons#LL-023" },
+      }),
+    );
+    assert.match(body, /Public mode/);
+    assert.match(body, /Verify on a phone/);
+    assert.match(body, /Lesson/);
+    assert.match(body, /data-lock-badge/);
+    assert.match(body, /node-card-equal/);
+    assert.match(body, /id="platform-public"/);
+    assert.equal(body.includes("#80"), false);
+    assert.equal(body.includes("pull/80"), false);
+    assert.equal(body.includes("$"), false);
+    assert.match(body, /Updated 2:04 PM CT/);
+
+    const bare = render(
+      createElement(buildUi.BuildSectionBody, {
+        section: { ...section, percent: null, items: [], counts: { live: 0, inProgress: 0, queued: 0 } },
+        now: CONTROL_NOW,
+        showPr: false,
+      }),
+    );
+    assert.match(bare, /data-card="empty"/);
+    assert.match(bare, new RegExp(EMPTY_CARD_NOTE));
+    assert.equal(bare.includes("Updated"), false);
+    assert.equal(bare.includes("Nothing queued"), false);
   });
 });
