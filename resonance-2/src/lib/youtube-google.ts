@@ -7,6 +7,7 @@ import {
   YOUTUBE_OAUTH_REDIRECT,
   YOUTUBE_VIDEO_CAP,
   analyticsReportUrl,
+  describeGoogleFailure,
   metricUnsupported,
   parseChannelDays,
   parseChannelPayload,
@@ -20,6 +21,18 @@ import type { YouTubeClientConfig } from "@/lib/youtube-oauth";
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 let fetchImpl: FetchLike | null = null;
+let lastFailure: string | null = null;
+
+/** Returns and clears the last Google failure line (status and reason, no secrets). */
+export function takeYouTubeGoogleFailure(): string | null {
+  const value = lastFailure;
+  lastFailure = null;
+  return value;
+}
+
+function noteFailure(status: number, json: unknown) {
+  lastFailure = describeGoogleFailure(status, json);
+}
 
 export function setYouTubeFetchForTests(next: FetchLike | null) {
   fetchImpl = next;
@@ -79,8 +92,13 @@ export async function refreshAccessToken(
     body,
   });
   const json = await readJson(response);
-  if (!response.ok) return null;
-  return readTokenField(json, "access_token");
+  if (!response.ok) {
+    noteFailure(response.status, json);
+    return null;
+  }
+  const token = readTokenField(json, "access_token");
+  if (!token) lastFailure = "token response had no access_token";
+  return token;
 }
 
 async function getJson(url: string, accessToken: string): Promise<{ status: number; json: unknown }> {
@@ -95,8 +113,13 @@ export async function fetchYouTubeChannel(accessToken: string) {
     "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
     accessToken,
   );
-  if (status !== 200) return null;
-  return parseChannelPayload(json);
+  if (status !== 200) {
+    noteFailure(status, json);
+    return null;
+  }
+  const channel = parseChannelPayload(json);
+  if (!channel) lastFailure = "no channel on this Google account (pick the channel or brand account at connect)";
+  return channel;
 }
 
 export async function fetchChannelDays(
@@ -113,7 +136,10 @@ export async function fetchChannelDays(
     }),
     accessToken,
   );
-  if (status !== 200) return null;
+  if (status !== 200) {
+    noteFailure(status, json);
+    return null;
+  }
   return parseChannelDays(json);
 }
 
@@ -146,9 +172,13 @@ export async function fetchVideoMetrics(
       }),
       accessToken,
     );
-    if (second.status !== 200) return null;
+    if (second.status !== 200) {
+      noteFailure(second.status, second.json);
+      return null;
+    }
     return parseVideoRows(second.json);
   }
+  noteFailure(first.status, first.json);
   return null;
 }
 
