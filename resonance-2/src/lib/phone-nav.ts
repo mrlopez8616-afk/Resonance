@@ -444,10 +444,11 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
     if (!parentLabel) return homeTrail();
     const parent: PhoneTarget = { href: `/n/${parentId}`, label: parentLabel };
     if (parentId === "fitness" && parts[2] === "runs" && parts.length === 4) {
+      const runs: PhoneTarget = { href: "/n/fitness?tab=runs", label: "Runs" };
       const runId = parts[3] ?? "";
       return {
-        back: parent,
-        crumbs: [HOME, parent, { href: `/n/fitness/runs/${runId}`, label: "Run" }],
+        back: runs,
+        crumbs: [HOME, parent, runs, { href: `/n/fitness/runs/${runId}`, label: "Run" }],
       };
     }
     const nodeId = parts[2];

@@ -8,6 +8,8 @@ import {
   buildRunDetail,
   buildRunsView,
   buildStepsView,
+  fitnessTabHref,
+  parseFitnessTab,
   textHasHeartRate,
 } from "@/lib/fitness-present";
 import type { FitnessMetricWrite, FitnessWorkoutWrite } from "@/lib/fitness-types";
@@ -153,6 +155,51 @@ describe("steps mirror", () => {
     const empty = buildStepsView({ metrics: [], today: TODAY, span: "w" });
     assert.equal(empty.empty, "No steps in this range yet.");
     assert.equal(empty.average, null);
+    assert.deepEqual(empty.records, []);
+    assert.deepEqual(empty.history.weeks, []);
+    assert.deepEqual(empty.history.months, []);
+    assert.deepEqual(empty.history.years, []);
+  });
+
+  it("shows this month's weeks and collapses older months and years", async () => {
+    const view = buildStepsView({
+      metrics: [
+        ...metrics,
+        step("2026-09-30", 1000),
+        step("2026-10-01", 2000),
+        step("2025-12-02", 4000),
+      ],
+      today: TODAY,
+      span: "y",
+      publicMode: true,
+    });
+    assert.equal(view.history.monthLabel, "October 2026");
+    const straddle = view.history.weeks.find((week) => week.days.some((day) => day.id === "2026-09-30"));
+    assert.ok(straddle);
+    assert.equal(straddle?.days.some((day) => day.id === "2026-10-01"), true);
+    assert.equal(view.history.months.some((month) => month.weeks.some((week) => week.days.some((day) => day.id === "2026-09-30"))), false);
+    assert.deepEqual(
+      view.history.months.map((month) => month.id),
+      ["2026-09", "2026-08"],
+    );
+    assert.equal(view.history.months[0]?.weeks[0]?.days[0]?.value, "12,000");
+    assert.equal(view.history.years[0]?.label, "2025");
+    assert.equal(view.history.years[0]?.months[0]?.label, "December 2025");
+    assert.equal(view.history.years[0]?.months[0]?.weeks[0]?.days[0]?.value, "4,000");
+    assert.equal(view.records.find((record) => record.id === "most-steps")?.value, "12,000");
+    assert.equal(view.records.find((record) => record.id === "best-week")?.value, "35,000");
+    assert.equal(textHasHeartRate(JSON.stringify(view)), false);
+
+    const { StepsMirror } = await mirrors();
+    const html = render(createElement(StepsMirror, { view }));
+    assert.match(html, /History/);
+    assert.match(html, /October 2026/);
+    assert.match(html, /September 2026/);
+    assert.match(html, /class="fitness-history-month"/);
+    assert.match(html, /class="fitness-history-year"/);
+    const yearAt = html.indexOf('class="fitness-history-year"');
+    assert.ok(html.indexOf("December 2025") > yearAt);
+    assert.equal(textHasHeartRate(html), false);
   });
 });
 
@@ -212,6 +259,74 @@ describe("runs mirror", () => {
     assert.equal(view.empty, "No runs yet.");
     assert.deepEqual(view.prs, []);
     assert.deepEqual(view.cards, []);
+    assert.deepEqual(view.bars, []);
+    assert.deepEqual(view.history.weeks, []);
+  });
+
+  it("charts miles on the same ranges and nests history without heart rate", async () => {
+    const month = buildRunsView({ workouts, today: TODAY, span: "m", publicMode: true });
+    assert.equal(month.bars.length, 3);
+    assert.equal(month.bars.some((bar) => bar.value === 0), false);
+    assert.match(month.bars[0]?.caption ?? "", /mi/);
+    assert.equal(month.averageLabel, "daily average");
+    const half = buildRunsView({ workouts, today: TODAY, span: "6m", publicMode: true });
+    assert.match(half.bars[0]?.caption ?? "", /avg/);
+    const year = buildRunsView({ workouts, today: TODAY, span: "y", publicMode: true });
+    assert.deepEqual(
+      year.bars.map((bar) => bar.label),
+      ["Oct"],
+    );
+    const day = buildRunsView({ workouts, today: TODAY, span: "d", publicMode: true });
+    assert.equal(day.hourlyNote, "Hourly distance is not in this export.");
+    assert.deepEqual(day.bars, []);
+    assert.equal(day.rangeEmpty, "No runs for today yet.");
+    assert.equal(month.history.monthLabel, "October 2026");
+    assert.deepEqual(month.history.months, []);
+    assert.deepEqual(month.history.years, []);
+    const publicText = JSON.stringify(month);
+    assert.equal(textHasHeartRate(publicText), false);
+    assert.equal(publicText.includes("154"), false);
+    assert.equal(publicText.includes("170"), false);
+
+    const priv = buildRunsView({ workouts, today: TODAY, span: "m", publicMode: false });
+    const privateDays = priv.history.weeks.flatMap((week) => week.days);
+    assert.equal(privateDays.some((row) => row.value.includes("154 bpm")), true);
+
+    const second = run({ id: "later", day: "2026-10-20", miles: 1, seconds: 500, heart: 160 });
+    second.startedAt = "2026-10-20T18:00:00.000Z";
+    const doubled = buildRunsView({
+      workouts: [run({ id: "early", day: "2026-10-20", miles: 2, seconds: 1100 }), second],
+      today: TODAY,
+      publicMode: true,
+    });
+    const shared = doubled.history.weeks.flatMap((week) => week.days).find((row) => row.id === "2026-10-20");
+    assert.equal(shared?.lines?.length, 2);
+    assert.equal(JSON.stringify(shared).includes("160"), false);
+    const older = buildRunsView({
+      workouts: [...workouts, run({ id: "old", day: "2025-06-02", miles: 2, seconds: 1200, heart: 140 })],
+      today: TODAY,
+      publicMode: true,
+    });
+    assert.equal(older.history.years[0]?.label, "2025");
+    assert.match(older.history.years[0]?.months[0]?.summary ?? "", /2\.0 mi/);
+    assert.equal(textHasHeartRate(JSON.stringify(older.history)), false);
+    assert.match(JSON.stringify(older.history), /140 kcal/);
+
+    const { FitnessTabs, RunsMirror } = await mirrors();
+    const html = render(createElement(RunsMirror, { view: month }));
+    assert.match(html, /tab=runs/);
+    assert.match(html, /span=6m/);
+    assert.match(html, /<svg/);
+    assert.match(html, /Records/);
+    assert.match(html, /History/);
+    assert.match(html, /<details/);
+    assert.equal(textHasHeartRate(html), false);
+    const tabs = render(createElement(FitnessTabs, { tab: "runs", span: "m" }));
+    assert.match(tabs, /href="\/n\/fitness\?span=m"/);
+    assert.match(tabs, /href="\/n\/fitness\?tab=runs&span=m"/);
+    assert.equal(fitnessTabHref("runs"), "/n/fitness?tab=runs");
+    assert.equal(parseFitnessTab("runs"), "runs");
+    assert.equal(parseFitnessTab("steps"), "steps");
   });
 });
 
