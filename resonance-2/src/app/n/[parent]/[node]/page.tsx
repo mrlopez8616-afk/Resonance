@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { ChildValueCard } from "@/components/child-value-card";
+import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
+import { ValueStatCard } from "@/components/value-stat";
 import { PositionBook } from "@/components/position-book";
 import { PublicNodePage, TreasuryCard } from "@/components/public-floor";
 import { FinanceDetail } from "@/components/finance-detail";
@@ -10,9 +11,7 @@ import { FitnessDetail } from "@/components/fitness-detail";
 import { manualImportDetail } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { LiveNodeFace } from "@/components/live-node-face";
-import { NodeSquare } from "@/components/node-square";
 import { BankrollLedgerView } from "@/components/predictions-floor";
-import { ValueCard } from "@/components/value-card";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { loadBankroll } from "@/lib/bankroll-load";
@@ -31,6 +30,7 @@ import { holdingChildModel, positionLines, priceSpark, type ChildCardModel } fro
 import { isDecimalString } from "@/lib/decimal";
 import { isEquityTicker } from "@/lib/equity-price";
 import { nextTickerCatalystLine } from "@/lib/home-lines";
+import { latestTimestamp, type NodePart } from "@/lib/node-layout";
 import { legacyParentHref, nodeParent, parentById } from "@/lib/node-parents";
 import { loadOperatorFloor, type OperatorFloor } from "@/lib/operator-floor";
 import { loadPublicFloor } from "@/lib/public-load";
@@ -44,6 +44,7 @@ import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
 import { suiBalanceLine } from "@/lib/sui-balance-line";
+import { valueCardFromFace } from "@/lib/value-card";
 
 export const dynamic = "force-dynamic";
 
@@ -118,10 +119,14 @@ export default async function NodeDetailPage({
       if (node.ticker === "XRP") {
         return (
           <OperatorShell>
-            <Link href={`/n/${parent.id}`} className="calendar-back">
-              {parent.label}
-            </Link>
-            <TreasuryCard />
+            <NodeLayout>
+              <NodeHeader name="Treasury" parts={["live"]} backHref={`/n/${parent.id}`} />
+              <NodeSections>
+                <NodeSection kind="lists">
+                  <TreasuryCard />
+                </NodeSection>
+              </NodeSections>
+            </NodeLayout>
           </OperatorShell>
         );
       }
@@ -130,15 +135,23 @@ export default async function NodeDetailPage({
       const holding = group.holdings.find((item) => item.id === node.id) ?? null;
       return (
         <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
-          <Link href={`/n/${parent.id}`} className="calendar-back">
-            {parent.label}
-          </Link>
-          <PublicNodePage
-            ticker={node.ticker}
-            holding={holding}
-            bars={floor.nodeBars[node.ticker] ?? []}
-            range={range}
-          />
+          <NodeLayout>
+            <NodeHeader
+              name={node.ticker}
+              parts={holding?.weightLabel ? ["live"] : ["missing"]}
+              backHref={`/n/${parent.id}`}
+            />
+            <NodeSections>
+              <NodeSection kind="numbers">
+                <PublicNodePage
+                  ticker={node.ticker}
+                  holding={holding}
+                  bars={floor.nodeBars[node.ticker] ?? []}
+                  range={range}
+                />
+              </NodeSection>
+            </NodeSections>
+          </NodeLayout>
         </OperatorShell>
       );
     }
@@ -154,14 +167,23 @@ export default async function NodeDetailPage({
       <OperatorShell
         storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
       >
-        <Link href={`/n/${parent.id}`} className="calendar-back">
-          {parent.label}
-        </Link>
         {finance.status === "live" && detail ? (
-          <FinanceDetail detail={detail} asOf={finance.snapshot.asOf} stale={finance.stale} />
-        ) : finance.status === "waiting" ? (
-          <FinanceWaiting />
-        ) : null}
+          <FinanceDetail
+            detail={detail}
+            asOf={finance.snapshot.asOf}
+            stale={finance.stale}
+            updatedAt={finance.storedAt}
+            backHref={`/n/${parent.id}`}
+          />
+        ) : (
+          <NodeLayout>
+            <NodeHeader name={financeNode(nodeId)?.title ?? "Finance"} parts={["missing"]} backHref={`/n/${parent.id}`} />
+            <NodeSections>
+              <NodeSection kind="lists" empty />
+            </NodeSections>
+            {finance.status === "waiting" ? <FinanceWaiting /> : null}
+          </NodeLayout>
+        )}
       </OperatorShell>
     );
   }
@@ -227,9 +249,6 @@ export default async function NodeDetailPage({
         }
         storageDetail={floor.storageDetail ?? bankroll.storageDetail}
       >
-        <Link href={`/n/${parent.id}`} className="calendar-back">
-          {parent.label}
-        </Link>
         {bankroll.ledger ? (
           <BankrollLedgerView
             ledger={bankroll.ledger}
@@ -237,9 +256,17 @@ export default async function NodeDetailPage({
             publicMode={publicMode}
           />
         ) : (
-          <p className="parent-empty" role="status">
-            {publicMode ? "No data yet" : (bankroll.storageDetail ?? "No data yet")}
-          </p>
+          <NodeLayout>
+            <NodeHeader name="Bankroll" parts={["missing"]} backHref={`/n/${parent.id}`} />
+            <NodeSections>
+              <NodeSection kind="numbers">
+                <NodeGrid>
+                  <EmptyCard label="Bankroll" />
+                </NodeGrid>
+              </NodeSection>
+            </NodeSections>
+            {publicMode || !bankroll.storageDetail ? null : <p className="node-note">{bankroll.storageDetail}</p>}
+          </NodeLayout>
         )}
       </OperatorShell>
     );
@@ -306,28 +333,54 @@ export default async function NodeDetailPage({
     const pageModel: ChildCardModel = showBook
       ? { ...model, spark: null, role: null }
       : model;
+    const valueModel = {
+      headline: pageModel.headline,
+      priceLine: pageModel.priceLine,
+      label: pageModel.label,
+    };
+    const equityParts: NodePart[] = pageModel.headline ? ["live"] : pageModel.priceLine ? ["partial"] : ["missing"];
+    const chartModel = { ...pageModel, headline: null, priceLine: null, label: null };
+    const hasChart =
+      chartModel.lines.length > 0 ||
+      chartModel.footerLines.length > 0 ||
+      chartModel.spark !== null ||
+      Boolean(chartModel.role);
     return (
       <OperatorShell
         storageMessage={floor.storageMessage}
         storageDetail={floor.storageDetail}
       >
-        <Link href={`/n/${parent.id}`} className="calendar-back">
-          {parent.label}
-        </Link>
-        <div className="child-page">
-          <ChildValueCard model={pageModel} wide />
-          {showBook ? (
-            <NodePosition
-              fills={book.fills}
-              ticker={ticker}
-              sleeves={sleeves}
-              priceUsd={face?.priceUsd ?? null}
-              closes={dated[ticker] ?? []}
-              range={range}
-            />
-          ) : null}
-          {showBook && model.role ? <p className="child-role">{model.role}</p> : null}
-        </div>
+        <NodeLayout>
+          <NodeHeader
+            name={ticker}
+            parts={equityParts}
+            updatedAt={latestTimestamp([quote?.fetchedAt])}
+            backHref={`/n/${parent.id}`}
+          />
+          <NodeSections>
+            <NodeSection kind="numbers">
+              <NodeGrid>
+                <ValueStatCard label={ticker} model={valueModel} />
+              </NodeGrid>
+            </NodeSection>
+            <NodeSection kind="trends" empty={!hasChart}>
+              {hasChart ? <ChildValueCard model={chartModel} wide /> : null}
+            </NodeSection>
+            <NodeSection kind="lists" empty={!showBook}>
+              {showBook ? (
+                <NodePosition
+                  fills={book.fills}
+                  ticker={ticker}
+                  sleeves={sleeves}
+                  priceUsd={face?.priceUsd ?? null}
+                  closes={dated[ticker] ?? []}
+                  range={range}
+                />
+              ) : null}
+              {showBook && model.role ? <p className="child-role">{model.role}</p> : null}
+            </NodeSection>
+          </NodeSections>
+        </NodeLayout>
       </OperatorShell>
     );
   }
@@ -355,64 +408,67 @@ export default async function NodeDetailPage({
           treasury: node.ticker === "XRP",
         }).lines
       : [];
+  const valueModel = face ? valueCardFromFace(face, now) : null;
+  const cryptoParts: NodePart[] = valueModel?.headline
+    ? ["live"]
+    : valueModel?.priceLine
+      ? ["partial"]
+      : ["missing"];
+  const showBook = Boolean(cryptoChild && book);
 
   return (
     <OperatorShell
       storageMessage={floor.storageMessage}
       storageDetail={floor.storageDetail}
     >
-      <Link href={`/n/${parent.id}`} className="calendar-back">
-        {parent.label}
-      </Link>
-      <section className="node-grid node-detail" aria-label={`${node.ticker} node`}>
-        <NodeSquare
-          live={ready}
-          dashed={!ready}
-          label={ready ? `${node.ticker} live node` : `${node.ticker} not connected`}
-        >
-          {ready && face && sleeves ? (
-            <Link
-              href={fillDeskHref({ ticker: node.ticker })}
-              className="node-log-link"
-              title={`Open ${node.ticker} log`}
-            >
-              <span className="sr-only">Open {node.ticker} operator log</span>
-              <LiveNodeFace
-                key={node.ticker}
+      <NodeLayout>
+        <NodeHeader
+          name={node.ticker}
+          parts={cryptoParts}
+          updatedAt={latestTimestamp([quote?.fetchedAt, face?.fetchedAt])}
+          backHref={`/n/${parent.id}`}
+        />
+        <NodeSections>
+          <NodeSection kind="numbers">
+            <NodeGrid>
+              {ready && face && sleeves ? (
+                <LiveNodeFace
+                  key={node.ticker}
+                  ticker={node.ticker}
+                  sleeves={sleeves}
+                  initial={face}
+                  href={fillDeskHref({ ticker: node.ticker })}
+                  statusLine={node.ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null}
+                />
+              ) : (
+                <EmptyCard label={node.ticker} />
+              )}
+            </NodeGrid>
+          </NodeSection>
+          <NodeSection kind="lists" empty={detailLines.length === 0 && !showBook}>
+            {detailLines.length > 0 ? (
+              <ul className="parent-lines">
+                {detailLines.map((line, index) => (
+                  <li key={`${line.text}-${index}`} className={line.tone ? `is-${line.tone}` : undefined}>
+                    {line.text}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {showBook && book ? (
+              <NodePosition
+                fills={book.fills}
                 ticker={node.ticker}
                 sleeves={sleeves}
-                initial={face}
-                statusLine={node.ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null}
+                priceUsd={face?.priceUsd ?? null}
+                closes={dated?.[node.ticker] ?? []}
+                vaultQuantity={sleeves?.find((row) => row.id === "flare-vault")?.quantity ?? null}
+                range={range}
               />
-            </Link>
-          ) : (
-            <ValueCard
-              ticker={node.ticker}
-              model={{ headline: null, priceLine: null, label: "not connected" }}
-            />
-          )}
-        </NodeSquare>
-      </section>
-      {detailLines.length > 0 ? (
-        <ul className="parent-lines">
-          {detailLines.map((line, index) => (
-            <li key={`${line.text}-${index}`} className={line.tone ? `is-${line.tone}` : undefined}>
-              {line.text}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {cryptoChild && book ? (
-        <NodePosition
-          fills={book.fills}
-          ticker={node.ticker}
-          sleeves={sleeves}
-          priceUsd={face?.priceUsd ?? null}
-          closes={dated?.[node.ticker] ?? []}
-          vaultQuantity={sleeves?.find((row) => row.id === "flare-vault")?.quantity ?? null}
-          range={range}
-        />
-      ) : null}
+            ) : null}
+          </NodeSection>
+        </NodeSections>
+      </NodeLayout>
     </OperatorShell>
   );
 }
@@ -480,20 +536,27 @@ async function retiredEquityPage(ticker: "ETN" | "HUBB", range: string) {
   const sleeves = sleevesFor(floor, ticker) ?? [];
   return (
     <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
-      <Link href={`/n/${parent.id}`} className="calendar-back">
-        {parent.label}
-      </Link>
-      <div className="child-page">
-        <p className="child-role">{ticker} · retired</p>
-        <NodePosition
-          fills={book.fills}
-          ticker={ticker}
-          sleeves={sleeves}
-          priceUsd={null}
-          closes={[]}
-          range={range}
-        />
-      </div>
+      <NodeLayout>
+        <NodeHeader name={ticker} parts={["missing"]} backHref={`/n/${parent.id}`} />
+        <p className="node-note">{ticker} · retired</p>
+        <NodeSections>
+          <NodeSection kind="numbers">
+            <NodeGrid>
+              <EmptyCard label={ticker} />
+            </NodeGrid>
+          </NodeSection>
+          <NodeSection kind="lists">
+            <NodePosition
+              fills={book.fills}
+              ticker={ticker}
+              sleeves={sleeves}
+              priceUsd={null}
+              closes={[]}
+              range={range}
+            />
+          </NodeSection>
+        </NodeSections>
+      </NodeLayout>
     </OperatorShell>
   );
 }

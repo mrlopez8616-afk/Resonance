@@ -302,11 +302,13 @@ describe("fitness on the shared layout", () => {
     assert.equal(cards.includes("not recorded"), false);
   });
 
-  it("leaves the other parent pages on their own floors", () => {
+  it("keeps fitness on its floor while market parents use the shared layout", () => {
     const page = readFileSync(path.join(root, "src/app/n/[parent]/page.tsx"), "utf8");
     const node = readFileSync(path.join(root, "src/app/n/[parent]/[node]/page.tsx"), "utf8");
-    assert.equal(page.includes("NodeLayout"), false);
-    assert.equal(node.includes("NodeLayout"), false);
+    assert.match(page, /NodeLayout/);
+    assert.match(node, /NodeLayout/);
+    assert.match(page, /latestTimestamp/);
+    assert.match(node, /latestTimestamp/);
     const fitness = page.slice(page.indexOf('parent.id === "fitness"'), page.indexOf('const childParent'));
     assert.match(fitness, /latestFitnessUpdatedAt/);
     assert.match(fitness, /FitnessFloor/);

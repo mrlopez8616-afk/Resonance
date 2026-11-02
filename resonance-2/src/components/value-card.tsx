@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ValueStatCard } from "@/components/value-stat";
 import type { ValueCardModel } from "@/lib/value-card";
 
 /**
@@ -10,30 +11,18 @@ export function ValueCard({
   ticker,
   model,
   priceTitle,
-  compact = false,
+  href,
   children,
 }: {
   ticker: string;
   model: ValueCardModel;
   priceTitle?: string;
-  compact?: boolean;
+  href?: string;
   children?: ReactNode;
 }) {
   return (
-    <div className={`live-face value-card${compact ? " parent-face" : ""}`}>
-      <header className="live-head">
-        <h2 className="node-ticker">{ticker}</h2>
-        {model.headline ? (
-          <p className="value-headline">{model.headline}</p>
-        ) : model.label ? (
-          <p className="node-note value-status">{model.label}</p>
-        ) : null}
-        {model.priceLine ? (
-          <p className="value-price" title={priceTitle}>
-            {model.priceLine}
-          </p>
-        ) : null}
-      </header>
+    <div className="node-span-12" title={priceTitle}>
+      <ValueStatCard label={ticker} model={model} href={href} />
       {children}
     </div>
   );
