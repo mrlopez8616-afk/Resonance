@@ -207,9 +207,10 @@ export default async function ParentNodePage({
           <NodeLayout>
             <NodeHeader name="Finance" parts={["missing"]} backHref="/" />
             <NodeSections>
-              <NodeSection kind="lists" empty />
+              <NodeSection kind="lists" empty={finance.status !== "waiting"}>
+                {finance.status === "waiting" ? <FinanceWaiting /> : null}
+              </NodeSection>
             </NodeSections>
-            {finance.status === "waiting" ? <FinanceWaiting /> : null}
           </NodeLayout>
         )}
       </OperatorShell>

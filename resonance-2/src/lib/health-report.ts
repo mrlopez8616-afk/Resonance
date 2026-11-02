@@ -73,6 +73,7 @@ export const PUBLIC_VIEW_ISSUE_IDS = [
   "finance-lock-href",
   "finance-logged-out-page",
   "finance-logged-out-api",
+  "node-layout",
 ] as const;
 
 export type PublicViewIssueId = (typeof PUBLIC_VIEW_ISSUE_IDS)[number];

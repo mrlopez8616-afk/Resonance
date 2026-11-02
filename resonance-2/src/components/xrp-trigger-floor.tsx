@@ -27,7 +27,7 @@ function TriggerBars({
   line: number;
   publicMode: boolean;
 }) {
-  if (bars.length === 0) return <p className="node-note">no closes</p>;
+  if (bars.length === 0) return null;
   const width = 320;
   const height = 64;
   const top = 6;

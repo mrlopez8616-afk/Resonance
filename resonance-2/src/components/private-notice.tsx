@@ -1,22 +1,27 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
 import { OperatorShell } from "@/components/operator-shell";
 import { isPublicMode } from "@/lib/public-mode-server";
 
+/** Locked finance page. The card keeps its size and does not render a value. */
 export function PrivateNotice() {
   return (
-    <p className="parent-empty" role="status">
-      Private
-    </p>
+    <NodeLayout>
+      <NodeHeader name="Finance" parts={["missing"]} backHref="/" />
+      <NodeSections>
+        <NodeSection kind="numbers">
+          <NodeGrid>
+            <StatCard label="Finance" locked />
+          </NodeGrid>
+        </NodeSection>
+      </NodeSections>
+    </NodeLayout>
   );
 }
 
 export async function PrivatePage() {
   return (
     <OperatorShell>
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
       <PrivateNotice />
     </OperatorShell>
   );

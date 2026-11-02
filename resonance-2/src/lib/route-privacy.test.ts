@@ -18,8 +18,10 @@ import {
   ROUTE_AUDIT,
   htmlHasErrorBoundary,
   loggedOutPageIssues,
+  nodeLayoutSourceIssues,
   payloadLeaksPrivate,
   runPublicViewProbe,
+  type LayoutSourceFile,
 } from "@/lib/public-view-probe";
 import { createSession } from "@/lib/auth-store";
 import { SESSION_COOKIE } from "@/lib/auth-core";
@@ -158,7 +160,9 @@ describe("logged-out privacy", () => {
 
     const probe = readFileSync(join(root, "src/lib/public-view-probe.ts"), "utf8");
     assert.equal(probe.includes("readFileSync"), false);
+    assert.equal(probe.includes("node:fs"), false);
     assert.equal(probe.includes("node-face.tsx"), false);
+    assert.match(probe, /nodeLayoutSourceIssues/);
     const face = readFileSync(join(root, "src/components/node-face.tsx"), "utf8");
     assert.equal(face.includes("data-lock-badge"), true);
     assert.match(face, /face\.href && !locked/);
@@ -226,7 +230,37 @@ describe("logged-out privacy", () => {
     const loggedOutAnalytics = await proxy(new NextRequest("https://resonance3.vercel.app/n/fitness/analytics"));
     assert.notEqual(loggedOutAnalytics.status, 200);
 
-    const issues = await runPublicViewProbe();
+    const sources: LayoutSourceFile[] = walk(join(root, "src"))
+      .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
+      .map((file) => ({ path: file, source: readFileSync(file, "utf8") }));
+    const layout = nodeLayoutSourceIssues(sources);
+    assert.deepEqual(
+      layout.map((row) => `${row.path} ${row.name}`),
+      [],
+    );
+    const skipped = nodeLayoutSourceIssues([
+      {
+        path: "src/app/n/example/page.tsx",
+        source: `export default function Page(){ return <p className="parent-empty">not recorded</p> }`,
+      },
+    ]);
+    assert.equal(skipped.some((row) => row.id === "node-layout" && row.status === "error"), true);
+    const boxed = nodeLayoutSourceIssues([
+      {
+        path: "src/app/n/example/page.tsx",
+        source: `export default function Page(){ return <NodeLayout><NodeHeader name="Example" parts={["missing"]} backHref="/" /><EmptyCard label="not recorded" /></NodeLayout> }`,
+      },
+    ]);
+    assert.deepEqual(boxed, []);
+    const broken = nodeLayoutSourceIssues([
+      {
+        path: "src/app/n/example/page.tsx",
+        source: `export default function Page(){ return <NodeLayout><NodeHeader name="Example" parts={["live"]} backHref="/" /><a href="/n/missing-node-xyz">Go</a></NodeLayout> }`,
+      },
+    ]);
+    assert.equal(broken.some((row) => row.name.includes("/n/missing-node-xyz")), true);
+
+    const issues = await runPublicViewProbe(sources);
     const errors = issues.filter((row) => row.status === "error");
     assert.deepEqual(
       errors.map((row) => `${row.id} ${row.path} ${row.name}`),
@@ -242,6 +276,7 @@ describe("logged-out privacy", () => {
       "finance-lock-href",
       "finance-logged-out-page",
       "finance-logged-out-api",
+      "node-layout",
     ]) {
       assert.equal(issues.some((row) => row.id === id && row.status === "ok"), true, id);
     }

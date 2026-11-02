@@ -35,6 +35,7 @@ export function StatCard({
   locked = false,
   money = false,
   id,
+  title,
   onRemove,
   children,
 }: {
@@ -48,6 +49,8 @@ export function StatCard({
   money?: boolean;
   /** Anchor for a lesson link that points at this card. */
   id?: string;
+  /** Tooltip for a live quote source. Not a second headline. */
+  title?: string;
   /** Hides the card on this floor. Sleeve rows and the fill log stay. */
   onRemove?: () => void;
   children?: ReactNode;
@@ -75,6 +78,7 @@ export function StatCard({
       <>
         {value ? <p className="node-card-value">{value}</p> : null}
         {detail ? <p className="node-card-price">{detail}</p> : null}
+        {children}
       </>
     );
   } else {
@@ -96,6 +100,7 @@ export function StatCard({
     <article
       className={className}
       id={id}
+      title={title}
       data-span={span}
       data-card="stat"
       data-locked={locked ? "true" : undefined}

@@ -15,9 +15,9 @@ export function FinanceAsOf({ asOf, stale }: { asOf: string; stale: boolean }) {
 
 export function FinanceWaiting() {
   return (
-    <p className="parent-empty" role="status">
-      {FINANCE_EMPTY_LINE}
-    </p>
+    <NodeGrid>
+      <EmptyCard span="list" label={FINANCE_EMPTY_LINE} />
+    </NodeGrid>
   );
 }
 

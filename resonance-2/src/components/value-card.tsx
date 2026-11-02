@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { StatCard } from "@/components/node-layout";
 import { ValueStatCard } from "@/components/value-stat";
 import type { ValueCardModel } from "@/lib/value-card";
 
@@ -21,9 +22,13 @@ export function ValueCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="node-span-12" title={priceTitle}>
-      <ValueStatCard label={ticker} model={model} href={href} />
-      {children}
-    </div>
+    <>
+      <ValueStatCard label={ticker} model={model} href={href} title={priceTitle} />
+      {children ? (
+        <StatCard span="list" label="Position">
+          {children}
+        </StatCard>
+      ) : null}
+    </>
   );
 }
