@@ -383,11 +383,8 @@ describe("uniform home tiles", () => {
     assert.equal(hidden.status, "not recorded");
     assert.equal(markup(ui, hidden).includes("$"), false);
     const pages = [
-      "src/components/node-grid.tsx",
       "src/components/build-floor.tsx",
       "src/components/crawl-walk-run-floor.tsx",
-      "src/components/finance-floor.tsx",
-      "src/components/predictions-floor.tsx",
       "src/components/youtube-node.tsx",
       "src/components/control-room.tsx",
       "src/components/chain-security-floor.tsx",
@@ -395,11 +392,20 @@ describe("uniform home tiles", () => {
       "src/components/approvals-parent.tsx",
       "src/components/public-floor.tsx",
       "src/components/catalyst-calendar.tsx",
-      "src/components/xrp-trigger-floor.tsx",
     ];
     for (const file of pages) {
       const source = readFileSync(path.join(root, file), "utf8");
       assert.match(source, /NodeFace/, file);
+    }
+    for (const file of [
+      "src/components/node-grid.tsx",
+      "src/components/finance-floor.tsx",
+      "src/components/predictions-floor.tsx",
+      "src/components/xrp-trigger-floor.tsx",
+    ]) {
+      const source = readFileSync(path.join(root, file), "utf8");
+      assert.match(source, /StatCard/, file);
+      assert.match(source, /EmptyCard|NodeLayout/, file);
     }
     const fitness = readFileSync(path.join(root, "src/components/fitness-grid.tsx"), "utf8");
     assert.equal(fitness.includes("NodeFace"), false);

@@ -77,6 +77,10 @@ type HealthUi = typeof import("@/components/machine-health-floor");
 type ApprovalsParentUi = typeof import("@/components/approvals-parent");
 type ApprovalsUi = typeof import("@/components/approvals-floor");
 type BuildUi = typeof import("@/components/build-floor");
+type FinanceUi = typeof import("@/components/finance-floor");
+type FinanceDetailUi = typeof import("@/components/finance-detail");
+type PredictionsUi = typeof import("@/components/predictions-floor");
+type ValueUi = typeof import("@/components/value-stat");
 
 let ui: LayoutUi;
 let youtube: YouTubeUi;
@@ -85,6 +89,10 @@ let healthUi: HealthUi;
 let approvalsParentUi: ApprovalsParentUi;
 let approvalsUi: ApprovalsUi;
 let buildUi: BuildUi;
+let financeUi: FinanceUi;
+let financeDetailUi: FinanceDetailUi;
+let predictionsUi: PredictionsUi;
+let valueUi: ValueUi;
 
 function render(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
@@ -119,6 +127,10 @@ before(async () => {
   approvalsParentUi = await import("@/components/approvals-parent");
   approvalsUi = await import("@/components/approvals-floor");
   buildUi = await import("@/components/build-floor");
+  financeUi = await import("@/components/finance-floor");
+  financeDetailUi = await import("@/components/finance-detail");
+  predictionsUi = await import("@/components/predictions-floor");
+  valueUi = await import("@/components/value-stat");
 });
 
 describe("node layout rules", () => {
@@ -622,5 +634,156 @@ describe("Control, Health, Approvals, and Build on the shared layout", () => {
     assert.match(bare, new RegExp(EMPTY_CARD_NOTE));
     assert.equal(bare.includes("Updated"), false);
     assert.equal(bare.includes("Nothing queued"), false);
+  });
+});
+
+describe("Crypto, AI Stocks, Finance, and Fights on the shared layout", () => {
+  it("keeps the dollar value above the live price and boxes a missing position", () => {
+    const held = render(
+      createElement(valueUi.ValueStatCard, {
+        label: "NVDA",
+        href: "/n/ai-stocks/nvda",
+        model: { headline: "$12,400", priceLine: "$142.10 live", label: null },
+      }),
+    );
+    assert.match(held, /node-card-value/);
+    assert.match(held, /node-card-price/);
+    assert.match(held, /\$12,400/);
+    assert.match(held, /\$142\.10 live/);
+    assert.match(held, /href="\/n\/ai-stocks\/nvda"/);
+    assert.ok(held.indexOf("$12,400") < held.indexOf("$142.10 live"));
+
+    const quiet = render(
+      createElement(valueUi.ValueStatCard, {
+        label: "SUI",
+        model: { headline: null, priceLine: "$2.184 live", label: "no position" },
+      }),
+    );
+    assert.match(quiet, /no position/);
+    assert.match(quiet, /\$2\.184 live/);
+    assert.equal(quiet.includes("$0"), false);
+    assert.ok(quiet.indexOf("no position") < quiet.indexOf("$2.184 live"));
+
+    const empty = render(
+      createElement(valueUi.ValueStatCard, {
+        label: "TSM",
+        model: { headline: null, priceLine: null, label: "not connected" },
+      }),
+    );
+    assert.match(empty, /data-card="empty"/);
+    assert.match(empty, new RegExp(EMPTY_CARD_NOTE));
+    assert.equal(empty.includes("not connected"), false);
+    assert.equal(empty.includes("$"), false);
+  });
+
+  it("stamps finance from the snapshot clock and locks a public dollar card", async () => {
+    const view = await import("@/lib/finance/view");
+    const fixture = await import("@/lib/finance/fixture");
+    const cards = view.financeCards(fixture.SYNTHETIC_FINANCE_SNAPSHOT);
+    const html = render(
+      createElement(financeUi.FinanceFloor, {
+        asOf: fixture.SYNTHETIC_FINANCE_SNAPSHOT.asOf,
+        stale: false,
+        cards,
+        updatedAt: STAMP,
+      }),
+    );
+    assert.match(html, /href="\/"/);
+    assert.match(html, /href="\/n\/finance\/debt"/);
+    assert.match(html, /Updated 2:04 PM CT/);
+    assert.match(html, /partial/);
+    assert.match(html, /node-card-equal/);
+    assert.equal(html.includes("$0"), false);
+
+    const dateOnly = render(
+      createElement(financeUi.FinanceFloor, {
+        asOf: "2026-10-07",
+        stale: true,
+        cards,
+        updatedAt: "2026-10-07",
+      }),
+    );
+    assert.equal(dateOnly.includes("Updated"), false);
+
+    const locked = render(
+      createElement(financeUi.FinanceFloor, {
+        asOf: fixture.SYNTHETIC_FINANCE_SNAPSHOT.asOf,
+        stale: false,
+        cards,
+        publicMode: true,
+      }),
+    );
+    assert.match(locked, /data-lock-badge/);
+    assert.equal(locked.includes("$"), false);
+    assert.equal(locked.includes('href="/n/finance/debt"'), false);
+
+    const detail = view.financeDetail(fixture.SYNTHETIC_FINANCE_SNAPSHOT, "debt");
+    assert.ok(detail);
+    const debt = render(
+      createElement(financeDetailUi.FinanceDetail, {
+        detail: detail!,
+        asOf: "2026-10-01",
+        stale: true,
+        updatedAt: STAMP,
+      }),
+    );
+    assert.match(debt, /not linked/);
+    assert.match(debt, /APR unknown/);
+    assert.match(debt, /stale/);
+    assert.match(debt, /Updated 2:04 PM CT/);
+    assert.match(debt, /node-card-equal/);
+    assert.equal(debt.includes("$0"), false);
+  });
+
+  it("keeps fight desk to child cards and hides dollars in Public view", () => {
+    const floor = render(
+      createElement(predictionsUi.PredictionsFloor, {
+        ledger: null,
+        bookFacts: { open: 2, deskOpen: 2, atRiskLabel: "$4.00", recordLabel: "4-1 · 0 sold · 0 void" },
+        publicMode: true,
+      }),
+    );
+    assert.match(floor, /href="\/n\/fight-desk\/bankroll"/);
+    assert.match(floor, /href="\/fights"/);
+    assert.match(floor, /4-1/);
+    assert.match(floor, /node-card-equal/);
+    assert.equal(floor.includes("$"), false);
+    assert.equal(floor.includes("Updated"), false);
+
+    const bankroll = render(
+      createElement(predictionsUi.BankrollLedgerView, {
+        publicMode: true,
+        deposits: [{ id: "dep", date: "2026-10-01", amount: "50.00", voidedAt: null, voidReason: null }],
+        ledger: {
+          start: "100.00",
+          asOf: "2026-10-01",
+          bankroll: "120.00",
+          bankrollLabel: "$120.00",
+          atRisk: "4.00",
+          atRiskLabel: "$4.00",
+          cash: "116.00",
+          cashLabel: "$116.00",
+          open: 1,
+          deskOpen: 1,
+          recordLabel: "4-1 · 0 sold · 0 void",
+          realizedLabel: "$20.00",
+          roiLabel: "+16.67%",
+          suggestedStake: "1.00",
+          suggestedStakeLabel: "Flat $1/fight",
+          depositTotal: "50.00",
+          depositTotalLabel: "+$50.00",
+          depositShareLabel: "+41.67%",
+          cards: [],
+          tiers: [],
+          before: [],
+        },
+      }),
+    );
+    assert.match(bankroll, /4-1/);
+    assert.match(bankroll, /\+16\.67%/);
+    assert.match(bankroll, /node-card-equal/);
+    assert.equal(bankroll.includes("$"), false);
+    assert.equal(bankroll.includes("50.00"), false);
+    assert.equal(bankroll.includes("Updated"), false);
   });
 });

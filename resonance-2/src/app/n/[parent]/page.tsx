@@ -7,6 +7,7 @@ import { FitnessFloor } from "@/components/fitness-floor";
 import { FitnessTokenCopy } from "@/components/fitness-token-copy";
 import { CatalystEntry } from "@/components/catalyst-calendar";
 import { NodeGrid } from "@/components/node-grid";
+import { NodeHeader, NodeLayout, NodeSection, NodeSections } from "@/components/node-layout";
 import { ParentGlance } from "@/components/parent-glance";
 import { PositionRollupView } from "@/components/position-book";
 import { PublicGroupFloor } from "@/components/public-floor";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/home-lines";
 import { inScopeBankrollPoints, predictionsTierBar } from "@/lib/home-visuals";
 import { parseLotRangeQuery } from "@/lib/lot-range";
+import { latestTimestamp, type NodePart } from "@/lib/node-layout";
 import { legacyParentHref, parentById } from "@/lib/node-parents";
 import { yahooSessionDay } from "@/lib/equity-chart";
 import { rollupHoldingBooks } from "@/lib/position-lots";
@@ -119,28 +121,36 @@ export default async function ParentNodePage({
             staleLabel={triggerCloses ? xrpTriggerAgeLabel(now) : null}
           />
         ) : null;
+      const publicParts: NodePart[] =
+        group.holdings.length > 0
+          ? group.holdings.map((holding) => (holding.weightLabel ? "live" : "missing"))
+          : ["missing"];
       return (
         <OperatorShell storageMessage={floor.storageMessage} storageDetail={floor.storageDetail}>
-          <Link href="/" className="calendar-back">
-            Floor
-          </Link>
-          {parent.id === "ai-stocks" ? (
-            <CatalystEntry events={calendar.events.map((event) => scrubTextFields(event))} now={now} />
-          ) : null}
-          {safeCatalyst ? (
-            <p className="parent-retiring">
-              <Link href="/calendar" className="parent-line-link">
-                {safeCatalyst}
-              </Link>
-            </p>
-          ) : null}
-          <PublicGroupFloor
-            group={group}
-            bars={floor.groupBars[parent.id]}
-            treasury={parent.id === "crypto"}
-            extra={trigger}
-            range={range}
-          />
+          <NodeLayout>
+            <NodeHeader name={parent.label} parts={publicParts} backHref="/" />
+            {parent.id === "ai-stocks" ? (
+              <CatalystEntry events={calendar.events.map((event) => scrubTextFields(event))} now={now} />
+            ) : null}
+            {safeCatalyst ? (
+              <p className="node-note">
+                <Link href="/calendar" className="parent-line-link">
+                  {safeCatalyst}
+                </Link>
+              </p>
+            ) : null}
+            <NodeSections>
+              <NodeSection kind="lists" label="Children">
+                <PublicGroupFloor
+                  group={group}
+                  bars={floor.groupBars[parent.id]}
+                  treasury={parent.id === "crypto"}
+                  extra={trigger}
+                  range={range}
+                />
+              </NodeSection>
+            </NodeSections>
+          </NodeLayout>
         </OperatorShell>
       );
     }
@@ -185,19 +195,23 @@ export default async function ParentNodePage({
       <OperatorShell
         storageMessage={finance.status === "unavailable" ? STORAGE_UNAVAILABLE_BANNER : null}
       >
-        <Link href="/" className="calendar-back">
-          Floor
-        </Link>
         {finance.status === "live" ? (
           <FinanceFloor
             asOf={finance.snapshot.asOf}
             stale={finance.stale}
             cards={financeCards(finance.snapshot)}
             publicMode={false}
+            updatedAt={finance.storedAt}
           />
-        ) : finance.status === "waiting" ? (
-          <FinanceWaiting />
-        ) : null}
+        ) : (
+          <NodeLayout>
+            <NodeHeader name="Finance" parts={["missing"]} backHref="/" />
+            <NodeSections>
+              <NodeSection kind="lists" empty />
+            </NodeSections>
+            {finance.status === "waiting" ? <FinanceWaiting /> : null}
+          </NodeLayout>
+        )}
       </OperatorShell>
     );
   }
@@ -321,33 +335,58 @@ export default async function ParentNodePage({
         : null;
   const cryptoCatalyst = parent.id === "crypto" ? nextCryptoCatalystLine(events, now) : null;
   const today = yahooSessionDay(now.getTime() / 1000) ?? "";
+  const quoteStamps =
+    parent.id === "crypto"
+      ? CRYPTO_HOME_TICKERS.map((ticker) => floor.spotQuotes[ticker]?.fetchedAt)
+      : parent.id === "ai-stocks"
+        ? AI_STOCK_TICKERS.map((ticker) => floor.equityQuotes[ticker]?.fetchedAt)
+        : [];
+  const holdingParts: NodePart[] =
+    Object.keys(childCards).length > 0
+      ? Object.values(childCards).map((card) =>
+          card.headline ? "live" : card.priceLine ? "partial" : "missing",
+        )
+      : ["missing"];
+  const trendEmpty = (!glanceBars || glanceBars.length === 0) && !cryptoCatalyst;
   return (
     <OperatorShell
       storageMessage={floor.storageMessage}
       storageDetail={floor.storageDetail}
     >
-      <Link href="/" className="calendar-back">
-        Floor
-      </Link>
-      {retiring ? <p className="parent-retiring">{retiring}</p> : null}
-      {parent.id === "ai-stocks" ? <CatalystEntry events={events} now={now} /> : null}
-      <ParentGlance bars={glanceBars} catalyst={cryptoCatalyst} catalystHref="/calendar" />
-      <NodeGrid
-        parentId={parent.id}
-        parentLabel={parent.label}
-        cards={cards}
-        heldUsd={heldUsd}
-        childCards={childParent ? childCards : undefined}
-        extra={
-          parent.id === "crypto" ? (
-            <XrpTriggerCard
-              view={evaluateXrpTrigger(triggerCloses ?? [], now)}
-              publicMode={false}
-              staleLabel={triggerCloses ? xrpTriggerAgeLabel(now) : null}
+      <NodeLayout>
+        <NodeHeader
+          name={parent.label}
+          parts={holdingParts}
+          updatedAt={latestTimestamp(quoteStamps)}
+          backHref="/"
+        />
+        {retiring ? <p className="node-note">{retiring}</p> : null}
+        <NodeSections>
+          <NodeSection kind="trends" empty={trendEmpty}>
+            {trendEmpty ? null : (
+              <ParentGlance bars={glanceBars} catalyst={cryptoCatalyst} catalystHref="/calendar" />
+            )}
+          </NodeSection>
+          <NodeSection kind="lists" label="Children">
+            {parent.id === "ai-stocks" ? <CatalystEntry events={events} now={now} /> : null}
+            <NodeGrid
+              parentId={parent.id}
+              parentLabel={parent.label}
+              cards={cards}
+              heldUsd={heldUsd}
+              childCards={childParent ? childCards : undefined}
+              extra={
+                parent.id === "crypto" ? (
+                  <XrpTriggerCard
+                    view={evaluateXrpTrigger(triggerCloses ?? [], now)}
+                    publicMode={false}
+                    staleLabel={triggerCloses ? xrpTriggerAgeLabel(now) : null}
+                  />
+                ) : null
+              }
             />
-          ) : null
-        }
-      />
+          </NodeSection>
+        </NodeSections>
       {childParent && book && dated ? (
         <PositionRollupView
           parentId={parent.id}
@@ -368,6 +407,7 @@ export default async function ParentNodePage({
           })}
         />
       ) : null}
+      </NodeLayout>
     </OperatorShell>
   );
 }

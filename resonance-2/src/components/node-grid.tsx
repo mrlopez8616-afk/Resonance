@@ -2,7 +2,8 @@
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { FloorDialog } from "@/components/floor-dialog";
-import { NodeFace, NodeFaceGrid } from "@/components/node-face";
+import { EmptyCard, NodeGrid as CardGrid } from "@/components/node-layout";
+import { ValueStatCard } from "@/components/value-stat";
 import type { FloorNode } from "@/data/floor-nodes";
 import {
   hiddenIdsServerSnapshot,
@@ -13,7 +14,6 @@ import {
 } from "@/lib/floor-registry";
 import { isZeroCryptoHolding, nodesOnParent, removedOnParent } from "@/lib/node-parents";
 import type { ChildCardModel } from "@/lib/child-card";
-import { valueTileFace } from "@/lib/home-faces";
 import type { ValueCardModel } from "@/lib/value-card";
 import type { ParentId } from "@/data/node-parents";
 
@@ -67,17 +67,17 @@ export function NodeGrid({
   if (nodes.length === 0) {
     if (!extra) {
       return (
-        <p className="parent-empty" role="status">
-          not connected yet
-        </p>
+        <CardGrid>
+          <EmptyCard label={parentLabel} />
+        </CardGrid>
       );
     }
-    return <NodeFaceGrid label={`${parentLabel} nodes`}>{extra}</NodeFaceGrid>;
+    return <CardGrid>{extra}</CardGrid>;
   }
 
   return (
     <>
-      <NodeFaceGrid label={`${parentLabel} nodes`}>
+      <CardGrid>
         {nodes.map((node) => {
           if (node.status === "live") {
             if (isZeroCryptoHolding(node.ticker, heldUsd?.[node.ticker])) return null;
@@ -86,37 +86,28 @@ export function NodeGrid({
               ? { headline: child.headline, priceLine: child.priceLine, label: child.label }
               : (cards[node.ticker] ?? NOT_CONNECTED);
             return (
-              <NodeFace
+              <ValueStatCard
                 key={node.id}
+                label={node.ticker}
+                model={card}
+                href={`/n/${parentId}/${node.id}`}
                 onRemove={() => setPending(node)}
-                face={valueTileFace({
-                  id: node.id,
-                  glyph: parentId,
-                  href: `/n/${parentId}/${node.id}`,
-                  name: node.ticker,
-                  headline: card.headline,
-                  priceLine: card.priceLine,
-                  label: card.label,
-                })}
               />
             );
           }
 
           if (node.status === "empty") {
             return (
-              <article key={node.id} className="node-face is-offline" aria-label="Empty node slot">
+              <article key={node.id} className="node-card node-card-equal node-span-3" aria-label="Empty node slot">
                 <button
                   type="button"
-                  className="node-face-link node-add"
+                  className="node-card-link node-add"
                   aria-label="Add node"
                   onClick={() => setAdding(true)}
                 >
-                  <span className="node-face-glyph" aria-hidden="true">
-                    +
-                  </span>
-                  <h2 className="node-face-name">Empty</h2>
-                  <p className="node-face-headline">+</p>
-                  <p className="node-face-status">add</p>
+                  <p className="node-card-label">Empty</p>
+                  <p className="node-card-value">+</p>
+                  <p className="node-card-detail">add</p>
                 </button>
               </article>
             );
@@ -125,7 +116,7 @@ export function NodeGrid({
           return null;
         })}
         {extra}
-      </NodeFaceGrid>
+      </CardGrid>
 
       <FloorDialog
         open={pending !== null}

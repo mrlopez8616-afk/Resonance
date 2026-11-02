@@ -35,6 +35,7 @@ export function StatCard({
   locked = false,
   money = false,
   id,
+  onRemove,
   children,
 }: {
   label: string;
@@ -47,6 +48,8 @@ export function StatCard({
   money?: boolean;
   /** Anchor for a lesson link that points at this card. */
   id?: string;
+  /** Hides the card on this floor. Sleeve rows and the fill log stay. */
+  onRemove?: () => void;
   children?: ReactNode;
 }) {
   const className = `${EQUAL_CARD_CLASS} ${cardSpanClass(span)}`;
@@ -98,6 +101,20 @@ export function StatCard({
       data-locked={locked ? "true" : undefined}
       aria-label={locked ? `${label}, private` : undefined}
     >
+      {onRemove ? (
+        <button
+          type="button"
+          className="node-delete"
+          aria-label="Delete node"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+        >
+          <span aria-hidden>×</span>
+        </button>
+      ) : null}
       {href && !locked ? (
         <Link href={href} className="node-card-link">
           {inner}
@@ -115,14 +132,21 @@ export function EmptyCard({
   span = "stat",
   setupHref,
   setupLabel,
+  onRemove,
 }: {
   label: string;
   span?: CardSpan;
   setupHref?: string | null;
   setupLabel?: string | null;
+  onRemove?: () => void;
 }) {
   return (
     <article className={`${EQUAL_CARD_CLASS} ${cardSpanClass(span)}`} data-span={span} data-card="empty">
+      {onRemove ? (
+        <button type="button" className="node-delete" aria-label="Delete node" onClick={() => onRemove()}>
+          <span aria-hidden>×</span>
+        </button>
+      ) : null}
       <p className="node-card-label">{label}</p>
       <p className="node-card-value">—</p>
       <p className="node-card-detail">{EMPTY_CARD_NOTE}</p>

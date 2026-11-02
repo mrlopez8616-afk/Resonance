@@ -21,11 +21,13 @@ export function LiveNodeFace({
   sleeves,
   initial,
   statusLine: initialStatus = null,
+  href,
 }: {
   ticker: string;
   sleeves: readonly NodeSleeve[];
   initial: LiveFaceData;
   statusLine?: string | null;
+  href?: string;
 }) {
   const [face, setFace] = useState(initial);
   const [polledStatus, setPolledStatus] = useState<string | null | undefined>(undefined);
@@ -127,6 +129,7 @@ export function LiveNodeFace({
       ticker={ticker}
       model={valueCardFromFace(face)}
       priceTitle={priceTitle}
+      href={href}
     >
       {statusLine ? <p className="node-note">{statusLine}</p> : null}
       <p className="live-units">

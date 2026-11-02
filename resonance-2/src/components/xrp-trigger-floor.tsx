@@ -1,6 +1,4 @@
-import { NodeFace } from "@/components/node-face";
 import { EmptyCard, NodeGrid, NodeHeader, NodeLayout, NodeSection, NodeSections, StatCard } from "@/components/node-layout";
-import { tileFace } from "@/lib/home-faces";
 import type { NodePart } from "@/lib/node-layout";
 import { formatSpotPrice } from "@/lib/live-face";
 import {
@@ -93,20 +91,8 @@ export function XrpTriggerCard({
 }) {
   const title = publicMode ? "Trigger" : "XRP Trigger";
   const distance = `${distanceCopy(view, publicMode)} · ${view.streak} of ${view.holdDays}`;
-  return (
-    <NodeFace
-      face={tileFace({
-        id: "xrp-trigger",
-        glyph: "crypto",
-        href: XRP_TRIGGER_HREF,
-        name: title,
-        headline: view.stateLabel,
-        status: staleLabel ? `${distance} · ${staleLabel}` : distance,
-        live: true,
-        publicMode,
-      })}
-    />
-  );
+  const detail = staleLabel ? `${distance} · ${staleLabel}` : distance;
+  return <StatCard label={title} href={XRP_TRIGGER_HREF} value={view.stateLabel} detail={detail} />;
 }
 
 /** Checklist page. Prices on this page are the public market line, not a holding. */
