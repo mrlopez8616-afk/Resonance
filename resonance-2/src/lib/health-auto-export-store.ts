@@ -68,6 +68,15 @@ async function upsertMetricBatch(rows: readonly FitnessMetricWrite[]): Promise<v
   );
 }
 
+/**
+ * Workout jsonb written by the Health Auto Export parser.
+ * Elevation, one heart rate per minute, the distance series, the energy series,
+ * and any splits live here. Route coordinates are not part of the payload.
+ */
+function workoutPayloadJson(row: FitnessWorkoutWrite): string {
+  return JSON.stringify(row.payload ?? {});
+}
+
 async function upsertWorkoutBatch(rows: readonly FitnessWorkoutWrite[]): Promise<void> {
   if (rows.length === 0) return;
   const values: string[] = [];
@@ -91,7 +100,7 @@ async function upsertWorkoutBatch(rows: readonly FitnessWorkoutWrite[]): Promise
       row.heartRateMin,
       row.heartRateMax,
       row.origin,
-      JSON.stringify(row.payload),
+      workoutPayloadJson(row),
     );
   });
   await sqlQuery(

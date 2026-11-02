@@ -396,16 +396,74 @@ export function FitnessFloor({
   );
 }
 
+function HeartLine({ points }: { points: readonly { minute: number; bpm: number }[] }) {
+  if (points.length === 0) return null;
+  const width = 640;
+  const height = 148;
+  const values = points.map((point) => point.bpm);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const low = min - span * 0.16;
+  const high = max + span * 0.16;
+  const top = 16;
+  const bottom = 118;
+  const last = points[points.length - 1]?.minute ?? 0;
+  const xAt = (minute: number) => (last === 0 ? width / 2 : (minute / last) * (width - 24) + 12);
+  const yAt = (value: number) => bottom - ((value - low) / (high - low || 1)) * (bottom - top);
+  const paths: string[] = [];
+  let current = "";
+  points.forEach((point, index) => {
+    const previous = points[index - 1];
+    if (previous && point.minute - previous.minute > 1 && current) {
+      paths.push(current.trim());
+      current = "";
+    }
+    current += `${current ? "L" : "M"}${xAt(point.minute).toFixed(2)} ${yAt(point.bpm).toFixed(2)} `;
+  });
+  if (current) paths.push(current.trim());
+  const caption = points.map((point) => `${point.minute} min ${Math.round(point.bpm)} bpm`).join(", ");
+  return (
+    <div className="fitness-plot">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Heart rate. ${caption}`}>
+        {paths.map((path, index) => (
+          <path key={index} d={path} className="fitness-hr-line" />
+        ))}
+        {points.map((point) => (
+          <g key={point.minute}>
+            <title>{`${point.minute} min ${Math.round(point.bpm)} bpm`}</title>
+            <circle cx={xAt(point.minute)} cy={yAt(point.bpm)} r="2.2" className="fitness-hr-line-dot" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function runParts(detail: RunDetailView, publicMode: boolean): NodePart[] {
+  const heartPoints = publicMode ? 0 : (detail.heart?.length ?? 0);
   return [
     fitnessPart(detail.distance),
     fitnessPart(detail.duration),
     fitnessPart(detail.pace),
     detail.energy ? "live" : "missing",
+    fitnessPart(detail.elevation),
     publicMode ? "missing" : detail.avgHeart ? "live" : "missing",
     publicMode ? "missing" : detail.maxHeart ? "live" : "missing",
+    publicMode ? "missing" : heartPoints > 0 ? "live" : "missing",
     detail.splits.length > 0 ? "live" : "missing",
   ];
+}
+
+function HeartRateCard({ detail, publicMode }: { detail: RunDetailView; publicMode: boolean }) {
+  if (publicMode) return <StatCard span="trend" label="Heart rate" locked />;
+  const points = detail.heart ?? [];
+  if (points.length === 0) return <EmptyCard span="trend" label="Heart rate" />;
+  return (
+    <StatCard span="trend" label="Heart rate">
+      <HeartLine points={points} />
+    </StatCard>
+  );
 }
 
 export function RunDetailMirror({
@@ -429,12 +487,18 @@ export function RunDetailMirror({
           <NumberCard label="Time" value={detail.duration} />
           <NumberCard label="Pace" value={detail.pace} />
           <NumberCard label="Energy" value={detail.energy} />
+          <NumberCard label="Elevation" value={detail.elevation} span="trend" />
           {publicMode ? (
             <StatCard label="Average heart rate" locked />
           ) : (
             <NumberCard label="Average heart rate" value={detail.avgHeart} />
           )}
           {publicMode ? <StatCard label="Max heart rate" locked /> : <NumberCard label="Max heart rate" value={detail.maxHeart} />}
+        </NodeGrid>
+      </NodeSection>
+      <NodeSection kind="trends" label="Heart rate">
+        <NodeGrid>
+          <HeartRateCard detail={detail} publicMode={publicMode} />
         </NodeGrid>
       </NodeSection>
       <NodeSection kind="lists" label="Splits">
@@ -459,6 +523,7 @@ export function RunDetailMirror({
           </NodeGrid>
         )}
       </NodeSection>
+      <p className="node-note">{detail.route}</p>
     </NodeLayout>
   );
 }
