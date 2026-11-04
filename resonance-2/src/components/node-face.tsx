@@ -91,6 +91,7 @@ const HOME_GLYPHS = new Set([
   "control",
   "health",
   "youtube",
+  "factorio",
   "system",
   "lessons",
   "roundtable",
@@ -204,6 +205,16 @@ function NodeGlyph({ id }: { id: string }) {
       <svg viewBox="0 0 24 24">
         <rect x="3.5" y="6" width="17" height="12" rx="2.5" {...stroke} />
         <polygon points="11,9.5 16,12 11,14.5" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (kind === "factorio") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <rect x="3.5" y="4" width="7" height="7" {...stroke} />
+        <rect x="13.5" y="4" width="7" height="7" {...stroke} />
+        <rect x="3.5" y="13" width="7" height="7" {...stroke} />
+        <path d="M17 13.5v6.2M14.6 16.6h4.8" {...stroke} />
       </svg>
     );
   }

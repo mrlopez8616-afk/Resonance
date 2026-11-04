@@ -21,8 +21,8 @@ describe("shelved nodes", () => {
     assert.equal(nodeShelved("crypto"), false);
     assert.equal(nodeShelved("fitness", ["fitness"]), true);
 
-    assert.equal(privateHomeNodeCount({ owner: true, health: true }), 13);
-    assert.equal(privateHomeNodeCount({ owner: true, health: true, shelved: ["fitness"] }), 12);
+    assert.equal(privateHomeNodeCount({ owner: true, health: true }), 14);
+    assert.equal(privateHomeNodeCount({ owner: true, health: true, shelved: ["fitness"] }), 13);
     assert.equal(publicHomeNodeCount({ fight: true, health: true }), 14);
     assert.equal(publicHomeNodeCount({ fight: true, health: true, shelved: ["fitness"] }), 13);
 
@@ -61,7 +61,7 @@ describe("shelved nodes", () => {
 
     const shown = buildLiveGraph();
     assert.equal(shown.points.find((point) => point.id === "node:fitness")?.href, "/n/fitness");
-    assert.equal(shown.points.filter((point) => point.kind === "node").length, 9);
+    assert.equal(shown.points.filter((point) => point.kind === "node").length, 10);
     assert.equal(shown.edges.some((edge) => edge.to === "node:fitness"), true);
     const hidden = buildLiveGraph(["fitness"]);
     assert.equal(hidden.points.some((point) => point.id === "node:fitness" || point.href === "/n/fitness"), false);

@@ -13,9 +13,11 @@ import { loadFinancePage, readFinanceNetWorthSeries } from "@/lib/finance/store"
 import { FINANCE_NODES } from "@/lib/finance/view";
 import { loadFitnessBundle, loadFitnessNode, type FitnessRead } from "@/lib/fitness-store";
 import { FITNESS_NODES } from "@/lib/fitness-board";
+import { loadFactorioFreshness } from "@/lib/factorio-store";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { loadIdeaBoard } from "@/lib/future-ideas-store";
 import {
+  ageSeconds,
   assembleHealth,
   betsBits,
   bits,
@@ -145,6 +147,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     brickCounts,
     brickRows,
     liveMode,
+    factorio,
   ] = await Promise.all([
     settled(async () => {
       const [spotQuotes, equityQuotes] = await Promise.all([
@@ -183,6 +186,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     settled(() => loadBrickCounts()),
     settled(() => loadBrickRows(false)),
     settled(() => readLivePublicMode()),
+    settled(() => loadFactorioFreshness(now.getTime())),
   ]);
 
   const series =
@@ -289,6 +293,15 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
   );
   tiles.health = healthFact;
   pages.health = healthFact;
+
+  tiles.factorio = fromSettled(factorio, (row) => {
+    if (!row.receivedAt) return bits("ok", "no snapshot yet");
+    return bits("ok", row.stale ? "data stale" : "loaded", {
+      stale: row.stale,
+      ageSeconds: ageSeconds(row.receivedAt, now),
+    });
+  });
+  pages.factorio = tiles.factorio;
 
   tiles.youtube = staticBits("not connected");
   pages.youtube = fromSettled(brickCounts, () => bits("ok", "loaded"));

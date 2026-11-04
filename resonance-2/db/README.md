@@ -66,6 +66,8 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `chain_security_incidents` | `id` | Weekly security incidents. `id` is the slug. Loss is one amount, a low-high range, `none`, or `not_recorded`. `source_url` is null until an article is stored. Migration `030_chain_security` inserts five rows when each id is absent. |
 | `market_quotes` | `cache_key` | Last good public spot or daily-close print. Not a position. Migration `040_market_quotes` inserts no rows. |
 | `health_auto_export_tokens` | `id` = 1 | Health Auto Export ingest token, sha256 hex only. Migration `043_health_auto_export_token` inserts no token. |
+| `factorio_tokens` | `id` = 1 | Factorio ingest token, sha256 hex only. Migration `046_factorio` inserts no token. |
+| `factorio_snapshots` | `tick` | One factory snapshot per game tick. A repeat of that tick replaces the row. Older ticks stay. |
 
 Seeds still merge on read: missing seed ids are inserted, and a row already stored under that id or order id is left alone.
 

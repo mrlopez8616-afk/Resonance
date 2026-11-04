@@ -875,6 +875,30 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     }),
   );
   const healthItems = [{ title: "Wire $40", steps: [{ done: true }, { done: false }] }];
+  const factorioUi = await import("@/components/factorio-floor");
+  const factorioHtml = render(
+    createElement(factorioUi.FactorioFloor, {
+      latest: {
+        tick: 10,
+        playHours: 237.08,
+        rockets: 91,
+        technologies: 187,
+        currentResearch: "worker-robots-speed-6",
+        researchProgress: 0.7,
+        players: [{ name: "Andres", connected: true, onlineHours: 237, afkMinutes: 0.4 }],
+        production: [{ name: "copper-cable", perMin: 3866 }],
+        science: [{ name: "automation-science-pack", total: 153342 }],
+        machines: [{ name: "assembling-machine", total: 632 }],
+        receivedAt: "2026-11-04T12:00:00.000Z",
+      },
+      history: [
+        { tick: 9, playHours: 200, rockets: 80 },
+        { tick: 10, playHours: 237.08, rockets: 91 },
+      ],
+      stale: true,
+      unavailable: false,
+    }),
+  );
   const visible = [
     { path: "/", html: home },
     { path: "/tv", html: tv },
@@ -924,6 +948,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/build/platform", html: buildSectionHtml },
     { path: "/n/backup", html: backupHtml },
     { path: "/n/lessons", html: publicLessonsHtml() },
+    { path: "/n/factorio", html: factorioHtml },
     { path: "/n/chain-security", html: render(createElement(chainUi.ChainSecurityFloor, { feed: chainFeed })) },
     {
       path: "/n/chain-security/autheo-theo",
@@ -1161,6 +1186,7 @@ describe("public render scan", () => {
       "/n/build/[section]/page.tsx",
       "/n/backup/page.tsx",
       "/n/crypto/xrp-trigger/page.tsx",
+      "/n/factorio/page.tsx",
       "/n/fitness/runs/[run]/page.tsx",
       "/n/approvals/page.tsx",
       "/n/approvals/[view]/page.tsx",
@@ -1219,6 +1245,7 @@ describe("public render scan", () => {
       "/n/crawl-walk-run/built/youtube",
       "/n/crawl-walk-run/built/site-health",
       "/n/lessons",
+      "/n/factorio",
       "/n/chain-security",
       "/n/chain-security/autheo-theo",
       "/n/roundtable",
@@ -1390,6 +1417,8 @@ describe("public render scan", () => {
       "/settings/integrations",
       "/api/settings/health-auto-export-token",
       "/api/ingest/health-auto-export",
+      "/api/settings/factorio-token",
+      "/api/ingest/factorio",
       "/log",
       "/api/fills",
       "/api/bets/stake",

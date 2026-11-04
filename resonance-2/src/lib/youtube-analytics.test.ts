@@ -108,7 +108,7 @@ describe("YouTube analytics", { concurrency: false }, () => {
   it("keeps migration 045 and schedules one Hobby-safe job per health check", () => {
     const file = readFileSync(path.join(root, "db/migrations/045_youtube_analytics.sql"), "utf8");
     assert.equal(YOUTUBE_ANALYTICS_SQL, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "045_youtube_analytics");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "046_factorio");
     assert.equal(file.includes("refresh_token"), true);
     assert.equal(/^\s*INSERT\b/im.test(file), false);
     const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {

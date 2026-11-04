@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { FactorioGuide } from "@/components/factorio-guide";
+import { FactorioToken } from "@/components/factorio-token";
 import { HealthAutoExportGuide } from "@/components/health-auto-export-guide";
 import { HealthAutoExportToken } from "@/components/health-auto-export-token";
 import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
+import { factorioTokenConfigured } from "@/lib/factorio-store";
 import { healthAutoExportTokenConfigured } from "@/lib/health-auto-export-store";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +19,14 @@ export default async function IntegrationsPage() {
   const blocked = await blockedPublicPage();
   if (blocked) return blocked;
   await requireRole("owner");
-  let configured = false;
+  let healthConfigured = false;
+  let factorioConfigured = false;
   let unavailable = false;
   try {
-    configured = await healthAutoExportTokenConfigured();
+    [healthConfigured, factorioConfigured] = await Promise.all([
+      healthAutoExportTokenConfigured(),
+      factorioTokenConfigured(),
+    ]);
   } catch {
     unavailable = true;
   }
@@ -33,9 +40,13 @@ export default async function IntegrationsPage() {
         {unavailable ? (
           <p className="auth-note">Storage is unavailable.</p>
         ) : (
-          <HealthAutoExportToken configured={configured} />
+          <>
+            <HealthAutoExportToken configured={healthConfigured} />
+            <FactorioToken configured={factorioConfigured} />
+          </>
         )}
         <HealthAutoExportGuide />
+        <FactorioGuide />
       </section>
     </OperatorShell>
   );

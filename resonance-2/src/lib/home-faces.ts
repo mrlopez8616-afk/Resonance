@@ -34,7 +34,7 @@ export const HOME_FACE_SLOTS = ["glyph", "name", "headline", "status"] as const;
 export const DESKTOP_FACE_BOX = { width: 1324, height: 738, gap: 6.4 } as const;
 
 /**
- * Private home paints the parents plus build, control, YouTube, system, and lessons.
+ * Private home paints the parents plus build, control, YouTube, Factorio, system, and lessons.
  * Owner adds roundtable and chain security. Health is owner-only.
  * A shelved parent is one fewer square. Pass `shelved: ["fitness"]` to count the floor without Fitness.
  */
@@ -44,7 +44,7 @@ export function privateHomeNodeCount(input: {
   shelved?: readonly string[];
 }): number {
   const shelvedParent = nodeShelved("fitness", input.shelved) ? 1 : 0;
-  return 10 - shelvedParent + (input.owner && input.health ? 1 : 0) + (input.owner ? 2 : 0);
+  return 11 - shelvedParent + (input.owner && input.health ? 1 : 0) + (input.owner ? 2 : 0);
 }
 
 /**
@@ -571,6 +571,53 @@ export function roundtableHomeFace(card: { unavailable: boolean; count: number; 
       headline: String(card.count),
       status: card.lines[0]?.trim() || "no messages yet",
       live: card.count > 0,
+    },
+    false,
+  );
+}
+
+export function factorioHomeFace(card: {
+  unavailable: boolean;
+  playHours: number | null;
+  rockets: number | null;
+  stale: boolean;
+}): HomeFace {
+  if (card.unavailable) {
+    return finish(
+      {
+        id: "factorio",
+        href: "/n/factorio",
+        name: "Factorio",
+        headline: "unavailable",
+        status: NOT_RECORDED,
+        live: false,
+      },
+      false,
+    );
+  }
+  if (card.playHours === null || card.rockets === null) {
+    return finish(
+      {
+        id: "factorio",
+        href: "/n/factorio",
+        name: "Factorio",
+        headline: "",
+        status: "",
+        live: false,
+      },
+      false,
+    );
+  }
+  const hours = `${Math.round(card.playHours * 10) / 10}`;
+  const headline = Number.isInteger(Number(hours)) ? `${Number(hours)}h` : `${Number(hours).toFixed(1)}h`;
+  return finish(
+    {
+      id: "factorio",
+      href: "/n/factorio",
+      name: "Factorio",
+      headline,
+      status: card.stale ? "feed stale" : `${card.rockets} rockets`,
+      live: !card.stale,
     },
     false,
   );

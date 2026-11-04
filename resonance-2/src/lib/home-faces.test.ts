@@ -318,14 +318,14 @@ describe("uniform home tiles", () => {
   });
 
   it("fits the square grid to the node count", () => {
-    assert.equal(privateHomeNodeCount({ owner: true, health: true }), 13);
-    assert.equal(privateHomeNodeCount({ owner: true, health: false }), 12);
-    assert.equal(privateHomeNodeCount({ owner: false, health: false }), 10);
+    assert.equal(privateHomeNodeCount({ owner: true, health: true }), 14);
+    assert.equal(privateHomeNodeCount({ owner: true, health: false }), 13);
+    assert.equal(privateHomeNodeCount({ owner: false, health: false }), 11);
     assert.equal(publicHomeNodeCount({ fight: true, health: true }), 14);
     assert.equal(publicHomeNodeCount({ fight: false, health: false }), 12);
-    assert.equal(privateHomeNodeCount({ owner: true, health: true, shelved: ["fitness"] }), 12);
+    assert.equal(privateHomeNodeCount({ owner: true, health: true, shelved: ["fitness"] }), 13);
     assert.equal(publicHomeNodeCount({ fight: true, health: true, shelved: ["fitness"] }), 13);
-    const owner = faceGridPlan(13, DESKTOP_FACE_BOX);
+    const owner = faceGridPlan(14, DESKTOP_FACE_BOX);
     const pub = faceGridPlan(14, DESKTOP_FACE_BOX);
     const phone = faceGridPlan(14, { width: 361, height: 586, gap: 5.6 }, true);
     assert.deepEqual({ columns: owner.columns, rows: owner.rows }, { columns: 5, rows: 3 });

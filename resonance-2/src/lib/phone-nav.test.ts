@@ -173,6 +173,14 @@ describe("phone back targets", () => {
       ],
     });
     assert.deepEqual(phoneTrail("/n/lessons/extra").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/factorio"), {
+      back: { href: "/", label: "Home" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/factorio", label: "Factorio" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/factorio/extra").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/n/roundtable"), {
       back: { href: "/", label: "Floor" },
       crumbs: [
