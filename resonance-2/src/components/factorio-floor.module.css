@@ -1,0 +1,79 @@
+.stale {
+  margin: 0.35rem 0 0;
+  color: var(--warning);
+  font-size: 0.92rem;
+}
+
+.bar {
+  margin-top: 0.55rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 16%, white);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--live);
+}
+
+.rows {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.rows li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rows span:last-child {
+  color: var(--muted);
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.35rem;
+  vertical-align: -0.05rem;
+  background: var(--ink);
+}
+
+.swatchRockets {
+  background: var(--live);
+}
+
+.chart {
+  width: 100%;
+  height: 7.5rem;
+}
+
+.rockets {
+  fill: none;
+  stroke: var(--live);
+  stroke-width: 1.7;
+}
+
+.hours {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.7;
+}

@@ -776,6 +776,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "043_health_auto_export_token",
         "044_future_idea_membership",
         "045_youtube_analytics",
+        "046_factorio",
       ],
     );
     assert.equal(

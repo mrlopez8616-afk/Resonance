@@ -129,6 +129,14 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     children: [],
   },
   {
+    id: "factorio",
+    label: "Factorio",
+    href: "/n/factorio",
+    status: "live",
+    connection: "A local save posts factory snapshots while the game is open.",
+    children: [],
+  },
+  {
     id: "health",
     label: "Health",
     href: "/n/health",
@@ -307,6 +315,12 @@ export const DATA_SOURCES = [
     feeds: "The operating calendar and the catalyst lines on Crypto and AI Stocks.",
     cadence: "When events are posted. The floor reads the stored calendar.",
   },
+  {
+    id: "factorio",
+    name: "Factorio",
+    feeds: "Factory snapshots from the resonance-bridge mod. They feed the Factorio node.",
+    cadence: "About every 5 minutes while the save is open.",
+  },
 ] as const;
 
 /**
@@ -345,6 +359,7 @@ export const SOURCE_REACH = {
   "github-actions": ["build"],
   "build-api": ["build"],
   calendar: ["fight-desk", "crypto", "ai-stocks", "build"],
+  factorio: ["factorio"],
 } as const satisfies Record<(typeof DATA_SOURCES)[number]["id"], readonly string[]>;
 
 export const GOVERNANCE = [

@@ -44,6 +44,8 @@ const HIDDEN_PREFIXES = [
   "/settings/integrations",
   "/api/settings/health-auto-export-token",
   "/api/ingest/health-auto-export",
+  "/api/settings/factorio-token",
+  "/api/ingest/factorio",
   "/n/finance",
   "/api/finance",
   "/api/bets",

@@ -1,5 +1,6 @@
 import { ControlHomeCard } from "@/components/control-room";
 import { HealthHomeCard } from "@/components/machine-health-floor";
+import { FactorioHomeCard } from "@/components/factorio-floor";
 import { YouTubeHomeCard } from "@/components/youtube-node";
 import { ChainSecurityHomeCard } from "@/components/chain-security-floor";
 import { LessonsHomeCard } from "@/components/lessons-floor";
@@ -35,6 +36,8 @@ import type { RoundtableHomeModel } from "@/lib/roundtable";
 import { isPublicMode } from "@/lib/public-mode-server";
 import { privateHomeNodeCount } from "@/lib/home-faces";
 import { thisWeekItems } from "@/lib/this-week";
+import { loadFactorioHome } from "@/lib/factorio-store";
+import type { FactorioHomeModel } from "@/lib/factorio";
 import { loadYouTubeHomeLines } from "@/lib/youtube-screen";
 
 export const dynamic = "force-dynamic";
@@ -75,9 +78,16 @@ const chainHomeFallback: ChainSecurityHomeModel = {
   lines: [],
 };
 
+const factorioHomeFallback: FactorioHomeModel = {
+  unavailable: true,
+  playHours: null,
+  rockets: null,
+  stale: false,
+};
+
 export default async function Home() {
   if (await isPublicMode()) return <PublicHomePage />;
-  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome, chainHome, youtubeLines] =
+  const [floor, fitness, bankroll, calendar, book, session, buildHome, lessonsHome, controlHome, healthHome, roundtableHome, chainHome, youtubeLines, factorioHome] =
     await Promise.all([
     loadOperatorFloor(),
     loadFitnessHome(),
@@ -109,6 +119,10 @@ export default async function Home() {
     loadYouTubeHomeLines().catch((error: unknown) => {
       if (!isStorageUnavailable(error)) throw error;
       return null;
+    }),
+    loadFactorioHome().catch((error: unknown) => {
+      if (!isStorageUnavailable(error)) throw error;
+      return factorioHomeFallback;
     }),
   ]);
   let financeHome: FinanceHomeFace | null = null;
@@ -164,6 +178,7 @@ export default async function Home() {
       <ControlHomeCard lines={controlHome.lines} live={controlHome.live} />
       {session?.role === "owner" && healthHome ? <HealthHomeCard report={healthHome.report} /> : null}
       <YouTubeHomeCard lines={youtubeLines ?? undefined} />
+      <FactorioHomeCard card={factorioHome} />
       <SystemHomeCard />
       <LessonsHomeCard card={lessonsHome} />
       {session?.role === "owner" ? <RoundtableHomeCard card={roundtableHome} /> : null}

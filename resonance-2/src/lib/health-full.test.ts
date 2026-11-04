@@ -246,6 +246,7 @@ describe("health full probe", () => {
       "/n/ideas",
       "/n/crawl-walk-run",
       "/n/youtube",
+      "/n/factorio",
       "/n/youtube/bricks",
       "/n/system",
       "/n/system/live",

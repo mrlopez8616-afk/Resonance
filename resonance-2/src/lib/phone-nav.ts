@@ -378,6 +378,10 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       const lessons: PhoneTarget = { href: "/n/lessons", label: "Lessons" };
       return { back: HOME, crumbs: [HOME, lessons] };
     }
+    if (parentId === "factorio" && parts.length === 2) {
+      const factorio: PhoneTarget = { href: "/n/factorio", label: "Factorio" };
+      return { back: HOME, crumbs: [HOME, factorio] };
+    }
     if (parentId === "roundtable") {
       const roundtable: PhoneTarget = { href: "/n/roundtable", label: "Roundtable" };
       if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, roundtable] };
