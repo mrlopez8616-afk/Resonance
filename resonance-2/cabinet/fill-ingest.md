@@ -2,7 +2,7 @@
 
 Hub / Agentic Trader files fills. Resonance 2.0 owns the **site write path**.
 
-This brick does **not** poll Robinhood or Coinbase. It does **not** light new nodes. It does **not** touch Xaman principal, RH Main account credentials, or the founder-entered Flare vault quantity.
+This brick does **not** poll Robinhood or Coinbase. The scheduled read is a separate cron ([`broker-sync.md`](./broker-sync.md)). It does **not** light new nodes. It does **not** touch Xaman principal, RH Main account credentials, or the founder-entered Flare vault quantity.
 
 Reuse the existing operator log and live faces. Do not invent a second fill card, a second sleeve type, or a second floor.
 
@@ -398,7 +398,7 @@ After a real fill (placeholders replaced):
 
 ## Forbidden
 
-- Polling Robinhood / Coinbase from this site
+- Polling Robinhood / Coinbase from the fill route. The scheduled read lives in [`broker-sync.md`](./broker-sync.md) and does not place orders
 - Lighting new nodes or inventing sleeve ids
 - Writing `flare-vault`
 - Seeds, broker keys, `NEXT_PUBLIC_*` secrets, Xaman / gas wallet addresses

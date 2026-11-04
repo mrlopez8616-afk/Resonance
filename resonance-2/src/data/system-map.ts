@@ -196,7 +196,7 @@ export const SYSTEM_AGENTS = [
   {
     id: AGENTIC_TRADER_ID,
     name: AGENTIC_TRADER_NAME,
-    role: "The agentic trader across Robinhood and Coinbase, and every order needs Andres's yes.",
+    role: "Reads Coinbase and Robinhood on a schedule. The agentic trader across Robinhood and Coinbase, and every order needs Andres's yes.",
     nodes: ["Crypto", "AI Stocks"],
   },
   {
@@ -304,14 +304,14 @@ export const DATA_SOURCES = [
   {
     id: "robinhood",
     name: "Robinhood",
-    feeds: "Fills posted by Agentic Trader through /api/fills. They update the fill log and the Robinhood Agentic sleeves.",
-    cadence: "When an approved fill is posted. The floor does not poll the broker.",
+    feeds: "A scheduled read of crypto holdings, buying power, and recent orders for Robinhood Agentic. Stock positions are not configured. Fills posted by Agentic Trader through the fill log update the Robinhood Agentic sleeves.",
+    cadence: "About 8 AM, 1 PM, and 7 PM CT. A failed read or a read older than a day is marked stale. The read does not place orders.",
   },
   {
     id: "coinbase",
     name: "Coinbase",
-    feeds: "The cb-agentic sleeve and the Default sleeve on the crypto books.",
-    cadence: "When a Coinbase fill is posted. The floor does not poll Coinbase.",
+    feeds: "A scheduled read of portfolio holdings, cash, and recent fills for the Coinbase book and Coinbase Agentic. Approved fills still post through the fill log.",
+    cadence: "About 8 AM, 1 PM, and 7 PM CT. A failed read or a read older than a day is marked stale. The read does not place orders.",
   },
   {
     id: "plaid",

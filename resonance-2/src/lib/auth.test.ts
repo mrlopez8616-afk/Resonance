@@ -582,6 +582,7 @@ describe("login core", { concurrency: false }, () => {
         "046_factorio",
         "047_printer",
         "048_obs",
+        "049_broker_sync",
       ],
     );
     const ids = (await sqlQuery<{ id: string }>(`SELECT id FROM schema_migrations ORDER BY id`)).map(
@@ -654,6 +655,7 @@ describe("login core", { concurrency: false }, () => {
         "046_factorio",
         "047_printer",
         "048_obs",
+        "049_broker_sync",
       ],
     );
     const filled = await applyMigrations(EMBEDDED_MIGRATIONS);

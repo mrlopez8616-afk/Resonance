@@ -18,6 +18,7 @@ import { listFills } from "./fills";
 import { latestVaultAsOf, withVaultAsOf } from "./position-lots";
 import { loadFillsStore, liveSleevesFromEnvelope, type FillsStoreBackend } from "./fills-store";
 import { isStorageUnavailable, type StoreAvailability } from "@/lib/storage-unavailable";
+import { overlayStoredBrokerBooks } from "@/lib/broker-sync-store";
 import { overlayLiveSuiBook } from "@/lib/sui-coinbase-balance";
 import type { SuiBalanceMark } from "@/lib/sui-balance-line";
 
@@ -74,15 +75,24 @@ function booksFromEnvelope(envelope: Parameters<typeof liveSleevesFromEnvelope>[
 
 const QUIET_SUI: SuiBalanceMark = { fresh: false, asOf: null };
 
+async function withStoredBrokers(books: SleeveBooks): Promise<SleeveBooks> {
+  try {
+    return await overlayStoredBrokerBooks(books);
+  } catch {
+    return books;
+  }
+}
+
 async function withLiveSui(books: SleeveBooks): Promise<{
   books: SleeveBooks;
   suiBalance: SuiBalanceMark;
 }> {
+  const stored = await withStoredBrokers(books);
   try {
-    const live = await overlayLiveSuiBook(books);
+    const live = await overlayLiveSuiBook(stored);
     return { books: live.books, suiBalance: { fresh: live.fresh, asOf: live.asOf } };
   } catch {
-    return { books, suiBalance: QUIET_SUI };
+    return { books: stored, suiBalance: QUIET_SUI };
   }
 }
 

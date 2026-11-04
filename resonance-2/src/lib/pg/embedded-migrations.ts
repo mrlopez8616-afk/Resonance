@@ -911,6 +911,51 @@ export const PRINTER_SQL = "-- Printer ink snapshots from the HP OfficeJet Pro 9
 
 export const OBS_SQL = "-- OBS recording posts from the PC. Number 048.\n-- 047 stores printer ink. This file does not change those tables.\n-- One row per folder, file name, and created time. A repeat updates that row.\n-- The ingest token is stored only as a sha256 hex digest.\n-- Idempotent: CREATE is IF NOT EXISTS. A second run inserts nothing.\n\nCREATE TABLE IF NOT EXISTS obs_tokens (\n  id integer PRIMARY KEY CHECK (id = 1),\n  token_hash text NOT NULL,\n  updated_at timestamptz NOT NULL\n);\n\nCREATE TABLE IF NOT EXISTS obs_recordings (\n  recording_key text PRIMARY KEY,\n  file_name text NOT NULL,\n  folder text NOT NULL,\n  size_bytes bigint NOT NULL,\n  duration_sec numeric,\n  created_at timestamptz NOT NULL,\n  received_at timestamptz NOT NULL DEFAULT now(),\n  payload jsonb NOT NULL\n);\n\nCREATE INDEX IF NOT EXISTS obs_recordings_created_idx\n  ON obs_recordings (created_at DESC, recording_key);\n";
 
+export const BROKER_SYNC_SQL = `-- Broker read sync. Number 049.
+-- 048 stores OBS recordings. This file stores the last Coinbase and
+-- Robinhood read: status, positions, cash balances, and recent orders.
+-- The cron is read-only. These tables do not place orders.
+-- Idempotent: CREATE is IF NOT EXISTS. A second run changes nothing.
+
+CREATE TABLE IF NOT EXISTS broker_sync_state (
+  venue text PRIMARY KEY CHECK (venue IN ('coinbase', 'robinhood')),
+  status text NOT NULL CHECK (status IN ('ok', 'error', 'not_configured')),
+  synced_at timestamptz,
+  checked_at timestamptz NOT NULL,
+  message text NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS broker_positions (
+  venue text NOT NULL CHECK (venue IN ('coinbase', 'robinhood')),
+  sleeve_id text NOT NULL,
+  ticker text NOT NULL,
+  quantity text NOT NULL,
+  synced_at timestamptz NOT NULL,
+  PRIMARY KEY (venue, sleeve_id, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS broker_balances (
+  venue text NOT NULL CHECK (venue IN ('coinbase', 'robinhood')),
+  currency text NOT NULL,
+  amount text NOT NULL,
+  synced_at timestamptz NOT NULL,
+  PRIMARY KEY (venue, currency)
+);
+
+CREATE TABLE IF NOT EXISTS broker_orders (
+  venue text NOT NULL CHECK (venue IN ('coinbase', 'robinhood')),
+  order_id text NOT NULL,
+  ticker text NOT NULL,
+  side text NOT NULL DEFAULT '',
+  quantity text NOT NULL DEFAULT '',
+  price text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT '',
+  filled_at timestamptz,
+  synced_at timestamptz NOT NULL,
+  PRIMARY KEY (venue, order_id)
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -958,4 +1003,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "046_factorio", sql: FACTORIO_SQL },
   { id: "047_printer", sql: PRINTER_SQL },
   { id: "048_obs", sql: OBS_SQL },
+  { id: "049_broker_sync", sql: BROKER_SYNC_SQL },
 ];

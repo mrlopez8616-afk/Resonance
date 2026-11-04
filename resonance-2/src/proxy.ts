@@ -58,7 +58,10 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? null;
   const authorization = request.headers.get("authorization");
-  const cronRoute = pathname === "/api/cron/backup" || pathname === "/api/cron/youtube";
+  const cronRoute =
+    pathname === "/api/cron/backup" ||
+    pathname === "/api/cron/youtube" ||
+    pathname === "/api/cron/brokers";
   const plan = planAccess({
     pathname,
     method: request.method,

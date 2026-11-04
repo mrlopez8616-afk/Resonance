@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { BrokerSyncNote } from "@/components/broker-sync-note";
 import { XrpTriggerCard } from "@/components/xrp-trigger-floor";
 import { FinanceFloor, FinanceWaiting } from "@/components/finance-floor";
 import { PrivatePage } from "@/components/private-notice";
@@ -14,6 +15,7 @@ import { PublicGroupFloor } from "@/components/public-floor";
 import { OperatorShell } from "@/components/operator-shell";
 import { PredictionsFloor } from "@/components/predictions-floor";
 import { requireRole } from "@/lib/auth-session";
+import { brokerSyncNoteLines, tickerSyncLine } from "@/lib/broker-sync";
 import { loadBankroll } from "@/lib/bankroll-load";
 import { loadPublicFloor } from "@/lib/public-load";
 import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
@@ -307,7 +309,7 @@ export default async function ParentNodePage({
         now,
         catalyst: nextTickerCatalystLine(events, ticker, now),
         treasury: ticker === "XRP",
-        statusLine: ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null,
+        statusLine: tickerSyncLine(ticker, floor.brokerSync) ?? suiBalanceLine(floor.suiBalance),
       });
     }
   } else if (parent.id === "ai-stocks") {
@@ -321,6 +323,7 @@ export default async function ParentNodePage({
         fetchedAt: quote?.fetchedAt ?? null,
         now,
         catalyst: nextTickerCatalystLine(events, ticker, now),
+        statusLine: tickerSyncLine(ticker, floor.brokerSync),
       });
     }
   }
@@ -363,6 +366,9 @@ export default async function ParentNodePage({
           updatedAt={latestTimestamp(quoteStamps)}
           backHref="/"
         />
+        {parent.id === "crypto" || parent.id === "ai-stocks" ? (
+          <BrokerSyncNote lines={brokerSyncNoteLines(parent.id, floor.brokerSync)} />
+        ) : null}
         {retiring ? <p className="node-note">{retiring}</p> : null}
         <NodeSections>
           <NodeSection kind="trends" empty={trendEmpty}>

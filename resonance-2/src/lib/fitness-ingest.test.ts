@@ -779,6 +779,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "046_factorio",
         "047_printer",
         "048_obs",
+        "049_broker_sync",
       ],
     );
     assert.equal(

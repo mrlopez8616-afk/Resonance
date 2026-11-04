@@ -4,6 +4,9 @@ import { privateModeResponse, requestIsPublicMode } from "@/lib/public-mode-serv
 import { asFillWriteError, liveSleevesFromEnvelope, loadFillsStore } from "@/lib/fills-store";
 import { seedBookForTicker } from "@/lib/sleeve-apply";
 import { storageErrorJson } from "@/lib/storage-unavailable";
+import { overlayStoredBrokerBooks, readBrokerSyncView } from "@/lib/broker-sync-store";
+import { tickerSyncLine, tickerSyncStale } from "@/lib/broker-sync";
+import { hasMoneyText } from "@/lib/public-mode";
 import { withSuiCoinbaseBalance } from "@/lib/sui-coinbase-balance";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +32,15 @@ export async function GET(request: Request) {
   try {
     const loaded = await loadFillsStore();
     const printed = liveSleevesFromEnvelope(loaded.envelope, ticker) ?? [...seed];
-    const live = ticker === "SUI" ? await withSuiCoinbaseBalance(printed) : null;
+    const stored = await overlayStoredBrokerBooks({ [ticker]: printed });
+    const brokered = stored[ticker] ?? printed;
+    const live = ticker === "SUI" ? await withSuiCoinbaseBalance(brokered) : null;
+    const syncView = await readBrokerSyncView(new Date());
+    const syncLine = tickerSyncLine(ticker, syncView);
+    const sync =
+      syncLine && !hasMoneyText(syncLine)
+        ? { line: syncLine, stale: tickerSyncStale(ticker, syncView) }
+        : null;
     return finishAuthorizedRead(
       NextResponse.json(
         {
@@ -38,8 +49,9 @@ export async function GET(request: Request) {
           configured: loaded.configured,
           backend: loaded.backend,
           updatedAt: loaded.envelope.updatedAt,
-          sleeves: live?.sleeves ?? printed,
+          sleeves: live?.sleeves ?? brokered,
           ...(live ? { balance: { fresh: live.fresh, asOf: live.asOf } } : {}),
+          ...(sync ? { sync } : {}),
         },
         { headers: { "cache-control": "no-store" } },
       ),

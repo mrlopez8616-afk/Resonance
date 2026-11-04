@@ -52,6 +52,7 @@ export function LiveNodeFace({
         const payload = (await sleeveRes.json()) as {
           sleeves?: NodeSleeve[];
           balance?: { fresh?: boolean; asOf?: string | null };
+          sync?: { line?: string; stale?: boolean };
         };
         if (Array.isArray(payload.sleeves) && payload.sleeves.length > 0) {
           const byId = new Map(sleeves.map((row) => [row.id, row]));
@@ -61,14 +62,19 @@ export function LiveNodeFace({
             return row;
           });
         }
-        const balance = payload.balance;
-        if (balance && typeof balance.fresh === "boolean") {
-          setPolledStatus(
-            suiBalanceLine({
-              fresh: balance.fresh,
-              asOf: typeof balance.asOf === "string" ? balance.asOf : null,
-            }),
-          );
+        const syncLine = payload.sync?.line;
+        if (typeof syncLine === "string" && !/\$\s?\d|\bUSD\b/i.test(syncLine)) {
+          setPolledStatus(syncLine.trim() || null);
+        } else {
+          const balance = payload.balance;
+          if (balance && typeof balance.fresh === "boolean") {
+            setPolledStatus(
+              suiBalanceLine({
+                fresh: balance.fresh,
+                asOf: typeof balance.asOf === "string" ? balance.asOf : null,
+              }),
+            );
+          }
         }
       }
 

@@ -43,6 +43,7 @@ import { loadCryptoCloses, loadEquityCloses, loadEquityHistory } from "@/lib/pri
 import { loadOperatorFills } from "@/lib/sleeve-prints";
 import { loadCalendarForPage } from "@/lib/store-page";
 import { STORAGE_UNAVAILABLE_BANNER } from "@/lib/storage-unavailable";
+import { tickerSyncLine } from "@/lib/broker-sync";
 import { suiBalanceLine } from "@/lib/sui-balance-line";
 import { valueCardFromFace } from "@/lib/value-card";
 
@@ -440,7 +441,10 @@ export default async function NodeDetailPage({
                   sleeves={sleeves}
                   initial={face}
                   href={fillDeskHref({ ticker: node.ticker })}
-                  statusLine={node.ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null}
+                  statusLine={
+                    tickerSyncLine(node.ticker, floor.brokerSync) ??
+                    (node.ticker === "SUI" ? suiBalanceLine(floor.suiBalance) : null)
+                  }
                 />
               ) : (
                 <EmptyCard label={node.ticker} />
