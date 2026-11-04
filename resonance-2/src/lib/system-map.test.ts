@@ -5,8 +5,11 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { NextRequest } from "next/server";
+import nextConfig from "../../next.config";
 import { FLOOR_NODES } from "@/data/floor-nodes";
 import {
+  AGENTIC_TRADER_NAME,
+  AGENTIC_TRADER_REDIRECTS,
   DATA_SOURCES,
   GOVERNANCE,
   SYSTEM_AGENTS,
@@ -15,6 +18,7 @@ import {
   SYSTEM_NODES,
   TIMELINE,
   parseSystemLens,
+  presentAgentCopy,
   systemLensHref,
   systemNodeHrefs,
 } from "@/data/system-map";
@@ -116,6 +120,45 @@ describe("system map", () => {
     assert.equal(parseSystemLens(["nope"]), "nodes");
     assert.equal(systemLensHref("nodes"), "/n/system");
     assert.equal(systemLensHref("sources"), "/n/system?lens=sources");
+  });
+
+  it("names Agentic Trader, redirects the old film slug, and marks YouTube connected", async () => {
+    const trader = SYSTEM_AGENTS.find((agent) => agent.id === "robinhood-ops");
+    assert.equal(trader?.name, AGENTIC_TRADER_NAME);
+    assert.match(trader?.role ?? "", /agentic trader across Robinhood and Coinbase/);
+    assert.match(trader?.role ?? "", /every order needs Andres's yes/);
+    const youtube = SYSTEM_NODES.find((node) => node.id === "youtube");
+    assert.match(youtube?.connection ?? "", /Channel stats are connected and pulled about three times a day/);
+    assert.match(youtube?.connection ?? "", /OBS\/PC is an automatic bridge/);
+    assert.equal(youtube?.connection.includes("not connected"), false);
+    const robinhood = DATA_SOURCES.find((source) => source.id === "robinhood");
+    assert.match(robinhood?.feeds ?? "", /Fills posted by Agentic Trader/);
+    assert.match(robinhood?.feeds ?? "", /Robinhood Agentic sleeves/);
+    assert.equal(
+      presentAgentCopy("Robinhood Ops' draft. RH Ops can replay."),
+      "Agentic Trader's draft. Agentic Trader can replay.",
+    );
+    assert.equal(
+      presentAgentCopy("/workspace/robinhood-ops/learnings.md"),
+      "/workspace/robinhood-ops/learnings.md",
+    );
+    assert.equal(presentAgentCopy("Robinhood Agentic"), "Robinhood Agentic");
+    const redirects = await nextConfig.redirects?.();
+    assert.ok(redirects);
+    for (const redirect of AGENTIC_TRADER_REDIRECTS) {
+      assert.equal(redirect.permanent, true);
+      assert.ok(
+        redirects?.some(
+          (row) =>
+            row.source === redirect.source &&
+            row.destination === redirect.destination &&
+            row.permanent === true,
+        ),
+        redirect.source,
+      );
+    }
+    assert.equal(AGENTIC_TRADER_REDIRECTS[0]?.source, "/film/system/agents/robinhood-ops");
+    assert.equal(AGENTIC_TRADER_REDIRECTS[0]?.destination, "/film/system/agents/agentic-trader");
   });
 
   it("renders no dollar amounts and no env values", () => {

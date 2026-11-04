@@ -1,4 +1,4 @@
-import { SYSTEM_AGENTS, SYSTEM_NODES } from "@/data/system-map";
+import { SYSTEM_AGENTS, SYSTEM_NODES, agentPublicSlug } from "@/data/system-map";
 import { textLooksSecret } from "@/lib/approvals";
 import {
   bookHomeFace,
@@ -954,7 +954,7 @@ function systemLevel(snap: FilmSnapshot, child?: string, leaf?: string): FilmLev
           face({
             id: agent.id,
             glyph: "system",
-            href: `/film/system/agents/${agent.id}`,
+            href: `/film/system/agents/${agentPublicSlug(agent.id)}`,
             name: agent.name,
             headline: "Agent",
             status: agent.role,
@@ -963,7 +963,7 @@ function systemLevel(snap: FilmSnapshot, child?: string, leaf?: string): FilmLev
         ),
       );
     }
-    const agent = agents.find((row) => row.id === leaf) ?? null;
+    const agent = agents.find((row) => agentPublicSlug(row.id) === leaf) ?? null;
     const agentName = agent ? filmLine(agent.name) : null;
     if (!agent || !agentName) return null;
     return board(agentName, up("/film/system/agents", "Agents"), [

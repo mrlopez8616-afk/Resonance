@@ -151,7 +151,7 @@ function room(): ControlRoom {
           createdAt: "2026-10-11T16:00:00.000Z",
           decidedAt: null,
           title: "Send $1,200",
-          agent: "Robinhood Ops",
+          agent: "Agentic Trader",
         },
       ],
       NOW,
@@ -285,7 +285,7 @@ describe("factory floor public default", () => {
     assert.equal(model.approvalsPending, 2);
     assert.equal(model.control.feeds.some((feed) => feed.id === "finance" || feed.label === "Finance"), false);
     assert.equal(model.control.agents.some((agent) => agent.name === "Finance Desk"), false);
-    assert.ok(model.control.agents.some((agent) => agent.name === "Robinhood Ops"));
+    assert.ok(model.control.agents.some((agent) => agent.name === "Agentic Trader"));
     assert.ok(model.control.feeds.some((feed) => feed.freshness === "green"));
     assert.equal(model.trigger.close, "1.60");
     assert.equal(model.trigger.versus, "above 1.55");

@@ -113,7 +113,8 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     label: "YouTube",
     href: "/n/youtube",
     status: "live",
-    connection: "YouTube Studio runs this node. Channel stats are not connected yet. OBS/PC is an automatic bridge for recordings on Gear.",
+    connection:
+      "YouTube Studio runs this node. Channel stats are connected and pulled about three times a day. OBS/PC is an automatic bridge for recordings on Gear.",
     children: [
       { id: "channel", label: "Channel", href: "/n/youtube/channel" },
       { id: "gear", label: "Gear", href: "/n/youtube/gear" },
@@ -154,6 +155,37 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
   },
 ];
 
+/**
+ * Roster id stays `robinhood-ops`. Roundtable rows, fill signals, and calendar
+ * writers already use it. The public film slug is `agentic-trader`.
+ */
+export const AGENTIC_TRADER_ID = "robinhood-ops" as const;
+export const AGENTIC_TRADER_SLUG = "agentic-trader" as const;
+export const AGENTIC_TRADER_NAME = "Agentic Trader" as const;
+const LEGACY_AGENT_NAME = "Robinhood Ops";
+
+export function agentPublicSlug(id: string): string {
+  return id === AGENTIC_TRADER_ID ? AGENTIC_TRADER_SLUG : id;
+}
+
+/** Current agent name in copy that was stored under the old name. Source paths stay. */
+export function presentAgentCopy(value: string): string {
+  return value
+    .replaceAll(`${LEGACY_AGENT_NAME}'s`, `${AGENTIC_TRADER_NAME}'s`)
+    .replaceAll(`${LEGACY_AGENT_NAME}'`, `${AGENTIC_TRADER_NAME}'s`)
+    .replaceAll(LEGACY_AGENT_NAME, AGENTIC_TRADER_NAME)
+    .replaceAll("RH Ops", AGENTIC_TRADER_NAME);
+}
+
+/** Old film URL. Next keeps the query string. */
+export const AGENTIC_TRADER_REDIRECTS = [
+  {
+    source: `/film/system/agents/${AGENTIC_TRADER_ID}`,
+    destination: `/film/system/agents/${AGENTIC_TRADER_SLUG}`,
+    permanent: true,
+  },
+] as const;
+
 export const SYSTEM_AGENTS = [
   {
     id: "sophia",
@@ -162,9 +194,9 @@ export const SYSTEM_AGENTS = [
     nodes: ["All nodes"],
   },
   {
-    id: "robinhood-ops",
-    name: "Robinhood Ops",
-    role: "The only trader. Robinhood Agentic and Coinbase Agentic, only with the owner's yes.",
+    id: AGENTIC_TRADER_ID,
+    name: AGENTIC_TRADER_NAME,
+    role: "The agentic trader across Robinhood and Coinbase, and every order needs Andres's yes.",
     nodes: ["Crypto", "AI Stocks"],
   },
   {
@@ -272,7 +304,7 @@ export const DATA_SOURCES = [
   {
     id: "robinhood",
     name: "Robinhood",
-    feeds: "Fills posted by Robinhood Ops through /api/fills. They update the fill log and the Robinhood Agentic sleeves.",
+    feeds: "Fills posted by Agentic Trader through /api/fills. They update the fill log and the Robinhood Agentic sleeves.",
     cadence: "When an approved fill is posted. The floor does not poll the broker.",
   },
   {

@@ -17,7 +17,7 @@
  * "Over" is strict: the exact threshold keeps the earlier color.
  */
 
-import { SYSTEM_AGENTS } from "@/data/system-map";
+import { AGENTIC_TRADER_ID, SYSTEM_AGENTS } from "@/data/system-map";
 import { chicagoDay, chicagoToday } from "@/lib/calendar-time";
 import { stripMoneyText } from "@/lib/public-mode";
 
@@ -80,8 +80,8 @@ export type ControlAgentId = (typeof CONTROL_AGENT_ORDER)[number];
  * Anything else, including lessons and a calendar writer of "agent" or "founder",
  * is not an agent heartbeat.
  *
- * - fills:robinhood — "Fills posted by Robinhood Ops through /api/fills."
- * - fills:cb-agentic — Robinhood Ops is "the only trader" for Coinbase Agentic.
+ * - fills:robinhood — "Fills posted by Agentic Trader through /api/fills."
+ * - fills:cb-agentic — Agentic Trader posts the Coinbase Agentic fills.
  * - build_items — Architect is the site builder. The row is the Build checklist.
  * - fitness_ingest — Fitness Coach runs steps and runs. The row is the Health ingest.
  * - finance_snapshot — Finance Desk posts the encrypted snapshot.
@@ -182,10 +182,20 @@ function agentName(id: ControlAgentId): string {
   return SYSTEM_AGENTS.find((agent) => agent.id === id)?.name ?? id;
 }
 
+/**
+ * The old display name normalizes to the same key as the roster id.
+ * Keep that match so a calendar writer of "Robinhood Ops" still counts.
+ */
+const LEGACY_WRITER: Readonly<Record<string, ControlAgentId>> = {
+  robinhoodops: AGENTIC_TRADER_ID,
+};
+
 /** A calendar writer maps only when it is an agent id or the agent name. */
 export function agentIdForWriter(writer: string | null | undefined): ControlAgentId | null {
   const key = normalizeKey(writer ?? "");
   if (!key) return null;
+  const legacy = LEGACY_WRITER[key];
+  if (legacy) return legacy;
   for (const agent of SYSTEM_AGENTS) {
     const id = agent.id as ControlAgentId;
     if (key === normalizeKey(agent.id) || key === normalizeKey(agent.name)) return id;
