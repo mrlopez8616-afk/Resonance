@@ -12,7 +12,7 @@ This folder is a **separate** Next.js App Router app. It does not share runtime,
 
 ## Live faces (this brick)
 
-Sleeve quantities start as typed placeholders, then update when Hub / RH Ops POSTs a fill:
+Sleeve quantities start as typed placeholders, then update when Hub / Agentic Trader POSTs a fill:
 
 - XRP — [`src/data/xrp-sleeves.ts`](src/data/xrp-sleeves.ts) (RH Agentic `51.601`; Flare vault `28287`; no RH Main sleeve; no Coinbase sleeve). The vault date is the latest flare-vault reward or print time.
 - SUI — [`src/data/sui-sleeves.ts`](src/data/sui-sleeves.ts) (RH Agentic `0` sold; Coinbase 33.7)
@@ -110,7 +110,7 @@ RESONANCE_SYNC_SECRET=... npm run bets:post -- ticket.json
 
 ## How to append a later fill
 
-Production path: Hub / RH Ops `POST /api/fills` with Bearer `RESONANCE_SYNC_SECRET`. Schema, idempotency, and the Monday Agentic SUI→6 AI fixture are in [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
+Production path: Hub / Agentic Trader `POST /api/fills` with Bearer `RESONANCE_SYNC_SECRET`. Schema, idempotency, and the Monday Agentic SUI→6 AI fixture are in [`cabinet/fill-ingest.md`](cabinet/fill-ingest.md).
 
 Local/dev without Blob still seeds from [`src/data/fills.ts`](src/data/fills.ts) and writes `.data/fills.json`. Do not paste keys, seeds, account numbers, or the gas wallet address into that file.
 

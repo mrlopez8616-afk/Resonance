@@ -17,6 +17,7 @@ import {
   type LessonsHomeModel,
 } from "@/lib/lessons";
 import { loadBuildView } from "@/lib/build-store";
+import { presentAgentCopy } from "@/data/system-map";
 import { sqlQuery } from "@/lib/pg/client";
 import { isPublicMode, requestIsPublicMode } from "@/lib/public-mode-server";
 import { isStorageUnavailable } from "@/lib/storage-unavailable";
@@ -83,11 +84,11 @@ function mapRow(row: LessonRow): Lesson {
   return {
     id: row.id,
     date: asDate(row.date),
-    title: row.title,
+    title: presentAgentCopy(row.title),
     category: row.category,
-    whatChanged: row.what_changed,
-    why: row.why,
-    lesson: row.lesson,
+    whatChanged: presentAgentCopy(row.what_changed),
+    why: presentAgentCopy(row.why),
+    lesson: presentAgentCopy(row.lesson),
     publicSafe: asBool(row.public_safe),
     sources: asSources(row.sources),
     buildItemId: row.build_item_id,

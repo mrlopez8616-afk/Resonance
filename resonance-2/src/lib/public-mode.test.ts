@@ -447,7 +447,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
             createdAt: "2026-10-09T18:00:00.000Z",
             decidedAt: null,
             title: "Send $1,200",
-            agent: "Robinhood Ops",
+            agent: "Agentic Trader",
           },
         ],
         controlNow,
@@ -613,7 +613,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         {
           id: "appr_publicmodeexample",
           createdAt: "2026-10-29T15:00:00.000Z",
-          requestedByAgent: "Robinhood Ops",
+          requestedByAgent: "Agentic Trader",
           title: "Send $1,200",
           detail: "Wire $40 today",
           category: "transfer",
@@ -1335,7 +1335,7 @@ describe("public render scan", () => {
     assert.match(controlFeeds?.html ?? "", /XRP daily closes/);
     assert.equal(controlFeeds?.html.includes("$"), false);
     const controlBots = pages.find((page) => page.path === "/n/control/bots");
-    assert.match(controlBots?.html ?? "", /Robinhood Ops/);
+    assert.match(controlBots?.html ?? "", /Agentic Trader/);
     assert.match(controlBots?.html ?? "", /no signal/);
     assert.equal(controlBots?.html.includes("Finance Desk"), false);
     const healthPage = pages.find((page) => page.path === "/n/health");

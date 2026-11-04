@@ -285,6 +285,19 @@ describe("episode 1 filming view", () => {
     assert.match(html, /coming soon/);
   });
 
+  it("opens Agentic Trader on the film slug and leaves the old slug to the redirect", () => {
+    const snap = blankFilmSnapshot();
+    const board = filmLevel(["system", "agents"], snap);
+    const card = board?.faces.find((row) => row.name === "Agentic Trader");
+    assert.equal(card?.href, "/film/system/agents/agentic-trader");
+    assert.match(card?.status ?? "", /across Robinhood and Coinbase/);
+    assert.match(card?.status ?? "", /Andres's yes/);
+    const page = filmLevel(["system", "agents", "agentic-trader"], snap);
+    assert.equal(page?.label, "Agentic Trader");
+    assert.equal(filmLevel(["system", "agents", "robinhood-ops"], snap), null);
+    assert.equal(phoneTrail("/film/system/agents/agentic-trader").back?.href, "/film/system/agents");
+  });
+
   it("sends the phone trail up one level without a ticker crumb", () => {
     assert.equal(phoneTrail("/film").back, null);
     assert.deepEqual(phoneTrail("/film").crumbs, [{ href: "/film", label: "Film" }]);
