@@ -27,6 +27,8 @@ function fail(message: string): never {
 }
 
 if (/\$\d/.test(html)) fail("rendered html contains a dollar amount");
+if (html.includes("Robinhood Ops")) fail("rendered html still names Robinhood Ops");
+if (html.includes("not connected yet")) fail("rendered html still says YouTube is not connected");
 
 for (const name of SECRET_ENV) {
   const value = process.env[name]?.trim() ?? "";
@@ -54,6 +56,9 @@ const markers = [
   "/n/ideas",
   "Crawl Walk Run",
   "/n/crawl-walk-run",
+  "Agentic Trader",
+  "agentic trader across Robinhood and Coinbase",
+  "pulled about three times a day",
 ];
 for (const marker of markers) {
   if (!html.includes(marker)) fail(`missing ${marker}`);

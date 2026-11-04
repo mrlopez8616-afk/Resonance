@@ -385,7 +385,7 @@ describe("Control, Health, Approvals, and Build on the shared layout", () => {
             doneTodayRows: [],
           },
           agents: [
-            { id: "robinhood-ops", name: "Robinhood Ops", at: STAMP, source: "fills" },
+            { id: "robinhood-ops", name: "Agentic Trader", at: STAMP, source: "fills" },
             { id: "architect", name: "Architect", at: null, source: null },
           ],
           feeds: [
@@ -418,14 +418,14 @@ describe("Control, Health, Approvals, and Build on the shared layout", () => {
         room: {
           approvals: null,
           agents: [
-            { id: "robinhood-ops", name: "Robinhood Ops", at: STAMP, source: "fills" },
+            { id: "robinhood-ops", name: "Agentic Trader", at: STAMP, source: "fills" },
             { id: "architect", name: "Architect", at: null, source: null },
           ],
           feeds: [],
         },
       }),
     );
-    assert.match(bots, /Robinhood Ops/);
+    assert.match(bots, /Agentic Trader/);
     assert.match(bots, /Architect/);
     assert.match(bots, new RegExp(EMPTY_CARD_NOTE));
     assert.match(bots, /data-card="empty"/);
@@ -522,7 +522,7 @@ describe("Control, Health, Approvals, and Build on the shared layout", () => {
           {
             id: "appr_publicmodeexample",
             createdAt: STAMP,
-            requestedByAgent: "Robinhood Ops",
+            requestedByAgent: "Agentic Trader",
             title: "Send $1,200",
             detail: "Wire $40 today",
             category: "transfer",

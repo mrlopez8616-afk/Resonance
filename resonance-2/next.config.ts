@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import { AGENTIC_TRADER_REDIRECTS } from "./src/data/system-map";
 import { FIGHT_DESK_REDIRECTS } from "./src/lib/fight-desk-redirects";
 
 const appRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       ...FIGHT_DESK_REDIRECTS.map((redirect) => ({ ...redirect })),
+      ...AGENTIC_TRADER_REDIRECTS.map((redirect) => ({ ...redirect })),
       {
         source: "/n/fitness/activity",
         destination: "/n/fitness/steps",

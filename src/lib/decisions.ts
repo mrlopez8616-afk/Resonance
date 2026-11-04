@@ -89,7 +89,7 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
   {
     id: "D-2026-09-11-02",
     date: "2026-09-11",
-    question: "Lock the Phase Zero Agentic charter for Robinhood Ops?",
+    question: "Lock the Phase Zero Agentic charter for Agentic Trader?",
     proposal: "Lock the Phase Zero Agentic charter (constrained agent).",
     options:
       "Lock charter (constrained agent) · Delay · Unlock full autonomy now",
@@ -129,7 +129,7 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
     outcome:
       "PWR $35 and VRT $17 are QUEUED for Monday open — not filled. Queued ≠ filled.",
     evidence:
-      "Written size ($35 PWR, $17 VRT); Agentic Robinhood Ops only; Monday open timing. No fill recorded.",
+      "Written size ($35 PWR, $17 VRT); Agentic Trader only; Monday open timing. No fill recorded.",
     reviewTrigger:
       "After Monday open — confirm fills, residual cash, and whether either ticker needs a new decision.",
     fingerprint: null,
@@ -143,18 +143,18 @@ export const LOCKED_DECISIONS_2026_09_11: Decision[] = [
   {
     id: "D-2026-09-11-04",
     date: "2026-09-11",
-    question: "Unlock full Agentic autonomy for Robinhood Ops?",
-    proposal: "Unlock FULL Agentic autonomy for Robinhood Ops (Agentic only).",
+    question: "Unlock full Agentic autonomy for Agentic Trader?",
+    proposal: "Unlock FULL Agentic autonomy for Agentic Trader (Agentic only).",
     options:
       "Unlock full Agentic autonomy (Agentic only) · Keep D-2026-09-11-02 charter · Unlock including Main/Xaman (rejected)",
     status: "decided",
     decision:
-      "Unlock FULL Agentic autonomy for Robinhood Ops. Agentic account only. Main + Xaman treasury principal remain off-limits.",
+      "Unlock FULL Agentic autonomy for Agentic Trader. Agentic account only. Main + Xaman treasury principal remain off-limits.",
     rationale:
       "Trading autonomy is granted to Agentic only. This supersedes D-2026-09-11-02 for trading autonomy. It does not authorize spending Xaman treasury principal or the founder Main account. Agentic may trade ETN and GEV under this unlock.",
     authorizedBy: "Andres López",
     outcome:
-      "Autonomy unlocked for Agentic Robinhood Ops only. Agentic autonomy trades ETN/GEV under this row. PWR/VRT (D-03) and ETN/GEV (D-04) are QUEUED for Monday open — not filled. No Main or Xaman principal movement. No on-chain write.",
+      "Autonomy unlocked for Agentic Trader only. Agentic autonomy trades ETN/GEV under this row. PWR/VRT (D-03) and ETN/GEV (D-04) are QUEUED for Monday open — not filled. No Main or Xaman principal movement. No on-chain write.",
     evidence:
       "Founder lock tonight; Phase Zero Web2 record only — no wallet signing, no on-chain write. ETN/GEV autonomy tickets sit on the Agentic sleeve, not Main.",
     reviewTrigger:

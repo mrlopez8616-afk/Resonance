@@ -83,7 +83,7 @@ function room(partial: Partial<ControlRoom> = {}): ControlRoom {
           createdAt: atAge(60 * 60 * 1000),
           decidedAt: null,
           title: "Send $1,200 to the treasury",
-          agent: "Robinhood Ops",
+          agent: "Agentic Trader",
         },
         {
           status: "approved",
@@ -158,6 +158,8 @@ describe("control room agents", () => {
     assert.equal(agentIdForSignal(signal("finance_snapshot", NOW.toISOString())), "finance-desk");
     assert.equal(agentIdForSignal(signal("calendar", NOW.toISOString(), "Fight Desk")), "fight-desk");
     assert.equal(agentIdForSignal(signal("calendar", NOW.toISOString(), "sophia")), "sophia");
+    assert.equal(agentIdForSignal(signal("calendar", NOW.toISOString(), "Robinhood Ops")), "robinhood-ops");
+    assert.equal(agentIdForSignal(signal("calendar", NOW.toISOString(), "Agentic Trader")), "robinhood-ops");
 
     assert.equal(agentIdForSignal(signal("lessons", NOW.toISOString())), null);
     assert.equal(agentIdForSignal(signal("calendar", NOW.toISOString(), "agent")), null);
@@ -187,7 +189,7 @@ describe("control room agents", () => {
     ]);
     const robinhood = rows.find((row) => row.id === "robinhood-ops");
     assert.equal(robinhood?.at, atAge(5 * 60 * 1000));
-    assert.equal(robinhood?.name, "Robinhood Ops");
+    assert.equal(robinhood?.name, "Agentic Trader");
     assert.ok(rows.every((row) => row.at === null || formatControlWhen(row.at, NOW) !== NO_SIGNAL));
     assert.ok(quiet.every((name) => name.length > 0));
   });
@@ -203,7 +205,7 @@ describe("control room public hide", () => {
       false,
     );
     assert.equal(view.feeds.some((feed) => feed.id === "finance" || feed.label === "Finance"), false);
-    assert.equal(view.agents.some((agent) => agent.name === "Robinhood Ops"), true);
+    assert.equal(view.agents.some((agent) => agent.name === "Agentic Trader"), true);
     assert.equal(view.feeds.some((feed) => feed.id === "coingecko"), true);
     const closes = view.feeds.find((feed) => feed.id === "xrp-closes");
     assert.equal(closes?.label, "XRP daily closes");
