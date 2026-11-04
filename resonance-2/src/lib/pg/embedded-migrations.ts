@@ -907,6 +907,51 @@ export const YOUTUBE_ANALYTICS_SQL = "-- YouTube analytics. Number 045.\n-- 044 
 
 export const FACTORIO_SQL = "-- Factorio snapshots from the resonance-bridge mod. Number 046.\n-- 045 stores YouTube analytics. This file does not change those tables.\n-- One row per game tick. A repeat of the same tick replaces that row.\n-- Older ticks stay, so the node can chart rockets and play hours.\n-- The ingest token is stored only as a sha256 hex digest.\n-- Idempotent: CREATE is IF NOT EXISTS. A second run inserts nothing.\n\nCREATE TABLE IF NOT EXISTS factorio_tokens (\n  id integer PRIMARY KEY CHECK (id = 1),\n  token_hash text NOT NULL,\n  updated_at timestamptz NOT NULL\n);\n\nCREATE TABLE IF NOT EXISTS factorio_snapshots (\n  tick bigint PRIMARY KEY,\n  play_hours numeric NOT NULL,\n  rockets_launched integer NOT NULL,\n  technologies_researched integer NOT NULL,\n  current_research text,\n  research_progress numeric,\n  players jsonb NOT NULL DEFAULT '[]'::jsonb,\n  production jsonb NOT NULL DEFAULT '[]'::jsonb,\n  consumption jsonb NOT NULL DEFAULT '[]'::jsonb,\n  science_produced jsonb NOT NULL DEFAULT '{}'::jsonb,\n  machines jsonb NOT NULL DEFAULT '{}'::jsonb,\n  surfaces jsonb NOT NULL DEFAULT '[]'::jsonb,\n  game_time text,\n  reason text,\n  source text NOT NULL,\n  version text,\n  received_at timestamptz NOT NULL DEFAULT now(),\n  payload jsonb NOT NULL\n);\n\nCREATE INDEX IF NOT EXISTS factorio_snapshots_received_idx\n  ON factorio_snapshots (received_at DESC, tick DESC);\n";
 
+export const BROKER_SYNC_SQL = `-- Broker read sync. Number 047.
+-- 046 stores Factorio snapshots. This file stores the last Coinbase and
+-- Robinhood read: status, positions, cash balances, and recent orders.
+-- The cron is read-only. These tables do not place orders.
+-- Idempotent: CREATE is IF NOT EXISTS. A second run changes nothing.
+
+CREATE TABLE IF NOT EXISTS broker_sync_state (
+  venue text PRIMARY KEY CHECK (venue IN ('coinbase', 'robinhood')),
+  status text NOT NULL CHECK (status IN ('ok', 'error', 'not_configured')),
+  synced_at timestamptz,
+  checked_at timestamptz NOT NULL,
+  message text NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS broker_positions (
+  venue text NOT NULL CHECK (venue IN ('coinbase', 'robinhood')),
+  sleeve_id text NOT NULL,
+  ticker text NOT NULL,
+  quantity text NOT NULL,
+  synced_at timestamptz NOT NULL,
+  PRIMARY KEY (venue, sleeve_id, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS broker_balances (
+  venue text NOT NULL CHECK (venue IN ('coinbase', 'robinhood')),
+  currency text NOT NULL,
+  amount text NOT NULL,
+  synced_at timestamptz NOT NULL,
+  PRIMARY KEY (venue, currency)
+);
+
+CREATE TABLE IF NOT EXISTS broker_orders (
+  venue text NOT NULL CHECK (venue IN ('coinbase', 'robinhood')),
+  order_id text NOT NULL,
+  ticker text NOT NULL,
+  side text NOT NULL DEFAULT '',
+  quantity text NOT NULL DEFAULT '',
+  price text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT '',
+  filled_at timestamptz,
+  synced_at timestamptz NOT NULL,
+  PRIMARY KEY (venue, order_id)
+);
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -952,4 +997,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "044_future_idea_membership", sql: FUTURE_IDEA_MEMBERSHIP_SQL },
   { id: "045_youtube_analytics", sql: YOUTUBE_ANALYTICS_SQL },
   { id: "046_factorio", sql: FACTORIO_SQL },
+  { id: "047_broker_sync", sql: BROKER_SYNC_SQL },
 ];

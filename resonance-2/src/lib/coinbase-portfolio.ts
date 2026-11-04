@@ -46,7 +46,7 @@ function textField(value: unknown): string {
 /** Keep the digits Coinbase sent. JSON.parse would turn them into binary floats. */
 export function preserveBalanceLiterals(raw: string): string {
   return raw.replace(
-    /("total_balance_crypto"\s*:\s*)(-?\d+(?:\.\d+)?)(?=\s*[,}\]])/g,
+    /("(?:total_balance_crypto|value|size|price)"\s*:\s*)(-?\d+(?:\.\d+)?)(?=\s*[,}\]])/g,
     '$1"$2"',
   );
 }
@@ -104,12 +104,14 @@ export function parsePortfolioList(body: unknown): CoinbasePortfolioRef[] {
 }
 
 /**
- * Sum SUI `total_balance_crypto` on one breakdown.
+ * Sum one asset's `total_balance_crypto` on one breakdown.
  * Staked and liquid rows both count. Other assets are ignored.
- * A readable breakdown with no SUI row is a real zero.
- * An unreadable SUI row is null, so the caller does not invent a quantity.
+ * A readable breakdown with no row for that asset is a real zero.
+ * An unreadable row for that asset is null, so the caller does not invent a quantity.
  */
-export function suiQuantityFromBreakdown(body: unknown): string | null {
+export function assetQuantityFromBreakdown(body: unknown, asset: string): string | null {
+  const wanted = asset.trim().toUpperCase();
+  if (!wanted) return null;
   const root = asRecord(body);
   const breakdown = asRecord(root?.breakdown) ?? root;
   const positions = breakdown?.spot_positions;
@@ -118,12 +120,17 @@ export function suiQuantityFromBreakdown(body: unknown): string | null {
   for (const row of positions) {
     const item = asRecord(row);
     if (!item) continue;
-    if (textField(item.asset).toUpperCase() !== "SUI") continue;
+    if (textField(item.asset).toUpperCase() !== wanted) continue;
     const qty = decimalFromApiValue(item.total_balance_crypto);
     if (qty === null) return null;
     sum = addDecimal(sum, qty);
   }
   return sum;
+}
+
+/** Sum SUI on one breakdown. Same rules as `assetQuantityFromBreakdown`. */
+export function suiQuantityFromBreakdown(body: unknown): string | null {
+  return assetQuantityFromBreakdown(body, "SUI");
 }
 
 export function suiSleeveQuantities(

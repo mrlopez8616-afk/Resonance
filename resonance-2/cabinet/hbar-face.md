@@ -37,7 +37,7 @@ HBAR is a live crypto node, batched with XLM ([`xlm-face.md`](./xlm-face.md)). D
 
 Headline: `7847.91 tokens`, then `7847.91 × live HBAR-USD` as `~$… live`. The face keeps two stored decimals so the print does not round to `7,848`.
 
-Durable overrides land via fill ingest on `rh-agentic` only. Seed `7847.91` remains the fallback until a hub POST applies. This app does not poll Robinhood.
+Durable overrides land via fill ingest on `rh-agentic`, and the scheduled Robinhood crypto read can refresh that quantity when its key is set ([`broker-sync.md`](./broker-sync.md)). Seed `7847.91` remains the fallback until one of those writes applies. The read does not place orders.
 
 ## What this brick does not store
 

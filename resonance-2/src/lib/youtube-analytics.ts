@@ -79,6 +79,24 @@ export const CRON_GATE_PLAN = [
     slot: "01:00 UTC hour (7:00–7:59 PM CST / 8:00–8:59 PM CDT), after the ~6 PM CT health check",
     gated: true,
   },
+  {
+    path: "/api/cron/brokers",
+    schedule: "0 14 * * *",
+    slot: "14:00 UTC hour (8:00–8:59 AM CST / 9:00–9:59 AM CDT), about 8 AM CT",
+    gated: false,
+  },
+  {
+    path: "/api/cron/brokers",
+    schedule: "0 19 * * *",
+    slot: "19:00 UTC hour (1:00–1:59 PM CST / 2:00–2:59 PM CDT), about 1 PM CT",
+    gated: false,
+  },
+  {
+    path: "/api/cron/brokers",
+    schedule: "0 1 * * *",
+    slot: "01:00 UTC hour (7:00–7:59 PM CST / 8:00–8:59 PM CDT), about 7 PM CT",
+    gated: false,
+  },
 ] as const;
 
 export function isHobbyDailySchedule(schedule: string): boolean {
