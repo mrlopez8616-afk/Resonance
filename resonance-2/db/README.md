@@ -68,6 +68,10 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `health_auto_export_tokens` | `id` = 1 | Health Auto Export ingest token, sha256 hex only. Migration `043_health_auto_export_token` inserts no token. |
 | `factorio_tokens` | `id` = 1 | Factorio ingest token, sha256 hex only. Migration `046_factorio` inserts no token. |
 | `factorio_snapshots` | `tick` | One factory snapshot per game tick. A repeat of that tick replaces the row. Older ticks stay. |
+| `printer_tokens` | `id` = 1 | Printer ingest token, sha256 hex only. Migration `047_printer` inserts no token. |
+| `printer_snapshots` | `id` | One ink reading per post. Older readings stay. The node reads the newest row. |
+| `obs_tokens` | `id` = 1 | OBS ingest token, sha256 hex only. Migration `048_obs` inserts no token. |
+| `obs_recordings` | `recording_key` | One OBS file per folder, name, and created time. A repeat of that file updates the row. |
 
 Seeds still merge on read: missing seed ids are inserted, and a row already stored under that id or order id is left alone.
 

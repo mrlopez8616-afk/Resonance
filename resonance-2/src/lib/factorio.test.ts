@@ -140,7 +140,7 @@ describe("factorio snapshots", () => {
   it("keeps the migration file and the embedded copy identical", () => {
     const file = readFileSync(path.join(root, "db/migrations/046_factorio.sql"), "utf8");
     assert.equal(FACTORIO_SQL, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "046_factorio");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "046_factorio");
     assert.equal(file.includes("INSERT"), false);
   });
 

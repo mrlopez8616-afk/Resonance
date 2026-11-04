@@ -113,7 +113,7 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     label: "YouTube",
     href: "/n/youtube",
     status: "live",
-    connection: "YouTube Studio runs this node. Channel stats are not connected yet.",
+    connection: "YouTube Studio runs this node. Channel stats are not connected yet. OBS/PC is an automatic bridge for recordings on Gear.",
     children: [
       { id: "channel", label: "Channel", href: "/n/youtube/channel" },
       { id: "gear", label: "Gear", href: "/n/youtube/gear" },
@@ -134,6 +134,14 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     href: "/n/factorio",
     status: "live",
     connection: "A local save posts factory snapshots while the game is open.",
+    children: [],
+  },
+  {
+    id: "printer",
+    label: "Printer",
+    href: "/n/printer",
+    status: "live",
+    connection: "An automatic bridge posts ink levels from the HP OfficeJet Pro 9120e.",
     children: [],
   },
   {
@@ -321,6 +329,18 @@ export const DATA_SOURCES = [
     feeds: "Factory snapshots from the resonance-bridge mod. They feed the Factorio node.",
     cadence: "About every 5 minutes while the save is open.",
   },
+  {
+    id: "printer",
+    name: "Printer",
+    feeds: "Ink levels from the HP OfficeJet Pro 9120e public supplies endpoint. The automatic bridge posts them to the Printer node.",
+    cadence: "A few times a day, from the PC.",
+  },
+  {
+    id: "obs",
+    name: "OBS/PC",
+    feeds: "Recording files from the PC. The automatic bridge posts them to YouTube Gear.",
+    cadence: "When OBS saves a recording.",
+  },
 ] as const;
 
 /**
@@ -360,6 +380,8 @@ export const SOURCE_REACH = {
   "build-api": ["build"],
   calendar: ["fight-desk", "crypto", "ai-stocks", "build"],
   factorio: ["factorio"],
+  printer: ["printer"],
+  obs: ["youtube"],
 } as const satisfies Record<(typeof DATA_SOURCES)[number]["id"], readonly string[]>;
 
 export const GOVERNANCE = [

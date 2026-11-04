@@ -35,11 +35,11 @@ describe("edmonton event merge", { concurrency: false }, () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === MIGRATION_ID);
     assert.equal(embedded?.sql, file);
     assert.equal(splitSqlStatements(file).some((statement) => /^delete\b/i.test(statement)), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-12)?.id, MIGRATION_ID);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-5)?.id, "042_visitor_counts");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "043_health_auto_export_token");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "044_future_idea_membership");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "046_factorio");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-14)?.id, MIGRATION_ID);
+    assert.equal(EMBEDDED_MIGRATIONS.at(-7)?.id, "042_visitor_counts");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-6)?.id, "043_health_auto_export_token");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-5)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "048_obs");
 
     setSqlClientForTests(memorySql());
     await applyMigrations(EMBEDDED_MIGRATIONS.filter((entry) => entry.id !== MIGRATION_ID));

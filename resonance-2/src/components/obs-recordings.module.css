@@ -1,0 +1,38 @@
+.rows {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto auto;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .rows li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .name,
+  .meta {
+    white-space: normal;
+  }
+}
+
+.meta {
+  color: var(--muted);
+  white-space: nowrap;
+}
