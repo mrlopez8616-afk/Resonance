@@ -3,11 +3,17 @@ import { FactorioGuide } from "@/components/factorio-guide";
 import { FactorioToken } from "@/components/factorio-token";
 import { HealthAutoExportGuide } from "@/components/health-auto-export-guide";
 import { HealthAutoExportToken } from "@/components/health-auto-export-token";
+import { ObsGuide } from "@/components/obs-guide";
+import { ObsToken } from "@/components/obs-token";
+import { PrinterGuide } from "@/components/printer-guide";
+import { PrinterToken } from "@/components/printer-token";
 import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { factorioTokenConfigured } from "@/lib/factorio-store";
 import { healthAutoExportTokenConfigured } from "@/lib/health-auto-export-store";
+import { obsTokenConfigured } from "@/lib/obs-store";
+import { printerTokenConfigured } from "@/lib/printer-store";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +27,15 @@ export default async function IntegrationsPage() {
   await requireRole("owner");
   let healthConfigured = false;
   let factorioConfigured = false;
+  let printerConfigured = false;
+  let obsConfigured = false;
   let unavailable = false;
   try {
-    [healthConfigured, factorioConfigured] = await Promise.all([
+    [healthConfigured, factorioConfigured, printerConfigured, obsConfigured] = await Promise.all([
       healthAutoExportTokenConfigured(),
       factorioTokenConfigured(),
+      printerTokenConfigured(),
+      obsTokenConfigured(),
     ]);
   } catch {
     unavailable = true;
@@ -43,10 +53,14 @@ export default async function IntegrationsPage() {
           <>
             <HealthAutoExportToken configured={healthConfigured} />
             <FactorioToken configured={factorioConfigured} />
+            <PrinterToken configured={printerConfigured} />
+            <ObsToken configured={obsConfigured} />
           </>
         )}
         <HealthAutoExportGuide />
         <FactorioGuide />
+        <PrinterGuide />
+        <ObsGuide />
       </section>
     </OperatorShell>
   );

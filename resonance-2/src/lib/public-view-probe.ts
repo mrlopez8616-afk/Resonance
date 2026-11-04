@@ -92,6 +92,10 @@ export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "POST", path: "/api/settings/health-auto-export-token", loggedOut: "401 or 403", auth: "owner session" },
   { method: "POST", path: "/api/ingest/factorio", loggedOut: "401 or 503", auth: "X-Factorio-Token" },
   { method: "POST", path: "/api/settings/factorio-token", loggedOut: "401 or 403", auth: "owner session" },
+  { method: "POST", path: "/api/ingest/printer", loggedOut: "401 or 503", auth: "X-Printer-Token" },
+  { method: "POST", path: "/api/settings/printer-token", loggedOut: "401 or 403", auth: "owner session" },
+  { method: "POST", path: "/api/ingest/obs", loggedOut: "401 or 503", auth: "X-Obs-Token" },
+  { method: "POST", path: "/api/settings/obs-token", loggedOut: "401 or 403", auth: "owner session" },
   { method: "GET", path: "/api/fitness/runs", loggedOut: "401", auth: "session or sync bearer" },
   { method: "POST", path: "/api/fitness/token", loggedOut: "401", auth: "owner session" },
   { method: "GET", path: "/api/health/full", loggedOut: "401", auth: "RESONANCE_HEALTH_TOKEN" },
@@ -448,6 +452,10 @@ async function loadHandlers(): Promise<{
     healthAutoToken,
     factorio,
     factorioToken,
+    printer,
+    printerToken,
+    obs,
+    obsToken,
     runs,
     fitnessToken,
     health,
@@ -503,6 +511,10 @@ async function loadHandlers(): Promise<{
     import("@/app/api/settings/health-auto-export-token/route"),
     import("@/app/api/ingest/factorio/route"),
     import("@/app/api/settings/factorio-token/route"),
+    import("@/app/api/ingest/printer/route"),
+    import("@/app/api/settings/printer-token/route"),
+    import("@/app/api/ingest/obs/route"),
+    import("@/app/api/settings/obs-token/route"),
     import("@/app/api/fitness/runs/route"),
     import("@/app/api/fitness/token/route"),
     import("@/app/api/health/full/route"),
@@ -599,6 +611,10 @@ async function loadHandlers(): Promise<{
       { method: "POST", path: "/api/settings/health-auto-export-token", call: healthAutoToken.POST },
       { method: "POST", path: "/api/ingest/factorio", call: factorio.POST },
       { method: "POST", path: "/api/settings/factorio-token", call: factorioToken.POST },
+      { method: "POST", path: "/api/ingest/printer", call: printer.POST },
+      { method: "POST", path: "/api/settings/printer-token", call: printerToken.POST },
+      { method: "POST", path: "/api/ingest/obs", call: obs.POST },
+      { method: "POST", path: "/api/settings/obs-token", call: obsToken.POST },
       { method: "POST", path: "/api/fitness/token", call: fitnessToken.POST },
       { method: "POST", path: "/api/ideas", call: ideas.POST },
       { method: "PATCH", path: "/api/ideas", call: ideas.PATCH },
@@ -702,7 +718,7 @@ function routePatterns(files: ReadonlyMap<string, string>): string[] {
   const patterns: string[] = [];
   for (const path of files.keys()) {
     if (!/^src\/app\/.*page\.tsx$/.test(path)) continue;
-    let route = pageRoute(path);
+    const route = pageRoute(path);
     if (route.includes("[[...")) {
       const base = route.replace(/\/\[\[\.\.\.[^\]]+\]\]/g, "") || "/";
       patterns.push(base);

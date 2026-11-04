@@ -1,0 +1,40 @@
+.model {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.stale {
+  margin: 0.35rem 0 0;
+  color: var(--warning);
+  font-size: 0.92rem;
+}
+
+.bar {
+  margin-top: 0.55rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 16%, white);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+}
+
+.fillC {
+  background: #1aa6c9;
+}
+
+.fillM {
+  background: #c43b7a;
+}
+
+.fillY {
+  background: #d6a100;
+}
+
+.fillK {
+  background: var(--ink);
+}

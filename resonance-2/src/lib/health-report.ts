@@ -133,6 +133,7 @@ export const HEALTH_TILES: readonly HealthTarget[] = [
   { id: "health", name: "Health", path: "/n/health" },
   { id: "youtube", name: "YouTube", path: "/n/youtube" },
   { id: "factorio", name: "Factorio", path: "/n/factorio" },
+  { id: "printer", name: "Printer", path: "/n/printer" },
   { id: "system", name: "System", path: "/n/system" },
   { id: "lessons", name: "Lessons", path: "/n/lessons" },
   { id: "roundtable", name: "Roundtable", path: "/n/roundtable" },
@@ -193,6 +194,7 @@ export function healthPages(): HealthTarget[] {
   pages.push(
     { id: "youtube", name: "YouTube", path: "/n/youtube" },
     { id: "factorio", name: "Factorio", path: "/n/factorio" },
+    { id: "printer", name: "Printer", path: "/n/printer" },
     { id: "youtube-channel", name: "Channel", path: "/n/youtube/channel" },
     { id: "youtube-gear", name: "Gear", path: "/n/youtube/gear" },
     { id: "youtube-bricks", name: "Brick Tracker", path: "/n/youtube/bricks" },

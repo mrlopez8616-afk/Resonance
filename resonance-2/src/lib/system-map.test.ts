@@ -39,6 +39,7 @@ export function systemRouteResolves(href: string): boolean {
   if (href === "/n/build") return appPage("n/build");
   if (href === "/n/lessons") return appPage("n/lessons");
   if (href === "/n/factorio") return appPage("n/factorio");
+  if (href === "/n/printer") return appPage("n/printer");
   if (href === "/n/health") return appPage("n/health");
   if (href === "/n/youtube") return appPage("n/youtube");
   if (href === "/n/youtube/channel") return appPage("n/youtube/channel");
@@ -72,10 +73,10 @@ const SECRETISH = [
 ];
 
 describe("system map", () => {
-  it("counts nine agents and ten nodes on the home line", () => {
+  it("counts nine agents and eleven nodes on the home line", () => {
     assert.equal(SYSTEM_AGENTS.length, 9);
-    assert.equal(SYSTEM_NODES.length, 10);
-    assert.equal(SYSTEM_HOME_LINE, "9 agents · 10 nodes · all protections on");
+    assert.equal(SYSTEM_NODES.length, 11);
+    assert.equal(SYSTEM_HOME_LINE, "9 agents · 11 nodes · all protections on");
     assert.equal(SYSTEM_LENSES.length, 6);
     assert.equal(DATA_SOURCES.some((source) => source.name === "GitHub Actions"), true);
     assert.equal(DATA_SOURCES.some((source) => source.name === "Build Tracker API"), true);
@@ -128,6 +129,7 @@ describe("system map", () => {
     assert.match(trader?.role ?? "", /every order needs Andres's yes/);
     const youtube = SYSTEM_NODES.find((node) => node.id === "youtube");
     assert.match(youtube?.connection ?? "", /Channel stats are connected and pulled about three times a day/);
+    assert.match(youtube?.connection ?? "", /OBS\/PC is an automatic bridge/);
     assert.equal(youtube?.connection.includes("not connected"), false);
     const robinhood = DATA_SOURCES.find((source) => source.id === "robinhood");
     assert.match(robinhood?.feeds ?? "", /Fills posted by Agentic Trader/);

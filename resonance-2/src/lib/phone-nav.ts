@@ -382,6 +382,10 @@ export function phoneTrail(pathname: string, search = ""): PhoneTrail {
       const factorio: PhoneTarget = { href: "/n/factorio", label: "Factorio" };
       return { back: HOME, crumbs: [HOME, factorio] };
     }
+    if (parentId === "printer" && parts.length === 2) {
+      const printer: PhoneTarget = { href: "/n/printer", label: "Printer" };
+      return { back: HOME, crumbs: [HOME, printer] };
+    }
     if (parentId === "roundtable") {
       const roundtable: PhoneTarget = { href: "/n/roundtable", label: "Roundtable" };
       if (parts.length === 2) return { back: FLOOR, crumbs: [HOME, roundtable] };

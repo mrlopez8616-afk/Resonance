@@ -61,7 +61,8 @@ describe("shelved nodes", () => {
 
     const shown = buildLiveGraph();
     assert.equal(shown.points.find((point) => point.id === "node:fitness")?.href, "/n/fitness");
-    assert.equal(shown.points.filter((point) => point.kind === "node").length, 10);
+    assert.equal(shown.points.filter((point) => point.kind === "node").length, 11);
+    assert.equal(shown.points.find((point) => point.id === "node:printer")?.href, "/n/printer");
     assert.equal(shown.edges.some((edge) => edge.to === "node:fitness"), true);
     const hidden = buildLiveGraph(["fitness"]);
     assert.equal(hidden.points.some((point) => point.id === "node:fitness" || point.href === "/n/fitness"), false);
