@@ -13,6 +13,7 @@ import {
   type ApprovalListFilter,
   type ApprovalStatus,
 } from "@/lib/approvals";
+import { presentAgentCopy } from "@/data/system-map";
 import { sqlQuery } from "@/lib/pg/client";
 
 const COLUMNS = `id, created_at, requested_by_agent, title, detail, category, node,
@@ -59,15 +60,15 @@ function mapApproval(row: ApprovalRow): Approval {
   return {
     id: row.id,
     createdAt: iso(row.created_at),
-    requestedByAgent: row.requested_by_agent,
-    title: row.title,
-    detail: row.detail,
+    requestedByAgent: presentAgentCopy(row.requested_by_agent),
+    title: presentAgentCopy(row.title),
+    detail: presentAgentCopy(row.detail),
     category: asCategory(row.category),
     node: row.node,
     status: asStatus(row.status),
     decidedBy: asDecider(row.decided_by),
     decidedAt: row.decided_at == null ? null : iso(row.decided_at),
-    decisionNote: row.decision_note,
+    decisionNote: row.decision_note == null ? null : presentAgentCopy(row.decision_note),
     idempotencyKey: row.idempotency_key,
   };
 }

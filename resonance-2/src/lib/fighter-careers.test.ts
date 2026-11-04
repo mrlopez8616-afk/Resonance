@@ -211,12 +211,12 @@ describe("fighter career trends", () => {
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "033_fighter_careers");
     assert.equal(embedded?.sql, file);
     assert.equal(file.includes("INSERT"), false);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-6)?.id, "042_visitor_counts");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-5)?.id, "043_health_auto_export_token");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "044_future_idea_membership");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "045_youtube_analytics");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "046_factorio");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "047_broker_sync");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-8)?.id, "042_visitor_counts");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-7)?.id, "043_health_auto_export_token");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-6)?.id, "044_future_idea_membership");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-5)?.id, "045_youtube_analytics");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "048_obs");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "049_broker_sync");
 
     const parsed = parseFighterCareer({
       name: "Bravo",

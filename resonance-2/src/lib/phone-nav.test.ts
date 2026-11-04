@@ -181,6 +181,14 @@ describe("phone back targets", () => {
       ],
     });
     assert.deepEqual(phoneTrail("/n/factorio/extra").back, { href: "/", label: "Home" });
+    assert.deepEqual(phoneTrail("/n/printer"), {
+      back: { href: "/", label: "Home" },
+      crumbs: [
+        { href: "/", label: "Home" },
+        { href: "/n/printer", label: "Printer" },
+      ],
+    });
+    assert.deepEqual(phoneTrail("/n/printer/extra").back, { href: "/", label: "Home" });
     assert.deepEqual(phoneTrail("/n/roundtable"), {
       back: { href: "/", label: "Floor" },
       crumbs: [

@@ -14,6 +14,7 @@ import { FINANCE_NODES } from "@/lib/finance/view";
 import { loadFitnessBundle, loadFitnessNode, type FitnessRead } from "@/lib/fitness-store";
 import { FITNESS_NODES } from "@/lib/fitness-board";
 import { loadFactorioFreshness } from "@/lib/factorio-store";
+import { loadPrinterFreshness } from "@/lib/printer-store";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { loadIdeaBoard } from "@/lib/future-ideas-store";
 import {
@@ -148,6 +149,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     brickRows,
     liveMode,
     factorio,
+    printer,
   ] = await Promise.all([
     settled(async () => {
       const [spotQuotes, equityQuotes] = await Promise.all([
@@ -187,6 +189,7 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     settled(() => loadBrickRows(false)),
     settled(() => readLivePublicMode()),
     settled(() => loadFactorioFreshness(now.getTime())),
+    settled(() => loadPrinterFreshness(now.getTime())),
   ]);
 
   const series =
@@ -302,6 +305,15 @@ async function loadHealthFullLive(now: Date): Promise<HealthFullReport> {
     });
   });
   pages.factorio = tiles.factorio;
+
+  tiles.printer = fromSettled(printer, (row) => {
+    if (!row.receivedAt) return bits("ok", "no snapshot yet");
+    return bits("ok", row.stale ? "data stale" : "loaded", {
+      stale: row.stale,
+      ageSeconds: ageSeconds(row.receivedAt, now),
+    });
+  });
+  pages.printer = tiles.printer;
 
   tiles.youtube = staticBits("not connected");
   pages.youtube = fromSettled(brickCounts, () => bits("ok", "loaded"));

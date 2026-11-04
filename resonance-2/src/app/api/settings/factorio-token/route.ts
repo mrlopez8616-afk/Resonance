@@ -22,6 +22,8 @@ function machineCredential(request: Request): boolean {
   if (request.headers.get(FITNESS_TOKEN_HEADER)?.trim()) return true;
   if (request.headers.get("x-resonance-token")?.trim()) return true;
   if (request.headers.get("x-factorio-token")?.trim()) return true;
+  if (request.headers.get("x-printer-token")?.trim()) return true;
+  if (request.headers.get("x-obs-token")?.trim()) return true;
   return false;
 }
 

@@ -162,9 +162,9 @@ describe("broker read sync", () => {
   });
 
   it("keeps the migration, the Hobby schedules, and the read-only clients", () => {
-    const file = readFileSync(path.join(root, "db/migrations/047_broker_sync.sql"), "utf8");
+    const file = readFileSync(path.join(root, "db/migrations/049_broker_sync.sql"), "utf8");
     assert.equal(BROKER_SYNC_SQL, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "047_broker_sync");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "049_broker_sync");
     assert.equal(file.includes("INSERT"), false);
     const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {
       crons: { path: string; schedule: string }[];

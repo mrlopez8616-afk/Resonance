@@ -447,7 +447,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
             createdAt: "2026-10-09T18:00:00.000Z",
             decidedAt: null,
             title: "Send $1,200",
-            agent: "Robinhood Ops",
+            agent: "Agentic Trader",
           },
         ],
         controlNow,
@@ -613,7 +613,7 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
         {
           id: "appr_publicmodeexample",
           createdAt: "2026-10-29T15:00:00.000Z",
-          requestedByAgent: "Robinhood Ops",
+          requestedByAgent: "Agentic Trader",
           title: "Send $1,200",
           detail: "Wire $40 today",
           category: "transfer",
@@ -949,6 +949,33 @@ async function routeHtml(model: PublicFloorModel): Promise<{ path: string; html:
     { path: "/n/backup", html: backupHtml },
     { path: "/n/lessons", html: publicLessonsHtml() },
     { path: "/n/factorio", html: factorioHtml },
+    {
+      path: "/n/printer",
+      html: render(
+        createElement((await import("@/components/printer-floor")).PrinterFloor, {
+          latest: {
+            id: "1",
+            printerModel: "HP OfficeJet Pro 9120e",
+            readAt: "2026-11-04T12:00:00.000Z",
+            receivedAt: "2026-11-04T12:00:00.000Z",
+            shownAt: "2026-11-04T12:00:00.000Z",
+            version: "1",
+            supplies: [
+              {
+                supplyType: "inkCartridge",
+                color: "C",
+                percent: 72,
+                state: "ok",
+                buy: "HP 936",
+                pagesRemaining: 450,
+              },
+            ],
+          },
+          stale: true,
+          unavailable: false,
+        }),
+      ),
+    },
     { path: "/n/chain-security", html: render(createElement(chainUi.ChainSecurityFloor, { feed: chainFeed })) },
     {
       path: "/n/chain-security/autheo-theo",
@@ -1187,6 +1214,7 @@ describe("public render scan", () => {
       "/n/backup/page.tsx",
       "/n/crypto/xrp-trigger/page.tsx",
       "/n/factorio/page.tsx",
+      "/n/printer/page.tsx",
       "/n/fitness/runs/[run]/page.tsx",
       "/n/approvals/page.tsx",
       "/n/approvals/[view]/page.tsx",
@@ -1246,6 +1274,7 @@ describe("public render scan", () => {
       "/n/crawl-walk-run/built/site-health",
       "/n/lessons",
       "/n/factorio",
+      "/n/printer",
       "/n/chain-security",
       "/n/chain-security/autheo-theo",
       "/n/roundtable",
@@ -1335,7 +1364,7 @@ describe("public render scan", () => {
     assert.match(controlFeeds?.html ?? "", /XRP daily closes/);
     assert.equal(controlFeeds?.html.includes("$"), false);
     const controlBots = pages.find((page) => page.path === "/n/control/bots");
-    assert.match(controlBots?.html ?? "", /Robinhood Ops/);
+    assert.match(controlBots?.html ?? "", /Agentic Trader/);
     assert.match(controlBots?.html ?? "", /no signal/);
     assert.equal(controlBots?.html.includes("Finance Desk"), false);
     const healthPage = pages.find((page) => page.path === "/n/health");
@@ -1419,6 +1448,10 @@ describe("public render scan", () => {
       "/api/ingest/health-auto-export",
       "/api/settings/factorio-token",
       "/api/ingest/factorio",
+      "/api/settings/printer-token",
+      "/api/ingest/printer",
+      "/api/settings/obs-token",
+      "/api/ingest/obs",
       "/log",
       "/api/fills",
       "/api/bets/stake",

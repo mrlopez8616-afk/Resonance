@@ -1,6 +1,6 @@
 # Cabinet note — fill ingest (RH + Coinbase)
 
-Hub / Robinhood Ops files fills. Resonance 2.0 owns the **site write path**.
+Hub / Agentic Trader files fills. Resonance 2.0 owns the **site write path**.
 
 This brick does **not** poll Robinhood or Coinbase. The scheduled read is a separate cron ([`broker-sync.md`](./broker-sync.md)). It does **not** light new nodes. It does **not** touch Xaman principal, RH Main account credentials, or the founder-entered Flare vault quantity.
 
@@ -21,7 +21,7 @@ Live floor is **XRP + SUI + PWR + VRT + GEV + CEG + NVDA + TSM + TSLA + SPCX**. 
 
 ## Who writes what
 
-- **Hub / RH Ops** POSTs a fill after a Robinhood or Coinbase value transfer.
+- **Hub / Agentic Trader** POSTs a fill after a Robinhood or Coinbase value transfer.
 - **This app** appends the operator log and refreshes the matching live sleeve print.
 - **Founder** is the only writer of Flare vault quantity (`FLARE_VAULT_XRP` / `flare-vault`). Ingest refuses that id.
 
@@ -140,7 +140,7 @@ Math is decimal-string (no binary float). Trailing zeros are stripped.
 
 ### Historical backfill
 
-`backfill: true` is the general form of the position-log exception below. Robinhood Ops can replay fills whose quantity is already in the live sleeve. The row is logged. The sleeve is not.
+`backfill: true` is the general form of the position-log exception below. Agentic Trader can replay fills whose quantity is already in the live sleeve. The row is logged. The sleeve is not.
 
 Send it on the fill object, or beside a `{ "fill": { ... } }` wrapper. `historical: true` is the same flag. Only the JSON boolean `true` counts. The stored row and the POST response use `backfill`, not `historical`.
 

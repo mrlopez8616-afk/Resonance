@@ -1,5 +1,5 @@
--- Broker read sync. Number 047.
--- 046 stores Factorio snapshots. This file stores the last Coinbase and
+-- Broker read sync. Number 049.
+-- 048 stores OBS recordings. This file stores the last Coinbase and
 -- Robinhood read: status, positions, cash balances, and recent orders.
 -- The cron is read-only. These tables do not place orders.
 -- Idempotent: CREATE is IF NOT EXISTS. A second run changes nothing.

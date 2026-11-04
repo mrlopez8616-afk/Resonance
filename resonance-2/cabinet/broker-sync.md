@@ -16,7 +16,7 @@ The route accepts `Authorization: Bearer <CRON_SECRET>` or the sync secret. `CRO
 
 ## What a successful read stores
 
-Postgres tables from migration `047_broker_sync`:
+Postgres tables from migration `049_broker_sync`:
 
 | Table | What it holds |
 | --- | --- |

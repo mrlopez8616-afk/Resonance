@@ -113,7 +113,8 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     label: "YouTube",
     href: "/n/youtube",
     status: "live",
-    connection: "YouTube Studio runs this node. Channel stats are not connected yet.",
+    connection:
+      "YouTube Studio runs this node. Channel stats are connected and pulled about three times a day. OBS/PC is an automatic bridge for recordings on Gear.",
     children: [
       { id: "channel", label: "Channel", href: "/n/youtube/channel" },
       { id: "gear", label: "Gear", href: "/n/youtube/gear" },
@@ -137,6 +138,14 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
     children: [],
   },
   {
+    id: "printer",
+    label: "Printer",
+    href: "/n/printer",
+    status: "live",
+    connection: "An automatic bridge posts ink levels from the HP OfficeJet Pro 9120e.",
+    children: [],
+  },
+  {
     id: "health",
     label: "Health",
     href: "/n/health",
@@ -146,6 +155,37 @@ export const SYSTEM_NODES: readonly SystemNode[] = [
   },
 ];
 
+/**
+ * Roster id stays `robinhood-ops`. Roundtable rows, fill signals, and calendar
+ * writers already use it. The public film slug is `agentic-trader`.
+ */
+export const AGENTIC_TRADER_ID = "robinhood-ops" as const;
+export const AGENTIC_TRADER_SLUG = "agentic-trader" as const;
+export const AGENTIC_TRADER_NAME = "Agentic Trader" as const;
+const LEGACY_AGENT_NAME = "Robinhood Ops";
+
+export function agentPublicSlug(id: string): string {
+  return id === AGENTIC_TRADER_ID ? AGENTIC_TRADER_SLUG : id;
+}
+
+/** Current agent name in copy that was stored under the old name. Source paths stay. */
+export function presentAgentCopy(value: string): string {
+  return value
+    .replaceAll(`${LEGACY_AGENT_NAME}'s`, `${AGENTIC_TRADER_NAME}'s`)
+    .replaceAll(`${LEGACY_AGENT_NAME}'`, `${AGENTIC_TRADER_NAME}'s`)
+    .replaceAll(LEGACY_AGENT_NAME, AGENTIC_TRADER_NAME)
+    .replaceAll("RH Ops", AGENTIC_TRADER_NAME);
+}
+
+/** Old film URL. Next keeps the query string. */
+export const AGENTIC_TRADER_REDIRECTS = [
+  {
+    source: `/film/system/agents/${AGENTIC_TRADER_ID}`,
+    destination: `/film/system/agents/${AGENTIC_TRADER_SLUG}`,
+    permanent: true,
+  },
+] as const;
+
 export const SYSTEM_AGENTS = [
   {
     id: "sophia",
@@ -154,9 +194,9 @@ export const SYSTEM_AGENTS = [
     nodes: ["All nodes"],
   },
   {
-    id: "robinhood-ops",
-    name: "Robinhood Ops",
-    role: "Reads Coinbase and Robinhood on a schedule. Trades Robinhood Agentic and Coinbase Agentic only with the owner's yes.",
+    id: AGENTIC_TRADER_ID,
+    name: AGENTIC_TRADER_NAME,
+    role: "Reads Coinbase and Robinhood on a schedule. The agentic trader across Robinhood and Coinbase, and every order needs Andres's yes.",
     nodes: ["Crypto", "AI Stocks"],
   },
   {
@@ -264,7 +304,7 @@ export const DATA_SOURCES = [
   {
     id: "robinhood",
     name: "Robinhood",
-    feeds: "A scheduled read of crypto holdings, buying power, and recent orders for Robinhood Agentic. Stock positions are not configured. Approved fills still post through the fill log.",
+    feeds: "A scheduled read of crypto holdings, buying power, and recent orders for Robinhood Agentic. Stock positions are not configured. Fills posted by Agentic Trader through the fill log update the Robinhood Agentic sleeves.",
     cadence: "About 8 AM, 1 PM, and 7 PM CT. A failed read or a read older than a day is marked stale. The read does not place orders.",
   },
   {
@@ -321,6 +361,18 @@ export const DATA_SOURCES = [
     feeds: "Factory snapshots from the resonance-bridge mod. They feed the Factorio node.",
     cadence: "About every 5 minutes while the save is open.",
   },
+  {
+    id: "printer",
+    name: "Printer",
+    feeds: "Ink levels from the HP OfficeJet Pro 9120e public supplies endpoint. The automatic bridge posts them to the Printer node.",
+    cadence: "A few times a day, from the PC.",
+  },
+  {
+    id: "obs",
+    name: "OBS/PC",
+    feeds: "Recording files from the PC. The automatic bridge posts them to YouTube Gear.",
+    cadence: "When OBS saves a recording.",
+  },
 ] as const;
 
 /**
@@ -360,6 +412,8 @@ export const SOURCE_REACH = {
   "build-api": ["build"],
   calendar: ["fight-desk", "crypto", "ai-stocks", "build"],
   factorio: ["factorio"],
+  printer: ["printer"],
+  obs: ["youtube"],
 } as const satisfies Record<(typeof DATA_SOURCES)[number]["id"], readonly string[]>;
 
 export const GOVERNANCE = [

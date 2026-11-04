@@ -1,3 +1,4 @@
+import styles from "@/components/obs-recordings.module.css";
 import {
   EmptyCard,
   NodeGrid,
@@ -268,11 +269,31 @@ export function YouTubeChannel({
   );
 }
 
-export function YouTubeGearList({ gear = YOUTUBE_GEAR }: { gear?: readonly YouTubeGear[] }) {
+export type GearRecording = {
+  key: string;
+  fileName: string;
+  length: string;
+  size: string;
+  time: string;
+};
+
+export function YouTubeGearList({
+  gear = YOUTUBE_GEAR,
+  recordings = [],
+  updatedAt = null,
+  lastSeenLabel = null,
+}: {
+  gear?: readonly YouTubeGear[];
+  recordings?: readonly GearRecording[];
+  /** ISO time of the newest OBS post. The header prints it as Updated. */
+  updatedAt?: string | null;
+  /** Clock text for the recordings card, already formatted. */
+  lastSeenLabel?: string | null;
+}) {
   const parts: NodePart[] = gear.length > 0 ? ["live"] : ["missing"];
   return (
     <NodeLayout>
-      <NodeHeader name="Gear" parts={parts} backHref="/n/youtube" />
+      <NodeHeader name="Gear" parts={parts} updatedAt={updatedAt} backHref="/n/youtube" />
       <p className="node-note">{YOUTUBE_GEAR_SOURCE}</p>
       <NodeSections>
         <NodeSection kind="lists" empty={gear.length === 0}>
@@ -287,6 +308,24 @@ export function YouTubeGearList({ gear = YOUTUBE_GEAR }: { gear?: readonly YouTu
                   href={gearHref(item.id)}
                 />
               ))}
+            </NodeGrid>
+          )}
+        </NodeSection>
+        <NodeSection kind="lists" label="Recordings" empty={recordings.length === 0}>
+          {recordings.length === 0 ? null : (
+            <NodeGrid>
+              <StatCard span="list" label="Latest recordings" detail={lastSeenLabel ? `Last seen ${lastSeenLabel}` : null}>
+                <ul className={styles.rows}>
+                  {recordings.map((row) => (
+                    <li key={row.key}>
+                      <span className={styles.name}>{row.fileName}</span>
+                      <span className={styles.meta}>{row.length}</span>
+                      <span className={styles.meta}>{row.size}</span>
+                      <span className={styles.meta}>{row.time}</span>
+                    </li>
+                  ))}
+                </ul>
+              </StatCard>
             </NodeGrid>
           )}
         </NodeSection>
