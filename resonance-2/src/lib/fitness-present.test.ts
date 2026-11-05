@@ -352,6 +352,8 @@ describe("resonance analytics", () => {
     );
     const score = buildAnalytics({ metrics: steady, workouts: [], today: TODAY, publicMode: true });
     assert.match(score.find((metric) => metric.id === "step-consistency")?.how ?? "", /8,000/);
+    assert.match(score.find((metric) => metric.id === "step-consistency")?.how ?? "", /Central Time days/);
+    assert.equal((score.find((metric) => metric.id === "step-streak")?.how ?? "").includes("Chicago"), false);
     assert.match(score.find((metric) => metric.id === "step-consistency")?.value ?? "", /%$/);
   });
 
@@ -367,12 +369,14 @@ describe("resonance analytics", () => {
     const metrics = buildAnalytics({ metrics: [], workouts, today: TODAY, publicMode: true });
     const miles = metrics.find((metric) => metric.id === "weekly-mileage");
     assert.equal(miles?.bars.length, 8);
+    assert.match(miles?.how ?? "", /Central Time weeks/);
     const pace = metrics.find((metric) => metric.id === "pace-progression");
     assert.match(pace?.value ?? "", /\/mi/);
     assert.match(pace?.how ?? "", /last 5 runs/);
     const share = metrics.find((metric) => metric.id === "long-run-share");
     assert.match(share?.value ?? "", /%$/);
     assert.match(share?.how ?? "", /longest run/);
+    assert.match(share?.how ?? "", /Central Time weeks/);
     for (const metric of metrics) assert.match(metric.how, /\w/);
   });
 
@@ -384,14 +388,19 @@ describe("resonance analytics", () => {
     const html = render(createElement(AnalyticsMirror, { metrics: pub }));
     assert.equal(textHasHeartRate(html), false);
     assert.match(html, /How it(?:'|&#x27;)s calculated/);
+    assert.match(html, /Central Time/);
+    assert.equal(html.includes("Chicago"), false);
     assert.match(html, /Resonance Analytics/);
 
     const priv = buildAnalytics({ metrics: [], workouts, today: TODAY, publicMode: false });
     const restingCard = priv.find((metric) => metric.id === "resting-heart");
     assert.equal(restingCard?.value, "Not connected yet");
     assert.match(restingCard?.detail ?? "", /resting_heart_rate/);
+    assert.match(restingCard?.how ?? "", /Central Time day/);
+    assert.equal((restingCard?.how ?? "").includes("Chicago"), false);
     const average = priv.find((metric) => metric.id === "average-heart");
     assert.match(average?.value ?? "", /bpm/);
+    assert.match(average?.how ?? "", /Central Time days/);
 
     const connected = buildAnalytics({
       metrics: [resting("2026-10-01", 60), resting("2026-10-20", 64)],
@@ -400,6 +409,7 @@ describe("resonance analytics", () => {
       publicMode: false,
     });
     assert.match(connected.find((metric) => metric.id === "resting-heart")?.value ?? "", /bpm/);
+    assert.match(connected.find((metric) => metric.id === "resting-heart")?.how ?? "", /Central Time days/);
     assert.ok((connected.find((metric) => metric.id === "resting-heart")?.bars.length ?? 0) > 0);
   });
 });
