@@ -42,7 +42,7 @@ export function HealthAutoExportGuide() {
         </li>
         <li>Start and end each export on a calendar day so one day is not split across requests.</li>
         <li>
-          Overlapping ranges are safe. A Chicago day replaces that day. A workout id replaces that workout.
+          Overlapping ranges are safe. A Central Time day replaces that day. A workout id replaces that workout.
         </li>
         <li>Leave both automations on after the backfill.</li>
       </ol>
