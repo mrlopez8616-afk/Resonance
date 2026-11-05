@@ -1114,7 +1114,7 @@ const ANALYTICS_BUILDERS: {
         title: "Step streak",
         value: streak === null ? NOT_RECORDED : `${formatCount(streak)} ${streak === 1 ? "day" : "days"}`,
         detail: streak === null ? null : `Goal ${formatCount(STEP_GOAL)} steps`,
-        how: `Chicago days in a row at or above ${formatCount(STEP_GOAL)} steps, through today. A day with no sample does not count, and it ends the streak once a sample lands under the goal.`,
+        how: `Central Time days in a row at or above ${formatCount(STEP_GOAL)} steps, through today. A day with no sample does not count, and it ends the streak once a sample lands under the goal.`,
         bars: [],
       };
     },
@@ -1129,7 +1129,7 @@ const ANALYTICS_BUILDERS: {
         title: "Step consistency",
         value: score === null ? NOT_RECORDED : `${Math.round(score)}%`,
         detail: score === null ? null : `Last 30 days at ${formatCount(STEP_GOAL)}`,
-        how: `Days at or above ${formatCount(STEP_GOAL)} steps, divided by the last 30 Chicago days. A day with no sample counts as under the goal.`,
+        how: `Days at or above ${formatCount(STEP_GOAL)} steps, divided by the last 30 Central Time days. A day with no sample counts as under the goal.`,
         bars: [],
       };
     },
@@ -1156,7 +1156,7 @@ const ANALYTICS_BUILDERS: {
         title: "Weekly mileage",
         value: any ? formatMiles(latest) : NOT_RECORDED,
         detail,
-        how: "Run miles added up for each of the last 8 Chicago weeks, Monday through Sunday. A week with no run is zero.",
+        how: "Run miles added up for each of the last 8 Central Time weeks, Monday through Sunday. A week with no run is zero.",
         bars: any ? bars : [],
       };
     },
@@ -1230,7 +1230,7 @@ const ANALYTICS_BUILDERS: {
         title: "Long-run portion",
         value: share === null ? NOT_RECORDED : `${Math.round(share)}%`,
         detail: share === null ? null : "Longest run in each week",
-        how: "Miles from each week's longest run, divided by all run miles in the last 8 Chicago weeks.",
+        how: "Miles from each week's longest run, divided by all run miles in the last 8 Central Time weeks.",
         bars,
       };
     },
@@ -1245,7 +1245,7 @@ const ANALYTICS_BUILDERS: {
           title: "Resting heart rate",
           value: NOT_CONNECTED,
           detail: "Add resting_heart_rate in Health Auto Export.",
-          how: "One resting_heart_rate for each Chicago day. A later export for that day replaces the stored value. No number is filled in before it arrives.",
+          how: "One resting_heart_rate for each Central Time day. A later export for that day replaces the stored value. No number is filled in before it arrives.",
           bars: [],
         };
       }
@@ -1261,7 +1261,7 @@ const ANALYTICS_BUILDERS: {
         title: "Resting heart rate",
         value: latest === null || latest === undefined ? NOT_RECORDED : `${formatCount(latest)} bpm`,
         detail: bpmDelta(current, previous),
-        how: "Latest resting_heart_rate, with the average of the last 30 Chicago days beside the 30 days before that.",
+        how: "Latest resting_heart_rate, with the average of the last 30 Central Time days beside the 30 days before that.",
         bars: days.flatMap((day) => {
           const value = context.resting.get(day);
           if (value === undefined) return [];
@@ -1281,7 +1281,7 @@ const ANALYTICS_BUILDERS: {
           title: "Average heart rate",
           value: NOT_RECORDED,
           detail: null,
-          how: "Average of each workout's average heart rate over the last 30 Chicago days, beside the 30 days before.",
+          how: "Average of each workout's average heart rate over the last 30 Central Time days, beside the 30 days before.",
           bars: [],
         };
       }
@@ -1297,7 +1297,7 @@ const ANALYTICS_BUILDERS: {
         title: "Average heart rate",
         value: current === null ? `${formatCount(withHeart[0]?.heartAvg ?? 0)} bpm` : `${formatCount(current)} bpm`,
         detail: bpmDelta(current, previous) ?? "From workouts",
-        how: "Average of each workout's average heart rate over the last 30 Chicago days, beside the 30 days before.",
+        how: "Average of each workout's average heart rate over the last 30 Central Time days, beside the 30 days before.",
         bars: recent.flatMap((run) => {
           if (run.heartAvg === null) return [];
           return [{ id: run.id, label: shortDay(run.day), value: run.heartAvg, caption: `${formatCount(run.heartAvg)} bpm` }];
