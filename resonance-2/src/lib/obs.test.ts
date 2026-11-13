@@ -126,8 +126,8 @@ describe("obs recordings", () => {
   it("keeps the migration file and the embedded copy identical", () => {
     const file = readFileSync(path.join(root, "db/migrations/048_obs.sql"), "utf8");
     assert.equal(OBS_SQL, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "048_obs");
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "049_broker_sync");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "048_obs");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-2)?.id, "049_broker_sync");
     assert.equal(file.includes("INSERT"), false);
     const bridge = DATA_SOURCES.find((source) => source.id === "obs");
     assert.equal(bridge?.name, "OBS/PC");
