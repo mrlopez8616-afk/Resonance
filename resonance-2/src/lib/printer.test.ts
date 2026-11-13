@@ -159,7 +159,7 @@ describe("printer snapshots", () => {
   it("keeps the migration file and the embedded copy identical", () => {
     const file = readFileSync(path.join(root, "db/migrations/047_printer.sql"), "utf8");
     assert.equal(PRINTER_SQL, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-3)?.id, "047_printer");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-4)?.id, "047_printer");
     assert.equal(file.includes("INSERT"), false);
   });
 

@@ -6,6 +6,13 @@ import {
   healthAutoExportTokenMatches,
   parseHealthAutoExport,
 } from "@/lib/health-auto-export";
+import {
+  beginIngestAttempt,
+  HEALTH_AUTO_EXPORT_INGEST_ROUTE,
+  markIngestAttempt,
+  noteIngestBodyLength,
+  recordIngestAttempt,
+} from "@/lib/ingest-attempts";
 import { isStorageUnavailable, storageErrorJson } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +32,8 @@ export const maxDuration = 60;
  * too large, export a shorter range that starts and ends on a calendar day.
  * Posting September and then October leaves September in place. A Chicago day
  * or a workout id that appears again replaces that row.
+ * Each request writes one attempt row: status, a short reason, and counts.
+ * That row does not include the token, the header value, or the body.
  */
 
 function json(status: number, body: { ok: boolean; error?: string; steps?: number; workouts?: number }) {
@@ -34,13 +43,18 @@ function json(status: number, body: { ok: boolean; error?: string; steps?: numbe
   });
 }
 
-export async function POST(request: Request) {
+function tooLarge() {
+  return json(413, {
+    ok: false,
+    error: "Body is too large. Turn on Batch Requests, or export a shorter date range. The limit is 4.5 MB.",
+  });
+}
+
+async function handleHealthAutoExport(request: Request, draft: ReturnType<typeof beginIngestAttempt>) {
   const declared = Number(request.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > HEALTH_AUTO_EXPORT_BODY_LIMIT) {
-    return json(413, {
-      ok: false,
-      error: "Body is too large. Turn on Batch Requests, or export a shorter date range. The limit is 4.5 MB.",
-    });
+    markIngestAttempt(draft, 413, false, "body too large");
+    return tooLarge();
   }
 
   let stored: string | null;
@@ -49,52 +63,74 @@ export async function POST(request: Request) {
   } catch (error) {
     const reason = isStorageUnavailable(error) ? error.reason : "token lookup failed";
     console.error("health auto export auth failed", reason);
+    markIngestAttempt(draft, 503, false, "token lookup failed");
     return json(503, { ok: false, error: "Health Auto Export is not configured." });
   }
-  if (!stored) return json(503, { ok: false, error: "Health Auto Export is not configured." });
+  if (!stored) {
+    markIngestAttempt(draft, 503, false, "no token configured");
+    return json(503, { ok: false, error: "Health Auto Export is not configured." });
+  }
 
   const presented = request.headers.get(HEALTH_AUTO_EXPORT_HEADER)?.trim() ?? "";
   if (!presented || !healthAutoExportTokenMatches(presented, stored)) {
+    markIngestAttempt(draft, 401, false, presented ? "bad token" : "missing header");
     return json(401, { ok: false, error: "Unauthorized." });
   }
+  draft.authOk = true;
 
   let raw: string;
   try {
     raw = await request.text();
   } catch {
+    markIngestAttempt(draft, 400, true, "bad body");
     return json(400, { ok: false, error: "JSON body is required." });
   }
+  noteIngestBodyLength(draft, raw);
   if (raw.length > HEALTH_AUTO_EXPORT_BODY_LIMIT) {
-    return json(413, {
-      ok: false,
-      error: "Body is too large. Turn on Batch Requests, or export a shorter date range. The limit is 4.5 MB.",
-    });
+    markIngestAttempt(draft, 413, true, "body too large");
+    return tooLarge();
   }
 
   let body: unknown;
   try {
     body = JSON.parse(raw) as unknown;
   } catch {
+    markIngestAttempt(draft, 400, true, "bad body");
     return json(400, { ok: false, error: "JSON body is required." });
   }
 
   const parsed = parseHealthAutoExport(body);
   if (parsed.metrics.length === 0 && parsed.workouts.length === 0) {
+    markIngestAttempt(draft, 400, true, "bad body");
     return json(400, { ok: false, error: "No steps or workouts in the body." });
   }
 
   try {
     const written = await writeHealthAutoExport(parsed);
+    const metricIds = new Set(parsed.metrics.map((row) => `${row.source}:${row.externalId}`));
+    const workoutIds = new Set(parsed.workouts.map((row) => `${row.source}:${row.externalId}`));
+    markIngestAttempt(draft, 200, true, "ok", metricIds.size + workoutIds.size);
     return json(200, { ok: true, steps: written.steps, workouts: written.workouts });
   } catch (error) {
     const reason = isStorageUnavailable(error) ? error.reason : "Health Auto Export ingest failed.";
     console.error("health auto export ingest failed", reason);
+    const status = isStorageUnavailable(error) ? 503 : 500;
+    markIngestAttempt(draft, status, true, status === 503 ? "storage unavailable" : "write failed");
     return NextResponse.json(
       storageErrorJson({
         message: isStorageUnavailable(error) ? error.message : "Health Auto Export ingest failed.",
         reason,
       }),
-      { status: isStorageUnavailable(error) ? 503 : 500, headers: { "cache-control": "no-store" } },
+      { status, headers: { "cache-control": "no-store" } },
     );
+  }
+}
+
+export async function POST(request: Request) {
+  const draft = beginIngestAttempt(HEALTH_AUTO_EXPORT_INGEST_ROUTE, request);
+  try {
+    return await handleHealthAutoExport(request, draft);
+  } finally {
+    await recordIngestAttempt(draft, request);
   }
 }

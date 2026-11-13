@@ -3,6 +3,7 @@ import { authorizeHealthRequest } from "@/lib/health-auth";
 import { loadHealthFull } from "@/lib/health-full-load";
 import { rememberHealthMark } from "@/lib/health-mark";
 import { publicHealthReport } from "@/lib/health-report";
+import { loadIngestHealth } from "@/lib/ingest-attempts";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ const PRIVATE = { "cache-control": "no-store" };
  * Read-only floor probe. `Authorization: Bearer $RESONANCE_HEALTH_TOKEN`.
  * The sync secret is not accepted. There is no write handler.
  * The result is also stored as one mark so the YouTube pull can see it.
+ * `ingest` adds attempt timestamps and counts for the fitness posts.
+ * It does not include a token, a header value, or a body.
  */
 export async function GET(request: Request) {
   if (!authorizeHealthRequest(request)) {
@@ -24,7 +27,8 @@ export async function GET(request: Request) {
     } catch {
       // The YouTube pull reads only a recorded pass. A missed write is not one.
     }
-    return NextResponse.json(report, { headers: PRIVATE });
+    const ingest = await loadIngestHealth();
+    return NextResponse.json({ ...report, ingest }, { headers: PRIVATE });
   } catch {
     return NextResponse.json(
       { ok: false, error: "Health check failed." },
