@@ -7,8 +7,10 @@ import {
   getFitnessIngestToken,
   getSyncSecret,
   readBearerToken,
+  readIngestCredentials,
   writeProtectionEnabled,
   type FitnessAuthResult,
+  type IngestCredentials,
   type SyncAuthResult,
 } from "./sync-auth-core";
 
@@ -17,15 +19,15 @@ export {
   getFitnessIngestToken,
   getSyncSecret,
   readBearerToken,
+  readIngestCredentials,
   writeProtectionEnabled,
+  type IngestCredentials,
 };
 
 export function authorizeFitnessRequest(request: Request): FitnessAuthResult {
-  const header = request.headers.get(FITNESS_TOKEN_HEADER)?.trim() ?? "";
   return authorizeFitnessAccess({
     token: getFitnessIngestToken(),
-    bearer: readBearerToken(request.headers.get("authorization")),
-    headerToken: header || null,
+    presented: readIngestCredentials(request.headers).tokens,
   });
 }
 

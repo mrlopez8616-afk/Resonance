@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { decimalString, energyKcal, parseHealthTimestamp } from "@/lib/fitness-parse";
 import type { FitnessMetricWrite, FitnessWorkoutWrite, FitnessWrites } from "@/lib/fitness-types";
+import { tokensMatch } from "@/lib/sync-auth-core";
 
 /** Vercel serverless functions reject a request body over about 4.5 MB. */
 export const HEALTH_AUTO_EXPORT_BODY_LIMIT = 4_500_000;
@@ -32,6 +33,44 @@ export function healthAutoExportTokenMatches(provided: string, storedHex: string
     return false;
   }
   return timingSafeEqual(left, right);
+}
+
+export type HealthAutoExportAuth =
+  | { ok: true }
+  | { ok: false; status: 401 | 503; reason: "missing header" | "bad token" | "no token configured" };
+
+/**
+ * The stored digest and, when set, FITNESS_INGEST_TOKEN.
+ * Both unset fails closed. The hub sync secret is not an accepted token.
+ * Every presented value is compared in constant time.
+ */
+export function authorizeHealthAutoExportAccess(input: {
+  presented: readonly string[];
+  digest: string | null;
+  fitnessToken: string | null;
+}): HealthAutoExportAuth {
+  const digest = input.digest?.trim() || null;
+  const fitnessToken = input.fitnessToken?.trim() || null;
+  if (!digest && !fitnessToken) {
+    return { ok: false, status: 503, reason: "no token configured" };
+  }
+  const presented = input.presented.filter((value) => value.trim());
+  let accepted = false;
+  if (presented.length === 0) {
+    if (digest) healthAutoExportTokenMatches(" ", digest);
+    if (fitnessToken) tokensMatch(" ", fitnessToken);
+  } else {
+    for (const token of presented) {
+      if (digest && healthAutoExportTokenMatches(token, digest)) accepted = true;
+      if (fitnessToken && tokensMatch(token, fitnessToken)) accepted = true;
+    }
+  }
+  if (accepted) return { ok: true };
+  return {
+    ok: false,
+    status: 401,
+    reason: presented.length === 0 ? "missing header" : "bad token",
+  };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

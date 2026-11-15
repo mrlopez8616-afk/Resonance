@@ -2,7 +2,7 @@
 
 Summaries typed in from an app that does not post on its own. Resonance stores the rows. The site does not invent a figure.
 
-These rows never feed the daily step rows, the run rows, or the steps and runs charts. A week or month figure can use a summary when those days have no day-by-day record. If a day-by-day record covers the same days, that record is kept and the summary is not added again.
+A single-day step summary counts on the Fitness steps chart and the home step total when that Central Time day has no Health Auto Export or Shortcuts step row. When that day has one, the live total is kept and the manual steps are not added. Non-step summaries never feed the daily step rows, the run rows, or the steps and runs charts. A week or month figure can use a summary when those days have no day-by-day record. If a day-by-day record covers the same days, that record is kept and the summary is not added again.
 
 | Piece | Path | Use |
 | --- | --- | --- |

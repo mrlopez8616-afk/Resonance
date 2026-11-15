@@ -5,6 +5,7 @@ import {
   type FitnessNodeDetail,
   type FitnessRow,
 } from "@/lib/fitness-board";
+import type { FitnessMetricWrite } from "@/lib/fitness-types";
 import { stripMoneyText } from "@/lib/public-mode";
 
 /** One posted summary. Amounts stay decimal strings. Dates are YYYY-MM-DD. */
@@ -329,4 +330,52 @@ export function manualEntryJson(entry: ManualSummary, publicMode: boolean): Reco
     source: shown(entry.source, publicMode),
     created_at: entry.createdAt,
   };
+}
+
+/** A typed step total. Sessions and other counts are not steps. */
+export function manualStepSummary(entry: Pick<ManualSummary, "metric" | "unit">): boolean {
+  const metric = entry.metric.toLowerCase();
+  const unit = entry.unit.toLowerCase();
+  return metric.includes("step") || unit === "steps" || unit === "step";
+}
+
+/**
+ * Single-day manual steps fill a Central Time day that has no step row yet.
+ * A day that already has Health Auto Export, Shortcuts, or a manual metric keeps that row.
+ * A multi-day step summary is left out, so a lump sum is not added on top of a live day.
+ * Non-step summaries are left out.
+ */
+export function foldManualStepDays(
+  metrics: readonly FitnessMetricWrite[],
+  manuals: readonly ManualSummary[],
+): FitnessMetricWrite[] {
+  const covered = new Set<string>();
+  for (const row of metrics) {
+    if (row.metric !== "step_count") continue;
+    const qty = Number(row.qty);
+    if (!Number.isFinite(qty) || qty < 0) continue;
+    covered.add(row.day.slice(0, 10));
+  }
+  const extra: FitnessMetricWrite[] = [];
+  for (const entry of manuals) {
+    if (!manualStepSummary(entry) || entry.periodStart !== entry.periodEnd) continue;
+    if (covered.has(entry.periodStart)) continue;
+    const qty = Number(entry.value);
+    if (!Number.isFinite(qty) || qty < 0) continue;
+    covered.add(entry.periodStart);
+    extra.push({
+      source: "manual-import",
+      externalId: `manual-step:${entry.id}`,
+      metric: "step_count",
+      day: entry.periodStart,
+      recordedAt: entry.createdAt || null,
+      qty: canonicalManualValue(entry.value),
+      units: "count",
+      qtyMin: null,
+      qtyMax: null,
+      origin: "manual",
+      payload: { source: "Manual import" },
+    });
+  }
+  return extra.length === 0 ? [...metrics] : [...metrics, ...extra];
 }

@@ -17,6 +17,8 @@ import {
   type FitnessWeekFacts,
 } from "@/lib/fitness-board";
 import { latestFitnessUpdatedAt } from "@/lib/fitness-layout";
+import { foldManualStepDays } from "@/lib/fitness-manual";
+import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { fitnessLocalFile, readLocalFitness, upsertLocalFitness } from "@/lib/fitness-local";
 import { MANUAL_RUN_IDS, MANUAL_STEP_ID, manualFitnessSeed } from "@/lib/fitness-seed";
 import type { FitnessMetricWrite, FitnessOrigin, FitnessWorkoutWrite, FitnessWrites, NrcRunWrite } from "@/lib/fitness-types";
@@ -616,7 +618,8 @@ export async function loadFitnessHome(today = chicagoToday()): Promise<{
   availability: FitnessAvailability;
 }> {
   try {
-    const read = present(await readFitness(today));
+    const [raw, manual] = await Promise.all([readFitness(today), loadFitnessManual()]);
+    const read = present({ ...raw, metrics: foldManualStepDays(raw.metrics, manual.entries) });
     return {
       line: fitnessHomeLine(read.metrics, read.workouts, read.today),
       week: fitnessWeekFacts(read.metrics, read.workouts, read.today),

@@ -41,6 +41,8 @@ export type IngestAttemptDraft = {
   reason: IngestAttemptReason;
   contentLength: number | null;
   rowsUpserted: number | null;
+  /** JSON array of header names present on an auth failure. Null until then. */
+  authHeaders: string | null;
 };
 
 export type IngestRouteSummary = {
@@ -82,7 +84,19 @@ export function beginIngestAttempt(route: string, request: Request): IngestAttem
     reason: "write failed",
     contentLength: declaredContentLength(request),
     rowsUpserted: null,
+    authHeaders: null,
   };
+}
+
+/**
+ * Auth failure only. Stores a JSON array of header names, never values.
+ * A name that is not a short token of letters, digits, and hyphens is dropped.
+ */
+export function noteRejectedAuthHeaders(draft: IngestAttemptDraft, names: readonly string[]): void {
+  const clean = [...new Set(names.map((name) => name.trim().toLowerCase()))].filter((name) =>
+    /^[a-z0-9-]{1,40}$/.test(name),
+  );
+  draft.authHeaders = JSON.stringify(clean);
 }
 
 export function markIngestAttempt(
@@ -143,8 +157,8 @@ export async function recordIngestAttempt(draft: IngestAttemptDraft, request: Re
     }
     await sqlQuery(
       `INSERT INTO ingest_attempts (
-         route, status_code, auth_ok, reason, user_agent, content_length, rows_upserted
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         route, status_code, auth_ok, reason, user_agent, content_length, rows_upserted, auth_headers
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         draft.route,
         draft.statusCode,
@@ -153,6 +167,7 @@ export async function recordIngestAttempt(draft: IngestAttemptDraft, request: Re
         userAgent(request),
         wholeOrNull(draft.contentLength),
         wholeOrNull(draft.rowsUpserted),
+        draft.authHeaders,
       ],
     );
   } catch (error) {

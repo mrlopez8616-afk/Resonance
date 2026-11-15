@@ -10,10 +10,11 @@ import {
   FITNESS_INGEST_ROUTE,
   markIngestAttempt,
   noteIngestBodyLength,
+  noteRejectedAuthHeaders,
   recordIngestAttempt,
   type IngestAttemptReason,
 } from "@/lib/ingest-attempts";
-import { authorizeFitnessRequest, FITNESS_TOKEN_HEADER, readBearerToken } from "@/lib/sync-auth";
+import { authorizeFitnessRequest, readIngestCredentials } from "@/lib/sync-auth";
 import { isStorageUnavailable, storageErrorJson } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,11 @@ export const maxDuration = 60;
 
 /**
  * Health Auto Export and Apple Shortcuts target.
- * Header: `Authorization: Bearer <FITNESS_INGEST_TOKEN>`
- * or `X-Fitness-Token: <FITNESS_INGEST_TOKEN>`.
+ * Header: `Authorization: Bearer <FITNESS_INGEST_TOKEN>`,
+ * `X-Resonance-Token`, or `X-Fitness-Token`.
+ * A Bearer prefix and surrounding whitespace are ignored.
  * Unset token fails closed. The hub sync secret is not accepted.
+ * The Health Auto Export digest is not accepted here.
  * A Shortcuts day keeps the larger total, so a partial nightly window
  * cannot shrink a full day. Post the same window again and the totals stay the same.
  * A later post with a higher total replaces the stored one.
@@ -42,17 +45,17 @@ export const maxDuration = 60;
  * That row does not include the token, the header value, or the body.
  */
 
-function fitnessAuthReason(request: Request, status: number): IngestAttemptReason {
+function fitnessAuthReason(tokenCount: number, status: number): IngestAttemptReason {
   if (status === 503) return "no token configured";
-  const bearer = readBearerToken(request.headers.get("authorization"));
-  const header = request.headers.get(FITNESS_TOKEN_HEADER)?.trim() ?? "";
-  return bearer || header ? "bad token" : "missing header";
+  return tokenCount > 0 ? "bad token" : "missing header";
 }
 
 async function handleFitnessIngest(request: Request, draft: ReturnType<typeof beginIngestAttempt>) {
+  const creds = readIngestCredentials(request.headers);
   const auth = authorizeFitnessRequest(request);
   if (!auth.ok) {
-    markIngestAttempt(draft, auth.status, false, fitnessAuthReason(request, auth.status));
+    noteRejectedAuthHeaders(draft, creds.headerNames);
+    markIngestAttempt(draft, auth.status, false, fitnessAuthReason(creds.tokens.length, auth.status));
     return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   }
   draft.authOk = true;

@@ -981,6 +981,15 @@ CREATE INDEX IF NOT EXISTS ingest_attempts_received_idx
   ON ingest_attempts (received_at);
 `;
 
+export const INGEST_ATTEMPT_HEADERS_SQL = `-- Header names on a rejected fitness ingest. Number 051.
+-- 050 created ingest_attempts. This file adds one text column.
+-- The column stores a JSON array of header names. It does not store values.
+-- Idempotent: ADD COLUMN is IF NOT EXISTS. A second run changes nothing.
+-- This file inserts nothing.
+
+ALTER TABLE ingest_attempts ADD COLUMN IF NOT EXISTS auth_headers text;
+`;
+
 export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_domain_tables", sql: DOMAIN_SCHEMA_SQL },
   { id: "002_fitness", sql: FITNESS_SCHEMA_SQL },
@@ -1030,4 +1039,5 @@ export const EMBEDDED_MIGRATIONS: { id: string; sql: string }[] = [
   { id: "048_obs", sql: OBS_SQL },
   { id: "049_broker_sync", sql: BROKER_SYNC_SQL },
   { id: "050_ingest_attempts", sql: INGEST_ATTEMPTS_SQL },
+  { id: "051_ingest_attempt_headers", sql: INGEST_ATTEMPT_HEADERS_SQL },
 ];
