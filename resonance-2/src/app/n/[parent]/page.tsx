@@ -21,6 +21,7 @@ import { loadPublicFloor } from "@/lib/public-load";
 import { hasMoneyText, scrubTextFields } from "@/lib/public-mode";
 import { loadFinancePage } from "@/lib/finance/store";
 import { financeCards } from "@/lib/finance/view";
+import { foldManualStepDays } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
 import { latestFitnessUpdatedAt } from "@/lib/fitness-layout";
 import { buildAnalytics, buildRunsView, buildStepsView, parseFitnessTab, parseStepSpan } from "@/lib/fitness-present";
@@ -234,15 +235,16 @@ export default async function ParentNodePage({
       ...shortcutWorkoutsAsWrites(bundle.shortcutWorkouts),
       ...nrcRunsAsWrites(bundle.nrcRuns),
     ];
+    const metrics = foldManualStepDays(bundle.metrics, manual.entries);
     const steps = buildStepsView({
-      metrics: bundle.metrics,
+      metrics,
       today: bundle.today,
       span,
       publicMode,
     });
     const runs = buildRunsView({ workouts, today: bundle.today, span, publicMode });
     const analytics = buildAnalytics({
-      metrics: bundle.metrics,
+      metrics,
       workouts,
       today: bundle.today,
       publicMode,

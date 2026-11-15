@@ -22,7 +22,7 @@ import {
   type IngestHealth,
 } from "@/lib/ingest-attempts";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
-import { EMBEDDED_MIGRATIONS, INGEST_ATTEMPTS_SQL } from "@/lib/pg/embedded-migrations";
+import { EMBEDDED_MIGRATIONS, INGEST_ATTEMPT_HEADERS_SQL, INGEST_ATTEMPTS_SQL } from "@/lib/pg/embedded-migrations";
 import { migrate } from "@/lib/pg/migrate";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -157,7 +157,10 @@ describe("ingest attempts", { concurrency: false }, () => {
   it("keeps the migration file and the embedded copy identical", () => {
     const file = readFileSync(path.join(root, "db/migrations/050_ingest_attempts.sql"), "utf8");
     assert.equal(INGEST_ATTEMPTS_SQL, file);
-    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "050_ingest_attempts");
+    assert.equal(EMBEDDED_MIGRATIONS.at(-1)?.id, "051_ingest_attempt_headers");
+    const headersFile = readFileSync(path.join(root, "db/migrations/051_ingest_attempt_headers.sql"), "utf8");
+    assert.equal(INGEST_ATTEMPT_HEADERS_SQL, headersFile);
+    assert.equal(headersFile.includes("INSERT"), false);
     assert.equal(file.includes("INSERT"), false);
     assert.equal(file.includes("token_hash"), false);
     assert.equal(file.includes("health_auto_export_tokens"), false);
@@ -170,9 +173,11 @@ describe("ingest attempts", { concurrency: false }, () => {
   });
 
   it("records health auto export rejects and a success without the token or the body", async () => {
+    delete process.env.FITNESS_INGEST_TOKEN;
     const closed = await postHae(steps, null);
     assert.equal(closed.status, 503);
     assert.deepEqual(await closed.json(), { ok: false, error: "Health Auto Export is not configured." });
+    process.env.FITNESS_INGEST_TOKEN = "phone-token";
 
     const digest = hashHealthAutoExportToken(TOKEN);
     await saveHealthAutoExportTokenHash(digest);
@@ -239,7 +244,7 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(missing.status, 401);
     assert.deepEqual(await missing.json(), {
       ok: false,
-      error: "Send Authorization: Bearer <token> or X-Fitness-Token.",
+      error: "Send Authorization: Bearer <token>, X-Resonance-Token, or X-Fitness-Token.",
     });
     const wrong = await postFit(
       { source: "shortcuts", date: "2026-10-12", steps: 10 },
@@ -280,6 +285,79 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(dump.includes("hub-secret"), false);
     assert.equal(dump.includes(MARKER), false);
     assert.equal(rows.every((row) => row.route === FITNESS_INGEST_ROUTE), true);
+  });
+
+  it("accepts each header form and records only header names when auth fails", async () => {
+    const digest = hashHealthAutoExportToken(TOKEN);
+    await saveHealthAutoExportTokenHash(digest);
+    const marker = "header-value-marker";
+    const day = (date: string, qty: number) => ({
+      data: {
+        metrics: [
+          {
+            name: "step_count",
+            units: "count",
+            data: [{ qty, date: `${date} 12:00:00 -0500`, source: marker }],
+          },
+        ],
+      },
+    });
+
+    const bearer = await postHae(day("2026-09-04", 11), null, { authorization: `Bearer ${TOKEN}` });
+    assert.equal(bearer.status, 200);
+    const raw = await postHae(day("2026-09-05", 12), null, { authorization: TOKEN });
+    assert.equal(raw.status, 200);
+    const prefixed = await postHae(day("2026-09-06", 13), null, {
+      [HEALTH_AUTO_EXPORT_HEADER]: `Bearer ${TOKEN}`,
+    });
+    assert.equal(prefixed.status, 200);
+    const fitnessHeader = await postHae(day("2026-09-07", 14), null, {
+      "x-fitness-token": "  Bearer phone-token  ",
+    });
+    assert.equal(fitnessHeader.status, 200);
+    const resonanceOnFitness = await postFit(
+      { source: "shortcuts", date: "2026-10-14", steps: 40 },
+      { "x-resonance-token": "phone-token" },
+    );
+    assert.equal(resonanceOnFitness.status, 200);
+    const doubleBearer = await postFit(
+      { source: "shortcuts", date: "2026-10-15", steps: 41 },
+      { authorization: "Bearer Bearer phone-token" },
+    );
+    assert.equal(doubleBearer.status, 200);
+
+    const badBearer = await postHae(day("2026-09-08", 15), null, { authorization: `Bearer ${marker}` });
+    assert.equal(badBearer.status, 401);
+    const badFitness = await postFit(
+      { source: "shortcuts", date: "2026-10-16", steps: 1 },
+      { "x-fitness-token": marker, authorization: `Bearer ${marker}-auth` },
+    );
+    assert.equal(badFitness.status, 401);
+    const hub = await postHae(day("2026-09-09", 16), null, { authorization: "Bearer hub-secret" });
+    assert.equal(hub.status, 401);
+    delete process.env.FITNESS_INGEST_TOKEN;
+    await sqlQuery(`DELETE FROM health_auto_export_tokens`);
+    const closed = await postHae(day("2026-09-10", 17), TOKEN);
+    assert.equal(closed.status, 503);
+
+    const logged = await sqlQuery<{ route: string; reason: string; auth_headers: string | null; auth_ok: boolean | string }>(
+      `SELECT route, reason, auth_headers, auth_ok FROM ingest_attempts ORDER BY id`,
+    );
+    const names = logged.map((row) => [row.reason, row.auth_headers]);
+    assert.deepEqual(names.slice(0, 6).map((row) => row[1]), [null, null, null, null, null, null]);
+    assert.deepEqual(names.slice(6), [
+      ["bad token", '["authorization"]'],
+      ["bad token", '["authorization","x-fitness-token"]'],
+      ["bad token", '["authorization"]'],
+      ["no token configured", '["x-resonance-token"]'],
+    ]);
+    const dump = JSON.stringify(logged);
+    assert.equal(dump.includes(TOKEN), false);
+    assert.equal(dump.includes(marker), false);
+    assert.equal(dump.includes("phone-token"), false);
+    assert.equal(dump.includes("hub-secret"), false);
+    assert.equal(dump.includes(digest), false);
+    assert.equal(logged.some((row) => String(row.auth_headers ?? "").includes("Bearer")), false);
   });
 
   it("shows no request, a rejection, and a later success on the private health probe", async () => {

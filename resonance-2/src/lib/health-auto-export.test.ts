@@ -565,8 +565,10 @@ describe("health auto export ingest", { concurrency: false }, () => {
   }
 
   it("rejects a missing token, the wrong token, and the hub secret", async () => {
+    delete process.env.FITNESS_INGEST_TOKEN;
     const closed = await postIngest(aggregatedSteps, "anything");
     assert.equal(closed.status, 503);
+    process.env.FITNESS_INGEST_TOKEN = "shortcut-token";
 
     await saveHealthAutoExportTokenHash(hashHealthAutoExportToken("correct-token"));
     const missing = await postIngest(aggregatedSteps, null);
@@ -575,10 +577,8 @@ describe("health auto export ingest", { concurrency: false }, () => {
     assert.equal(wrong.status, 401);
     const hub = await postIngest(aggregatedSteps, "hub-secret");
     assert.equal(hub.status, 401);
-    const bearer = await postIngest(aggregatedSteps, null, { authorization: "Bearer correct-token" });
-    assert.equal(bearer.status, 401);
-    const shortcut = await postIngest(aggregatedSteps, null, { "x-fitness-token": "shortcut-token" });
-    assert.equal(shortcut.status, 401);
+    const hubBearer = await postIngest(aggregatedSteps, null, { authorization: "Bearer hub-secret" });
+    assert.equal(hubBearer.status, 401);
     const empty = await postIngest({ data: { metrics: [], workouts: [] } }, "correct-token");
     assert.equal(empty.status, 400);
     const rows = await sqlQuery<{ n: string }>(
@@ -810,6 +810,8 @@ describe("health auto export settings copy", () => {
     assert.match(html, /JSON/);
     assert.match(html, /Export version2/);
     assert.match(html, new RegExp(HEALTH_AUTO_EXPORT_HEADER_NAME));
+    assert.match(html, /Authorization: Bearer/);
+    assert.match(html, /X-Fitness-Token/);
     assert.match(html, /step_count/);
     assert.match(html, /Aggregate data on/);
     assert.match(html, /Include Workout Metrics ON/);

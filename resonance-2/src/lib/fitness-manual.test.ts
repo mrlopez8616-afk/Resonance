@@ -8,11 +8,14 @@ import { createElement, isValidElement, type ReactNode } from "react";
 import { newDb } from "pg-mem";
 import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/fitness/manual/route";
+import { POST as postHealthAutoExport } from "@/app/api/ingest/health-auto-export/route";
 import { SESSION_COOKIE } from "@/lib/auth-core";
 import { createSession } from "@/lib/auth-store";
-import { fitnessCards, fitnessNode, metricSamples, workoutSamples } from "@/lib/fitness-board";
+import { fitnessCards, fitnessHomeLine, fitnessNode, fitnessWeekFacts, metricSamples, workoutSamples } from "@/lib/fitness-board";
+import { buildStepsView } from "@/lib/fitness-present";
 import {
   canonicalManualValue,
+  foldManualStepDays,
   latestManualPeriod,
   manualImportCard,
   manualImportDetail,
@@ -21,7 +24,9 @@ import {
   type ManualSummary,
 } from "@/lib/fitness-manual";
 import { loadFitnessManual } from "@/lib/fitness-manual-store";
-import { loadFitnessCards, loadFitnessHome, resetFitnessStoreForTests } from "@/lib/fitness-store";
+import { hashHealthAutoExportToken } from "@/lib/health-auto-export";
+import { saveHealthAutoExportTokenHash } from "@/lib/health-auto-export-store";
+import { loadFitnessBundle, loadFitnessCards, loadFitnessHome, resetFitnessStoreForTests } from "@/lib/fitness-store";
 import { manualFitnessSeed } from "@/lib/fitness-seed";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS } from "@/lib/pg/embedded-migrations";
@@ -219,6 +224,79 @@ describe("fitness manual copy", () => {
     assert.equal(parseManualImport({ ...week, value: "none" }).ok, false);
     assert.equal(parseManualImport({ ...week, approx: "yes" }).ok, false);
     assert.equal(parseManualImport({ ...week, entry_date: "10/12/2026" }).ok, false);
+  });
+
+  it("prefers health auto export steps over a manual step for the same day", () => {
+    const manuals = [
+      summary({
+        id: "nov-9",
+        app: "Notes",
+        metric: "steps",
+        value: "5000",
+        unit: "steps",
+        periodStart: "2026-11-09",
+        periodEnd: "2026-11-09",
+      }),
+      summary({
+        id: "nov-10",
+        app: "Notes",
+        metric: "steps",
+        value: "7000",
+        unit: "steps",
+        periodStart: "2026-11-10",
+        periodEnd: "2026-11-10",
+      }),
+      summary({
+        id: "lift",
+        app: "Strong",
+        metric: "sessions",
+        value: "1",
+        unit: "count",
+        periodStart: "2026-11-09",
+        periodEnd: "2026-11-09",
+      }),
+    ];
+    const metrics = [
+      {
+        source: "health-auto-export",
+        externalId: "step_count:2026-11-09:count",
+        metric: "step_count",
+        day: "2026-11-09",
+        recordedAt: "2026-11-09T18:00:00.000Z",
+        qty: "9000",
+        units: "count",
+        qtyMin: null,
+        qtyMax: null,
+        origin: "health-auto-export" as const,
+        payload: {},
+      },
+      {
+        source: "manual",
+        externalId: "step_count:2026-11-09:manual",
+        metric: "step_count",
+        day: "2026-11-09",
+        recordedAt: null,
+        qty: "1111",
+        units: "count",
+        qtyMin: null,
+        qtyMax: null,
+        origin: "manual" as const,
+        payload: {},
+      },
+    ];
+    const folded = foldManualStepDays(metrics, manuals);
+    const samples = metricSamples(folded);
+    const nov9 = samples.find((row) => row.day === "2026-11-09" && row.metric === "step_count");
+    assert.equal(nov9?.qty, 9000);
+    assert.equal(samples.filter((row) => row.day === "2026-11-09" && row.metric === "step_count").length, 1);
+    const view = buildStepsView({ metrics: folded, today: "2026-11-15", span: "w" });
+    assert.equal(view.days.find((day) => day.id === "2026-11-09")?.steps, "9,000");
+    assert.equal(view.days.find((day) => day.id === "2026-11-10")?.steps, "7,000");
+    assert.equal(fitnessWeekFacts(samples, [], "2026-11-15").steps, 16000);
+    assert.deepEqual(fitnessHomeLine(samples, [], "2026-11-09"), { value: "9,000", unit: "steps" });
+    assert.equal(JSON.stringify(view).includes("5000"), false);
+    assert.equal(JSON.stringify(view).includes("1111"), false);
+    assert.equal(JSON.stringify(view).includes("1,111"), false);
   });
 
   it("keeps the manual table out of the daily and run readers", () => {
@@ -436,5 +514,91 @@ describe("fitness manual route", { concurrency: false }, () => {
     const again = await migrate();
     assert.equal(again.applied.includes("031_fitness_manual_summaries"), false);
     assert.equal(again.skipped.includes("031_fitness_manual_summaries"), true);
+  });
+
+  it("lets health auto export replace that day's manual steps without dropping other manual rows", async () => {
+    const nov9 = await post({
+      entry_date: "2026-11-09",
+      period_start: "2026-11-09",
+      period_end: "2026-11-09",
+      app: "Notes",
+      metric: "steps",
+      value: 5000,
+      unit: "steps",
+    });
+    assert.equal(nov9.status, 200);
+    const nov10 = await post({
+      entry_date: "2026-11-10",
+      period_start: "2026-11-10",
+      period_end: "2026-11-10",
+      app: "Notes",
+      metric: "steps",
+      value: 7000,
+      unit: "steps",
+    });
+    assert.equal(nov10.status, 200);
+    const lift = await post({
+      entry_date: "2026-11-09",
+      period_start: "2026-11-09",
+      period_end: "2026-11-09",
+      app: "Strong",
+      metric: "sessions",
+      value: 1,
+      unit: "count",
+    });
+    assert.equal(lift.status, 200);
+    await sqlQuery(
+      `INSERT INTO fitness_metrics (
+         source, external_id, metric, day, qty, units, origin, payload
+       ) VALUES ('manual', 'step_count:2026-11-09:count', 'step_count', '2026-11-09', 1111, 'count', 'manual', '{}'::jsonb)`,
+    );
+    const haeToken = "hae-plain-token";
+    await saveHealthAutoExportTokenHash(hashHealthAutoExportToken(haeToken));
+    const exported = await postHealthAutoExport(
+      new Request("https://resonance3.vercel.app/api/ingest/health-auto-export", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${haeToken}`,
+        },
+        body: JSON.stringify({
+          data: {
+            metrics: [
+              {
+                name: "step_count",
+                units: "count",
+                data: [{ qty: 9000, date: "2026-11-09 12:00:00 -0600" }],
+              },
+            ],
+          },
+        }),
+      }),
+    );
+    assert.equal(exported.status, 200);
+
+    const home = await loadFitnessHome("2026-11-15");
+    assert.equal(home.week.steps, 16000);
+    assert.deepEqual(home.line, { value: "7,000", unit: "steps · 10 Nov" });
+    const bundle = await loadFitnessBundle("2026-11-15");
+    const loaded = await loadFitnessManual();
+    const view = buildStepsView({
+      metrics: foldManualStepDays(bundle.metrics, loaded.entries),
+      today: "2026-11-15",
+      span: "w",
+    });
+    assert.equal(view.days.find((day) => day.id === "2026-11-09")?.steps, "9,000");
+    assert.equal(view.days.find((day) => day.id === "2026-11-10")?.steps, "7,000");
+    assert.equal(JSON.stringify(view).includes("5,000"), false);
+    assert.equal(JSON.stringify(view).includes("1,111"), false);
+    const kept = await sqlQuery<{ metric: string; n: string }>(
+      `SELECT metric, count(*)::text AS n FROM fitness_manual_summaries GROUP BY metric ORDER BY metric`,
+    );
+    assert.deepEqual(
+      kept.map((row) => [row.metric, row.n]),
+      [
+        ["sessions", "1"],
+        ["steps", "2"],
+      ],
+    );
   });
 });

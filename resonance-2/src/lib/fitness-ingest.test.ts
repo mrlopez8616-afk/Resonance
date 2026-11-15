@@ -781,6 +781,7 @@ describe("fitness ingest", { concurrency: false }, () => {
         "048_obs",
         "049_broker_sync",
         "050_ingest_attempts",
+        "051_ingest_attempt_headers",
       ],
     );
     assert.equal(

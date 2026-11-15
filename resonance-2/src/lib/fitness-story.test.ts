@@ -261,6 +261,50 @@ describe("fitness story", () => {
     assert.equal(JSON.stringify(quiet).includes("0 bpm"), false);
   });
 
+  it("keeps a manual step day out of the total once health auto export covers that day", () => {
+    const story = buildFitnessStory({
+      metrics: [
+        steps("2026-11-09", "9000", "health-auto-export"),
+        steps("2026-11-09", "1111", "manual"),
+      ],
+      workouts: [],
+      manuals: [
+        manual({
+          id: "nov-9",
+          metric: "steps",
+          value: "5000",
+          unit: "steps",
+          periodStart: "2026-11-09",
+          periodEnd: "2026-11-09",
+        }),
+        manual({
+          id: "nov-10",
+          metric: "steps",
+          value: "4000",
+          unit: "steps",
+          periodStart: "2026-11-10",
+          periodEnd: "2026-11-10",
+        }),
+        manual({
+          id: "lift",
+          metric: "sessions",
+          value: "1",
+          unit: "count",
+          app: "Strong",
+          periodStart: "2026-11-10",
+          periodEnd: "2026-11-10",
+        }),
+      ],
+      today: "2026-11-15",
+      stepsRange: "w",
+    });
+    assert.equal(figure(story, "week", "average-steps").value, "6,500");
+    assert.match(figure(story, "week", "average-steps").meta ?? "", /Apple Health and Manual import/);
+    assert.equal(JSON.stringify(story).includes("5000"), false);
+    assert.equal(JSON.stringify(story).includes("1111"), false);
+    assert.match(story.manual.text, /Strong/);
+  });
+
   it("uses a manual summary only for days the day-by-day record does not cover", async () => {
     const story = buildFitnessStory({
       metrics: [steps("2026-10-05", "10000", "health-auto-export")],

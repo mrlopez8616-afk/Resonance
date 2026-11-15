@@ -4,7 +4,7 @@ export function HealthAutoExportGuide() {
   return (
     <div className="fitness-setup">
       <h2 className="node-ticker">Health Auto Export</h2>
-      <p>Two automations. Same URL, same header, JSON, export version 2.</p>
+      <p>Two automations. Same URL, JSON, export version 2. Any one of these headers.</p>
       <dl className="fitness-log">
         <div>
           <dt>URL</dt>
@@ -19,10 +19,11 @@ export function HealthAutoExportGuide() {
           <dd>2</dd>
         </div>
         <div>
-          <dt>Header</dt>
-          <dd>{HEALTH_AUTO_EXPORT_HEADER_NAME}</dd>
+          <dt>Headers</dt>
+          <dd>Authorization: Bearer, {HEALTH_AUTO_EXPORT_HEADER_NAME}, or X-Fitness-Token</dd>
         </div>
       </dl>
+      <p>The value is the token. A leading Bearer and surrounding spaces are ignored.</p>
       <h3>Steps</h3>
       <p>Health metrics. Select step_count only. Aggregate data on. Interval 1 day.</p>
       <p>Optional. Also select resting_heart_rate, one value per day. A later export replaces that day.</p>
@@ -32,7 +33,7 @@ export function HealthAutoExportGuide() {
       <p>On, for both automations. Each request must stay under 4.5 MB.</p>
       <h3>Backfill</h3>
       <ol className="fitness-log">
-        <li>Paste the token into the header on both automations.</li>
+        <li>Paste the token into one of the headers on both automations.</li>
         <li>Turn Batch Requests on before the manual export.</li>
         <li>Export the full history, from the earliest day in Apple Health through today.</li>
         <li>

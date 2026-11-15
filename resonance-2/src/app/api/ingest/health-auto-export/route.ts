@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { writeHealthAutoExport, readHealthAutoExportTokenHash } from "@/lib/health-auto-export-store";
 import {
+  authorizeHealthAutoExportAccess,
   HEALTH_AUTO_EXPORT_BODY_LIMIT,
-  HEALTH_AUTO_EXPORT_HEADER,
-  healthAutoExportTokenMatches,
   parseHealthAutoExport,
 } from "@/lib/health-auto-export";
 import {
@@ -11,8 +10,10 @@ import {
   HEALTH_AUTO_EXPORT_INGEST_ROUTE,
   markIngestAttempt,
   noteIngestBodyLength,
+  noteRejectedAuthHeaders,
   recordIngestAttempt,
 } from "@/lib/ingest-attempts";
+import { getFitnessIngestToken, readIngestCredentials } from "@/lib/sync-auth";
 import { isStorageUnavailable, storageErrorJson } from "@/lib/storage-unavailable";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +22,10 @@ export const maxDuration = 60;
 
 /**
  * Health Auto Export REST API automation, JSON export version 2.
- * Header: `X-Resonance-Token`. The value is compared with the sha256 digest
- * stored for the owner. The sync secret and the Shortcuts token are not accepted.
- * An unset digest fails closed.
+ * Header: `Authorization: Bearer <token>`, `X-Resonance-Token`, or `X-Fitness-Token`.
+ * A Bearer prefix and surrounding whitespace are ignored. The value is compared
+ * with the sha256 digest stored for the owner. A valid FITNESS_INGEST_TOKEN is
+ * also accepted. The hub sync secret is not accepted. Both tokens unset fails closed.
  *
  * Vercel drops a request body over about 4.5 MB. This route rejects anything
  * over {@link HEALTH_AUTO_EXPORT_BODY_LIMIT} before it parses. Turn on Batch
@@ -57,24 +59,28 @@ async function handleHealthAutoExport(request: Request, draft: ReturnType<typeof
     return tooLarge();
   }
 
+  const creds = readIngestCredentials(request.headers);
   let stored: string | null;
   try {
     stored = await readHealthAutoExportTokenHash();
   } catch (error) {
     const reason = isStorageUnavailable(error) ? error.reason : "token lookup failed";
     console.error("health auto export auth failed", reason);
+    noteRejectedAuthHeaders(draft, creds.headerNames);
     markIngestAttempt(draft, 503, false, "token lookup failed");
     return json(503, { ok: false, error: "Health Auto Export is not configured." });
   }
-  if (!stored) {
-    markIngestAttempt(draft, 503, false, "no token configured");
-    return json(503, { ok: false, error: "Health Auto Export is not configured." });
-  }
-
-  const presented = request.headers.get(HEALTH_AUTO_EXPORT_HEADER)?.trim() ?? "";
-  if (!presented || !healthAutoExportTokenMatches(presented, stored)) {
-    markIngestAttempt(draft, 401, false, presented ? "bad token" : "missing header");
-    return json(401, { ok: false, error: "Unauthorized." });
+  const decision = authorizeHealthAutoExportAccess({
+    presented: creds.tokens,
+    digest: stored,
+    fitnessToken: getFitnessIngestToken(),
+  });
+  if (!decision.ok) {
+    noteRejectedAuthHeaders(draft, creds.headerNames);
+    markIngestAttempt(draft, decision.status, false, decision.reason);
+    const error =
+      decision.status === 503 ? "Health Auto Export is not configured." : "Unauthorized.";
+    return json(decision.status, { ok: false, error });
   }
   draft.authOk = true;
 
