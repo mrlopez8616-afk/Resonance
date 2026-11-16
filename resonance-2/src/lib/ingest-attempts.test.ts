@@ -684,20 +684,21 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(flagged.includes("x-forwarded-host"), true);
   });
 
-  it("returns the latest five rejects and drops values from stored names", async () => {
+  it("returns the latest ten rejects and drops values from stored names", async () => {
     const now = Date.now();
     const leaked = "sekret=value";
-    for (let i = 0; i < 6; i += 1) {
+    const count = 12;
+    for (let i = 0; i < count; i += 1) {
       await sqlQuery(
         `INSERT INTO ingest_attempts (
            route, received_at, status_code, auth_ok, reason, user_agent, content_length, auth_headers
          ) VALUES ($1, $2::timestamptz, 401, false, 'missing header', $3, $4, $5)`,
         [
           FITNESS_INGEST_ROUTE,
-          new Date(now - (6 - i) * 1000).toISOString(),
-          i === 5 ? "Agent" : null,
+          new Date(now - (count - i) * 1000).toISOString(),
+          i === count - 1 ? "Agent" : null,
           20 + i,
-          i === 5
+          i === count - 1
             ? JSON.stringify(["content-type", leaked, "Query:Token", "host:other", "nope value", "n".repeat(41)])
             : null,
         ],
@@ -712,10 +713,10 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(live.status, 200);
     const body = (await live.json()) as { ingest: IngestHealth };
     const rows: IngestRejectRow[] = body.ingest[FITNESS_INGEST_ROUTE].recentRejects;
-    assert.equal(rows.length, 5);
+    assert.equal(rows.length, 10);
     assert.deepEqual(
       rows.map((row) => row.content_length),
-      [25, 24, 23, 22, 21],
+      [31, 30, 29, 28, 27, 26, 25, 24, 23, 22],
     );
     assert.equal(rows[0]?.user_agent, "Agent");
     assert.equal(rows[0]?.status_code, 401);
@@ -723,7 +724,7 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.deepEqual(rows[0]?.auth_headers, ["content-type", "query:token", "host:other"]);
     assert.equal(rows[1]?.auth_headers, null);
     assert.match(rows[0]?.received_at ?? "", ISO);
-    assert.equal(Date.parse(rows[0]?.received_at ?? "") > Date.parse(rows[4]?.received_at ?? ""), true);
+    assert.equal(Date.parse(rows[0]?.received_at ?? "") > Date.parse(rows[9]?.received_at ?? ""), true);
     assert.equal(body.ingest[HEALTH_AUTO_EXPORT_INGEST_ROUTE].recentRejects.length, 0);
     const dump = JSON.stringify(body.ingest);
     assert.equal(dump.includes(leaked), false);

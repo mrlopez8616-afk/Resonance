@@ -14,7 +14,7 @@ const PRIVATE = { "cache-control": "no-store" };
  * The sync secret is not accepted. There is no write handler.
  * The result is also stored as one mark so the YouTube pull can see it.
  * `ingest` adds attempt timestamps and counts for the fitness posts.
- * Each route includes `recentRejects`, the latest five reject rows:
+ * Each route includes `recentRejects`, the latest ten reject rows:
  * received_at, status_code, reason, user_agent, content_length, and auth_headers.
  * auth_headers is names only. The probe does not include a token, a header value, or a body.
  */
