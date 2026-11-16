@@ -72,6 +72,7 @@ export type IngestHealth = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const RECENT_REJECTS = 10;
 const USER_AGENT_LIMIT = 200;
 const REASON_LIMIT = 80;
 const INT_MAX = 2_147_483_647;
@@ -431,7 +432,7 @@ function fillSummaries(summary: IngestHealth, rows: readonly AttemptRow[], now: 
   for (const route of [HEALTH_AUTO_EXPORT_INGEST_ROUTE, FITNESS_INGEST_ROUTE]) {
     const list = recent.get(route) ?? [];
     list.sort((a, b) => b.at - a.at || b.id - a.id);
-    summary[route].recentRejects = list.slice(0, 5).map((row) => ({
+    summary[route].recentRejects = list.slice(0, RECENT_REJECTS).map((row) => ({
       received_at: row.received_at,
       status_code: row.status_code,
       reason: row.reason,
@@ -443,7 +444,7 @@ function fillSummaries(summary: IngestHealth, rows: readonly AttemptRow[], now: 
 }
 
 /**
- * Counts, timestamps, and the latest five reject rows for the private health probe.
+ * Counts, timestamps, and the latest ten reject rows for the private health probe.
  * `tokenUpdatedAt` is the digest row's `updated_at`. The digest itself is not selected.
  * `recentRejects` carries header names only. A header value and the body are not selected.
  * A missing table or a failed read leaves the counts at zero and the timestamps null.

@@ -43,6 +43,9 @@ export type RouteAuditRow = {
  * Every API the floor ships. Logged-out expectations are what the probe checks.
  * Login and passkey verify are not called from the live probe: a failed attempt
  * records a lockout. The route-privacy test calls those two directly.
+ * Fitness ingest and Health Auto Export are listed here and are not called from
+ * the live probe: a logged-out POST writes an ingest_attempts row. The
+ * ingest-attempt tests call those two directly.
  */
 export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "GET", path: "/api/approvals", loggedOut: "401", auth: "session or sync bearer" },
@@ -451,8 +454,6 @@ async function loadHandlers(): Promise<{
     fills,
     finance,
     manual,
-    ingest,
-    healthAuto,
     healthAutoToken,
     factorio,
     factorioToken,
@@ -511,8 +512,6 @@ async function loadHandlers(): Promise<{
     import("@/app/api/fills/route"),
     import("@/app/api/finance/snapshot/route"),
     import("@/app/api/fitness/manual/route"),
-    import("@/app/api/fitness/ingest/route"),
-    import("@/app/api/ingest/health-auto-export/route"),
     import("@/app/api/settings/health-auto-export-token/route"),
     import("@/app/api/ingest/factorio/route"),
     import("@/app/api/settings/factorio-token/route"),
@@ -614,8 +613,6 @@ async function loadHandlers(): Promise<{
       { method: "POST", path: "/api/fills", call: fills.POST },
       { method: "POST", path: "/api/finance/snapshot", call: finance.POST },
       { method: "POST", path: "/api/fitness/manual", call: manual.POST },
-      { method: "POST", path: "/api/fitness/ingest", call: ingest.POST },
-      { method: "POST", path: "/api/ingest/health-auto-export", call: healthAuto.POST },
       { method: "POST", path: "/api/settings/health-auto-export-token", call: healthAutoToken.POST },
       { method: "POST", path: "/api/ingest/factorio", call: factorio.POST },
       { method: "POST", path: "/api/settings/factorio-token", call: factorioToken.POST },

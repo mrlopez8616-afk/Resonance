@@ -7,7 +7,7 @@ import { newDb } from "pg-mem";
 import { POST as login } from "@/app/api/auth/login/route";
 import { POST as logoutAll } from "@/app/api/auth/logout-all/route";
 import { POST as passkeyVerify } from "@/app/api/auth/passkey/login/verify/route";
-import { setSqlClientForTests, type SqlClient } from "@/lib/pg/client";
+import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { migrate } from "@/lib/pg/migrate";
 import { publicFitnessDetail } from "@/lib/fitness-board";
 import { NextRequest } from "next/server";
@@ -163,6 +163,10 @@ describe("logged-out privacy", () => {
     assert.equal(probe.includes("node:fs"), false);
     assert.equal(probe.includes("node-face.tsx"), false);
     assert.match(probe, /nodeLayoutSourceIssues/);
+    assert.equal(probe.includes("call: ingest.POST"), false);
+    assert.equal(probe.includes("call: healthAuto.POST"), false);
+    assert.equal(probe.includes('import("@/app/api/fitness/ingest/route")'), false);
+    assert.equal(probe.includes('import("@/app/api/ingest/health-auto-export/route")'), false);
     const face = readFileSync(join(root, "src/components/node-face.tsx"), "utf8");
     assert.equal(face.includes("data-lock-badge"), true);
     assert.match(face, /face\.href && !locked/);
@@ -281,5 +285,7 @@ describe("logged-out privacy", () => {
       assert.equal(issues.some((row) => row.id === id && row.status === "ok"), true, id);
     }
     assert.equal(JSON.stringify(issues).includes("$"), false);
+    const logged = await sqlQuery<{ n: string }>(`SELECT count(*)::text AS n FROM ingest_attempts`);
+    assert.equal(Number(logged[0]?.n), 0);
   });
 });
