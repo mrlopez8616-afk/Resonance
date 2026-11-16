@@ -22,10 +22,14 @@ export const maxDuration = 60;
 
 /**
  * Health Auto Export REST API automation, JSON export version 2.
- * Header: `Authorization: Bearer <token>`, `X-Resonance-Token`, or `X-Fitness-Token`.
- * A Bearer prefix and surrounding whitespace are ignored. The value is compared
+ * Header: `Authorization` (`Bearer`, `Token`, or the bare token),
+ * `X-Resonance-Token`, `X-Fitness-Token`, `X-Api-Key`, `Api-Key`, `Apikey`,
+ * `X-Auth-Token`, `X-Access-Token`, `X-Token`, `Token`, or `X-Health-Token`.
+ * On Authorization, a Bearer or Token prefix is ignored. On the other headers,
+ * a Bearer prefix and surrounding whitespace are ignored. The value is compared
  * with the sha256 digest stored for the owner. A valid FITNESS_INGEST_TOKEN is
- * also accepted. The hub sync secret is not accepted. Both tokens unset fails closed.
+ * also accepted. The hub sync secret is not accepted. A query parameter or a
+ * body field is not a token. Both tokens unset fails closed.
  *
  * Vercel drops a request body over about 4.5 MB. This route rejects anything
  * over {@link HEALTH_AUTO_EXPORT_BODY_LIMIT} before it parses. Turn on Batch
@@ -35,7 +39,10 @@ export const maxDuration = 60;
  * Posting September and then October leaves September in place. A Chicago day
  * or a workout id that appears again replaces that row.
  * Each request writes one attempt row: status, a short reason, and counts.
- * That row does not include the token, the header value, or the body.
+ * On an auth failure that row lists header names, a `query:<name>` flag for
+ * token, key, api_key, auth, or access_token, and `host:other` when the host
+ * is not resonance3.vercel.app. That row does not include the token, a header
+ * value, or the body.
  */
 
 function json(status: number, body: { ok: boolean; error?: string; steps?: number; workouts?: number }) {
@@ -66,7 +73,7 @@ async function handleHealthAutoExport(request: Request, draft: ReturnType<typeof
   } catch (error) {
     const reason = isStorageUnavailable(error) ? error.reason : "token lookup failed";
     console.error("health auto export auth failed", reason);
-    noteRejectedAuthHeaders(draft, creds.headerNames);
+    noteRejectedAuthHeaders(draft, request);
     markIngestAttempt(draft, 503, false, "token lookup failed");
     return json(503, { ok: false, error: "Health Auto Export is not configured." });
   }
@@ -76,7 +83,7 @@ async function handleHealthAutoExport(request: Request, draft: ReturnType<typeof
     fitnessToken: getFitnessIngestToken(),
   });
   if (!decision.ok) {
-    noteRejectedAuthHeaders(draft, creds.headerNames);
+    noteRejectedAuthHeaders(draft, request);
     markIngestAttempt(draft, decision.status, false, decision.reason);
     const error =
       decision.status === 503 ? "Health Auto Export is not configured." : "Unauthorized.";

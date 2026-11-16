@@ -20,10 +20,13 @@ export function HealthAutoExportGuide() {
         </div>
         <div>
           <dt>Headers</dt>
-          <dd>Authorization: Bearer, {HEALTH_AUTO_EXPORT_HEADER_NAME}, or X-Fitness-Token</dd>
+          <dd>
+            Authorization: Bearer or Token, {HEALTH_AUTO_EXPORT_HEADER_NAME}, X-Fitness-Token, X-Api-Key,
+            Api-Key, Apikey, X-Auth-Token, X-Access-Token, X-Token, Token, or X-Health-Token
+          </dd>
         </div>
       </dl>
-      <p>The value is the token. A leading Bearer and surrounding spaces are ignored.</p>
+      <p>The value is the token. On Authorization, a leading Bearer or Token is ignored. A leading Bearer and surrounding spaces are ignored on the other headers.</p>
       <h3>Steps</h3>
       <p>Health metrics. Select step_count only. Aggregate data on. Interval 1 day.</p>
       <p>Optional. Also select resting_heart_rate, one value per day. A later export replaces that day.</p>
