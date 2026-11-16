@@ -41,23 +41,35 @@ export function stripOptionalBearer(value: string): string {
   return trimmed.slice(match[0].length).trim();
 }
 
+/** Drop up to two leading Bearer or Token schemes. The word match is case-insensitive. */
+function stripIngestScheme(value: string): string {
+  let current = value.trim();
+  for (let i = 0; i < 2; i += 1) {
+    const match = /^(?:Bearer|Token)\s+/i.exec(current);
+    if (!match) return current;
+    current = current.slice(match[0].length).trim();
+  }
+  return current;
+}
+
 /**
  * Token from an Authorization header.
- * `Bearer <token>` is the normal form. A second Bearer prefix is ignored.
+ * `Bearer <token>` and `Token <token>` are accepted. The scheme match is case-insensitive.
+ * A second Bearer or Token prefix is ignored.
  * A value with no scheme is the token itself. Basic and other schemes are not tokens.
  */
 export function readAuthorizationCredential(value: string | null | undefined): string | null {
   if (!value?.trim()) return null;
   const trimmed = value.trim();
-  if (/^Bearer\b/i.test(trimmed)) {
-    const token = stripOptionalBearer(stripOptionalBearer(trimmed));
+  if (/^(?:Bearer|Token)\b/i.test(trimmed)) {
+    const token = stripIngestScheme(trimmed);
     return token || null;
   }
   if (/^[A-Za-z][A-Za-z0-9._-]*\s+\S/.test(trimmed)) return null;
   return trimmed;
 }
 
-/** Token from X-Resonance-Token or X-Fitness-Token. A Bearer prefix is optional. */
+/** Token from an ingest header other than Authorization. A Bearer prefix is optional. */
 export function readLooseToken(value: string | null | undefined): string | null {
   if (!value?.trim()) return null;
   const token = stripOptionalBearer(stripOptionalBearer(value));
@@ -67,10 +79,23 @@ export function readLooseToken(value: string | null | undefined): string | null 
 export const RESONANCE_TOKEN_HEADER = "x-resonance-token";
 export const FITNESS_TOKEN_HEADER = "x-fitness-token";
 
+/** Extra names a phone may use for the same ingest token. Query and body are not read. */
+export const INGEST_TOKEN_HEADER_NAMES = [
+  "x-api-key",
+  "api-key",
+  "apikey",
+  "x-auth-token",
+  "x-access-token",
+  "x-token",
+  "token",
+  "x-health-token",
+] as const;
+
 export const INGEST_AUTH_HEADER_NAMES = [
   "authorization",
   RESONANCE_TOKEN_HEADER,
   FITNESS_TOKEN_HEADER,
+  ...INGEST_TOKEN_HEADER_NAMES,
 ] as const;
 
 export type IngestCredentials = {
@@ -79,20 +104,20 @@ export type IngestCredentials = {
 };
 
 /**
- * Credentials from the three ingest headers.
+ * Credentials from the ingest headers.
  * `headerNames` is the lowercase names that were present. Values are not copied into that list.
+ * The URL and the body are not read.
  */
 export function readIngestCredentials(headers: { get(name: string): string | null }): IngestCredentials {
   const headerNames: string[] = [];
+  const tokens: string[] = [];
   for (const name of INGEST_AUTH_HEADER_NAMES) {
     const raw = headers.get(name);
     if (raw === null || raw.trim() === "") continue;
     headerNames.push(name);
+    const token = name === "authorization" ? readAuthorizationCredential(raw) : readLooseToken(raw);
+    if (token) tokens.push(token);
   }
-  const authorization = readAuthorizationCredential(headers.get("authorization"));
-  const resonance = readLooseToken(headers.get(RESONANCE_TOKEN_HEADER));
-  const fitness = readLooseToken(headers.get(FITNESS_TOKEN_HEADER));
-  const tokens = [authorization, resonance, fitness].filter((value): value is string => Boolean(value));
   return { tokens, headerNames };
 }
 

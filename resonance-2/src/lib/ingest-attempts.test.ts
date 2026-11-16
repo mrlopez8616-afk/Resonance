@@ -19,7 +19,9 @@ import { resetFitnessStoreForTests } from "@/lib/fitness-store";
 import {
   FITNESS_INGEST_ROUTE,
   HEALTH_AUTO_EXPORT_INGEST_ROUTE,
+  rejectedAuthHeaderNames,
   type IngestHealth,
+  type IngestRejectRow,
 } from "@/lib/ingest-attempts";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
 import { EMBEDDED_MIGRATIONS, INGEST_ATTEMPT_HEADERS_SQL, INGEST_ATTEMPTS_SQL } from "@/lib/pg/embedded-migrations";
@@ -40,8 +42,21 @@ const ROUTE_KEYS = [
   "lastRejectReason",
   "lastRejectStatus",
   "lastSuccessAt",
+  "recentRejects",
   "rejects24h",
 ] as const;
+
+const STORED_NAME = /^(?:[a-z0-9-]{1,40}|query:(?:token|key|api_key|auth|access_token)|host:other)$/;
+
+function storedNames(value: string | null): string[] {
+  assert.equal(typeof value, "string");
+  const parsed = JSON.parse(value ?? "") as unknown;
+  assert.ok(Array.isArray(parsed));
+  const names = parsed.filter((item): item is string => typeof item === "string");
+  assert.equal(names.length, parsed.length);
+  for (const name of names) assert.match(name, STORED_NAME);
+  return names;
+}
 
 function memorySql(): SqlClient {
   const db = newDb();
@@ -343,14 +358,23 @@ describe("ingest attempts", { concurrency: false }, () => {
     const logged = await sqlQuery<{ route: string; reason: string; auth_headers: string | null; auth_ok: boolean | string }>(
       `SELECT route, reason, auth_headers, auth_ok FROM ingest_attempts ORDER BY id`,
     );
-    const names = logged.map((row) => [row.reason, row.auth_headers]);
-    assert.deepEqual(names.slice(0, 6).map((row) => row[1]), [null, null, null, null, null, null]);
-    assert.deepEqual(names.slice(6), [
-      ["bad token", '["authorization"]'],
-      ["bad token", '["authorization","x-fitness-token"]'],
-      ["bad token", '["authorization"]'],
-      ["no token configured", '["x-resonance-token"]'],
-    ]);
+    assert.deepEqual(
+      logged.slice(0, 6).map((row) => row.auth_headers),
+      [null, null, null, null, null, null],
+    );
+    const failed = logged.slice(6);
+    assert.deepEqual(
+      failed.map((row) => row.reason),
+      ["bad token", "bad token", "bad token", "no token configured"],
+    );
+    const names = failed.map((row) => storedNames(row.auth_headers));
+    assert.equal(names[0]?.includes("authorization"), true);
+    assert.equal(names[0]?.includes("content-type"), true);
+    assert.equal(names[0]?.includes("host:other"), false);
+    assert.equal(names[1]?.includes("authorization"), true);
+    assert.equal(names[1]?.includes("x-fitness-token"), true);
+    assert.equal(names[2]?.includes("authorization"), true);
+    assert.equal(names[3]?.includes("x-resonance-token"), true);
     const dump = JSON.stringify(logged);
     assert.equal(dump.includes(TOKEN), false);
     assert.equal(dump.includes(marker), false);
@@ -378,9 +402,11 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(quietHae.lastAttemptAt, null);
     assert.equal(quietHae.attempts24h, 0);
     assert.equal(quietHae.rejects24h, 0);
+    assert.deepEqual(quietHae.recentRejects, []);
     assert.equal(quietHae.tokenUpdatedAt, null);
     assert.equal(quietFit.lastAttemptAt, null);
     assert.equal(quietFit.lastSuccessAt, null);
+    assert.deepEqual(quietFit.recentRejects, []);
 
     await sqlQuery(
       `INSERT INTO ingest_attempts (route, received_at, status_code, auth_ok, reason)
@@ -423,6 +449,15 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.match(fit.lastSuccessAt ?? "", ISO);
     assert.equal(fit.lastAttemptAt, fit.lastSuccessAt);
     assert.match(fit.lastRejectAt ?? "", ISO);
+    assert.equal(hae.recentRejects.length, 1);
+    assert.equal(hae.recentRejects[0]?.reason, "bad body");
+    assert.equal(hae.recentRejects[0]?.status_code, 400);
+    assert.equal(hae.recentRejects[0]?.auth_headers, null);
+    assert.equal(fit.recentRejects.length, 1);
+    assert.equal(fit.recentRejects[0]?.reason, "bad token");
+    assert.equal(fit.recentRejects[0]?.status_code, 401);
+    assert.equal(fit.recentRejects[0]?.auth_headers, null);
+    assert.match(fit.recentRejects[0]?.received_at ?? "", ISO);
     assert.equal(JSON.stringify(body.ingest).includes(digest), false);
     assert.equal(JSON.stringify(body.ingest).includes(TOKEN), false);
     assert.equal(JSON.stringify(body.ingest).includes("phone-token"), false);
@@ -473,5 +508,226 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(Number(steps[0]?.n), 1);
     const logged = await inner.query<{ n: string }>(`SELECT count(*)::text AS n FROM ingest_attempts`);
     assert.equal(Number(logged[0]?.n), 0);
+  });
+
+  it("lists header names and query or host flags without values", () => {
+    const secret = "secretvalue";
+    const headers = new Headers();
+    headers.set("content-type", "application/json");
+    headers.set("a-kept", secret);
+    headers.set("bad_name", secret);
+    headers.set("n".repeat(41), secret);
+    for (let i = 0; i < 50; i += 1) headers.set(`m-${String(i).padStart(2, "0")}`, secret);
+    headers.set("z-cut", secret);
+    const url =
+      "https://preview.example/api/fitness/ingest?token=" +
+      secret +
+      "&key=" +
+      secret +
+      "&api_key=" +
+      secret +
+      "&auth=" +
+      secret +
+      "&access_token=" +
+      secret +
+      "&ignored=" +
+      secret;
+    const names = rejectedAuthHeaderNames(new Request(url, { method: "POST", headers, body: "{}" }));
+    const headerNames = names.filter((name) => /^[a-z0-9-]{1,40}$/.test(name));
+    assert.equal(headerNames.length, 40);
+    assert.equal(headerNames.includes("a-kept"), true);
+    assert.equal(headerNames.includes("content-type"), true);
+    assert.equal(headerNames.includes("z-cut"), false);
+    assert.equal(names.includes("bad_name"), false);
+    assert.equal(names.includes("n".repeat(41)), false);
+    assert.deepEqual(
+      names.filter((name) => name.startsWith("query:") || name === "host:other"),
+      ["query:token", "query:key", "query:api_key", "query:auth", "query:access_token", "host:other"],
+    );
+    const dump = JSON.stringify(names);
+    assert.equal(dump.includes(secret), false);
+    assert.equal(dump.includes("preview.example"), false);
+    assert.equal(dump.includes("ignored"), false);
+    assert.equal(dump.includes("Bearer"), false);
+
+    const canonical = rejectedAuthHeaderNames(
+      new Request(FITNESS, {
+        method: "POST",
+        headers: { "x-api-key": secret, bad_name: secret, "content-type": "application/json" },
+        body: "{}",
+      }),
+    );
+    assert.equal(canonical.includes("x-api-key"), true);
+    assert.equal(canonical.includes("bad_name"), false);
+    assert.equal(canonical.includes("host:other"), false);
+    assert.equal(JSON.stringify(canonical).includes(secret), false);
+
+    const forwarded = rejectedAuthHeaderNames(
+      new Request(FITNESS, {
+        method: "POST",
+        headers: { "x-forwarded-host": "other.example", "content-type": "application/json" },
+        body: "{}",
+      }),
+    );
+    assert.equal(forwarded.includes("host:other"), true);
+    assert.equal(forwarded.includes("x-forwarded-host"), true);
+    assert.equal(JSON.stringify(forwarded).includes("other.example"), false);
+
+    const sameHost = rejectedAuthHeaderNames(
+      new Request("https://preview.example/api/fitness/ingest", {
+        method: "POST",
+        headers: { "x-forwarded-host": "Resonance3.vercel.app:443" },
+        body: "{}",
+      }),
+    );
+    assert.equal(sameHost.includes("host:other"), false);
+    assert.equal(JSON.stringify(sameHost).includes("preview.example"), false);
+
+    const cased = rejectedAuthHeaderNames(
+      new Request(`${FITNESS}?Token=${secret}&API_KEY=&access_token=${secret}`, {
+        method: "POST",
+        body: "{}",
+      }),
+    );
+    assert.equal(cased.includes("query:token"), true);
+    assert.equal(cased.includes("query:api_key"), true);
+    assert.equal(cased.includes("query:access_token"), true);
+    assert.equal(cased.includes("query:key"), false);
+    assert.equal(JSON.stringify(cased).includes(secret), false);
+  });
+
+  it("accepts the extra headers and never stores a token value", async () => {
+    const digest = hashHealthAutoExportToken(TOKEN);
+    await saveHealthAutoExportTokenHash(digest);
+    const secret = "secretvalue";
+    const names = [
+      "x-api-key",
+      "api-key",
+      "apikey",
+      "x-auth-token",
+      "x-access-token",
+      "x-token",
+      "token",
+      "x-health-token",
+    ];
+    for (const [index, name] of names.entries()) {
+      const day = `2026-11-${String(index + 1).padStart(2, "0")}`;
+      const fit = await postFit({ source: "shortcuts", date: day, steps: 10 }, { [name]: "phone-token" });
+      assert.equal(fit.status, 200);
+      const hae = await postHae(steps, null, { [name]: TOKEN });
+      assert.equal(hae.status, 200);
+    }
+    const tokenScheme = await postFit(
+      { source: "shortcuts", date: "2026-11-20", steps: 11 },
+      { authorization: "Token phone-token" },
+    );
+    assert.equal(tokenScheme.status, 200);
+    const haeScheme = await postHae(steps, null, { authorization: `Token ${TOKEN}` });
+    assert.equal(haeScheme.status, 200);
+
+    const hub = await postFit({ source: "shortcuts", date: "2026-11-21", steps: 1 }, { "x-api-key": "hub-secret" });
+    assert.equal(hub.status, 401);
+    const haeHub = await postHae(steps, null, { "x-token": "hub-secret" });
+    assert.equal(haeHub.status, 401);
+    const haeOnFitness = await postFit(
+      { source: "shortcuts", date: "2026-11-22", steps: 1 },
+      { "x-api-key": TOKEN },
+    );
+    assert.equal(haeOnFitness.status, 401);
+
+    const queryOnly = await postFitness(
+      new Request(`${FITNESS}?token=phone-token`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: "phone-token", source: "shortcuts", date: "2026-11-24", steps: 4 }),
+      }),
+    );
+    assert.equal(queryOnly.status, 401);
+
+    const queryUrl = `${FITNESS}?token=${secret}&key=${secret}&api_key=${secret}&auth=${secret}&access_token=${secret}&ignored=${secret}`;
+    const query = await postFitness(
+      new Request(queryUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": secret,
+          bad_name: secret,
+          "x-forwarded-host": "other.example",
+        },
+        body: JSON.stringify({ token: secret, source: "shortcuts", date: "2026-11-23", steps: 1 }),
+      }),
+    );
+    assert.equal(query.status, 401);
+    assert.equal(JSON.stringify(await query.json()).includes(secret), false);
+
+    const rows = await sqlQuery<{ reason: string; auth_headers: string | null }>(
+      `SELECT reason, auth_headers FROM ingest_attempts WHERE status_code = 401 ORDER BY id`,
+    );
+    const dump = JSON.stringify(rows);
+    assert.equal(dump.includes(secret), false);
+    assert.equal(dump.includes(TOKEN), false);
+    assert.equal(dump.includes("phone-token"), false);
+    assert.equal(dump.includes("hub-secret"), false);
+    assert.equal(dump.includes("other.example"), false);
+    assert.equal(dump.includes(digest), false);
+    const flagged = rows.map((row) => storedNames(row.auth_headers)).find((row) => row.includes("query:access_token"));
+    assert.ok(flagged);
+    assert.equal(flagged.includes("x-api-key"), true);
+    assert.equal(flagged.includes("content-type"), true);
+    assert.equal(flagged.includes("bad_name"), false);
+    assert.equal(flagged.includes("query:key"), true);
+    assert.equal(flagged.includes("query:api_key"), true);
+    assert.equal(flagged.includes("query:auth"), true);
+    assert.equal(flagged.includes("query:access_token"), true);
+    assert.equal(flagged.includes("query:ignored"), false);
+    assert.equal(flagged.includes("host:other"), true);
+    assert.equal(flagged.includes("x-forwarded-host"), true);
+  });
+
+  it("returns the latest five rejects and drops values from stored names", async () => {
+    const now = Date.now();
+    const leaked = "sekret=value";
+    for (let i = 0; i < 6; i += 1) {
+      await sqlQuery(
+        `INSERT INTO ingest_attempts (
+           route, received_at, status_code, auth_ok, reason, user_agent, content_length, auth_headers
+         ) VALUES ($1, $2::timestamptz, 401, false, 'missing header', $3, $4, $5)`,
+        [
+          FITNESS_INGEST_ROUTE,
+          new Date(now - (6 - i) * 1000).toISOString(),
+          i === 5 ? "Agent" : null,
+          20 + i,
+          i === 5
+            ? JSON.stringify(["content-type", leaked, "Query:Token", "host:other", "nope value", "n".repeat(41)])
+            : null,
+        ],
+      );
+    }
+    await sqlQuery(
+      `INSERT INTO ingest_attempts (route, received_at, status_code, auth_ok, reason)
+       VALUES ($1, $2::timestamptz, 200, true, 'ok')`,
+      [FITNESS_INGEST_ROUTE, new Date(now).toISOString()],
+    );
+    const live = await healthRequest("health-token");
+    assert.equal(live.status, 200);
+    const body = (await live.json()) as { ingest: IngestHealth };
+    const rows: IngestRejectRow[] = body.ingest[FITNESS_INGEST_ROUTE].recentRejects;
+    assert.equal(rows.length, 5);
+    assert.deepEqual(
+      rows.map((row) => row.content_length),
+      [25, 24, 23, 22, 21],
+    );
+    assert.equal(rows[0]?.user_agent, "Agent");
+    assert.equal(rows[0]?.status_code, 401);
+    assert.equal(rows[0]?.reason, "missing header");
+    assert.deepEqual(rows[0]?.auth_headers, ["content-type", "query:token", "host:other"]);
+    assert.equal(rows[1]?.auth_headers, null);
+    assert.match(rows[0]?.received_at ?? "", ISO);
+    assert.equal(Date.parse(rows[0]?.received_at ?? "") > Date.parse(rows[4]?.received_at ?? ""), true);
+    assert.equal(body.ingest[HEALTH_AUTO_EXPORT_INGEST_ROUTE].recentRejects.length, 0);
+    const dump = JSON.stringify(body.ingest);
+    assert.equal(dump.includes(leaked), false);
+    assert.equal(dump.includes("nope value"), false);
+    assert.equal(dump.includes("n".repeat(41)), false);
   });
 });

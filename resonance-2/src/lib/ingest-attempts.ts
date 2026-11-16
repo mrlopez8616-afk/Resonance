@@ -41,8 +41,18 @@ export type IngestAttemptDraft = {
   reason: IngestAttemptReason;
   contentLength: number | null;
   rowsUpserted: number | null;
-  /** JSON array of header names present on an auth failure. Null until then. */
+  /** JSON array of header names and flags on an auth failure. Null until then. Values are not stored. */
   authHeaders: string | null;
+};
+
+/** One rejected attempt. `auth_headers` is names only. */
+export type IngestRejectRow = {
+  received_at: string;
+  status_code: number;
+  reason: string | null;
+  user_agent: string | null;
+  content_length: number | null;
+  auth_headers: string[] | null;
 };
 
 export type IngestRouteSummary = {
@@ -53,6 +63,7 @@ export type IngestRouteSummary = {
   lastRejectReason: string | null;
   rejects24h: number;
   attempts24h: number;
+  recentRejects: IngestRejectRow[];
 };
 
 export type IngestHealth = {
@@ -64,6 +75,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const USER_AGENT_LIMIT = 200;
 const REASON_LIMIT = 80;
 const INT_MAX = 2_147_483_647;
+const HEADER_NAME = /^[a-z0-9-]{1,40}$/;
+const HEADER_NAME_CAP = 40;
+const AUTH_HEADER_TEXT_CAP = 4096;
+const CANONICAL_HOST = "resonance3.vercel.app";
+const QUERY_FLAG_NAMES = ["token", "key", "api_key", "auth", "access_token"] as const;
+const STORED_FLAGS = new Set<string>([
+  "query:token",
+  "query:key",
+  "query:api_key",
+  "query:auth",
+  "query:access_token",
+  "host:other",
+]);
 
 function failureText(error: unknown): string {
   const reason = isStorageUnavailable(error) ? error.reason : postgresFailureReason(error);
@@ -89,14 +113,71 @@ export function beginIngestAttempt(route: string, request: Request): IngestAttem
 }
 
 /**
- * Auth failure only. Stores a JSON array of header names, never values.
- * A name that is not a short token of letters, digits, and hyphens is dropped.
+ * Header names on an auth failure, plus query and host flags.
+ * Names are lowercased, unique, and capped at 40. A name outside letters,
+ * digits, and hyphens is dropped. Header values are not copied into the list.
+ * The host compare reads the host header only to choose the host:other flag.
+ * A `query:<name>` flag is added for token, key, api_key, auth, or access_token.
+ * `host:other` is added when the seen host is not resonance3.vercel.app.
+ * The flag strings are not counted toward the 40.
  */
-export function noteRejectedAuthHeaders(draft: IngestAttemptDraft, names: readonly string[]): void {
-  const clean = [...new Set(names.map((name) => name.trim().toLowerCase()))].filter((name) =>
-    /^[a-z0-9-]{1,40}$/.test(name),
-  );
-  draft.authHeaders = JSON.stringify(clean);
+export function rejectedAuthHeaderNames(request: Request): string[] {
+  const found = new Set<string>();
+  for (const key of request.headers.keys()) {
+    const name = key.trim().toLowerCase();
+    if (HEADER_NAME.test(name)) found.add(name);
+  }
+  const names = [...found].sort().slice(0, HEADER_NAME_CAP);
+  for (const flag of queryFlags(request.url)) names.push(flag);
+  if (hostIsOther(request)) names.push("host:other");
+  return names;
+}
+
+/** Auth failure only. Stores the name list. Values are not stored. */
+export function noteRejectedAuthHeaders(draft: IngestAttemptDraft, request: Request): void {
+  draft.authHeaders = JSON.stringify(rejectedAuthHeaderNames(request));
+}
+
+function queryFlags(url: string): string[] {
+  let params: URLSearchParams;
+  try {
+    params = new URL(url).searchParams;
+  } catch {
+    return [];
+  }
+  const present = new Set<string>();
+  for (const key of params.keys()) present.add(key.trim().toLowerCase());
+  const flags: string[] = [];
+  for (const name of QUERY_FLAG_NAMES) {
+    if (present.has(name)) flags.push(`query:${name}`);
+  }
+  return flags;
+}
+
+function hostIsOther(request: Request): boolean {
+  return seenHostname(request) !== CANONICAL_HOST;
+}
+
+function seenHostname(request: Request): string {
+  const forwarded = hostnameFromHeader(request.headers.get("x-forwarded-host"));
+  if (forwarded) return forwarded;
+  const host = hostnameFromHeader(request.headers.get("host"));
+  if (host) return host;
+  try {
+    return new URL(request.url).hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function hostnameFromHeader(value: string | null): string {
+  const first = value?.split(",")[0]?.trim().toLowerCase() ?? "";
+  if (!first) return "";
+  if (first.startsWith("[")) {
+    const end = first.indexOf("]");
+    return end > 1 ? first.slice(1, end) : "";
+  }
+  return first.replace(/:\d+$/, "").replace(/\.$/, "");
 }
 
 export function markIngestAttempt(
@@ -192,6 +273,7 @@ function emptyRoute(): IngestRouteSummary {
     lastRejectReason: null,
     rejects24h: 0,
     attempts24h: 0,
+    recentRejects: [],
   };
 }
 
@@ -238,8 +320,56 @@ type AttemptRow = {
   received_at: unknown;
   status_code: unknown;
   reason: unknown;
+  user_agent: unknown;
+  content_length: unknown;
+  auth_headers: unknown;
   id: unknown;
 };
+
+function asUserAgent(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, USER_AGENT_LIMIT);
+}
+
+function asContentLength(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(number) || number < 0 || number > INT_MAX) return null;
+  return number;
+}
+
+/** Names and the known flags only. Anything else, including a raw value, is dropped. */
+function asAuthHeaders(value: unknown): string[] | null {
+  if (value == null) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > AUTH_HEADER_TEXT_CAP) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) return null;
+  const names: string[] = [];
+  const seen = new Set<string>();
+  let headerCount = 0;
+  for (const item of parsed) {
+    if (typeof item !== "string") continue;
+    const name = item.trim().toLowerCase();
+    if (!name || seen.has(name)) continue;
+    const flag = STORED_FLAGS.has(name);
+    const header = HEADER_NAME.test(name);
+    if (!flag && !header) continue;
+    if (header && headerCount >= HEADER_NAME_CAP) continue;
+    seen.add(name);
+    if (header) headerCount += 1;
+    names.push(name);
+  }
+  return names;
+}
 
 function later(current: { at: number; id: number } | null, at: number, id: number): boolean {
   if (!current) return true;
@@ -247,12 +377,15 @@ function later(current: { at: number; id: number } | null, at: number, id: numbe
   return at === current.at && id > current.id;
 }
 
+type RankedReject = IngestRejectRow & { at: number; id: number };
+
 function fillSummaries(summary: IngestHealth, rows: readonly AttemptRow[], now: number): void {
   const health = summary[HEALTH_AUTO_EXPORT_INGEST_ROUTE];
   const fitness = summary[FITNESS_INGEST_ROUTE];
   const latest = new Map<string, { at: number; id: number }>();
   const success = new Map<string, { at: number; id: number }>();
   const reject = new Map<string, { at: number; id: number; status: number; reason: string | null }>();
+  const recent = new Map<string, RankedReject[]>();
   for (const row of rows) {
     const bucket = row.route === HEALTH_AUTO_EXPORT_INGEST_ROUTE ? health : row.route === FITNESS_INGEST_ROUTE ? fitness : null;
     if (!bucket) continue;
@@ -273,26 +406,53 @@ function fillSummaries(summary: IngestHealth, rows: readonly AttemptRow[], now: 
         success.set(row.route, { at, id });
         bucket.lastSuccessAt = new Date(at).toISOString();
       }
-    } else if (later(reject.get(row.route) ?? null, at, id)) {
+    } else {
       const reason = asRejectReason(row.reason);
-      reject.set(row.route, { at, id, status, reason });
-      bucket.lastRejectAt = new Date(at).toISOString();
-      bucket.lastRejectStatus = status;
-      bucket.lastRejectReason = reason;
+      if (later(reject.get(row.route) ?? null, at, id)) {
+        reject.set(row.route, { at, id, status, reason });
+        bucket.lastRejectAt = new Date(at).toISOString();
+        bucket.lastRejectStatus = status;
+        bucket.lastRejectReason = reason;
+      }
+      const list = recent.get(row.route) ?? [];
+      list.push({
+        at,
+        id,
+        received_at: new Date(at).toISOString(),
+        status_code: status,
+        reason,
+        user_agent: asUserAgent(row.user_agent),
+        content_length: asContentLength(row.content_length),
+        auth_headers: asAuthHeaders(row.auth_headers),
+      });
+      recent.set(row.route, list);
     }
+  }
+  for (const route of [HEALTH_AUTO_EXPORT_INGEST_ROUTE, FITNESS_INGEST_ROUTE]) {
+    const list = recent.get(route) ?? [];
+    list.sort((a, b) => b.at - a.at || b.id - a.id);
+    summary[route].recentRejects = list.slice(0, 5).map((row) => ({
+      received_at: row.received_at,
+      status_code: row.status_code,
+      reason: row.reason,
+      user_agent: row.user_agent,
+      content_length: row.content_length,
+      auth_headers: row.auth_headers,
+    }));
   }
 }
 
 /**
- * Counts and timestamps for the private health probe.
+ * Counts, timestamps, and the latest five reject rows for the private health probe.
  * `tokenUpdatedAt` is the digest row's `updated_at`. The digest itself is not selected.
+ * `recentRejects` carries header names only. A header value and the body are not selected.
  * A missing table or a failed read leaves the counts at zero and the timestamps null.
  */
 export async function loadIngestHealth(now = Date.now()): Promise<IngestHealth> {
   const summary = emptyIngestHealth();
   try {
     const rows = await sqlQuery<AttemptRow>(
-      `SELECT route, received_at, status_code, reason, id
+      `SELECT route, received_at, status_code, reason, user_agent, content_length, auth_headers, id
        FROM ingest_attempts
        WHERE route IN ($1, $2)`,
       [HEALTH_AUTO_EXPORT_INGEST_ROUTE, FITNESS_INGEST_ROUTE],

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   authorizeFitnessAccess,
   authorizeSyncAccess,
+  INGEST_AUTH_HEADER_NAMES,
   readAuthorizationCredential,
   readBearerToken,
   readIngestCredentials,
@@ -69,10 +70,17 @@ describe("fill ingest auth", () => {
     assert.equal(readBearerToken("Bearer abc.def"), "abc.def");
     assert.equal(readBearerToken("bearer abc"), "abc");
     assert.equal(readBearerToken("Basic x"), null);
+    assert.equal(readBearerToken("Token abc"), null);
+    assert.equal(readBearerToken("plain-token"), null);
     assert.equal(readAuthorizationCredential("Bearer abc.def"), "abc.def");
     assert.equal(readAuthorizationCredential("bearer   Bearer  abc"), "abc");
+    assert.equal(readAuthorizationCredential("Token abc.def"), "abc.def");
+    assert.equal(readAuthorizationCredential("token   secret"), "secret");
+    assert.equal(readAuthorizationCredential("TOKEN Bearer secret"), "secret");
+    assert.equal(readAuthorizationCredential("Bearer Token secret"), "secret");
     assert.equal(readAuthorizationCredential("  plain-token  "), "plain-token");
     assert.equal(readAuthorizationCredential("Basic x"), null);
+    assert.equal(readAuthorizationCredential("Digest abc"), null);
     assert.equal(readLooseToken(" Bearer phone-token "), "phone-token");
     assert.equal(readLooseToken("phone-token"), "phone-token");
   });
@@ -86,5 +94,25 @@ describe("fill ingest auth", () => {
     assert.deepEqual(creds.tokens, ["secret-value", "other-secret"]);
     assert.equal(JSON.stringify(creds.headerNames).includes("secret-value"), false);
     assert.equal(JSON.stringify(creds.headerNames).includes("other-secret"), false);
+  });
+
+  it("accepts the extra ingest header names and the Token scheme", () => {
+    const secret = "phone-token";
+    for (const name of INGEST_AUTH_HEADER_NAMES) {
+      const headers = new Headers();
+      headers.set(name, name === "authorization" ? `Token ${secret}` : secret);
+      const creds = readIngestCredentials(headers);
+      assert.deepEqual(creds.headerNames, [name]);
+      assert.deepEqual(creds.tokens, [secret]);
+      assert.equal(JSON.stringify(creds.headerNames).includes(secret), false);
+      assert.deepEqual(authorizeFitnessAccess({ token: secret, presented: creds.tokens }), { ok: true });
+    }
+    const basic = readIngestCredentials(new Headers({ authorization: `Basic ${secret}` }));
+    assert.deepEqual(basic.headerNames, ["authorization"]);
+    assert.deepEqual(basic.tokens, []);
+    assert.equal(authorizeFitnessAccess({ token: secret, presented: basic.tokens }).ok, false);
+    const hub = readIngestCredentials(new Headers({ "x-api-key": "hub-secret" }));
+    assert.equal(authorizeFitnessAccess({ token: secret, presented: hub.tokens }).ok, false);
+    assert.equal(JSON.stringify(hub.headerNames).includes("hub-secret"), false);
   });
 });

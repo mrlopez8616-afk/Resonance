@@ -72,7 +72,7 @@ The same import is `POST /api/storage/import` with that Bearer. `?dryRun=1` coun
 | `printer_snapshots` | `id` | One ink reading per post. Older readings stay. The node reads the newest row. |
 | `obs_tokens` | `id` = 1 | OBS ingest token, sha256 hex only. Migration `048_obs` inserts no token. |
 | `obs_recordings` | `recording_key` | One OBS file per folder, name, and created time. A repeat of that file updates the row. |
-| `ingest_attempts` | `id` | One row per fitness ingest request. Status, a short reason, and counts only. On an auth failure, `auth_headers` stores the names of the auth headers that were present. The token, the header value, and the body are not stored. Rows older than 30 days are deleted when a new row is inserted. Migrations `050_ingest_attempts` and `051_ingest_attempt_headers` insert no rows. |
+| `ingest_attempts` | `id` | One row per fitness ingest request. Status, a short reason, and counts only. On an auth failure, `auth_headers` stores a JSON array of request header names (lowercased, at most 40), plus `query:token`, `query:key`, `query:api_key`, `query:auth`, or `query:access_token` when that query name is present, and `host:other` when the host is not resonance3.vercel.app. The token, header values, and the body are not stored. Rows older than 30 days are deleted when a new row is inserted. Migrations `050_ingest_attempts` and `051_ingest_attempt_headers` insert no rows. |
 
 Seeds still merge on read: missing seed ids are inserted, and a row already stored under that id or order id is left alone.
 

@@ -26,11 +26,14 @@ export const maxDuration = 60;
 
 /**
  * Health Auto Export and Apple Shortcuts target.
- * Header: `Authorization: Bearer <FITNESS_INGEST_TOKEN>`,
- * `X-Resonance-Token`, or `X-Fitness-Token`.
- * A Bearer prefix and surrounding whitespace are ignored.
+ * Header: `Authorization` (`Bearer`, `Token`, or the bare token),
+ * `X-Resonance-Token`, `X-Fitness-Token`, `X-Api-Key`, `Api-Key`, `Apikey`,
+ * `X-Auth-Token`, `X-Access-Token`, `X-Token`, `Token`, or `X-Health-Token`.
+ * On Authorization, a Bearer or Token prefix is ignored. On the other headers,
+ * a Bearer prefix and surrounding whitespace are ignored.
  * Unset token fails closed. The hub sync secret is not accepted.
  * The Health Auto Export digest is not accepted here.
+ * A query parameter or a body field is not a token.
  * A Shortcuts day keeps the larger total, so a partial nightly window
  * cannot shrink a full day. Post the same window again and the totals stay the same.
  * A later post with a higher total replaces the stored one.
@@ -42,7 +45,10 @@ export const maxDuration = 60;
  * A steps-only post stays valid. Heart rate for a day is replaced, not kept as the larger number.
  * A run posted again with the same day and start, or the same day, distance, and duration, updates that run.
  * Each request writes one attempt row: status, a short reason, and counts.
- * That row does not include the token, the header value, or the body.
+ * On an auth failure that row lists header names, a `query:<name>` flag for
+ * token, key, api_key, auth, or access_token, and `host:other` when the host
+ * is not resonance3.vercel.app. That row does not include the token, a header
+ * value, or the body.
  */
 
 function fitnessAuthReason(tokenCount: number, status: number): IngestAttemptReason {
@@ -54,7 +60,7 @@ async function handleFitnessIngest(request: Request, draft: ReturnType<typeof be
   const creds = readIngestCredentials(request.headers);
   const auth = authorizeFitnessRequest(request);
   if (!auth.ok) {
-    noteRejectedAuthHeaders(draft, creds.headerNames);
+    noteRejectedAuthHeaders(draft, request);
     markIngestAttempt(draft, auth.status, false, fitnessAuthReason(creds.tokens.length, auth.status));
     return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   }

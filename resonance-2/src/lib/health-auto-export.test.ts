@@ -810,8 +810,10 @@ describe("health auto export settings copy", () => {
     assert.match(html, /JSON/);
     assert.match(html, /Export version2/);
     assert.match(html, new RegExp(HEALTH_AUTO_EXPORT_HEADER_NAME));
-    assert.match(html, /Authorization: Bearer/);
+    assert.match(html, /Authorization: Bearer or Token/);
     assert.match(html, /X-Fitness-Token/);
+    assert.match(html, /X-Api-Key/);
+    assert.match(html, /X-Health-Token/);
     assert.match(html, /step_count/);
     assert.match(html, /Aggregate data on/);
     assert.match(html, /Include Workout Metrics ON/);
