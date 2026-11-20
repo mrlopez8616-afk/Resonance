@@ -94,7 +94,7 @@ export const ROUTE_AUDIT: readonly RouteAuditRow[] = [
   { method: "POST", path: "/api/fitness/manual", loggedOut: "401", auth: "sync bearer" },
   { method: "POST", path: "/api/fitness/ingest", loggedOut: "401 or 503", auth: "fitness token" },
   { method: "POST", path: "/api/ingest/health-auto-export", loggedOut: "401 or 503", auth: "X-Resonance-Token" },
-  { method: "POST", path: "/api/settings/health-auto-export-token", loggedOut: "401 or 403", auth: "owner session" },
+  { method: "POST", path: "/api/settings/health-auto-export-token", loggedOut: "410", auth: "retired" },
   { method: "POST", path: "/api/ingest/factorio", loggedOut: "401 or 503", auth: "X-Factorio-Token" },
   { method: "POST", path: "/api/settings/factorio-token", loggedOut: "401 or 403", auth: "owner session" },
   { method: "POST", path: "/api/ingest/printer", loggedOut: "401 or 503", auth: "X-Printer-Token" },
@@ -373,6 +373,7 @@ function closedWrite(status: number, path: string): boolean {
     return status === 200 || status === 400 || status === 401 || status === 503;
   }
   if (path === "/api/visitors") return status === 204;
+  if (path === "/api/settings/health-auto-export-token") return status === 410;
   return status === 401 || status === 403 || status === 503;
 }
 

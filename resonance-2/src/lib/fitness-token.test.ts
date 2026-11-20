@@ -286,6 +286,13 @@ describe("fitness sync token", { concurrency: false }, () => {
     assert.match(body.html, /••••/);
     assert.match(body.html, /Reveal/);
     assert.match(body.html, /Copy/);
+    assert.match(
+      body.html,
+      /Paste into Health Auto Export -&gt; each automation \(Steps and Workouts\) -&gt; Headers -&gt; X-Resonance-Token\. No quotes, no spaces\./,
+    );
+    assert.match(body.html, /Last accepted post never\. Last rejected never\./);
+    assert.match(body.bare, /Last accepted post never\. Last rejected never\./);
+    assert.equal(body.bare.includes("Paste into Health Auto Export"), false);
     assert.match(body.html, /Authenticator code/);
     assert.match(body.html, /Set up the iPhone Shortcut/);
     assert.match(body.html, /Resonance Nightly/);

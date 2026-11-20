@@ -26,10 +26,11 @@ export const maxDuration = 60;
  * `X-Resonance-Token`, `X-Fitness-Token`, `X-Api-Key`, `Api-Key`, `Apikey`,
  * `X-Auth-Token`, `X-Access-Token`, `X-Token`, `Token`, or `X-Health-Token`.
  * On Authorization, a Bearer or Token prefix is ignored. On the other headers,
- * a Bearer prefix and surrounding whitespace are ignored. The value is compared
- * with the sha256 digest stored for the owner. A valid FITNESS_INGEST_TOKEN is
- * also accepted. The hub sync secret is not accepted. A query parameter or a
- * body field is not a token. Both tokens unset fails closed.
+ * the value is trimmed, one pair of surrounding straight or curly quotes is
+ * removed, and a Bearer prefix is ignored. The value is compared with the
+ * sha256 digest stored for the owner. FITNESS_INGEST_TOKEN is accepted too.
+ * The hub sync secret is not accepted. A query parameter or a body field is
+ * not a token. Both tokens unset fails closed.
  *
  * Vercel drops a request body over about 4.5 MB. This route rejects anything
  * over {@link HEALTH_AUTO_EXPORT_BODY_LIMIT} before it parses. Turn on Batch

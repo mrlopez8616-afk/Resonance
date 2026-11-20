@@ -4,12 +4,17 @@ import { useEffect, useState, type ReactNode } from "react";
 
 const VISIBLE_MS = 60_000;
 
+export const FITNESS_TOKEN_PASTE_HELP =
+  "Paste into Health Auto Export -> each automation (Steps and Workouts) -> Headers -> X-Resonance-Token. No quotes, no spaces.";
+
 export function FitnessTokenRow({
   configured,
   shortcut,
+  ingestStatus,
 }: {
   configured: boolean;
   shortcut: ReactNode;
+  ingestStatus: string;
 }) {
   const [code, setCode] = useState("");
   const [token, setToken] = useState<string | null>(null);
@@ -131,6 +136,9 @@ export function FitnessTokenRow({
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
+          <p className="auth-note" data-fitness-token-help>
+            {FITNESS_TOKEN_PASTE_HELP}
+          </p>
           {error ? (
             <p className="auth-error" role="alert">
               {error}
@@ -138,6 +146,9 @@ export function FitnessTokenRow({
           ) : null}
         </>
       )}
+      <p className="auth-note" data-fitness-ingest-status>
+        {ingestStatus}
+      </p>
       {shortcut}
     </section>
   );

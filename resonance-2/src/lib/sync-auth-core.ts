@@ -69,10 +69,36 @@ export function readAuthorizationCredential(value: string | null | undefined): s
   return trimmed;
 }
 
-/** Token from an ingest header other than Authorization. A Bearer prefix is optional. */
+const DOUBLE_QUOTES = new Set(['"', "\u201C", "\u201D", "\u201E"]);
+const SINGLE_QUOTES = new Set(["'", "\u2018", "\u2019", "\u201A"]);
+
+/** One surrounding pair of straight or curly quotes. Nested quotes stay. */
+function unwrapOneQuotePair(value: string): { value: string; unwrapped: boolean } {
+  const trimmed = value.trim();
+  if (trimmed.length < 2) return { value: trimmed, unwrapped: false };
+  const open = trimmed[0];
+  const close = trimmed[trimmed.length - 1];
+  const pair =
+    (DOUBLE_QUOTES.has(open) && DOUBLE_QUOTES.has(close)) ||
+    (SINGLE_QUOTES.has(open) && SINGLE_QUOTES.has(close));
+  if (!pair) return { value: trimmed, unwrapped: false };
+  return { value: trimmed.slice(1, -1).trim(), unwrapped: true };
+}
+
+/**
+ * Token from an ingest header other than Authorization.
+ * Trims, drops one pair of surrounding straight or curly quotes, and drops
+ * up to two leading Bearer prefixes. A quote pair inside a Bearer prefix is
+ * that one pair when the outside is not quoted.
+ */
 export function readLooseToken(value: string | null | undefined): string | null {
   if (!value?.trim()) return null;
-  const token = stripOptionalBearer(stripOptionalBearer(value));
+  const outer = unwrapOneQuotePair(value);
+  let token = stripOptionalBearer(stripOptionalBearer(outer.value));
+  if (!outer.unwrapped) {
+    const inner = unwrapOneQuotePair(token);
+    if (inner.unwrapped) token = stripOptionalBearer(stripOptionalBearer(inner.value));
+  }
   return token || null;
 }
 

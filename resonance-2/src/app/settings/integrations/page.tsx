@@ -11,7 +11,6 @@ import { blockedPublicPage } from "@/components/private-notice";
 import { OperatorShell } from "@/components/operator-shell";
 import { requireRole } from "@/lib/auth-session";
 import { factorioTokenConfigured } from "@/lib/factorio-store";
-import { healthAutoExportTokenConfigured } from "@/lib/health-auto-export-store";
 import { obsTokenConfigured } from "@/lib/obs-store";
 import { printerTokenConfigured } from "@/lib/printer-store";
 
@@ -25,14 +24,12 @@ export default async function IntegrationsPage() {
   const blocked = await blockedPublicPage();
   if (blocked) return blocked;
   await requireRole("owner");
-  let healthConfigured = false;
   let factorioConfigured = false;
   let printerConfigured = false;
   let obsConfigured = false;
   let unavailable = false;
   try {
-    [healthConfigured, factorioConfigured, printerConfigured, obsConfigured] = await Promise.all([
-      healthAutoExportTokenConfigured(),
+    [factorioConfigured, printerConfigured, obsConfigured] = await Promise.all([
       factorioTokenConfigured(),
       printerTokenConfigured(),
       obsTokenConfigured(),
@@ -51,7 +48,7 @@ export default async function IntegrationsPage() {
           <p className="auth-note">Storage is unavailable.</p>
         ) : (
           <>
-            <HealthAutoExportToken configured={healthConfigured} />
+            <HealthAutoExportToken />
             <FactorioToken configured={factorioConfigured} />
             <PrinterToken configured={printerConfigured} />
             <ObsToken configured={obsConfigured} />

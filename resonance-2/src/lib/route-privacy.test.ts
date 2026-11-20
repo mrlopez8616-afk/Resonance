@@ -5,6 +5,7 @@ import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { newDb } from "pg-mem";
 import { POST as login } from "@/app/api/auth/login/route";
+import { POST as retiredHealthToken } from "@/app/api/settings/health-auto-export-token/route";
 import { POST as logoutAll } from "@/app/api/auth/logout-all/route";
 import { POST as passkeyVerify } from "@/app/api/auth/passkey/login/verify/route";
 import { setSqlClientForTests, sqlQuery, type SqlClient } from "@/lib/pg/client";
@@ -140,6 +141,16 @@ describe("logged-out privacy", () => {
     const ingest = ROUTE_AUDIT.find((row) => row.path === "/api/ingest/health-auto-export");
     assert.equal(ingest?.method, "POST");
     assert.match(ingest?.auth ?? "", /token/i);
+    const retired = ROUTE_AUDIT.find((row) => row.path === "/api/settings/health-auto-export-token");
+    assert.equal(retired?.method, "POST");
+    assert.equal(retired?.loggedOut, "410");
+    const retiredSource = readFileSync(join(root, "src/app/api/settings/health-auto-export-token/route.ts"), "utf8");
+    assert.match(retiredSource, /status:\s*410/);
+    assert.equal(retiredSource.includes("newHealthAutoExportToken"), false);
+    assert.equal(retiredSource.includes("saveHealthAutoExportTokenHash"), false);
+    assert.equal(retiredSource.includes("request.text"), false);
+    assert.equal(retiredSource.includes("request.json"), false);
+    assert.equal(retiredSource.includes("console."), false);
   });
 
   it("treats a logged-out home redirect as the login gate", async () => {
@@ -287,5 +298,25 @@ describe("logged-out privacy", () => {
     assert.equal(JSON.stringify(issues).includes("$"), false);
     const logged = await sqlQuery<{ n: string }>(`SELECT count(*)::text AS n FROM ingest_attempts`);
     assert.equal(Number(logged[0]?.n), 0);
+
+    const marker = "phone-token";
+    const gone = await retiredHealthToken(
+      new Request("https://resonance3.vercel.app/api/settings/health-auto-export-token", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${marker}`,
+        },
+        body: JSON.stringify({ token: marker }),
+      }),
+    );
+    assert.equal(gone.status, 410);
+    assert.equal(gone.headers.get("cache-control"), "no-store");
+    const goneText = await gone.text();
+    const goneBody = JSON.parse(goneText) as { ok?: boolean; token?: string };
+    assert.equal(goneBody.ok, false);
+    assert.equal(goneBody.token, undefined);
+    assert.equal(goneText.includes(marker), false);
+    assert.equal(goneText.includes("FITNESS_INGEST_TOKEN"), false);
   });
 });
