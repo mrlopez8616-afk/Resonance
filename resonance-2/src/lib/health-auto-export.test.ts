@@ -549,21 +549,6 @@ describe("health auto export ingest", { concurrency: false }, () => {
     token = "";
   });
 
-  function rotate(headers: Record<string, string> = {}) {
-    return rotateToken(
-      new Request(TOKEN_ENDPOINT, {
-        method: "POST",
-        headers: {
-          host: "resonance3.vercel.app",
-          origin: "https://resonance3.vercel.app",
-          "sec-fetch-site": "same-origin",
-          cookie: `${SESSION_COOKIE}=${session}`,
-          ...headers,
-        },
-      }),
-    );
-  }
-
   it("rejects a missing token, the wrong token, and the hub secret", async () => {
     delete process.env.FITNESS_INGEST_TOKEN;
     const closed = await postIngest(aggregatedSteps, "anything");
@@ -708,7 +693,8 @@ describe("health auto export ingest", { concurrency: false }, () => {
     assert.equal(Number(rows[0]?.n), 0);
   });
 
-  it("shows the token once, stores only the hash, and keeps heart rate off the public view", async () => {
+  it("returns 410 for a write and does not store or reveal a token", async () => {
+    const marker = "BODY-MARKER-do-not-log";
     const logs: unknown[][] = [];
     const originals = {
       log: console.log,
@@ -723,12 +709,62 @@ describe("health auto export ingest", { concurrency: false }, () => {
       };
     }
     try {
-      const created = await rotate();
-      assert.equal(created.status, 200);
-      assert.equal(created.headers.get("cache-control"), "no-store");
-      const createdBody = (await created.json()) as { token?: string };
-      token = createdBody.token ?? "";
-      assert.equal(token.length > 20, true);
+      await saveHealthAutoExportTokenHash(hashHealthAutoExportToken("kept-token"));
+      const gone = await rotateToken(
+        new Request(TOKEN_ENDPOINT, {
+          method: "POST",
+          headers: {
+            host: "resonance3.vercel.app",
+            origin: "https://resonance3.vercel.app",
+            "sec-fetch-site": "same-origin",
+            cookie: `${SESSION_COOKIE}=${session}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ token: marker, note: "shortcut-token" }),
+        }),
+      );
+      assert.equal(gone.status, 410);
+      assert.equal(gone.headers.get("cache-control"), "no-store");
+      const body = (await gone.json()) as { ok?: boolean; token?: string; error?: string };
+      assert.equal(body.ok, false);
+      assert.equal(body.token, undefined);
+      assert.equal(body.error, "Use Settings -> Security -> Fitness sync token.");
+      const text = JSON.stringify(body);
+      assert.equal(text.includes(marker), false);
+      assert.equal(text.includes("shortcut-token"), false);
+      assert.equal(text.includes("kept-token"), false);
+      const stored = await sqlQuery<{ token_hash: string }>(
+        `SELECT token_hash FROM health_auto_export_tokens WHERE id = 1`,
+      );
+      assert.equal(stored[0]?.token_hash, hashHealthAutoExportToken("kept-token"));
+      const dump = JSON.stringify(logs);
+      assert.equal(dump.includes(marker), false);
+      assert.equal(dump.includes("shortcut-token"), false);
+      assert.equal(dump.includes("kept-token"), false);
+    } finally {
+      for (const key of Object.keys(originals) as (keyof typeof originals)[]) {
+        console[key] = originals[key];
+      }
+    }
+  });
+
+  it("keeps heart rate off the public view", async () => {
+    const logs: unknown[][] = [];
+    const originals = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error,
+      debug: console.debug,
+    };
+    for (const key of Object.keys(originals) as (keyof typeof originals)[]) {
+      console[key] = (...args: unknown[]) => {
+        logs.push(args);
+      };
+    }
+    try {
+      token = "view-token";
+      await saveHealthAutoExportTokenHash(hashHealthAutoExportToken(token));
       const stored = await sqlQuery<{ token_hash: string }>(
         `SELECT token_hash FROM health_auto_export_tokens WHERE id = 1`,
       );
@@ -788,12 +824,8 @@ describe("health auto export ingest", { concurrency: false }, () => {
       const runsBody = JSON.stringify(await opened.json());
       assert.equal(runsBody.includes("bpm"), false);
       assert.equal(runsBody.includes("154"), false);
-
-      const hidden = await rotate({ cookie: `${SESSION_COOKIE}=${session}; ${PUBLIC_MODE_COOKIE}=1` });
-      assert.equal(hidden.status, 404);
-      assert.equal((await hidden.text()).includes(token), false);
-      const machine = await rotate({ authorization: "Bearer hub-secret", cookie: "" });
-      assert.equal(machine.status, 401);
+      assert.equal(JSON.stringify(logs).includes(token), false);
+      assert.equal(JSON.stringify(logs).includes("shortcut-token"), false);
     } finally {
       for (const key of Object.keys(originals) as (keyof typeof originals)[]) {
         console[key] = originals[key];
@@ -823,13 +855,37 @@ describe("health auto export settings copy", () => {
     assert.match(html, /4\.5 MB/);
     assert.match(html, /full history/);
     assert.match(html, /earliest day in Apple Health/);
+    assert.match(
+      html,
+      /Paste the Fitness sync token \(Settings -> Security\) into the X-Resonance-Token header on both automations/,
+    );
+    assert.match(html, /The value is the Fitness sync token from Settings -> Security/);
+    assert.equal(html.includes("Generate"), false);
     assert.equal(html.includes("bpm"), false);
     const client = readFileSync(path.join(root, "src/components/health-auto-export-token.tsx"), "utf8");
-    assert.match(client, /Generate \/ rotate Health Auto Export token/);
-    assert.match(client, /useState<string \| null>\(null\)/);
+    assert.match(client, /Use Settings -> Security -> Fitness sync token\./);
+    assert.equal(client.includes("Generate / rotate"), false);
+    assert.equal(client.includes("fetch("), false);
+    assert.equal(client.includes("useState"), false);
     assert.equal(client.includes("token_hash"), false);
     assert.equal(client.includes("FITNESS_INGEST_TOKEN"), false);
     assert.equal(client.includes("AUTH_"), false);
+    const integrations = readFileSync(path.join(root, "src/app/settings/integrations/page.tsx"), "utf8");
+    assert.equal(integrations.includes("Generate / rotate Health Auto Export token"), false);
+    assert.match(integrations, /<HealthAutoExportToken \/>/);
+    const security = readFileSync(path.join(root, "src/app/settings/security/page.tsx"), "utf8");
+    assert.match(security, /loadIngestHealth\(/);
+    assert.match(security, /formatHealthAutoExportStatus/);
+    assert.match(security, /HEALTH_AUTO_EXPORT_INGEST_ROUTE/);
+    assert.equal(security.includes("token_hash"), false);
+    const row = readFileSync(path.join(root, "src/components/fitness-token-row.tsx"), "utf8");
+    assert.match(
+      row,
+      /Paste into Health Auto Export -> each automation \(Steps and Workouts\) -> Headers -> X-Resonance-Token\. No quotes, no spaces\./,
+    );
+    assert.match(row, /data-fitness-ingest-status/);
+    assert.equal(row.includes("FITNESS_INGEST_TOKEN"), false);
+    assert.equal(row.includes("process.env"), false);
     const file = readFileSync(path.join(root, "db/migrations/043_health_auto_export_token.sql"), "utf8");
     const embedded = EMBEDDED_MIGRATIONS.find((entry) => entry.id === "043_health_auto_export_token");
     assert.equal(embedded?.sql, file);

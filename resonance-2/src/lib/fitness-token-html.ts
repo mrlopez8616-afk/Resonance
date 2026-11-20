@@ -17,6 +17,7 @@ const html = renderToStaticMarkup(
     passkeys: [],
     passkeysConfigured: false,
     fitnessTokenConfigured: Boolean(token.trim()),
+    fitnessIngestStatus: "Last accepted post never. Last rejected never.",
     shortcut: createElement(FitnessShortcutSetup),
   }),
 );
@@ -26,6 +27,7 @@ const bare = renderToStaticMarkup(
     passkeys: [],
     passkeysConfigured: false,
     fitnessTokenConfigured: false,
+    fitnessIngestStatus: "Last accepted post never. Last rejected never.",
     shortcut: createElement(FitnessShortcutSetup),
   }),
 );

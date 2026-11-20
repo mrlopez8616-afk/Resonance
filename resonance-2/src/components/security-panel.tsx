@@ -23,12 +23,14 @@ export function SecurityPanel({
   passkeys,
   passkeysConfigured,
   fitnessTokenConfigured,
+  fitnessIngestStatus,
   shortcut,
 }: {
   sessions: SecuritySession[];
   passkeys: SecurityPasskey[];
   passkeysConfigured: boolean;
   fitnessTokenConfigured: boolean;
+  fitnessIngestStatus: string;
   shortcut: ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +96,11 @@ export function SecurityPanel({
         asked for after sign-in.
       </p>
 
-      <FitnessTokenRow configured={fitnessTokenConfigured} shortcut={shortcut} />
+      <FitnessTokenRow
+        configured={fitnessTokenConfigured}
+        ingestStatus={fitnessIngestStatus}
+        shortcut={shortcut}
+      />
 
       <section className="security-block">
         <h3>Devices</h3>

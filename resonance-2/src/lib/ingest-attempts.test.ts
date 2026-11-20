@@ -16,6 +16,7 @@ import { saveHealthAutoExportTokenHash } from "@/lib/health-auto-export-store";
 import { setHealthFullLoaderForTests } from "@/lib/health-full-load";
 import type { HealthFullReport } from "@/lib/health-report";
 import { resetFitnessStoreForTests } from "@/lib/fitness-store";
+import { formatHealthAutoExportStatus } from "@/lib/fitness-sync-status";
 import {
   FITNESS_INGEST_ROUTE,
   HEALTH_AUTO_EXPORT_INGEST_ROUTE,
@@ -139,6 +140,43 @@ const steps = {
     ],
   },
 };
+
+describe("fitness sync status line", () => {
+  it("formats Chicago times and a reject reason, and drops anything else", () => {
+    assert.equal(
+      formatHealthAutoExportStatus({
+        lastSuccessAt: "2026-11-05T20:14:00.000Z",
+        lastRejectAt: "2026-11-20T19:02:00.000Z",
+        lastRejectReason: "bad token",
+      }),
+      "Last accepted post Nov 5, 2:14 PM. Last rejected Nov 20, 1:02 PM (bad token).",
+    );
+    assert.equal(
+      formatHealthAutoExportStatus({
+        lastSuccessAt: "2026-07-04T18:30:00.000Z",
+        lastRejectAt: null,
+        lastRejectReason: null,
+      }),
+      "Last accepted post Jul 4, 1:30 PM. Last rejected never.",
+    );
+    const secret = "super-secret-token-value";
+    const hidden = formatHealthAutoExportStatus({
+      lastSuccessAt: null,
+      lastRejectAt: "2026-11-20T19:02:00.000Z",
+      lastRejectReason: secret,
+    });
+    assert.equal(hidden, "Last accepted post never. Last rejected Nov 20, 1:02 PM.");
+    assert.equal(hidden.includes(secret), false);
+    assert.equal(
+      formatHealthAutoExportStatus({
+        lastSuccessAt: "not-a-time",
+        lastRejectAt: null,
+        lastRejectReason: "ok",
+      }),
+      "Last accepted post unknown. Last rejected never.",
+    );
+  });
+});
 
 describe("ingest attempts", { concurrency: false }, () => {
   const previous = {
@@ -382,6 +420,39 @@ describe("ingest attempts", { concurrency: false }, () => {
     assert.equal(dump.includes("hub-secret"), false);
     assert.equal(dump.includes(digest), false);
     assert.equal(logged.some((row) => String(row.auth_headers ?? "").includes("Bearer")), false);
+  });
+
+  it("accepts one pair of surrounding quotes and stores no token value", async () => {
+    delete process.env.FITNESS_INGEST_TOKEN;
+    const digest = hashHealthAutoExportToken(TOKEN);
+    await saveHealthAutoExportTokenHash(digest);
+    const quotedHash = await postHae(steps, `"${TOKEN}"`);
+    assert.equal(quotedHash.status, 200);
+    const singleHash = await postHae(steps, `'${TOKEN}'`);
+    assert.equal(singleHash.status, 200);
+
+    await sqlQuery(`DELETE FROM health_auto_export_tokens`);
+    process.env.FITNESS_INGEST_TOKEN = "phone-token";
+    const quotedEnv = await postHae(steps, null, { "x-resonance-token": ' "phone-token" ' });
+    assert.equal(quotedEnv.status, 200);
+    const bearerQuoted = await postHae(steps, null, { "x-api-key": 'Bearer "phone-token"' });
+    assert.equal(bearerQuoted.status, 200);
+    const onePair = await postHae(steps, null, { "x-token": '""phone-token""' });
+    assert.equal(onePair.status, 401);
+    const mismatched = await postHae(steps, null, { "x-health-token": "\"phone-token'" });
+    assert.equal(mismatched.status, 401);
+
+    const rows = await attempts();
+    const headers = await sqlQuery<{ auth_headers: string | null }>(
+      `SELECT auth_headers FROM ingest_attempts ORDER BY id`,
+    );
+    const dump = JSON.stringify({ rows, headers });
+    assert.equal(dump.includes(TOKEN), false);
+    assert.equal(dump.includes("phone-token"), false);
+    assert.equal(dump.includes(digest), false);
+    assert.equal(dump.includes(MARKER), false);
+    assert.equal(rows.filter((row) => row.reason === "ok").length, 4);
+    assert.equal(rows.filter((row) => row.reason === "bad token").length, 2);
   });
 
   it("shows no request, a rejection, and a later success on the private health probe", async () => {

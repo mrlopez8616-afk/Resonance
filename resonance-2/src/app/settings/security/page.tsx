@@ -7,6 +7,8 @@ import { SecurityPanel } from "@/components/security-panel";
 import { webauthnConfig } from "@/lib/auth-core";
 import { readRequestSession } from "@/lib/auth-session";
 import { listPasskeys, listSessionViews } from "@/lib/auth-store";
+import { formatHealthAutoExportStatus } from "@/lib/fitness-sync-status";
+import { HEALTH_AUTO_EXPORT_INGEST_ROUTE, loadIngestHealth } from "@/lib/ingest-attempts";
 import { listModeLog, readOwnerPinHash } from "@/lib/owner-pin-store";
 import { redirect } from "next/navigation";
 
@@ -34,12 +36,19 @@ export default async function SecurityPage() {
   if (blocked) return blocked;
   const live = await readRequestSession();
   if (!live) redirect("/login?next=/settings/security");
-  const [sessions, passkeys, pinHash, modeLog] = await Promise.all([
+  const [sessions, passkeys, pinHash, modeLog, ingest] = await Promise.all([
     listSessionViews(live.session.idHash),
     listPasskeys(),
     readOwnerPinHash().catch(() => null),
     listModeLog().catch(() => []),
+    loadIngestHealth(),
   ]);
+  const hae = ingest[HEALTH_AUTO_EXPORT_INGEST_ROUTE];
+  const fitnessIngestStatus = formatHealthAutoExportStatus({
+    lastSuccessAt: hae.lastSuccessAt,
+    lastRejectAt: hae.lastRejectAt,
+    lastRejectReason: hae.lastRejectReason,
+  });
 
   return (
     <OperatorShell>
@@ -62,6 +71,7 @@ export default async function SecurityPage() {
         }))}
         passkeysConfigured={webauthnConfig() !== null}
         fitnessTokenConfigured={Boolean(process.env.FITNESS_INGEST_TOKEN?.trim())}
+        fitnessIngestStatus={fitnessIngestStatus}
         shortcut={<FitnessShortcutSetup />}
       />
     </OperatorShell>

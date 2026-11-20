@@ -83,6 +83,32 @@ describe("fill ingest auth", () => {
     assert.equal(readAuthorizationCredential("Digest abc"), null);
     assert.equal(readLooseToken(" Bearer phone-token "), "phone-token");
     assert.equal(readLooseToken("phone-token"), "phone-token");
+    assert.equal(readLooseToken('  "phone-token"  '), "phone-token");
+    assert.equal(readLooseToken("'phone-token'"), "phone-token");
+    assert.equal(readLooseToken("\u201Cphone-token\u201D"), "phone-token");
+    assert.equal(readLooseToken("\u2018phone-token\u2019"), "phone-token");
+    assert.equal(readLooseToken("\u201Ephone-token\u201C"), "phone-token");
+    assert.equal(readLooseToken("\u201C phone-token \u201D"), "phone-token");
+    assert.equal(readLooseToken('"Bearer phone-token"'), "phone-token");
+    assert.equal(readLooseToken('Bearer "phone-token"'), "phone-token");
+    assert.equal(readLooseToken('Bearer "Bearer phone-token"'), "phone-token");
+    assert.equal(readLooseToken(" Bearer  Bearer  phone-token "), "phone-token");
+    assert.equal(readLooseToken('""phone-token""'), '"phone-token"');
+    assert.equal(readLooseToken("\"phone-token'"), "\"phone-token'");
+    assert.equal(readLooseToken('""'), null);
+    assert.equal(readLooseToken("   "), null);
+    assert.equal(readLooseToken(null), null);
+    assert.equal(readLooseToken(undefined), null);
+  });
+
+  it("strips one quote pair from a loose header and keeps the name list free of the value", () => {
+    const headers = new Headers({ "x-resonance-token": '"phone-token"' });
+    const creds = readIngestCredentials(headers);
+    assert.deepEqual(creds.headerNames, ["x-resonance-token"]);
+    assert.deepEqual(creds.tokens, ["phone-token"]);
+    assert.equal(JSON.stringify(creds.headerNames).includes("phone-token"), false);
+    const quotedBearer = readIngestCredentials(new Headers({ authorization: 'Bearer "phone-token"' }));
+    assert.deepEqual(quotedBearer.tokens, ['"phone-token"']);
   });
 
   it("reads ingest credentials without keeping header values in the name list", () => {
